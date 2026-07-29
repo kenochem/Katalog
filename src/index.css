@@ -123,3 +123,27 @@ input[type="search"]::-webkit-search-cancel-button {
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
+/* PWA na komputerze: pełna szerokość jak zwykła aplikacja okienna */
+@media (display-mode: standalone), (display-mode: window-controls-overlay) {
+  html,
+  body,
+  #root {
+    width: 100%;
+    max-width: none;
+  }
+
+  .app-shell {
+    max-width: min(100%, 100rem);
+    margin-inline: auto;
+    padding-inline: clamp(0.75rem, 2vw, 2rem);
+  }
+}
+
+@media (display-mode: standalone) and (min-width: 1024px),
+  (display-mode: window-controls-overlay) and (min-width: 1024px) {
+  .app-shell {
+    padding-inline: clamp(1rem, 2.5vw, 2.5rem);
+  }
+}
+

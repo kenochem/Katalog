@@ -310,7 +310,7 @@ export default function App() {
   }
 
   return (
-    <div className="mx-auto min-h-dvh w-full max-w-7xl">
+    <div className="app-shell mx-auto min-h-dvh w-full max-w-7xl px-0 lg:max-w-[90rem] 2xl:max-w-[100rem]">
       {/* Header przewija się — na mobile nie zabiera ekranu */}
       <header className="border-b border-slate-800/80 bg-slate-950 pt-[env(safe-area-inset-top)]">
         <div className="flex items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
@@ -910,7 +910,7 @@ function CatalogView({
           <p className="mt-1 text-sm">Spróbuj innego SKU, nazwy albo filtrów</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
           {filtered.map((product) => (
             <ProductCard
               key={product.id}

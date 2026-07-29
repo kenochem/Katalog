@@ -1,5 +1,5 @@
 /* Minimalny service worker — PWA + świeży HTML przy każdym wejściu online. */
-const CACHE = 'katalog-shell-v4';
+const CACHE = 'katalog-shell-v5';
 const SHELL = [
   '/manifest.webmanifest',
   '/favicon.svg',
