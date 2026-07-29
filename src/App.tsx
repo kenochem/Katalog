@@ -310,221 +310,266 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell mx-auto min-h-dvh w-full max-w-7xl px-0 lg:max-w-[90rem] 2xl:max-w-[100rem]">
-      {/* Header przewija się — na mobile nie zabiera ekranu */}
+    <div className="app-shell mx-auto min-h-dvh w-full max-w-none">
       <header className="border-b border-slate-800/80 bg-slate-950 pt-[env(safe-area-inset-top)]">
-        <div className="flex items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
-          <a
-            href="https://kenochem.com"
-            target="_blank"
-            rel="noreferrer"
-            className="flex shrink-0 items-center"
-            title="Kenochem.com"
-          >
-            <img
-              src="/kenochem-logo.webp"
-              alt="Kenochem"
-              className="kenochem-logo"
-            />
-          </a>
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate text-base font-bold tracking-tight text-slate-100 sm:text-lg">
-              Katalog
-            </h1>
-            <p className="truncate text-[11px] text-slate-500 sm:text-xs">
-              {CATALOG_SUBTITLES[activeCatalog]}
-            </p>
+        {/* Mobile: klasyczny stos; Desktop (lg+): jeden pasek jak w aplikacji okienkowej */}
+        <div className="flex flex-col gap-2 px-3 py-2.5 sm:px-4 lg:flex-row lg:items-center lg:gap-3 lg:py-3 xl:px-6">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3 lg:min-w-[12rem]">
+            <a
+              href="https://kenochem.com"
+              target="_blank"
+              rel="noreferrer"
+              className="flex shrink-0 items-center"
+              title="Kenochem.com"
+            >
+              <img
+                src="/kenochem-logo.webp"
+                alt="Kenochem"
+                className="kenochem-logo"
+              />
+            </a>
+            <div className="min-w-0 flex-1 lg:hidden">
+              <h1 className="truncate text-base font-bold tracking-tight text-slate-100">
+                Katalog
+              </h1>
+              <p className="truncate text-[11px] text-slate-500">
+                {CATALOG_SUBTITLES[activeCatalog]}
+              </p>
+            </div>
+            <div className="ml-auto flex items-center gap-1 lg:hidden">
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                title={isDark ? 'Motyw jasny' : 'Motyw ciemny'}
+              >
+                {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              </button>
+              <button
+                type="button"
+                onClick={loadData}
+                disabled={loading}
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-slate-100 disabled:opacity-50"
+                title="Odśwież"
+              >
+                <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={toggleTheme}
-            className="shrink-0 rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-            title={isDark ? 'Motyw jasny' : 'Motyw ciemny'}
-            aria-label={isDark ? 'Włącz motyw jasny' : 'Włącz motyw ciemny'}
-          >
-            {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-          </button>
-          <button
-            type="button"
-            onClick={loadData}
-            disabled={loading}
-            className="shrink-0 rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-slate-100 disabled:opacity-50"
-            title="Odśwież"
-          >
-            <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-        </div>
 
-        <div className="flex gap-1.5 overflow-x-auto px-3 pb-2 scrollbar-none sm:px-4">
-          <div
-            className="flex shrink-0 items-center rounded-lg border border-slate-700 px-2.5 py-1.5"
-            title={ROLE_LABELS[role]}
-          >
-            <span className="max-w-[7rem] truncate text-xs font-medium text-slate-200 sm:max-w-[10rem] sm:text-sm">
-              {displayLabel}
-            </span>
+          <div className="w-full shrink-0 lg:w-auto lg:min-w-[16rem]">
+            <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-900 p-1 ring-1 ring-slate-800">
+              <CatalogSwitch
+                active={activeCatalog === 'accessories'}
+                onClick={() => switchCatalog('accessories')}
+                icon={<Wrench className="h-4 w-4 shrink-0" />}
+                label={CATALOG_LABELS.accessories}
+              />
+              <CatalogSwitch
+                active={activeCatalog === 'shop'}
+                onClick={() => switchCatalog('shop')}
+                icon={<ShoppingBag className="h-4 w-4 shrink-0" />}
+                label={CATALOG_LABELS.shop}
+              />
+            </div>
           </div>
-          {roleCan(role, 'manageUsers') && (
-            <button
-              type="button"
-              onClick={() => setShowAdminUsers(true)}
-              className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800 sm:gap-1.5 sm:px-3 sm:py-2 sm:text-sm"
-              title="Zarządzaj użytkownikami"
-            >
-              <Users className="h-4 w-4" />
-              Konta
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              if (mode === 'guest') exitGuest();
-              else void signOut();
-            }}
-            className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-100 sm:px-3 sm:py-2"
-            title={mode === 'guest' ? 'Wróć do logowania' : 'Wyloguj'}
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
-          {roleCan(role, 'addProduct') && (
-            <button
-              type="button"
-              onClick={() => setShowAddProduct(true)}
-              className="flex shrink-0 items-center gap-1 rounded-lg bg-brand-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-brand-500 sm:gap-1.5 sm:px-3 sm:py-2 sm:text-sm"
-              title="Dodaj produkt"
-            >
-              <Plus className="h-4 w-4" />
-              Dodaj
-            </button>
-          )}
-          {activeCatalog === 'shop' && roleCan(role, 'useLens') && (
-            <button
-              type="button"
-              onClick={() => setShowVisualSearch(true)}
-              className="flex shrink-0 items-center gap-1 rounded-lg border border-brand-500/40 bg-brand-500/10 px-2.5 py-1.5 text-xs font-medium text-brand-300 hover:bg-brand-500/20 sm:gap-1.5 sm:px-3 sm:py-2 sm:text-sm"
-              title="Rozpoznaj produkt ze zdjęcia"
-            >
-              <Sparkles className="h-4 w-4" />
-              Lens
-            </button>
-          )}
-          {roleCan(role, 'editStock') && (
-            <button
-              type="button"
-              onClick={() => setEditMode((v) => !v)}
-              className={`flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition sm:gap-1.5 sm:px-3 sm:py-2 sm:text-sm ${
-                editMode
-                  ? 'bg-amber-500 text-amber-950'
-                  : 'border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-100'
-              }`}
-              title="Tryb edycji stanów (±1)"
-            >
-              <Pencil className="h-4 w-4" />
-              {editMode ? 'Edycja ON' : 'Edycja'}
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              // przywróć banner / spróbuj natywnego promptu
-              if (getDeferredInstall()) {
-                try {
-                  localStorage.removeItem('katalog-pwa-hint-dismissed');
-                } catch {
-                  /* ignore */
-                }
-                window.dispatchEvent(new Event('katalog-show-install'));
-                return;
-              }
-              resetInstallHint();
-            }}
-            className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-slate-100 sm:gap-1.5 sm:px-3 sm:py-2 sm:text-sm"
-            title="Dodaj Katalog do ekranu głównego"
-          >
-            <Download className="h-4 w-4" />
-            <span className="hidden xs:inline sm:inline">Apka</span>
-          </button>
-        </div>
 
-        <div className="px-3 pb-2 sm:px-4">
-          <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-900 p-1 ring-1 ring-slate-800">
-            <CatalogSwitch
-              active={activeCatalog === 'accessories'}
-              onClick={() => switchCatalog('accessories')}
-              icon={<Wrench className="h-4 w-4 shrink-0" />}
-              label={CATALOG_LABELS.accessories}
-            />
-            <CatalogSwitch
-              active={activeCatalog === 'shop'}
-              onClick={() => switchCatalog('shop')}
-              icon={<ShoppingBag className="h-4 w-4 shrink-0" />}
-              label={CATALOG_LABELS.shop}
-            />
-          </div>
-        </div>
-
-        <nav className="flex gap-1 overflow-x-auto px-3 pb-3 scrollbar-none sm:px-4">
-          <NavTab
-            active={view === 'catalog'}
-            onClick={() => setView('catalog')}
-            icon={<Search className="h-4 w-4" />}
-            label="Katalog"
-            count={products.length}
-          />
-          {roleCan(role, 'manageFavorites') && (
-            <NavTab
-              active={view === 'favorites'}
-              onClick={() => setView('favorites')}
-              icon={<Star className="h-4 w-4" />}
-              label="Ulubione"
-              count={favoriteCount}
-              highlight={favoriteCount > 0}
-            />
-          )}
-          {roleCan(role, 'printLabels') && (
-            <NavTab
-              active={view === 'labels'}
+          <div className="flex gap-1.5 overflow-x-auto scrollbar-none lg:ml-auto lg:flex-wrap lg:overflow-visible lg:justify-end">
+            <div
+              className="flex shrink-0 items-center rounded-lg border border-slate-700 px-2.5 py-1.5"
+              title={ROLE_LABELS[role]}
+            >
+              <span className="max-w-[7rem] truncate text-xs font-medium text-slate-200 sm:max-w-[10rem] sm:text-sm">
+                {displayLabel}
+              </span>
+            </div>
+            {roleCan(role, 'manageUsers') && (
+              <button
+                type="button"
+                onClick={() => setShowAdminUsers(true)}
+                className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800 sm:gap-1.5 sm:px-3 sm:py-2 sm:text-sm"
+                title="Zarządzaj użytkownikami"
+              >
+                <Users className="h-4 w-4" />
+                Konta
+              </button>
+            )}
+            {roleCan(role, 'addProduct') && (
+              <button
+                type="button"
+                onClick={() => setShowAddProduct(true)}
+                className="flex shrink-0 items-center gap-1 rounded-lg bg-brand-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-brand-500 sm:gap-1.5 sm:px-3 sm:py-2 sm:text-sm"
+              >
+                <Plus className="h-4 w-4" />
+                Dodaj
+              </button>
+            )}
+            {activeCatalog === 'shop' && roleCan(role, 'useLens') && (
+              <button
+                type="button"
+                onClick={() => setShowVisualSearch(true)}
+                className="flex shrink-0 items-center gap-1 rounded-lg border border-brand-500/40 bg-brand-500/10 px-2.5 py-1.5 text-xs font-medium text-brand-300 hover:bg-brand-500/20 sm:gap-1.5 sm:px-3 sm:py-2 sm:text-sm"
+              >
+                <Sparkles className="h-4 w-4" />
+                Lens
+              </button>
+            )}
+            {roleCan(role, 'editStock') && (
+              <button
+                type="button"
+                onClick={() => setEditMode((v) => !v)}
+                className={`flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition sm:gap-1.5 sm:px-3 sm:py-2 sm:text-sm ${
+                  editMode
+                    ? 'bg-amber-500 text-amber-950'
+                    : 'border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                }`}
+              >
+                <Pencil className="h-4 w-4" />
+                {editMode ? 'Edycja ON' : 'Edycja'}
+              </button>
+            )}
+            <button
+              type="button"
               onClick={() => {
-                refreshLabelQueue();
-                setView('labels');
+                if (getDeferredInstall()) {
+                  try {
+                    localStorage.removeItem('katalog-pwa-hint-dismissed');
+                  } catch {
+                    /* ignore */
+                  }
+                  window.dispatchEvent(new Event('katalog-show-install'));
+                  return;
+                }
+                resetInstallHint();
               }}
-              icon={<Printer className="h-4 w-4" />}
-              label="Etykiety"
-              count={labelQueue.length}
-              highlight={labelQueue.length > 0}
-            />
-          )}
-          {activeCatalog === 'accessories' && (
+              className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800 sm:px-3 sm:py-2 lg:hidden"
+              title="Zainstaluj aplikację"
+            >
+              <Download className="h-4 w-4" />
+              Apka
+            </button>
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="hidden rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-slate-100 lg:inline-flex"
+              title={isDark ? 'Motyw jasny' : 'Motyw ciemny'}
+            >
+              {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </button>
+            <button
+              type="button"
+              onClick={loadData}
+              disabled={loading}
+              className="hidden rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-slate-100 disabled:opacity-50 lg:inline-flex"
+              title="Odśwież"
+            >
+              <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (mode === 'guest') exitGuest();
+                else void signOut();
+              }}
+              className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-100 sm:px-3 sm:py-2"
+              title={mode === 'guest' ? 'Wróć do logowania' : 'Wyloguj'}
+            >
+              <LogOut className="h-4 w-4" />
+              <span className="hidden xl:inline">
+                {mode === 'guest' ? 'Logowanie' : 'Wyloguj'}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2 border-t border-slate-800/60 px-3 py-2 sm:px-4 lg:flex-row lg:items-center lg:gap-4 xl:px-6">
+          <nav className="flex min-w-0 flex-1 gap-1 overflow-x-auto scrollbar-none lg:overflow-visible lg:flex-wrap">
             <NavTab
-              active={view === 'kits'}
-              onClick={() => setView('kits')}
-              icon={<Layers className="h-4 w-4" />}
-              label="Zestawy"
-              count={kits.length}
+              active={view === 'catalog'}
+              onClick={() => setView('catalog')}
+              icon={<Search className="h-4 w-4" />}
+              label="Katalog"
+              count={products.length}
             />
-          )}
-          {roleCan(role, 'viewProgress') && (
+            {roleCan(role, 'manageFavorites') && (
+              <NavTab
+                active={view === 'favorites'}
+                onClick={() => setView('favorites')}
+                icon={<Star className="h-4 w-4" />}
+                label="Ulubione"
+                count={favoriteCount}
+                highlight={favoriteCount > 0}
+              />
+            )}
+            {roleCan(role, 'printLabels') && (
+              <NavTab
+                active={view === 'labels'}
+                onClick={() => {
+                  refreshLabelQueue();
+                  setView('labels');
+                }}
+                icon={<Printer className="h-4 w-4" />}
+                label="Etykiety"
+                count={labelQueue.length}
+                highlight={labelQueue.length > 0}
+              />
+            )}
+            {activeCatalog === 'accessories' && (
+              <NavTab
+                active={view === 'kits'}
+                onClick={() => setView('kits')}
+                icon={<Layers className="h-4 w-4" />}
+                label="Zestawy"
+                count={kits.length}
+              />
+            )}
+            {roleCan(role, 'viewProgress') && (
+              <NavTab
+                active={view === 'progress'}
+                onClick={() => setView('progress')}
+                icon={<BarChart3 className="h-4 w-4" />}
+                label="Postęp"
+              />
+            )}
             <NavTab
-              active={view === 'progress'}
-              onClick={() => setView('progress')}
-              icon={<BarChart3 className="h-4 w-4" />}
-              label="Postęp"
+              active={view === 'missing-images'}
+              onClick={() => openMissingImages()}
+              icon={<ImageOff className="h-4 w-4" />}
+              label="Bez zdjęć"
+              count={missingImages.length}
+              highlight={missingImages.length > 0}
             />
+          </nav>
+
+          {(view === 'catalog' || view === 'favorites') && (
+            <div className="hidden min-w-0 flex-[1.4] gap-2 lg:flex">
+              <div className="min-w-0 flex-1">
+                <SearchBar
+                  value={search}
+                  onChange={setSearch}
+                  onScanClick={() => setShowScanner(true)}
+                />
+              </div>
+              {activeCatalog === 'shop' &&
+                view === 'catalog' &&
+                roleCan(role, 'useLens') && (
+                  <button
+                    type="button"
+                    onClick={() => setShowVisualSearch(true)}
+                    className="flex shrink-0 items-center gap-2 rounded-xl border border-brand-500/40 bg-brand-500/10 px-4 py-2 text-sm font-medium text-brand-200 hover:bg-brand-500/20"
+                  >
+                    <Sparkles className="h-5 w-5" />
+                    Lens
+                  </button>
+                )}
+            </div>
           )}
-          <NavTab
-            active={view === 'missing-images'}
-            onClick={() => openMissingImages()}
-            icon={<ImageOff className="h-4 w-4" />}
-            label="Bez zdjęć"
-            count={missingImages.length}
-            highlight={missingImages.length > 0}
-          />
-        </nav>
+        </div>
       </header>
 
-      {/* Wyszukiwarka zawsze przyklejona przy scrollu (mobile + desktop) */}
+      {/* Wyszukiwarka sticky — tylko mobile/tablet; na lg jest w headerze */}
       {(view === 'catalog' || view === 'favorites') && (
-        <div className="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/95 px-3 py-2 shadow-md shadow-black/10 backdrop-blur-xl sm:px-4">
+        <div className="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/95 px-3 py-2 shadow-md shadow-black/10 backdrop-blur-xl sm:px-4 lg:hidden">
           <div className="flex gap-2">
             <div className="min-w-0 flex-1">
               <SearchBar
@@ -539,19 +584,18 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setShowVisualSearch(true)}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-brand-500/40 bg-brand-500/10 text-brand-200 transition hover:bg-brand-500/20 sm:h-auto sm:w-auto sm:gap-2 sm:px-4"
-              title="Lens — EAN, potem OCR etykiety"
-              aria-label="Lens — EAN, potem OCR etykiety"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-brand-500/40 bg-brand-500/10 text-brand-200 transition hover:bg-brand-500/20"
+                title="Lens — EAN, potem OCR etykiety"
+                aria-label="Lens — EAN, potem OCR etykiety"
               >
                 <Sparkles className="h-5 w-5" />
-                <span className="hidden text-sm font-medium sm:inline">Lens</span>
               </button>
             )}
           </div>
         </div>
       )}
 
-      <main className="px-3 py-3 sm:px-4 sm:py-4">
+      <main className="px-3 py-3 sm:px-4 sm:py-4 xl:px-6 xl:py-5">
         {loading && allProducts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24">
             <Loader2 className="h-10 w-10 animate-spin text-brand-500" />
@@ -910,7 +954,7 @@ function CatalogView({
           <p className="mt-1 text-sm">Spróbuj innego SKU, nazwy albo filtrów</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
           {filtered.map((product) => (
             <ProductCard
               key={product.id}

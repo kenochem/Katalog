@@ -124,26 +124,28 @@ input[type="search"]::-webkit-search-cancel-button {
   display: none;
 }
 
-/* PWA na komputerze: pełna szerokość jak zwykła aplikacja okienna */
-@media (display-mode: standalone), (display-mode: window-controls-overlay) {
-  html,
-  body,
-  #root {
-    width: 100%;
-    max-width: none;
+/* Desktop / PWA: pełna szerokość okna, bez „kolumny telefonu” */
+html,
+body,
+#root {
+  width: 100%;
+  max-width: none;
+}
+
+.app-shell {
+  width: 100%;
+  max-width: none;
+}
+
+@media (min-width: 1024px) {
+  .kenochem-logo {
+    height: 2.25rem;
+    max-width: 10rem;
   }
 
   .app-shell {
-    max-width: min(100%, 100rem);
-    margin-inline: auto;
-    padding-inline: clamp(0.75rem, 2vw, 2rem);
+    padding-inline: 0;
   }
 }
 
-@media (display-mode: standalone) and (min-width: 1024px),
-  (display-mode: window-controls-overlay) and (min-width: 1024px) {
-  .app-shell {
-    padding-inline: clamp(1rem, 2.5vw, 2.5rem);
-  }
-}
 
