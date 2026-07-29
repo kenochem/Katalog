@@ -102,7 +102,12 @@ public/              # PWA, ikony, dane statyczne
 scripts/             # import Wapro / Baselinker / upload
 supabase/            # schema + migracje SQL
 data/                # eksporty lokalne (JSON)
+docs/                # notatki rozwojowe, roadmapa
 ```
+
+## Rozwój projektu
+
+Notatki: dług techniczny, roadmapa i backlog — [`docs/ROZWÓJ.md`](docs/ROZWÓJ.md).
 
 ## Licencja / dostęp
 
