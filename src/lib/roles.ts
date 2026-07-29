@@ -1,38 +1,47 @@
-export type UserRole = 'admin' | 'magazynier' | 'robol';
+export type AppRole = 'guest' | 'handlowiec' | 'magazynier' | 'operator' | 'admin';
 
-export const ROLE_LABELS: Record<UserRole, string> = {
-  admin: 'Admin',
+/** Role konta w bazie (bez guest — gość nie ma profilu). */
+export type AccountRole = Exclude<AppRole, 'guest'>;
+
+export type UserRole = AppRole;
+
+export const ACCOUNT_ROLES: AccountRole[] = [
+  'admin',
+  'operator',
+  'magazynier',
+  'handlowiec',
+];
+
+export const ROLE_LABELS: Record<AppRole, string> = {
+  guest: 'Gość',
+  handlowiec: 'Handlowiec',
   magazynier: 'Magazynier',
-  robol: 'Robol',
+  operator: 'Operator',
+  admin: 'Admin',
 };
 
-export const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
-  admin: 'Pełny dostęp (funkcje doprecyzujemy później)',
-  magazynier: 'Stany, etykiety, katalog (później)',
-  robol: 'Podstawowy podgląd / praca (później)',
+export const ROLE_DESCRIPTIONS: Record<AppRole, string> = {
+  guest: 'Podgląd i wyszukiwanie — bez edycji',
+  handlowiec: 'Podgląd, ulubione, Lens',
+  magazynier: 'Stany, etykiety, edycja, Lens',
+  operator: 'Pełna praca magazynowa — bez panelu użytkowników',
+  admin: 'Pełny dostęp + zarządzanie użytkownikami',
 };
 
-const ROLE_KEY = 'katalog-role';
-
-export function isUserRole(v: unknown): v is UserRole {
-  return v === 'admin' || v === 'magazynier' || v === 'robol';
+export function isAccountRole(v: unknown): v is AccountRole {
+  return (
+    v === 'admin' ||
+    v === 'operator' ||
+    v === 'magazynier' ||
+    v === 'handlowiec'
+  );
 }
 
-export function getRole(): UserRole {
-  try {
-    const v = localStorage.getItem(ROLE_KEY);
-    if (isUserRole(v)) return v;
-  } catch {
-    /* ignore */
-  }
-  return 'admin';
+export function isAppRole(v: unknown): v is AppRole {
+  return v === 'guest' || isAccountRole(v);
 }
 
-export function setRole(role: UserRole): void {
-  localStorage.setItem(ROLE_KEY, role);
-}
-
-/** Uprawnienia — szkielet; logowanie później. */
+/** Uprawnienia UI (ochrona RLS produktów — follow-up). */
 export type RoleAction =
   | 'editStock'
   | 'editProduct'
@@ -42,19 +51,32 @@ export type RoleAction =
   | 'printLabels'
   | 'manageFavorites'
   | 'switchCatalog'
-  | 'viewProgress';
+  | 'viewProgress'
+  | 'manageUsers';
 
-const MATRIX: Record<UserRole, Record<RoleAction, boolean>> = {
-  admin: {
-    editStock: true,
-    editProduct: true,
-    addProduct: true,
-    deleteImage: true,
+const ALL_FALSE: Record<RoleAction, boolean> = {
+  editStock: false,
+  editProduct: false,
+  addProduct: false,
+  deleteImage: false,
+  useLens: false,
+  printLabels: false,
+  manageFavorites: false,
+  switchCatalog: true,
+  viewProgress: false,
+  manageUsers: false,
+};
+
+const MATRIX: Record<AppRole, Record<RoleAction, boolean>> = {
+  guest: {
+    ...ALL_FALSE,
+    switchCatalog: true,
+  },
+  handlowiec: {
+    ...ALL_FALSE,
     useLens: true,
-    printLabels: true,
     manageFavorites: true,
     switchCatalog: true,
-    viewProgress: true,
   },
   magazynier: {
     editStock: true,
@@ -66,20 +88,34 @@ const MATRIX: Record<UserRole, Record<RoleAction, boolean>> = {
     manageFavorites: true,
     switchCatalog: true,
     viewProgress: true,
+    manageUsers: false,
   },
-  robol: {
-    editStock: false,
-    editProduct: false,
-    addProduct: false,
-    deleteImage: false,
+  operator: {
+    editStock: true,
+    editProduct: true,
+    addProduct: true,
+    deleteImage: true,
     useLens: true,
-    printLabels: false,
+    printLabels: true,
     manageFavorites: true,
     switchCatalog: true,
-    viewProgress: false,
+    viewProgress: true,
+    manageUsers: false,
+  },
+  admin: {
+    editStock: true,
+    editProduct: true,
+    addProduct: true,
+    deleteImage: true,
+    useLens: true,
+    printLabels: true,
+    manageFavorites: true,
+    switchCatalog: true,
+    viewProgress: true,
+    manageUsers: true,
   },
 };
 
-export function roleCan(role: UserRole, action: RoleAction): boolean {
+export function roleCan(role: AppRole, action: RoleAction): boolean {
   return MATRIX[role][action];
 }

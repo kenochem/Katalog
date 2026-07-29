@@ -1,8 +1,6 @@
-/* Minimalny service worker — pozwala dodać Katalog do ekranu głównego. */
-const CACHE = 'katalog-shell-v3';
+/* Minimalny service worker — PWA + świeży HTML przy każdym wejściu online. */
+const CACHE = 'katalog-shell-v4';
 const SHELL = [
-  '/',
-  '/index.html',
   '/manifest.webmanifest',
   '/favicon.svg',
   '/icons/icon-192.png',
@@ -30,18 +28,34 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
-  // Nie cache'uj API / dużych JSON embeddingów agresywnie przez SW
   if (url.pathname.startsWith('/data/')) return;
 
+  // Nawigacja / HTML — zawsze sieć (żeby PWA dostała nowy deploy)
+  const isHtml =
+    req.mode === 'navigate' ||
+    url.pathname === '/' ||
+    url.pathname.endsWith('.html') ||
+    url.pathname === '/index.html';
+
+  if (isHtml) {
+    event.respondWith(
+      fetch(req)
+        .then((res) => res)
+        .catch(() => caches.match('/index.html').then((c) => c || Response.error())),
+    );
+    return;
+  }
+
+  // Reszta: sieć, przy braku sieci — cache
   event.respondWith(
     fetch(req)
       .then((res) => {
-        const copy = res.clone();
-        if (res.ok && (url.pathname === '/' || url.pathname.endsWith('.html'))) {
+        if (res.ok && url.pathname.startsWith('/icons/')) {
+          const copy = res.clone();
           caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => undefined);
         }
         return res;
       })
-      .catch(() => caches.match(req).then((c) => c || caches.match('/index.html'))),
+      .catch(() => caches.match(req)),
   );
 });

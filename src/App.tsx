@@ -16,7 +16,8 @@ import {
   Star,
   Printer,
   Trash2,
-  UserRound,
+  LogOut,
+  Users,
   Download,
 } from 'lucide-react';
 import type { Product, Kit, View, CatalogType } from './types';
@@ -50,20 +51,16 @@ import { BarcodeScanner } from './components/BarcodeScanner';
 import { PhotoProgressView } from './components/PhotoProgressView';
 import { VisualSearchModal } from './components/VisualSearchModal';
 import { InstallAppHint, resetInstallHint } from './components/InstallAppHint';
+import { LoginGate } from './components/LoginGate';
+import { AdminUsersPanel } from './components/AdminUsersPanel';
 import {
   getDeferredInstall,
 } from './lib/pwaInstall';
-import {
-  getRole,
-  setRole,
-  roleCan,
-  ROLE_LABELS,
-  type UserRole,
-} from './lib/roles';
+import { useAuth } from './lib/auth';
+import { roleCan, ROLE_LABELS } from './lib/roles';
 
 const CATALOG_STORAGE_KEY = 'katalog-active-catalog';
 const SORT_STORAGE_KEY = 'katalog-sort';
-const ROLES: UserRole[] = ['admin', 'magazynier', 'robol'];
 
 function loadSavedSort(): CatalogSort {
   try {
@@ -86,6 +83,13 @@ function loadSavedCatalog(): CatalogType {
 
 export default function App() {
   const { toggleTheme, isDark } = useTheme();
+  const {
+    mode,
+    role,
+    displayLabel,
+    signOut,
+    exitGuest,
+  } = useAuth();
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [kits, setKits] = useState<Kit[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,7 +102,6 @@ export default function App() {
   const [stockFilter, setStockFilter] = useState<StockFilter>('all');
   const [imageFilter, setImageFilter] = useState<ImageFilter>('all');
   const [editMode, setEditMode] = useState(false);
-  const [role, setRoleState] = useState<UserRole>(() => getRole());
   const [favoriteIds, setFavoriteIds] = useState<string[]>(() => getFavoriteIds());
   const [labelQueue, setLabelQueue] = useState<LabelQueueItem[]>(() => getLabelQueue());
   const [stockBusyId, setStockBusyId] = useState<string | null>(null);
@@ -106,15 +109,16 @@ export default function App() {
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [showVisualSearch, setShowVisualSearch] = useState(false);
+  const [showAdminUsers, setShowAdminUsers] = useState(false);
   const [missingCategory, setMissingCategory] = useState('Wszystkie');
 
-  function changeRole(next: UserRole) {
-    setRole(next);
-    setRoleState(next);
-    if (!roleCan(next, 'editStock')) setEditMode(false);
-    if (!roleCan(next, 'printLabels') && view === 'labels') setView('catalog');
-    if (!roleCan(next, 'viewProgress') && view === 'progress') setView('catalog');
-  }
+  useEffect(() => {
+    if (!roleCan(role, 'editStock')) setEditMode(false);
+    if (!roleCan(role, 'printLabels') && view === 'labels') setView('catalog');
+    if (!roleCan(role, 'viewProgress') && view === 'progress') setView('catalog');
+    if (!roleCan(role, 'manageFavorites') && view === 'favorites') setView('catalog');
+  }, [role, view]);
+
   const products = useMemo(
     () => allProducts.filter((p) => (p.catalog || 'accessories') === activeCatalog),
     [allProducts, activeCatalog],
@@ -293,6 +297,18 @@ export default function App() {
     return counts;
   }, [products]);
 
+  if (mode === 'loading') {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-slate-950">
+        <Loader2 className="h-8 w-8 animate-spin text-brand-400" />
+      </div>
+    );
+  }
+
+  if (mode === 'gate') {
+    return <LoginGate />;
+  }
+
   return (
     <div className="mx-auto min-h-dvh w-full max-w-7xl">
       {/* Header przewija się — na mobile nie zabiera ekranu */}
@@ -340,22 +356,36 @@ export default function App() {
         </div>
 
         <div className="flex gap-1.5 overflow-x-auto px-3 pb-2 scrollbar-none sm:px-4">
-          <label className="relative flex shrink-0 items-center gap-1 rounded-lg border border-slate-700 px-2 py-1.5 text-slate-400">
-            <UserRound className="h-4 w-4 shrink-0" />
-            <select
-              value={role}
-              onChange={(e) => changeRole(e.target.value as UserRole)}
-              className="max-w-[6.5rem] cursor-pointer appearance-none bg-transparent text-xs font-medium text-slate-200 outline-none sm:max-w-[7.5rem] sm:text-sm"
-              title="Rola (logowanie później)"
-              aria-label="Wybierz rolę"
+          <div
+            className="flex shrink-0 items-center rounded-lg border border-slate-700 px-2.5 py-1.5"
+            title={ROLE_LABELS[role]}
+          >
+            <span className="max-w-[7rem] truncate text-xs font-medium text-slate-200 sm:max-w-[10rem] sm:text-sm">
+              {displayLabel}
+            </span>
+          </div>
+          {roleCan(role, 'manageUsers') && (
+            <button
+              type="button"
+              onClick={() => setShowAdminUsers(true)}
+              className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800 sm:gap-1.5 sm:px-3 sm:py-2 sm:text-sm"
+              title="Zarządzaj użytkownikami"
             >
-              {ROLES.map((r) => (
-                <option key={r} value={r} className="bg-slate-900 text-slate-100">
-                  {ROLE_LABELS[r]}
-                </option>
-              ))}
-            </select>
-          </label>
+              <Users className="h-4 w-4" />
+              Konta
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              if (mode === 'guest') exitGuest();
+              else void signOut();
+            }}
+            className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-100 sm:px-3 sm:py-2"
+            title={mode === 'guest' ? 'Wróć do logowania' : 'Wyloguj'}
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
           {roleCan(role, 'addProduct') && (
             <button
               type="button"
@@ -441,14 +471,16 @@ export default function App() {
             label="Katalog"
             count={products.length}
           />
-          <NavTab
-            active={view === 'favorites'}
-            onClick={() => setView('favorites')}
-            icon={<Star className="h-4 w-4" />}
-            label="Ulubione"
-            count={favoriteCount}
-            highlight={favoriteCount > 0}
-          />
+          {roleCan(role, 'manageFavorites') && (
+            <NavTab
+              active={view === 'favorites'}
+              onClick={() => setView('favorites')}
+              icon={<Star className="h-4 w-4" />}
+              label="Ulubione"
+              count={favoriteCount}
+              highlight={favoriteCount > 0}
+            />
+          )}
           {roleCan(role, 'printLabels') && (
             <NavTab
               active={view === 'labels'}
@@ -635,6 +667,10 @@ export default function App() {
         />
       )}
 
+      {showAdminUsers && roleCan(role, 'manageUsers') && (
+        <AdminUsersPanel onClose={() => setShowAdminUsers(false)} />
+      )}
+
       <InstallAppHint />
     </div>
   );
@@ -798,7 +834,7 @@ function CatalogView({
         <div className="flex flex-wrap gap-1.5">
           {(
             [
-              { id: 'all' as const, label: 'Stany' },
+              { id: 'all' as const, label: 'Wszystkie' },
               { id: 'in-stock' as const, label: 'Na stanie' },
               { id: 'out' as const, label: 'Brak' },
             ] as const
@@ -819,7 +855,7 @@ function CatalogView({
           <span className="mx-0.5 hidden h-6 w-px bg-slate-700 sm:inline-block" />
           {(
             [
-              { id: 'all' as const, label: 'Zdjęcia' },
+              { id: 'all' as const, label: 'Wszystkie' },
               { id: 'with' as const, label: 'Ze zdjęciem' },
               { id: 'without' as const, label: 'Bez zdjęcia' },
             ] as const
