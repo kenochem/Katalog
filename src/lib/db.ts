@@ -1,0 +1,99 @@
+import type { Product, Kit, KitItem, ProductVariant, CatalogType } from '../types';
+
+export interface ProductRow {
+  id: string;
+  sku: string;
+  name: string;
+  display_name: string;
+  category: string;
+  manufacturer: string;
+  ean: string;
+  image_url: string;
+  custom_image_url: string;
+  extra_images?: string[];
+  description: string;
+  has_image: boolean;
+  stock?: number;
+  stock_manual?: boolean;
+  catalog?: string;
+  variants?: ProductVariant[];
+  is_group?: boolean;
+}
+
+export interface KitRow {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  items: KitItem[];
+  image_url: string;
+  created_at: number;
+}
+
+export function rowToProduct(row: ProductRow): Product {
+  return {
+    id: row.id,
+    sku: row.sku,
+    name: row.name,
+    displayName: row.display_name,
+    category: row.category,
+    manufacturer: row.manufacturer,
+    ean: row.ean,
+    imageUrl: row.image_url,
+    customImageUrl: row.custom_image_url || undefined,
+    extraImageUrls: row.extra_images?.length ? row.extra_images : undefined,
+    description: row.description,
+    hasImage: row.has_image,
+    stock: Number(row.stock ?? 0),
+    stockManual: row.stock_manual || false,
+    catalog: (row.catalog === 'shop' ? 'shop' : 'accessories') as CatalogType,
+    variants: row.variants?.length ? row.variants : undefined,
+    isGroup: row.is_group || !!(row.variants?.length),
+  };
+}
+
+export function productToRow(p: Product): ProductRow {
+  return {
+    id: p.id,
+    sku: p.sku,
+    name: p.name,
+    display_name: p.displayName,
+    category: p.category,
+    manufacturer: p.manufacturer,
+    ean: p.ean,
+    image_url: p.imageUrl,
+    custom_image_url: p.customImageUrl || '',
+    extra_images: p.extraImageUrls || [],
+    description: p.description,
+    has_image: p.hasImage,
+    stock: p.stock ?? 0,
+    stock_manual: p.stockManual || false,
+    catalog: p.catalog || 'accessories',
+    variants: p.variants || [],
+    is_group: p.isGroup || false,
+  };
+}
+
+export function rowToKit(row: KitRow): Kit {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    category: row.category,
+    items: row.items,
+    imageUrl: row.image_url || undefined,
+    createdAt: row.created_at,
+  };
+}
+
+export function kitToRow(k: Kit): KitRow {
+  return {
+    id: k.id,
+    name: k.name,
+    description: k.description,
+    category: k.category,
+    items: k.items,
+    image_url: k.imageUrl || '',
+    created_at: k.createdAt,
+  };
+}

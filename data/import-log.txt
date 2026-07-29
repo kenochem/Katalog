@@ -1,0 +1,5 @@
+﻿Reading: Artyku│y  przegl╣danie_20260727.xls
+Baselinker images available: 2418
+Exported 1228 products to C:\Users\Biuro\Projects\katalog\data\products.json
+With images: 429, without: 799
+Categories: {'Inne czŕťci': 354, 'Dysze': 289, 'Lance': 115, 'Adaptery': 114, 'Zawory': 63, 'Pistolety': 61, 'Filtry': 41, 'Ko˝cˇwki odkurzaczy': 40, 'Szybkoz│╣cza': 32, 'Zbiorniki': 28, 'Pianownice': 25, 'Obrotowe z│╣cza': 17, 'Manometry': 11, 'Rurki': 10, 'Trˇjniki': 8, 'Szczotki do myjni': 8, 'Zestawy piaskowania': 6, 'Kolanka': 5, 'Opryskiwacze': 1}

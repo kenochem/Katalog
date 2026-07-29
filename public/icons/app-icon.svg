@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!-- Pelne tlo edge-to-edge (bez czarnej ramki — Android/iOS maskuje do kola) -->
+  <rect width="512" height="512" fill="#33b33b"/>
+  <!-- Symbol w safe zone (~80% srodka) -->
+  <path d="M256 108 L390 175 V337 L256 404 L122 337 V175 Z" stroke="#ffffff" stroke-width="30" stroke-linejoin="round" fill="none"/>
+  <circle cx="256" cy="256" r="52" fill="#ffffff"/>
+  <path d="M338 142 C372 118 408 138 412 174 C376 168 352 154 338 142 Z" fill="#d8f5da"/>
+</svg>

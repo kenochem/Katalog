@@ -1,0 +1,41 @@
+{
+  "name": "katalog",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "import:supabase": "node --env-file=.env scripts/upload-to-supabase.mjs",
+    "import:supabase:all": "node --env-file=.env scripts/upload-to-supabase.mjs all",
+    "import:supabase:shop": "node --env-file=.env scripts/upload-to-supabase.mjs shop",
+    "import:wapro": "py scripts/import-wapro.py",
+    "import:baselinker": "py scripts/import-baselinker.py",
+    "embeddings:shop": "node scripts/build-shop-embeddings.mjs",
+    "embeddings:enrich": "node scripts/enrich-shop-embeddings.mjs",
+    "deploy": "npm run build && firebase deploy --only hosting"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.4",
+    "@xenova/transformers": "^2.17.2",
+    "fuse.js": "^7.1.0",
+    "html5-qrcode": "^2.3.8",
+    "jsbarcode": "^3.12.3",
+    "lucide-react": "^0.487.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "tesseract.js": "^5.1.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.4",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@vitejs/plugin-react": "^4.4.1",
+    "firebase-tools": "^15.24.0",
+    "sharp": "^0.35.3",
+    "tailwindcss": "^4.1.4",
+    "typescript": "~5.8.3",
+    "vite": "^6.3.5"
+  }
+}

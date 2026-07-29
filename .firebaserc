@@ -1,0 +1,13 @@
+{
+  "projects": {
+    "default": "kenochem-f4a5b"
+  },
+  "targets": {
+    "kenochem-f4a5b": {
+      "hosting": {
+        "katalog": ["kenochem-katalog"],
+        "default": ["kenochem-f4a5b"]
+      }
+    }
+  }
+}

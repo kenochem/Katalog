@@ -1,0 +1,51 @@
+import type { Product } from '../types';
+
+const STORAGE_KEY = 'katalog-local-products';
+
+export function getLocalProducts(): Product[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as Product[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveLocalProduct(product: Product): void {
+  const existing = getLocalProducts();
+  const idx = existing.findIndex((p) => p.id === product.id);
+  if (idx >= 0) {
+    existing[idx] = product;
+  } else {
+    existing.push(product);
+  }
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+}
+
+export function mergeProducts(base: Product[], local: Product[]): Product[] {
+  const map = new Map(base.map((p) => [p.id, p]));
+  for (const p of local) {
+    const existing = map.get(p.id);
+    if (existing) {
+      map.set(p.id, {
+        ...existing,
+        ...p,
+        variants: p.variants?.length ? p.variants : existing.variants,
+        isGroup: p.isGroup ?? existing.isGroup,
+        stock: p.stockManual
+          ? p.stock
+          : existing.stockManual
+            ? existing.stock
+            : (p.stock ?? existing.stock),
+        stockManual: p.stockManual || existing.stockManual,
+        catalog: p.catalog || existing.catalog || 'accessories',
+        extraImageUrls: p.extraImageUrls?.length
+          ? p.extraImageUrls
+          : existing.extraImageUrls,
+      });
+    } else {
+      map.set(p.id, p);
+    }
+  }
+  return Array.from(map.values());
+}

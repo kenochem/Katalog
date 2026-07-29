@@ -1,0 +1,18 @@
+﻿py : Traceback (most recent call last):
+At C:\Users\Biuro\AppData\Local\Temp\ps-script-1c40944c-ee77-4904-a12b-37a74b3674e4.ps1:76 char:1
++ py -c "
++ ~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "<string>", line 27, in <module>
+    print(' ', s, '|', n[:70])
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Biuro\AppData\Local\Python\pythoncore-3.14-64\Lib\encodings\cp1250.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 1-2: character maps to <undefined>
+Total products: 5664
+Top SKU prefixes: [('HYD', 1061), ('INN', 584), ('KAL', 301), ('GRA', 196), ('MER', 189), ('ECO', 177), ('CAR', 167), ('CID', 166), ('DRA', 163), ('ATA', 161), ('LIN', 146), ('SON', 142), ('KWA', 140), ('VIK', 126), ('DAF', 124), ('TEN', 121), ('KAT', 112), ('ARO', 108), ('DET', 98), ('LAN', 87)]
+HYD products: 1061
+  HYD000489 | 
