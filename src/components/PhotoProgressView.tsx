@@ -2,6 +2,9 @@ import { ImageOff, Camera, ChevronRight } from 'lucide-react';
 import { useMemo } from 'react';
 import type { Product } from '../types';
 import { getProductImage } from '../lib/products';
+import { formatStock } from '../lib/format';
+
+export { formatStock };
 
 interface CategoryPhotoStats {
   category: string;
@@ -31,12 +34,6 @@ function computePhotoStats(products: Product[]): CategoryPhotoStats[] {
     .filter((s) => s.total > 0)
     .sort((a, b) => a.percent - b.percent || a.category.localeCompare(b.category, 'pl'));
 }
-
-function formatStock(value: number): string {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
-}
-
-export { formatStock };
 
 interface PhotoProgressViewProps {
   products: Product[];
@@ -123,7 +120,7 @@ export function PhotoProgressView({ products, onOpenMissing }: PhotoProgressView
                     />
                   </div>
                   {row.missing > 0 && (
-                    <p className="mt-1 text-xs text-amber-300/80">
+                    <p className="mt-1 text-xs text-amber-800 dark:text-amber-200/90">
                       Brakuje {row.missing} zdjęć
                     </p>
                   )}

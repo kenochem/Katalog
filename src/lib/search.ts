@@ -97,8 +97,15 @@ export function applyCatalogFilters(
   return sortProducts(result, opts.sort);
 }
 
+type FuseProduct = Product & {
+  variantSkus: string;
+  variantNames: string;
+  variantEans: string;
+  eanNormalized: string;
+};
+
 export function createProductSearch(products: Product[]) {
-  const expanded = products.map((p) => ({
+  const expanded: FuseProduct[] = products.map((p) => ({
     ...p,
     variantSkus: p.variants?.map((v) => v.sku).join(' ') || '',
     variantNames: p.variants?.map((v) => v.name).join(' ') || '',
@@ -125,25 +132,50 @@ export function createProductSearch(products: Product[]) {
   });
 }
 
+/** Cache Fuse — budowa indeksu przy każdym znaku mulił UI. */
+let fuseCache: {
+  products: Product[];
+  category: string;
+  list: Product[];
+  fuse: Fuse<FuseProduct>;
+} | null = null;
+
+function getCachedFuse(products: Product[], category: string) {
+  if (
+    fuseCache &&
+    fuseCache.products === products &&
+    fuseCache.category === category
+  ) {
+    return fuseCache;
+  }
+  let list = products;
+  if (category && category !== 'Wszystkie') {
+    list = products.filter((p) => p.category === category);
+  }
+  const fuse = createProductSearch(list);
+  fuseCache = { products, category, list, fuse };
+  return fuseCache;
+}
+
 export function filterProducts(
   products: Product[],
   search: string,
   category: string,
 ): Product[] {
-  let result = products;
-
-  if (category && category !== 'Wszystkie') {
-    result = result.filter((p) => p.category === category);
+  const q = search.trim();
+  if (q.length < 2) {
+    if (category && category !== 'Wszystkie') {
+      return products.filter((p) => p.category === category);
+    }
+    return products;
   }
 
-  const q = search.trim();
-  if (q.length < 2) return result;
-
+  const { list, fuse } = getCachedFuse(products, category);
   const lower = q.toLowerCase();
   const eanQuery = normalizeEan(q);
 
   if (eanQuery.length >= 8) {
-    const eanMatches = result.filter((p) =>
+    const eanMatches = list.filter((p) =>
       productEans(p).some(
         (ean) => ean === eanQuery || ean.endsWith(eanQuery) || eanQuery.endsWith(ean),
       ),
@@ -151,27 +183,26 @@ export function filterProducts(
     if (eanMatches.length > 0) return eanMatches;
   }
 
-  const exactSku = result.filter(
+  const exactSku = list.filter(
     (p) =>
       p.sku.toLowerCase() === lower ||
       p.variants?.some((v) => v.sku.toLowerCase() === lower),
   );
   if (exactSku.length > 0) return exactSku;
 
-  const prefixSku = result.filter(
+  const prefixSku = list.filter(
     (p) =>
       p.sku.toLowerCase().startsWith(lower) ||
       p.variants?.some((v) => v.sku.toLowerCase().startsWith(lower)),
   );
   if (prefixSku.length > 0 && prefixSku.length <= 20) return prefixSku;
 
-  const containsSku = result.filter(
+  const containsSku = list.filter(
     (p) =>
       p.sku.toLowerCase().includes(lower) ||
       p.variants?.some((v) => v.sku.toLowerCase().includes(lower)),
   );
   if (containsSku.length > 0 && containsSku.length <= 30) return containsSku;
 
-  const fuse = createProductSearch(result);
   return fuse.search(q).map((r) => r.item);
 }

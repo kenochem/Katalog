@@ -1,8 +1,9 @@
-import { Plus, Trash2, Package, ChevronDown, ChevronUp, Save, X } from 'lucide-react';
-import { useState } from 'react';
+import { Plus, Trash2, Package, ChevronDown, ChevronUp, Save, X, ShoppingCart, Camera, Upload, Loader2, ImageOff } from 'lucide-react';
+import { useRef, useState } from 'react';
 import type { Kit, KitItem, Product } from '../types';
-import { saveKit, deleteKit } from '../lib/products';
-import { SearchBar } from './ProductCard';
+import { saveKit, deleteKit, getProductImage, uploadKitImage } from '../lib/products';
+import { addKitToOrderDraft } from '../lib/orderDraft';
+import { SearchBar } from './SearchBar';
 import { BarcodeScanner } from './BarcodeScanner';
 import { filterProducts } from '../lib/search';
 import { showToast } from '../lib/toast';
@@ -11,9 +12,17 @@ interface KitsViewProps {
   kits: Kit[];
   products: Product[];
   onKitsChange: () => void;
+  canAddToOrder?: boolean;
+  onOrderDraftChange?: () => void;
 }
 
-export function KitsView({ kits, products, onKitsChange }: KitsViewProps) {
+export function KitsView({
+  kits,
+  products,
+  onKitsChange,
+  canAddToOrder,
+  onOrderDraftChange,
+}: KitsViewProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showEditor, setShowEditor] = useState(false);
   const [editingKit, setEditingKit] = useState<Kit | null>(null);
@@ -69,6 +78,20 @@ export function KitsView({ kits, products, onKitsChange }: KitsViewProps) {
                   onKitsChange();
                 }
               }}
+              onAddToOrder={
+                canAddToOrder
+                  ? () => {
+                      addKitToOrderDraft(kit, 1, (id, sku) => {
+                        const p =
+                          products.find((x) => x.id === id) ||
+                          products.find((x) => x.sku === sku);
+                        return p ? getProductImage(p) || undefined : undefined;
+                      });
+                      onOrderDraftChange?.();
+                      showToast(`Zestaw „${kit.name}” dodany do zamówienia`, 'ok');
+                    }
+                  : undefined
+              }
             />
           ))}
         </div>
@@ -100,6 +123,7 @@ function KitCard({
   onToggle,
   onEdit,
   onDelete,
+  onAddToOrder,
 }: {
   kit: Kit;
   products: Product[];
@@ -107,6 +131,7 @@ function KitCard({
   onToggle: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onAddToOrder?: () => void;
 }) {
   const productMap = new Map(products.map((p) => [p.id, p]));
 
@@ -117,8 +142,12 @@ function KitCard({
         onClick={onToggle}
         className="flex w-full items-center gap-3 p-4 text-left"
       >
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-500/15">
-          <Package className="h-6 w-6 text-brand-400" />
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-brand-500/15">
+          {kit.imageUrl ? (
+            <img src={kit.imageUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <Package className="h-6 w-6 text-brand-400" />
+          )}
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="font-medium text-slate-100">{kit.name}</h3>
@@ -141,11 +170,23 @@ function KitCard({
           <ul className="space-y-2">
             {kit.items.map((item, i) => {
               const prod = productMap.get(item.productId);
+              const img = prod ? getProductImage(prod) : null;
               return (
                 <li
                   key={`${item.productId}-${i}`}
                   className="flex items-center gap-3 rounded-lg bg-slate-800/50 px-3 py-2"
                 >
+                  {img ? (
+                    <img
+                      src={img}
+                      alt=""
+                      className="h-10 w-10 shrink-0 rounded-md object-contain bg-slate-900"
+                    />
+                  ) : (
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-slate-900 text-slate-600">
+                      <ImageOff className="h-4 w-4" />
+                    </div>
+                  )}
                   <span className="font-mono text-xs text-brand-400">
                     {item.quantity}×
                   </span>
@@ -159,7 +200,17 @@ function KitCard({
               );
             })}
           </ul>
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 flex flex-wrap gap-2">
+            {onAddToOrder && (
+              <button
+                type="button"
+                onClick={onAddToOrder}
+                className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-500"
+              >
+                <ShoppingCart className="h-3.5 w-3.5" />
+                Do zamówienia
+              </button>
+            )}
             <button
               type="button"
               onClick={onEdit}
@@ -196,9 +247,14 @@ function KitEditor({
   const [description, setDescription] = useState(kit?.description ?? '');
   const [category, setCategory] = useState(kit?.category ?? 'Zestawy');
   const [items, setItems] = useState<KitItem[]>(kit?.items ?? []);
+  const [imageUrl, setImageUrl] = useState(kit?.imageUrl ?? '');
+  const [pendingImage, setPendingImage] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState(kit?.imageUrl ?? '');
   const [search, setSearch] = useState('');
   const [saving, setSaving] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
 
   const filtered = search.trim().length >= 2
     ? filterProducts(products, search, 'Wszystkie').slice(0, 8)
@@ -228,6 +284,11 @@ function KitEditor({
     setSearch('');
   }
 
+  function pickImage(file: File) {
+    setPendingImage(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  }
+
   async function handleSave() {
     if (!name.trim() || items.length === 0) {
       showToast('Podaj nazwę i dodaj co najmniej 1 element', 'warn');
@@ -235,14 +296,19 @@ function KitEditor({
     }
     setSaving(true);
     try {
-      await saveKit({
+      const id = await saveKit({
         id: kit?.id,
         name: name.trim(),
         description: description.trim(),
         category,
         items,
+        imageUrl: imageUrl || undefined,
         createdAt: kit?.createdAt ?? Date.now(),
       });
+      if (pendingImage) {
+        const url = await uploadKitImage(id, pendingImage);
+        setImageUrl(url);
+      }
       showToast('Zestaw zapisany', 'ok');
       onSaved();
     } catch (err) {
@@ -276,6 +342,59 @@ function KitEditor({
         </div>
 
         <div className="space-y-4 p-4">
+          <Field label="Zdjęcie zestawu">
+            <div className="flex items-center gap-3">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-800">
+                {previewUrl ? (
+                  <img src={previewUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <Package className="h-8 w-8 text-slate-600" />
+                )}
+              </div>
+              <div className="flex flex-1 flex-col gap-2">
+                <input
+                  ref={cameraRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) pickImage(f);
+                    e.target.value = '';
+                  }}
+                />
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) pickImage(f);
+                    e.target.value = '';
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => cameraRef.current?.click()}
+                  className="flex items-center justify-center gap-1.5 rounded-lg bg-brand-600 py-2 text-xs font-medium text-white"
+                >
+                  <Camera className="h-3.5 w-3.5" />
+                  Zdjęcie
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  className="flex items-center justify-center gap-1.5 rounded-lg border border-slate-700 py-2 text-xs font-medium text-slate-300"
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  Plik
+                </button>
+              </div>
+            </div>
+          </Field>
+
           <Field label="Nazwa zestawu">
             <input
               value={name}
@@ -313,22 +432,36 @@ function KitEditor({
             />
             {filtered.length > 0 && (
               <ul className="mt-2 max-h-48 overflow-y-auto rounded-xl border border-slate-700">
-                {filtered.map((p) => (
-                  <li key={p.id}>
-                    <button
-                      type="button"
-                      onClick={() => addItem(p)}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-slate-800"
-                    >
-                      <span className="font-mono text-xs text-brand-400">
-                        {p.sku}
-                      </span>
-                      <span className="truncate text-slate-300">
-                        {p.displayName}
-                      </span>
-                    </button>
-                  </li>
-                ))}
+                {filtered.map((p) => {
+                  const img = getProductImage(p);
+                  return (
+                    <li key={p.id}>
+                      <button
+                        type="button"
+                        onClick={() => addItem(p)}
+                        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-slate-800"
+                      >
+                        {img ? (
+                          <img
+                            src={img}
+                            alt=""
+                            className="h-9 w-9 shrink-0 rounded-md object-contain bg-slate-900"
+                          />
+                        ) : (
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-slate-900 text-slate-600">
+                            <ImageOff className="h-4 w-4" />
+                          </div>
+                        )}
+                        <span className="font-mono text-xs text-brand-400">
+                          {p.sku}
+                        </span>
+                        <span className="truncate text-slate-300">
+                          {p.displayName}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </Field>
@@ -339,40 +472,53 @@ function KitEditor({
                 Elementy ({items.length})
               </p>
               <ul className="space-y-1">
-                {items.map((item, i) => (
-                  <li
-                    key={`${item.productId}-${i}`}
-                    className="flex items-center gap-2 rounded-lg bg-slate-800/50 px-3 py-2"
-                  >
-                    <input
-                      type="number"
-                      min={1}
-                      value={item.quantity}
-                      onChange={(e) => {
-                        const qty = parseInt(e.target.value) || 1;
-                        setItems(
-                          items.map((it, idx) =>
-                            idx === i ? { ...it, quantity: qty } : it,
-                          ),
-                        );
-                      }}
-                      className="w-12 rounded border border-slate-600 bg-slate-900 px-1 py-0.5 text-center text-sm"
-                    />
-                    <span className="font-mono text-xs text-brand-400">
-                      {item.sku}
-                    </span>
-                    <span className="flex-1 truncate text-sm text-slate-300">
-                      {item.name}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setItems(items.filter((_, idx) => idx !== i))}
-                      className="text-red-400 hover:text-red-300"
+                {items.map((item, i) => {
+                  const prod = products.find((p) => p.id === item.productId);
+                  const img = prod ? getProductImage(prod) : null;
+                  return (
+                    <li
+                      key={`${item.productId}-${i}`}
+                      className="flex items-center gap-2 rounded-lg bg-slate-800/50 px-3 py-2"
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </li>
-                ))}
+                      {img ? (
+                        <img
+                          src={img}
+                          alt=""
+                          className="h-9 w-9 shrink-0 rounded-md object-contain bg-slate-900"
+                        />
+                      ) : (
+                        <div className="h-9 w-9 shrink-0 rounded-md bg-slate-900" />
+                      )}
+                      <input
+                        type="number"
+                        min={1}
+                        value={item.quantity}
+                        onChange={(e) => {
+                          const qty = parseInt(e.target.value) || 1;
+                          setItems(
+                            items.map((it, idx) =>
+                              idx === i ? { ...it, quantity: qty } : it,
+                            ),
+                          );
+                        }}
+                        className="w-12 rounded border border-slate-600 bg-slate-900 px-1 py-0.5 text-center text-sm"
+                      />
+                      <span className="font-mono text-xs text-brand-400">
+                        {item.sku}
+                      </span>
+                      <span className="flex-1 truncate text-sm text-slate-300">
+                        {item.name}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setItems(items.filter((_, idx) => idx !== i))}
+                        className="text-red-400 hover:text-red-300"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}
@@ -383,7 +529,7 @@ function KitEditor({
             onClick={handleSave}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 py-3 text-sm font-medium text-white transition hover:bg-brand-500 disabled:opacity-50"
           >
-            <Save className="h-5 w-5" />
+            {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
             {saving ? 'Zapisywanie...' : 'Zapisz zestaw'}
           </button>
         </div>

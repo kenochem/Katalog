@@ -38,7 +38,7 @@ npm run dev            # http://localhost:5173
 
 ### 1. Projekt + schemat
 
-Dashboard → **SQL Editor** → uruchom `supabase/schema.sql`, potem migracje z `supabase/` (w tym **`migration-auth-profiles.sql`**).
+Dashboard → **SQL Editor** → uruchom `supabase/schema.sql`, potem migracje z `supabase/` (w tym **`migration-auth-profiles.sql`**, **`migration-user-favorites.sql`**).
 
 ### 2. Auth (Email) — bez publicznej rejestracji
 
@@ -78,29 +78,58 @@ Bucket `product-images` (public) + policies jak w `schema.sql`.
 ```env
 VITE_SUPABASE_URL=https://xxxxx.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJ...
+# opcjonalnie — zamówienie → Discord (webhook)
+# VITE_DISCORD_ORDERS_WEBHOOK=https://discord.com/api/webhooks/ID/TOKEN
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
 ```
 
 `SUPABASE_SERVICE_ROLE_KEY` tylko do skryptów / CLI — nie commituj `.env`.
 
+### Discord — zamówienia z katalogu
+
+1. Na Discordzie: kanał (np. `#zamowienia`) → **Edytuj kanał** → **Integracje** → **Webhooki** → **Nowy webhook**.
+2. Skopiuj URL webhooka (`https://discord.com/api/webhooks/...`).
+3. W pliku `.env` (lokalnie) i w zmiennych builda Firebase / CI ustaw:
+   ```env
+   VITE_DISCORD_ORDERS_WEBHOOK=https://discord.com/api/webhooks/...
+   ```
+4. Zrób **nowy build i deploy** (`npm run deploy`) — zmienne `VITE_*` wchodzą do bundla przy buildzie, nie działają „na żywo” po samym zapisaniu `.env` na serwerze.
+5. W katalogu: **Zamówienie** → pozycje + klient → **Discord**. Wiadomość zaczyna się od `Handlowiec: {imię}` (np. Kamil).
+
+Bez webhooka przycisk **Discord** kopiuje tekst do schowka (można wkleić ręcznie).
+
+### CRM — klienci, NIP, historia
+
+1. W Supabase SQL Editor uruchom [`supabase/migration-crm-clients-orders.sql`](supabase/migration-crm-clients-orders.sql).
+2. Deploy Edge Function (lookup NIP → biała lista VAT MF):
+   ```bash
+   npx supabase functions deploy nip-lookup
+   ```
+3. W aplikacji (zalogowany handlowiec/operator/admin): **Zamówienie** → zakładki **Aktualne / Klienci / Historia**.
+4. **Po NIP** — wyszukuje firmę w MF; możesz nadać własną nazwę (`display_name`) i zapisać na swoją listę.
+5. Po **Discord** zamówienie trafia do historii (i draft się czyści). **Zapisz** zapisuje bez wysyłki.
+
+Klienci i historia są **tylko Twoje** (RLS po `auth.uid()`).
+
 ## Role (skrót)
 
 | Rola | Uprawnienia |
 |------|-------------|
-| Gość | Podgląd + wyszukiwanie |
-| Handlowiec | + ulubione, Lens |
-| Magazynier | + stany, etykiety, edycja |
-| Operator | + dodawanie produktów |
+| Gość | Podgląd katalogu ze zdjęciami — bez edycji, etykiet, zamówień, usuwania |
+| Handlowiec | Zamówienia, oferty, zdjęcia (+), katalog — bez stanów, usuwania zdjęć, kont |
+| Magazynier | Stany, etykiety, dodawanie zdjęć — bez zamówień, zestawów, edycji produktów |
+| Operator | Pełna praca — bez panelu kont |
 | Admin | + panel **Konta** |
 
 Sesja zostaje w przeglądarce (PWA) — po zalogowaniu nie trzeba wpisywać hasła przy każdym wejściu. Gość: wybór na czas karty (`sessionStorage`).
 
-### Edge Function `admin-users` (tworzenie kont z panelu)
+### Edge Functions
 
 ```bash
 npx supabase login
 npx supabase link --project-ref fgkkvbniyjysgqcjuxpl
 npx supabase functions deploy admin-users
+npx supabase functions deploy nip-lookup
 ```
 
 ## Sync stanów z WAPRO (cykliczny, stałe)

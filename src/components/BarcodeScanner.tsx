@@ -98,9 +98,9 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
 
         <div className="relative bg-black">
           {starting && (
-            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-slate-950/80">
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-black/80">
               <Loader2 className="h-8 w-8 animate-spin text-brand-400" />
-              <p className="text-sm text-slate-400">Uruchamianie kamery...</p>
+              <p className="text-sm text-white/80">Uruchamianie kamery...</p>
             </div>
           )}
           <div id={containerId} className="min-h-[280px] w-full" />

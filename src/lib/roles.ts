@@ -21,10 +21,12 @@ export const ROLE_LABELS: Record<AppRole, string> = {
 };
 
 export const ROLE_DESCRIPTIONS: Record<AppRole, string> = {
-  guest: 'Podgląd i wyszukiwanie — bez edycji',
-  handlowiec: 'Podgląd, ulubione, Lens',
-  magazynier: 'Stany, etykiety, edycja, Lens',
-  operator: 'Pełna praca magazynowa — bez panelu użytkowników',
+  guest: 'Podgląd katalogu ze zdjęciami — bez edycji, etykiet, zamówień i usuwania',
+  handlowiec:
+    'Zamówienia, oferty, zdjęcia (dodawanie), katalog — bez stanów, usuwania zdjęć i kont',
+  magazynier:
+    'Stany, etykiety, dodawanie zdjęć — bez zamówień, zestawów, edycji produktów i kont',
+  operator: 'Pełna praca (stany, produkty, zestawy, zamówienia) — bez panelu kont',
   admin: 'Pełny dostęp + zarządzanie użytkownikami',
 };
 
@@ -46,73 +48,97 @@ export type RoleAction =
   | 'editStock'
   | 'editProduct'
   | 'addProduct'
+  | 'uploadImage'
   | 'deleteImage'
   | 'useLens'
   | 'printLabels'
   | 'manageFavorites'
+  | 'manageKits'
   | 'switchCatalog'
   | 'viewProgress'
-  | 'manageUsers';
+  | 'viewImages'
+  | 'manageUsers'
+  | 'useCrm';
 
 const ALL_FALSE: Record<RoleAction, boolean> = {
   editStock: false,
   editProduct: false,
   addProduct: false,
+  uploadImage: false,
   deleteImage: false,
   useLens: false,
   printLabels: false,
   manageFavorites: false,
-  switchCatalog: true,
+  manageKits: false,
+  switchCatalog: false,
   viewProgress: false,
+  viewImages: false,
   manageUsers: false,
+  useCrm: false,
 };
 
 const MATRIX: Record<AppRole, Record<RoleAction, boolean>> = {
   guest: {
     ...ALL_FALSE,
     switchCatalog: true,
+    viewImages: true, // zdjęcia tak; upload/delete zostają false
   },
   handlowiec: {
     ...ALL_FALSE,
+    editProduct: true,
+    addProduct: true,
+    uploadImage: true,
     useLens: true,
+    printLabels: true,
     manageFavorites: true,
+    manageKits: true,
     switchCatalog: true,
+    viewProgress: true,
+    viewImages: true,
+    useCrm: true,
   },
   magazynier: {
+    ...ALL_FALSE,
     editStock: true,
-    editProduct: true,
-    addProduct: false,
-    deleteImage: true,
+    uploadImage: true,
     useLens: true,
     printLabels: true,
     manageFavorites: true,
     switchCatalog: true,
     viewProgress: true,
-    manageUsers: false,
+    viewImages: true,
   },
   operator: {
     editStock: true,
     editProduct: true,
     addProduct: true,
+    uploadImage: true,
     deleteImage: true,
     useLens: true,
     printLabels: true,
     manageFavorites: true,
+    manageKits: true,
     switchCatalog: true,
     viewProgress: true,
+    viewImages: true,
     manageUsers: false,
+    useCrm: true,
   },
   admin: {
     editStock: true,
     editProduct: true,
     addProduct: true,
+    uploadImage: true,
     deleteImage: true,
     useLens: true,
     printLabels: true,
     manageFavorites: true,
+    manageKits: true,
     switchCatalog: true,
     viewProgress: true,
+    viewImages: true,
     manageUsers: true,
+    useCrm: true,
   },
 };
 

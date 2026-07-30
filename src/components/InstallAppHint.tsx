@@ -129,7 +129,7 @@ export function InstallAppHint() {
 
   return (
     <div
-      className="pointer-events-auto fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-3 right-3 z-[80] mx-auto max-w-lg rounded-2xl border border-brand-500/60 bg-[#0b1220] p-3.5 shadow-2xl shadow-black/50 sm:left-auto sm:right-4"
+      className="pointer-events-auto fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-3 right-3 z-[80] mx-auto max-w-lg rounded-2xl border border-brand-500/60 bg-[#0b1220] p-3.5 shadow-2xl shadow-black/50 sm:left-auto sm:right-4 lg:bottom-[max(0.75rem,env(safe-area-inset-bottom))]"
       role="dialog"
       aria-label="Zainstaluj aplikację"
     >

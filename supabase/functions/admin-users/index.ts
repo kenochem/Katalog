@@ -37,15 +37,18 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) return json({ error: 'Brak Authorization' }, 401);
 
+    const jwt = authHeader.replace(/^Bearer\s+/i, '').trim();
+    if (!jwt) return json({ error: 'Brak tokenu' }, 401);
+
     const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
+      global: { headers: { Authorization: `Bearer ${jwt}` } },
     });
     const admin = createClient(supabaseUrl, serviceKey);
 
     const {
       data: { user },
       error: userErr,
-    } = await userClient.auth.getUser();
+    } = await userClient.auth.getUser(jwt);
     if (userErr || !user) return json({ error: 'Nieautoryzowany' }, 401);
 
     const { data: caller, error: profileErr } = await admin

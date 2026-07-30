@@ -16,7 +16,7 @@ import {
   recognizeProductFromImage,
   type VisualMatch,
 } from '../lib/visualSearch';
-import { formatStock } from './PhotoProgressView';
+import { formatStock } from '../lib/format';
 
 interface VisualSearchModalProps {
   products: Product[];
@@ -211,9 +211,9 @@ export function VisualSearchModal({
                   </div>
                 )}
                 {busy && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-950/70 px-4 text-center">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/65 px-4 text-center">
                     <Loader2 className="h-8 w-8 animate-spin text-brand-400" />
-                    <p className="text-sm text-slate-200">{statusText || 'Analiza...'}</p>
+                    <p className="text-sm text-white">{statusText || 'Analiza...'}</p>
                   </div>
                 )}
               </div>

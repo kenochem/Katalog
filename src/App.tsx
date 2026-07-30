@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useDeferredValue, lazy, Suspense, useRef } from 'react';
 import {
   Search,
   Layers,
@@ -17,15 +17,16 @@ import {
   Trash2,
   LogOut,
   Users,
-  Download,
   LayoutGrid,
   Rows2,
   Square,
+  SlidersHorizontal,
+  X,
+  ShoppingCart,
 } from 'lucide-react';
 import type { Product, Kit, View, CatalogType } from './types';
 import {
   CATALOG_LABELS,
-  CATALOG_SUBTITLES,
   deriveCategories,
 } from './types';
 import { fetchProducts, fetchKits, getProductImage, updateProduct } from './lib/products';
@@ -38,7 +39,13 @@ import {
   type ImageFilter,
 } from './lib/search';
 import { useTheme } from './lib/theme';
-import { getFavoriteIds, toggleFavorite } from './lib/favorites';
+import { loadAndMergeFavorites, getLocalFavoriteIds, setCloudFavorite, setLocalFavorite } from './lib/favorites';
+import {
+  getOrderDraft,
+  addToOrderDraft,
+  removeDraftItem,
+  setDraftItemQty,
+} from './lib/orderDraft';
 import { showToast } from './lib/toast';
 import {
   getLabelQueue,
@@ -46,22 +53,49 @@ import {
   clearLabelQueue,
   type LabelQueueItem,
 } from './lib/labelQueue';
-import { printShelfLabels } from './lib/printLabel';
-import { ProductCard, ProductDetail, SearchBar } from './components/ProductCard';
-import { KitsView } from './components/KitsView';
-import { AddProductModal } from './components/AddProductModal';
-import { BarcodeScanner } from './components/BarcodeScanner';
-import { PhotoProgressView } from './components/PhotoProgressView';
-import { VisualSearchModal } from './components/VisualSearchModal';
+import { ProductCard } from './components/ProductCard';
+import { SearchBar } from './components/SearchBar';
+import { ProductGrid } from './components/ProductGrid';
 import { InstallAppHint, resetInstallHint } from './components/InstallAppHint';
 import { LoginGate } from './components/LoginGate';
-import { AdminUsersPanel } from './components/AdminUsersPanel';
 import { RefreshControls } from './components/RefreshControls';
+import { MobileBottomNav, MobileMoreSheet } from './components/MobileNav';
+import { requestWaproStockSync } from './lib/stockSync';
 import {
   getDeferredInstall,
 } from './lib/pwaInstall';
 import { useAuth } from './lib/auth';
 import { roleCan, ROLE_LABELS } from './lib/roles';
+
+const KitsView = lazy(() =>
+  import('./components/KitsView').then((m) => ({ default: m.KitsView })),
+);
+const AddProductModal = lazy(() =>
+  import('./components/AddProductModal').then((m) => ({ default: m.AddProductModal })),
+);
+const BarcodeScanner = lazy(() =>
+  import('./components/BarcodeScanner').then((m) => ({ default: m.BarcodeScanner })),
+);
+const PhotoProgressView = lazy(() =>
+  import('./components/PhotoProgressView').then((m) => ({ default: m.PhotoProgressView })),
+);
+const VisualSearchModal = lazy(() =>
+  import('./components/VisualSearchModal').then((m) => ({ default: m.VisualSearchModal })),
+);
+const AdminUsersPanel = lazy(() =>
+  import('./components/AdminUsersPanel').then((m) => ({ default: m.AdminUsersPanel })),
+);
+const ProductDetail = lazy(() =>
+  import('./components/ProductDetail').then((m) => ({ default: m.ProductDetail })),
+);
+const CrmOrderView = lazy(() =>
+  import('./components/CrmOrderView').then((m) => ({ default: m.CrmOrderView })),
+);
+const CrmOrderSidePanel = lazy(() =>
+  import('./components/CrmOrderSidePanel').then((m) => ({
+    default: m.CrmOrderSidePanel,
+  })),
+);
 
 const CATALOG_STORAGE_KEY = 'katalog-active-catalog';
 const SORT_STORAGE_KEY = 'katalog-sort';
@@ -82,7 +116,8 @@ function loadGridDensity(): GridDensity {
 const GRID_CLASS: Record<GridDensity, string> = {
   sm: 'grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10',
   md: 'grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7',
-  lg: 'grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
+  /** Duże = mniej w rzędzie, większe zdjęcia (karty pionowe). */
+  lg: 'grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3',
 };
 
 
@@ -109,12 +144,15 @@ export default function App() {
   const { toggleTheme, isDark } = useTheme();
   const {
     mode,
+    user,
     role,
     displayLabel,
     signOut,
     exitGuest,
   } = useAuth();
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [catalogCache, setCatalogCache] = useState<
+    Partial<Record<CatalogType, Product[]>>
+  >({});
   const [kits, setKits] = useState<Kit[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -126,7 +164,13 @@ export default function App() {
   const [stockFilter, setStockFilter] = useState<StockFilter>('all');
   const [imageFilter, setImageFilter] = useState<ImageFilter>('all');
   const [editMode, setEditMode] = useState(false);
-  const [favoriteIds, setFavoriteIds] = useState<string[]>(() => getFavoriteIds());
+  const [favoriteIds, setFavoriteIds] = useState<string[]>(() => getLocalFavoriteIds());
+  const [orderCount, setOrderCount] = useState(() => getOrderDraft().items.length);
+  const [orderRevision, setOrderRevision] = useState(0);
+  const [orderQtys, setOrderQtys] = useState<Record<string, number>>(() => {
+    const items = getOrderDraft().items;
+    return Object.fromEntries(items.map((i) => [i.productId, i.quantity]));
+  });
   const [labelQueue, setLabelQueue] = useState<LabelQueueItem[]>(() => getLabelQueue());
   const [stockBusyId, setStockBusyId] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -136,6 +180,28 @@ export default function App() {
   const [showAdminUsers, setShowAdminUsers] = useState(false);
   const [missingCategory, setMissingCategory] = useState('Wszystkie');
   const [gridDensity, setGridDensity] = useState<GridDensity>(loadGridDensity);
+  const [showMobileMore, setShowMobileMore] = useState(false);
+  const [syncBusy, setSyncBusy] = useState(false);
+
+  function patchProductInCache(
+    productId: string,
+    patch: Partial<Product> | ((p: Product) => Product),
+  ) {
+    setCatalogCache((prev) => {
+      const next = { ...prev };
+      for (const key of ['accessories', 'shop'] as const) {
+        const list = next[key];
+        if (!list) continue;
+        const idx = list.findIndex((p) => p.id === productId);
+        if (idx < 0) continue;
+        const copy = [...list];
+        const cur = copy[idx];
+        copy[idx] = typeof patch === 'function' ? patch(cur) : { ...cur, ...patch };
+        next[key] = copy;
+      }
+      return next;
+    });
+  }
 
   function changeGridDensity(next: GridDensity) {
     setGridDensity(next);
@@ -146,48 +212,146 @@ export default function App() {
     }
   }
 
+  function triggerInstallApp() {
+    if (getDeferredInstall()) {
+      try {
+        localStorage.removeItem('katalog-pwa-hint-dismissed');
+      } catch {
+        /* ignore */
+      }
+      window.dispatchEvent(new Event('katalog-show-install'));
+      return;
+    }
+    resetInstallHint();
+  }
+
+  async function handleSyncStock() {
+    setSyncBusy(true);
+    try {
+      const res = await requestWaproStockSync();
+      if (!res.ok) {
+        showToast(res.error || 'Nie udało się zlecić syncu', 'error');
+        return;
+      }
+      showToast('Zlecono sync WAPRO — zwykle 1–2 min, potem Odśwież', 'info', 4500);
+    } finally {
+      setSyncBusy(false);
+    }
+  }
+
   useEffect(() => {
     if (!roleCan(role, 'editStock')) setEditMode(false);
     if (!roleCan(role, 'printLabels') && view === 'labels') setView('catalog');
     if (!roleCan(role, 'viewProgress') && view === 'progress') setView('catalog');
     if (!roleCan(role, 'manageFavorites') && view === 'favorites') setView('catalog');
+    if (!roleCan(role, 'manageKits') && view === 'kits') setView('catalog');
   }, [role, view]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function syncFavorites() {
+      if (mode === 'signed_in' && user?.id) {
+        try {
+          const ids = await loadAndMergeFavorites(user.id);
+          if (!cancelled) setFavoriteIds(ids);
+        } catch (err) {
+          console.warn('favorites load', err);
+          if (!cancelled) {
+            setFavoriteIds(getLocalFavoriteIds());
+            showToast('Nie udało się wczytać ulubionych z chmury', 'warn');
+          }
+        }
+        return;
+      }
+      if (!cancelled) setFavoriteIds(getLocalFavoriteIds());
+    }
+    void syncFavorites();
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, user?.id]);
+
+  const allProducts = useMemo(
+    () => [...(catalogCache.accessories ?? []), ...(catalogCache.shop ?? [])],
+    [catalogCache],
+  );
 
   const products = useMemo(
     () => allProducts.filter((p) => (p.catalog || 'accessories') === activeCatalog),
     [allProducts, activeCatalog],
   );
 
+  const catalogCacheRef = useRef(catalogCache);
+  catalogCacheRef.current = catalogCache;
+
+  const loadCatalog = useCallback(async (catalog: CatalogType, force = false) => {
+    if (!force && (catalogCacheRef.current[catalog]?.length ?? 0) > 0) return;
+    const prods = await fetchProducts(catalog);
+    setCatalogCache((prev) => ({ ...prev, [catalog]: prods }));
+  }, []);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [prods, kitList] = await Promise.all([
-        fetchProducts(),
-        fetchKits(),
-      ]);
-      setAllProducts(prods);
-      setKits(kitList);
+      const prods = await fetchProducts(activeCatalog);
+      setCatalogCache((prev) => ({ ...prev, [activeCatalog]: prods }));
+      void fetchKits()
+        .then(setKits)
+        .catch((err) => console.warn('kits', err));
     } catch (err) {
       console.error(err);
-      try {
-        const prods = await fetchProducts();
-        setAllProducts(prods);
-        const kitList = await fetchKits();
-        setKits(kitList);
-      } catch {
-        setError(
-          'Nie udało się załadować katalogu. Sprawdź połączenie z internetem.',
-        );
-      }
+      setError(
+        'Nie udało się załadować katalogu. Sprawdź połączenie z internetem.',
+      );
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeCatalog]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    let cancelled = false;
+    (async () => {
+      // cache hit — nie blokuj UI
+      if ((catalogCache[activeCatalog]?.length ?? 0) > 0) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      setError(null);
+      try {
+        const prods = await fetchProducts(activeCatalog);
+        if (cancelled) return;
+        setCatalogCache((prev) => ({ ...prev, [activeCatalog]: prods }));
+      } catch (err) {
+        console.error(err);
+        if (!cancelled) {
+          setError(
+            'Nie udało się załadować katalogu. Sprawdź połączenie z internetem.',
+          );
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- tylko przy zmianie katalogu
+  }, [activeCatalog]);
+
+  useEffect(() => {
+    if (view === 'favorites') {
+      void loadCatalog('accessories');
+      void loadCatalog('shop');
+    }
+  }, [view, loadCatalog]);
+
+  useEffect(() => {
+    void fetchKits()
+      .then(setKits)
+      .catch((err) => console.warn('kits', err));
+  }, []);
 
   const switchCatalog = useCallback((next: CatalogType) => {
     setActiveCatalog(next);
@@ -207,23 +371,26 @@ export default function App() {
 
   const categoryList = useMemo(() => deriveCategories(products), [products]);
 
+  const deferredSearch = useDeferredValue(search);
+  const favoriteSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
+
   const filtered = useMemo(() => {
     const base =
       view === 'favorites'
-        ? products.filter((p) => favoriteIds.includes(p.id))
+        ? products.filter((p) => favoriteSet.has(p.id))
         : products;
     return applyCatalogFilters(base, {
-      search,
+      search: deferredSearch,
       category,
       sort,
       stockFilter,
       imageFilter,
     });
-  }, [products, search, category, sort, stockFilter, imageFilter, view, favoriteIds]);
+  }, [products, deferredSearch, category, sort, stockFilter, imageFilter, view, favoriteSet]);
 
   const favoriteCount = useMemo(
-    () => products.filter((p) => favoriteIds.includes(p.id)).length,
-    [products, favoriteIds],
+    () => products.reduce((n, p) => n + (favoriteSet.has(p.id) ? 1 : 0), 0),
+    [products, favoriteSet],
   );
 
   const handleSortChange = useCallback((next: CatalogSort) => {
@@ -235,11 +402,68 @@ export default function App() {
     }
   }, []);
 
-  const handleToggleFavorite = useCallback((productId: string) => {
-    const on = toggleFavorite(productId);
-    setFavoriteIds(getFavoriteIds());
-    showToast(on ? 'Dodano do ulubionych' : 'Usunięto z ulubionych', on ? 'ok' : 'info');
+  const handleToggleFavorite = useCallback(
+    async (productId: string) => {
+      let wasOn = false;
+      let nextOn = false;
+      setFavoriteIds((prev) => {
+        wasOn = prev.includes(productId);
+        nextOn = !wasOn;
+        return nextOn
+          ? [productId, ...prev.filter((id) => id !== productId)]
+          : prev.filter((id) => id !== productId);
+      });
+
+      if (mode === 'signed_in' && user?.id) {
+        try {
+          await setCloudFavorite(user.id, productId, nextOn);
+          showToast(nextOn ? 'Dodano do ulubionych' : 'Usunięto z ulubionych', nextOn ? 'ok' : 'info');
+        } catch (err) {
+          console.error(err);
+          setFavoriteIds((prev) =>
+            wasOn
+              ? [productId, ...prev.filter((id) => id !== productId)]
+              : prev.filter((id) => id !== productId),
+          );
+          showToast('Nie udało się zapisać ulubionych', 'error');
+        }
+        return;
+      }
+
+      setLocalFavorite(productId, nextOn);
+      showToast(nextOn ? 'Dodano do ulubionych' : 'Usunięto z ulubionych', nextOn ? 'ok' : 'info');
+    },
+    [mode, user?.id],
+  );
+
+  const refreshOrderCount = useCallback(() => {
+    const items = getOrderDraft().items;
+    setOrderCount(items.length);
+    setOrderQtys(Object.fromEntries(items.map((i) => [i.productId, i.quantity])));
+    setOrderRevision((n) => n + 1);
   }, []);
+
+  const handleOrderDelta = useCallback(
+    (product: Product, delta: number) => {
+      if (delta > 0) {
+        addToOrderDraft(
+          {
+            ...product,
+            imageUrl: getProductImage(product) || undefined,
+          },
+          delta,
+        );
+      } else {
+        const current = getOrderDraft().items.find((i) => i.productId === product.id);
+        if (!current) return;
+        const next = current.quantity + delta;
+        if (next <= 0) removeDraftItem(product.id);
+        else setDraftItemQty(product.id, next);
+      }
+      refreshOrderCount();
+    },
+    [refreshOrderCount],
+  );
 
   const refreshLabelQueue = useCallback(() => {
     setLabelQueue(getLabelQueue());
@@ -249,24 +473,16 @@ export default function App() {
     async (product: Product, delta: number) => {
       const next = Math.max(0, Math.round((product.stock ?? 0) + delta));
       setStockBusyId(product.id);
-      // optimistic
-      setAllProducts((prev) =>
-        prev.map((p) =>
-          p.id === product.id ? { ...p, stock: next, stockManual: true } : p,
-        ),
-      );
+      patchProductInCache(product.id, { stock: next, stockManual: true });
       try {
         await updateProduct(product.id, { stock: next, stockManual: true });
         showToast(`Stan: ${next}`, 'ok', 1800);
       } catch (err) {
         console.error(err);
-        setAllProducts((prev) =>
-          prev.map((p) =>
-            p.id === product.id
-              ? { ...p, stock: product.stock, stockManual: product.stockManual }
-              : p,
-          ),
-        );
+        patchProductInCache(product.id, {
+          stock: product.stock,
+          stockManual: product.stockManual,
+        });
         showToast('Nie udało się zapisać stanu', 'error');
       } finally {
         setStockBusyId(null);
@@ -282,11 +498,7 @@ export default function App() {
 
   const handleImageUpdated = useCallback(
     (productId: string, url: string) => {
-      setAllProducts((prev) =>
-        prev.map((p) =>
-          p.id === productId ? { ...p, customImageUrl: url, hasImage: true } : p,
-        ),
-      );
+      patchProductInCache(productId, { customImageUrl: url, hasImage: true });
       if (selectedProduct?.id === productId) {
         setSelectedProduct((prev) =>
           prev ? { ...prev, customImageUrl: url, hasImage: true } : null,
@@ -297,9 +509,7 @@ export default function App() {
   );
 
   const handleProductUpdated = useCallback((updated: Product) => {
-    setAllProducts((prev) =>
-      prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)),
-    );
+    patchProductInCache(updated.id, () => updated);
     if (selectedProduct?.id === updated.id) {
       setSelectedProduct((prev) => (prev ? { ...prev, ...updated } : null));
     }
@@ -346,10 +556,20 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell mx-auto min-h-dvh w-full max-w-none">
+    <div
+      className={`app-shell relative mx-auto min-h-dvh w-full max-w-none pb-[calc(4.25rem+env(safe-area-inset-bottom))] lg:pb-0 ${
+        editMode ? 'ring-2 ring-inset ring-amber-500' : ''
+      }`}
+    >
+      {editMode && (
+        <div
+          className="pointer-events-none fixed inset-0 z-[70] border-[3px] border-amber-500"
+          aria-hidden
+        />
+      )}
       <header className="border-b border-slate-800/80 bg-slate-950 pt-[env(safe-area-inset-top)]">
-        {/* Mobile: klasyczny stos; Desktop (lg+): jeden pasek jak w aplikacji okienkowej */}
-        <div className="flex flex-col gap-2 px-3 py-2.5 sm:px-4 lg:flex-row lg:items-center lg:gap-3 lg:py-3 xl:px-6">
+        {/* Mobile: logo + switch; Desktop (lg+): pełny pasek */}
+        <div className="flex flex-col gap-2 px-3 py-2 sm:px-4 lg:flex-row lg:items-center lg:gap-3 lg:py-3 xl:px-6">
           <div className="flex min-w-0 items-center gap-2 sm:gap-3 lg:min-w-[12rem]">
             <a
               href="https://kenochem.com"
@@ -364,30 +584,10 @@ export default function App() {
                 className="kenochem-logo"
               />
             </a>
-            <div className="min-w-0 flex-1 lg:hidden">
+            <div className="hidden min-w-0 flex-1 sm:block lg:hidden">
               <h1 className="truncate text-base font-bold tracking-tight text-slate-100">
                 Katalog
               </h1>
-              <p className="truncate text-[11px] text-slate-500">
-                {CATALOG_SUBTITLES[activeCatalog]}
-              </p>
-            </div>
-            <div className="ml-auto flex items-center gap-1 lg:hidden">
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-                title={isDark ? 'Motyw jasny' : 'Motyw ciemny'}
-              >
-                {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-              </button>
-              <RefreshControls
-                loading={loading}
-                onRefresh={loadData}
-                canRequestStockSync={
-                  mode === 'signed_in' && roleCan(role, 'editStock')
-                }
-              />
             </div>
           </div>
 
@@ -408,12 +608,13 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex gap-1.5 overflow-x-auto scrollbar-none lg:ml-auto lg:flex-wrap lg:overflow-visible lg:justify-end">
+          {/* Desktop actions — ukryte na mobile (są w Więcej) */}
+          <div className="ml-auto hidden gap-1.5 lg:flex lg:flex-wrap lg:justify-end">
             <div
               className="flex shrink-0 items-center rounded-lg border border-slate-700 px-2.5 py-1.5"
               title={ROLE_LABELS[role]}
             >
-              <span className="max-w-[7rem] truncate text-xs font-medium text-slate-200 sm:max-w-[10rem] sm:text-sm">
+              <span className="max-w-[10rem] truncate text-sm font-medium text-slate-200">
                 {displayLabel}
               </span>
             </div>
@@ -421,7 +622,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setShowAdminUsers(true)}
-                className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800 sm:gap-1.5 sm:px-3 sm:py-2 sm:text-sm"
+                className="flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800"
                 title="Zarządzaj użytkownikami"
               >
                 <Users className="h-4 w-4" />
@@ -432,7 +633,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setShowAddProduct(true)}
-                className="flex shrink-0 items-center gap-1 rounded-lg bg-brand-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-brand-500 sm:gap-1.5 sm:px-3 sm:py-2 sm:text-sm"
+                className="flex shrink-0 items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-500"
               >
                 <Plus className="h-4 w-4" />
                 Dodaj
@@ -442,7 +643,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setShowVisualSearch(true)}
-                className="flex shrink-0 items-center gap-1 rounded-lg border border-brand-500/40 bg-brand-500/10 px-2.5 py-1.5 text-xs font-medium text-brand-300 hover:bg-brand-500/20 sm:gap-1.5 sm:px-3 sm:py-2 sm:text-sm"
+                className="flex shrink-0 items-center gap-1.5 rounded-lg border border-brand-500/40 bg-brand-500/10 px-3 py-2 text-sm font-medium text-brand-300 hover:bg-brand-500/20"
               >
                 <Sparkles className="h-4 w-4" />
                 Lens
@@ -452,7 +653,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setEditMode((v) => !v)}
-                className={`flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition sm:gap-1.5 sm:px-3 sm:py-2 sm:text-sm ${
+                className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
                   editMode
                     ? 'bg-amber-500 text-amber-950'
                     : 'border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-100'
@@ -464,34 +665,13 @@ export default function App() {
             )}
             <button
               type="button"
-              onClick={() => {
-                if (getDeferredInstall()) {
-                  try {
-                    localStorage.removeItem('katalog-pwa-hint-dismissed');
-                  } catch {
-                    /* ignore */
-                  }
-                  window.dispatchEvent(new Event('katalog-show-install'));
-                  return;
-                }
-                resetInstallHint();
-              }}
-              className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800 sm:px-3 sm:py-2 lg:hidden"
-              title="Zainstaluj aplikację"
-            >
-              <Download className="h-4 w-4" />
-              Apka
-            </button>
-            <button
-              type="button"
               onClick={toggleTheme}
-              className="hidden rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-slate-100 lg:inline-flex"
+              className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
               title={isDark ? 'Motyw jasny' : 'Motyw ciemny'}
             >
               {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </button>
             <RefreshControls
-              className="hidden lg:flex"
               loading={loading}
               onRefresh={loadData}
               canRequestStockSync={
@@ -504,7 +684,7 @@ export default function App() {
                 if (mode === 'guest') exitGuest();
                 else void signOut();
               }}
-              className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-100 sm:px-3 sm:py-2"
+              className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-700 px-3 py-2 text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-100"
               title={mode === 'guest' ? 'Wróć do logowania' : 'Wyloguj'}
             >
               <LogOut className="h-4 w-4" />
@@ -515,8 +695,9 @@ export default function App() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 border-t border-slate-800/60 px-3 py-2 sm:px-4 lg:flex-row lg:items-center lg:gap-4 xl:px-6">
-          <nav className="flex min-w-0 flex-1 gap-1 overflow-x-auto scrollbar-none lg:overflow-visible lg:flex-wrap">
+        {/* Desktop nav tabs */}
+        <div className="hidden border-t border-slate-800/60 px-3 py-2 sm:px-4 lg:flex lg:items-center lg:gap-4 xl:px-6">
+          <nav className="flex min-w-0 flex-1 flex-wrap gap-1">
             <NavTab
               active={view === 'catalog'}
               onClick={() => setView('catalog')}
@@ -524,6 +705,16 @@ export default function App() {
               label="Katalog"
               count={products.length}
             />
+            {roleCan(role, 'useCrm') && (
+              <NavTab
+                active={view === 'crm'}
+                onClick={() => setView('crm')}
+                icon={<ShoppingCart className="h-4 w-4" />}
+                label="Zamówienie"
+                count={orderCount}
+                highlight={orderCount > 0}
+              />
+            )}
             {roleCan(role, 'manageFavorites') && (
               <NavTab
                 active={view === 'favorites'}
@@ -534,20 +725,7 @@ export default function App() {
                 highlight={favoriteCount > 0}
               />
             )}
-            {roleCan(role, 'printLabels') && (
-              <NavTab
-                active={view === 'labels'}
-                onClick={() => {
-                  refreshLabelQueue();
-                  setView('labels');
-                }}
-                icon={<Printer className="h-4 w-4" />}
-                label="Etykiety"
-                count={labelQueue.length}
-                highlight={labelQueue.length > 0}
-              />
-            )}
-            {activeCatalog === 'accessories' && (
+            {activeCatalog === 'accessories' && roleCan(role, 'manageKits') && (
               <NavTab
                 active={view === 'kits'}
                 onClick={() => setView('kits')}
@@ -564,14 +742,29 @@ export default function App() {
                 label="Postęp"
               />
             )}
-            <NavTab
-              active={view === 'missing-images'}
-              onClick={() => openMissingImages()}
-              icon={<ImageOff className="h-4 w-4" />}
-              label="Bez zdjęć"
-              count={missingImages.length}
-              highlight={missingImages.length > 0}
-            />
+            {roleCan(role, 'viewProgress') && (
+              <NavTab
+                active={view === 'missing-images'}
+                onClick={() => openMissingImages()}
+                icon={<ImageOff className="h-4 w-4" />}
+                label="Bez zdjęć"
+                count={missingImages.length}
+                highlight={missingImages.length > 0}
+              />
+            )}
+            {roleCan(role, 'printLabels') && (
+              <NavTab
+                active={view === 'labels'}
+                onClick={() => {
+                  refreshLabelQueue();
+                  setView('labels');
+                }}
+                icon={<Printer className="h-4 w-4" />}
+                label="Etykiety"
+                count={labelQueue.length}
+                highlight={labelQueue.length > 0}
+              />
+            )}
           </nav>
 
           {(view === 'catalog' || view === 'favorites') && (
@@ -628,7 +821,13 @@ export default function App() {
         </div>
       )}
 
-      <main className="px-3 py-3 sm:px-4 sm:py-4 xl:px-6 xl:py-5">
+      <main
+        className={`px-3 py-3 sm:px-4 sm:py-4 xl:px-6 xl:py-5 ${
+          roleCan(role, 'useCrm') && orderCount > 0 && view !== 'crm'
+            ? 'xl:pr-[24rem]'
+            : ''
+        }`}
+      >
         {loading && allProducts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24">
             <Loader2 className="h-10 w-10 animate-spin text-brand-500" />
@@ -668,6 +867,9 @@ export default function App() {
             emptyFavorites={view === 'favorites' && favoriteCount === 0}
             gridDensity={gridDensity}
             onGridDensityChange={changeGridDensity}
+            onOrderDelta={roleCan(role, 'useCrm') ? handleOrderDelta : undefined}
+            orderQtys={orderQtys}
+            hideImages={!roleCan(role, 'viewImages')}
           />
         ) : view === 'labels' ? (
           <LabelsView
@@ -683,20 +885,45 @@ export default function App() {
               refreshLabelQueue();
               showToast('Wyczyszczono kolejkę etykiet', 'info');
             }}
-            onPrintAll={() => printShelfLabels(labelQueue)}
-            onPrintOne={(item) => printShelfLabels([item])}
+            onPrintAll={() => {
+              void import('./lib/printLabel').then(({ printShelfLabels }) => {
+                printShelfLabels(labelQueue);
+              });
+            }}
+            onPrintOne={(item) => {
+              void import('./lib/printLabel').then(({ printShelfLabels }) => {
+                printShelfLabels([item]);
+              });
+            }}
           />
-        ) : view === 'kits' && activeCatalog === 'accessories' ? (
-          <KitsView
-            kits={kits}
-            products={products}
-            onKitsChange={loadData}
-          />
+        ) : view === 'crm' && roleCan(role, 'useCrm') ? (
+          <Suspense fallback={<ViewFallback />}>
+            <CrmOrderView
+              authorLabel={displayLabel}
+              products={allProducts}
+              cloudEnabled={mode === 'signed_in'}
+              onChanged={refreshOrderCount}
+            />
+          </Suspense>
+        ) : view === 'kits' &&
+          activeCatalog === 'accessories' &&
+          roleCan(role, 'manageKits') ? (
+          <Suspense fallback={<ViewFallback />}>
+            <KitsView
+              kits={kits}
+              products={products}
+              onKitsChange={loadData}
+              canAddToOrder={roleCan(role, 'useCrm')}
+              onOrderDraftChange={refreshOrderCount}
+            />
+          </Suspense>
         ) : view === 'progress' ? (
-          <PhotoProgressView
-            products={products}
-            onOpenMissing={(cat) => openMissingImages(cat ?? 'Wszystkie')}
-          />
+          <Suspense fallback={<ViewFallback />}>
+            <PhotoProgressView
+              products={products}
+              onOpenMissing={(cat) => openMissingImages(cat ?? 'Wszystkie')}
+            />
+          </Suspense>
         ) : (
           <MissingImagesView
             products={missingImages}
@@ -704,55 +931,140 @@ export default function App() {
             initialCategory={missingCategory}
             onProductClick={setSelectedProduct}
             onImageUpdated={handleImageUpdated}
+            canUpload={roleCan(role, 'uploadImage')}
           />
+        )}
+
+        {roleCan(role, 'useCrm') && orderCount > 0 && view !== 'crm' && (
+          <Suspense fallback={null}>
+            <CrmOrderSidePanel
+              products={allProducts}
+              revision={orderRevision}
+              onOpenFull={() => setView('crm')}
+              onChanged={refreshOrderCount}
+            />
+          </Suspense>
         )}
       </main>
 
       {selectedProduct && (
-        <ProductDetail
-          product={selectedProduct}
-          onClose={() => setSelectedProduct(null)}
-          onImageUpdated={handleImageUpdated}
-          onProductUpdated={handleProductUpdated}
-          onLabelQueueChange={refreshLabelQueue}
-        />
+        <Suspense fallback={null}>
+          <ProductDetail
+            product={selectedProduct}
+            onClose={() => setSelectedProduct(null)}
+            onImageUpdated={handleImageUpdated}
+            onProductUpdated={handleProductUpdated}
+            onLabelQueueChange={refreshLabelQueue}
+            onOrderDraftChange={refreshOrderCount}
+            role={role}
+          />
+        </Suspense>
       )}
 
       {showAddProduct && (
-        <AddProductModal
-          catalog={activeCatalog}
-          existingProducts={products}
-          onClose={() => setShowAddProduct(false)}
-          onSaved={(product) => {
-            setAllProducts((prev) => [...prev, product]);
-            setShowAddProduct(false);
-          }}
-        />
+        <Suspense fallback={null}>
+          <AddProductModal
+            catalog={activeCatalog}
+            existingProducts={products}
+            onClose={() => setShowAddProduct(false)}
+            onSaved={(product) => {
+              const cat = product.catalog || activeCatalog;
+              setCatalogCache((prev) => ({
+                ...prev,
+                [cat]: [...(prev[cat] ?? []), product],
+              }));
+              setShowAddProduct(false);
+            }}
+          />
+        </Suspense>
       )}
 
       {showScanner && (
-        <BarcodeScanner
-          onScan={handleBarcodeScan}
-          onClose={() => setShowScanner(false)}
-        />
+        <Suspense fallback={null}>
+          <BarcodeScanner
+            onScan={handleBarcodeScan}
+            onClose={() => setShowScanner(false)}
+          />
+        </Suspense>
       )}
 
       {showVisualSearch && activeCatalog === 'shop' && roleCan(role, 'useLens') && (
-        <VisualSearchModal
-          products={products}
-          onClose={() => setShowVisualSearch(false)}
-          onSelect={(product) => {
-            setSelectedProduct(product);
-            setView('catalog');
-          }}
-        />
+        <Suspense fallback={null}>
+          <VisualSearchModal
+            products={products}
+            onClose={() => setShowVisualSearch(false)}
+            onSelect={(product) => {
+              setSelectedProduct(product);
+              setView('catalog');
+            }}
+          />
+        </Suspense>
       )}
 
       {showAdminUsers && roleCan(role, 'manageUsers') && (
-        <AdminUsersPanel onClose={() => setShowAdminUsers(false)} />
+        <Suspense fallback={null}>
+          <AdminUsersPanel onClose={() => setShowAdminUsers(false)} />
+        </Suspense>
       )}
 
+      <MobileBottomNav
+        view={view}
+        role={role}
+        favoriteCount={favoriteCount}
+        labelCount={labelQueue.length}
+        orderCount={orderCount}
+        onMore={() => setShowMobileMore(true)}
+        onView={(v) => {
+          if (v === 'labels') refreshLabelQueue();
+          if (v === 'missing-images') openMissingImages();
+          else setView(v);
+        }}
+      />
+
+      <MobileMoreSheet
+        open={showMobileMore}
+        onClose={() => setShowMobileMore(false)}
+        role={role}
+        displayLabel={displayLabel}
+        roleLabel={ROLE_LABELS[role]}
+        activeCatalog={activeCatalog}
+        view={view}
+        editMode={editMode}
+        loading={loading}
+        syncBusy={syncBusy}
+        canRequestStockSync={mode === 'signed_in' && roleCan(role, 'editStock')}
+        missingCount={missingImages.length}
+        kitsCount={kits.length}
+        onView={(v) => {
+          if (v === 'labels') refreshLabelQueue();
+          if (v === 'missing-images') openMissingImages();
+          else setView(v);
+        }}
+        onToggleEdit={() => setEditMode((v) => !v)}
+        onAddProduct={() => setShowAddProduct(true)}
+        onLens={() => setShowVisualSearch(true)}
+        onAdminUsers={() => setShowAdminUsers(true)}
+        onInstallApp={triggerInstallApp}
+        onToggleTheme={toggleTheme}
+        isDark={isDark}
+        onRefresh={loadData}
+        onSyncStock={() => void handleSyncStock()}
+        onSignOut={() => {
+          if (mode === 'guest') exitGuest();
+          else void signOut();
+        }}
+        modeGuest={mode === 'guest'}
+      />
+
       <InstallAppHint />
+    </div>
+  );
+}
+
+function ViewFallback() {
+  return (
+    <div className="flex justify-center py-16">
+      <Loader2 className="h-8 w-8 animate-spin text-brand-400" />
     </div>
   );
 }
@@ -852,6 +1164,9 @@ function CatalogView({
   emptyFavorites = false,
   gridDensity = 'md',
   onGridDensityChange,
+  onOrderDelta,
+  orderQtys = {},
+  hideImages = false,
 }: {
   search: string;
   category: string;
@@ -874,8 +1189,24 @@ function CatalogView({
   emptyFavorites?: boolean;
   gridDensity?: GridDensity;
   onGridDensityChange?: (v: GridDensity) => void;
+  onOrderDelta?: (product: Product, delta: number) => void;
+  orderQtys?: Record<string, number>;
+  hideImages?: boolean;
 }) {
   const searching = search.trim().length >= 2;
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const favoriteSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
+
+  const activeFilterCount =
+    (category !== 'Wszystkie' ? 1 : 0) +
+    (stockFilter !== 'all' ? 1 : 0) +
+    (imageFilter !== 'all' ? 1 : 0);
+
+  function resetFilters() {
+    onCategoryChange('Wszystkie');
+    onStockFilterChange('all');
+    onImageFilterChange('all');
+  }
 
   if (emptyFavorites) {
     return (
@@ -889,18 +1220,11 @@ function CatalogView({
     );
   }
 
-  return (
-    <div className="space-y-4">
-      {editMode && (
-        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-100">
-          Tryb edycji: zmieniaj stan przyciskami <strong>±1</strong> na kartach (zapis od razu).
-        </div>
-      )}
-
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {categoryList.filter(
-          (c) => c === 'Wszystkie' || (categoryCounts[c] ?? 0) > 0,
-        ).map((cat) => (
+  const categoryChips = (
+    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+      {categoryList
+        .filter((c) => c === 'Wszystkie' || (categoryCounts[c] ?? 0) > 0)
+        .map((cat) => (
           <button
             key={cat}
             type="button"
@@ -917,110 +1241,263 @@ function CatalogView({
             )}
           </button>
         ))}
-      </div>
+    </div>
+  );
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-1.5">
-          {(
-            [
-              { id: 'all' as const, label: 'Wszystkie' },
-              { id: 'in-stock' as const, label: 'Na stanie' },
-              { id: 'out' as const, label: 'Brak' },
-            ] as const
-          ).map((opt) => (
-            <button
-              key={opt.id}
-              type="button"
-              onClick={() => onStockFilterChange(opt.id)}
-              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
-                stockFilter === opt.id
-                  ? 'bg-brand-500 text-white'
-                  : 'bg-slate-800 text-slate-400 hover:text-slate-100'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-          <span className="mx-0.5 hidden h-6 w-px bg-slate-700 sm:inline-block" />
-          {(
-            [
-              { id: 'all' as const, label: 'Wszystkie' },
-              { id: 'with' as const, label: 'Ze zdjęciem' },
-              { id: 'without' as const, label: 'Bez zdjęcia' },
-            ] as const
-          ).map((opt) => (
-            <button
-              key={opt.id}
-              type="button"
-              onClick={() => onImageFilterChange(opt.id)}
-              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
-                imageFilter === opt.id
-                  ? 'bg-brand-500 text-white'
-                  : 'bg-slate-800 text-slate-400 hover:text-slate-100'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
+  const stockImageFilters = (
+    <div className="flex flex-wrap gap-1.5">
+      {(
+        [
+          { id: 'all' as const, label: 'Wszystkie' },
+          { id: 'in-stock' as const, label: 'Na stanie' },
+          { id: 'out' as const, label: 'Brak' },
+        ] as const
+      ).map((opt) => (
+        <button
+          key={opt.id}
+          type="button"
+          onClick={() => onStockFilterChange(opt.id)}
+          className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
+            stockFilter === opt.id
+              ? 'bg-brand-500 text-white'
+              : 'bg-slate-800 text-slate-400 hover:text-slate-100'
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
+      <span className="mx-0.5 hidden h-6 w-px bg-slate-700 sm:inline-block" />
+      {(
+        [
+          { id: 'all' as const, label: 'Wszystkie' },
+          { id: 'with' as const, label: 'Ze zdjęciem' },
+          { id: 'without' as const, label: 'Bez zdjęcia' },
+        ] as const
+      ).map((opt) => (
+        <button
+          key={`img-${opt.id}`}
+          type="button"
+          onClick={() => onImageFilterChange(opt.id)}
+          className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
+            imageFilter === opt.id
+              ? 'bg-brand-500 text-white'
+              : 'bg-slate-800 text-slate-400 hover:text-slate-100'
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  const sortSelect = (
+    <label className="flex min-w-0 shrink-0 items-center gap-2 text-xs text-slate-400">
+      <span className="shrink-0">Sortuj</span>
+      <select
+        value={sort}
+        onChange={(e) => onSortChange(e.target.value as CatalogSort)}
+        disabled={searching}
+        title={
+          searching
+            ? 'Przy wyszukiwaniu kolejność = trafność'
+            : 'Kolejność listy'
+        }
+        className="max-w-[11rem] rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs text-slate-200 focus:border-brand-500 focus:outline-none disabled:opacity-50 sm:max-w-none"
+      >
+        {CATALOG_SORT_OPTIONS.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+
+  const densityToggle = onGridDensityChange ? (
+    <div
+      className="flex shrink-0 items-center rounded-lg border border-slate-700 p-0.5"
+      title="Rozmiar kafelków"
+    >
+      {(
+        [
+          { id: 'sm' as const, icon: LayoutGrid, label: 'Małe' },
+          { id: 'md' as const, icon: Rows2, label: 'Średnie' },
+          { id: 'lg' as const, icon: Square, label: 'Duże' },
+        ] as const
+      ).map((opt) => (
+        <button
+          key={opt.id}
+          type="button"
+          onClick={() => onGridDensityChange(opt.id)}
+          className={`rounded-md p-1.5 transition ${
+            gridDensity === opt.id
+              ? 'bg-brand-600 text-white'
+              : 'text-slate-400 hover:text-slate-100'
+          }`}
+          title={opt.label}
+          aria-label={`Widok: ${opt.label}`}
+        >
+          <opt.icon className="h-4 w-4" />
+        </button>
+      ))}
+    </div>
+  ) : null;
+
+  return (
+    <div className="space-y-3 sm:space-y-4">
+      {editMode && (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-100">
+          Tryb edycji: zmieniaj stan przyciskami <strong>±1</strong> na kartach (zapis od razu).
         </div>
+      )}
 
-        <label className="flex min-w-0 shrink-0 items-center gap-2 text-xs text-slate-400">
-          <span className="shrink-0">Sortuj</span>
-          <select
-            value={sort}
-            onChange={(e) => onSortChange(e.target.value as CatalogSort)}
-            disabled={searching}
-            title={
-              searching
-                ? 'Przy wyszukiwaniu kolejność = trafność'
-                : 'Kolejność listy'
-            }
-            className="max-w-[11rem] rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs text-slate-200 focus:border-brand-500 focus:outline-none disabled:opacity-50 sm:max-w-none"
+      {/* Mobile: kategorie + jeden rząd Filtry / gęstość */}
+      <div className="space-y-2 lg:hidden">
+        {categoryChips}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setFiltersOpen(true)}
+            className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium ${
+              activeFilterCount > 0
+                ? 'border-brand-500/50 bg-brand-500/15 text-brand-200'
+                : 'border-slate-700 text-slate-300'
+            }`}
           >
-            {CATALOG_SORT_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        {onGridDensityChange && (
-          <div
-            className="flex shrink-0 items-center rounded-lg border border-slate-700 p-0.5"
-            title="Rozmiar kafelków"
-          >
-            {(
-              [
-                { id: 'sm' as const, icon: LayoutGrid, label: 'Małe' },
-                { id: 'md' as const, icon: Rows2, label: 'Średnie' },
-                { id: 'lg' as const, icon: Square, label: 'Duże' },
-              ] as const
-            ).map((opt) => (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => onGridDensityChange(opt.id)}
-                className={`rounded-md p-1.5 transition ${
-                  gridDensity === opt.id
-                    ? 'bg-brand-600 text-white'
-                    : 'text-slate-400 hover:text-slate-100'
-                }`}
-                title={opt.label}
-                aria-label={`Widok: ${opt.label}`}
-              >
-                <opt.icon className="h-4 w-4" />
-              </button>
-            ))}
-          </div>
-        )}
+            <SlidersHorizontal className="h-4 w-4" />
+            Filtry
+            {activeFilterCount > 0 && (
+              <span className="rounded-full bg-brand-600 px-1.5 text-[10px] font-bold text-white">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+          {densityToggle}
+          <p className="ml-auto truncate text-xs text-slate-500">
+            {filtered.length} prod.
+            {searching && ' · trafność'}
+          </p>
+        </div>
       </div>
 
-      <p className="text-sm text-slate-500">
-        {filtered.length} {filtered.length === 1 ? 'produkt' : 'produktów'}
-        {search && ` dla „${search}"`}
-        {searching && ' · wg trafności'}
-      </p>
+      {/* Desktop: pełne filtry */}
+      <div className="hidden space-y-4 lg:block">
+        {categoryChips}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          {stockImageFilters}
+          <div className="flex flex-wrap items-center gap-2">
+            {sortSelect}
+            {densityToggle}
+          </div>
+        </div>
+        <p className="text-sm text-slate-500">
+          {filtered.length} {filtered.length === 1 ? 'produkt' : 'produktów'}
+          {search && ` dla „${search}"`}
+          {searching && ' · wg trafności'}
+        </p>
+      </div>
+
+      {filtersOpen && (
+        <div className="fixed inset-0 z-[55] lg:hidden" role="dialog" aria-label="Filtry">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/50"
+            aria-label="Zamknij"
+            onClick={() => setFiltersOpen(false)}
+          />
+          <div className="absolute inset-x-0 bottom-0 max-h-[80dvh] overflow-y-auto rounded-t-3xl border border-slate-700 bg-slate-900 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl">
+            <div className="sticky top-0 flex items-center justify-between border-b border-slate-800 bg-slate-900 px-4 py-3">
+              <p className="font-semibold text-slate-100">Filtry</p>
+              <button
+                type="button"
+                onClick={() => setFiltersOpen(false)}
+                className="rounded-full p-2 text-slate-400 hover:bg-slate-800"
+                aria-label="Zamknij"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-4 px-4 py-4">
+              <div>
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Stan magazynowy
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {(
+                    [
+                      { id: 'all' as const, label: 'Wszystkie' },
+                      { id: 'in-stock' as const, label: 'Na stanie' },
+                      { id: 'out' as const, label: 'Brak' },
+                    ] as const
+                  ).map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => onStockFilterChange(opt.id)}
+                      className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
+                        stockFilter === opt.id
+                          ? 'bg-brand-500 text-white'
+                          : 'bg-slate-800 text-slate-400'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Zdjęcia
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {(
+                    [
+                      { id: 'all' as const, label: 'Wszystkie' },
+                      { id: 'with' as const, label: 'Ze zdjęciem' },
+                      { id: 'without' as const, label: 'Bez zdjęcia' },
+                    ] as const
+                  ).map((opt) => (
+                    <button
+                      key={`img-${opt.id}`}
+                      type="button"
+                      onClick={() => onImageFilterChange(opt.id)}
+                      className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
+                        imageFilter === opt.id
+                          ? 'bg-brand-500 text-white'
+                          : 'bg-slate-800 text-slate-400'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Sortowanie
+                </p>
+                {sortSelect}
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="flex-1 rounded-xl border border-slate-700 py-2.5 text-sm text-slate-300"
+                >
+                  Wyczyść
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFiltersOpen(false)}
+                  className="flex-1 rounded-xl bg-brand-600 py-2.5 text-sm font-medium text-white"
+                >
+                  Gotowe
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {filtered.length === 0 ? (
         <div className="py-16 text-center text-slate-500">
@@ -1029,21 +1506,26 @@ function CatalogView({
           <p className="mt-1 text-sm">Spróbuj innego SKU, nazwy albo filtrów</p>
         </div>
       ) : (
-        <div className={`grid ${GRID_CLASS[gridDensity]}`}>
-          {filtered.map((product) => (
+        <ProductGrid
+          products={filtered}
+          className={GRID_CLASS[gridDensity]}
+          resetKey={`${gridDensity}|${category}|${stockFilter}|${imageFilter}|${sort}|${search}|${filtered.length}`}
+          renderItem={(product) => (
             <ProductCard
-              key={product.id}
               product={product}
               onClick={() => onProductClick(product)}
               editMode={editMode}
-              isFavorite={favoriteIds.includes(product.id)}
+              isFavorite={favoriteSet.has(product.id)}
               onToggleFavorite={onToggleFavorite}
               onStockDelta={onStockDelta}
               stockBusy={stockBusyId === product.id}
               density={gridDensity}
+              orderQty={orderQtys[product.id] ?? 0}
+              onOrderDelta={onOrderDelta}
+              hideImages={hideImages}
             />
-          ))}
-        </div>
+          )}
+        />
       )}
     </div>
   );
@@ -1150,12 +1632,14 @@ function MissingImagesView({
   initialCategory = 'Wszystkie',
   onProductClick,
   onImageUpdated,
+  canUpload = false,
 }: {
   products: Product[];
   categoryList: string[];
   initialCategory?: string;
   onProductClick: (p: Product) => void;
   onImageUpdated: (id: string, url: string) => void;
+  canUpload?: boolean;
 }) {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState(initialCategory);
@@ -1250,28 +1734,32 @@ function MissingImagesView({
           <p className="mt-3">Brak produktów w tym filtrze</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((product) => (
+        <ProductGrid
+          products={filtered}
+          className="grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
+          resetKey={`missing|${category}|${search}|${filtered.length}`}
+          renderItem={(product) => (
             <ProductCard
-              key={product.id}
               product={product}
               onClick={() => onProductClick(product)}
-              showUpload
+              showUpload={canUpload}
               onImageUpdated={onImageUpdated}
             />
-          ))}
-        </div>
+          )}
+        />
       )}
 
       {showScanner && (
-        <BarcodeScanner
-          onScan={(code) => {
-            setSearch(code);
-            setCategory('Wszystkie');
-            setShowScanner(false);
-          }}
-          onClose={() => setShowScanner(false)}
-        />
+        <Suspense fallback={null}>
+          <BarcodeScanner
+            onScan={(code) => {
+              setSearch(code);
+              setCategory('Wszystkie');
+              setShowScanner(false);
+            }}
+            onClose={() => setShowScanner(false)}
+          />
+        </Suspense>
       )}
     </div>
   );

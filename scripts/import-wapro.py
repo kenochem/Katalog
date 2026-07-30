@@ -58,6 +58,14 @@ INCLUDE = [
     r"weży[kc]",
     r"butelka.*lanc",
     r"komplet.*ssaw",
+    # Papiery / higiena (bez wieszaków — osobno wykluczone)
+    r"papier",
+    r"r[eę]cznik",
+    r"czy[sś]ciw",
+    r"bibu[lł]",
+    r"chustecz",
+    r"toaletow",
+    r"\bzz\b",
 ]
 
 EXCLUDE = re.compile(
@@ -69,7 +77,8 @@ EXCLUDE = re.compile(
     r"kwazar\s+(?:venus|eco)\b|"
     r"gumowa\s+ściągaczk|szczotka\s+spiralna|"
     r"smar\s+do\s+lin|klej\s+do\s+zabezpiecz|"
-    r"mikrofibra|recznik|ręcznik\s+do\s+osusz|"
+    r"mikrofibra|r[eę]cznik\s+do\s+osusz|"
+    r"wieszak|stojak\s+pod|"
     r"myjka\s+(?:wysokociśnieniowa|zimnowodna)|comet\s+k\s*\d|"
     r"ściągacz.*(?:szyb|wody)|dywanik|"
     r"draco\b|tenzi\b|orion\s+v\s+\d|eco\s*shine|kenochem|kenotek|"
@@ -80,6 +89,9 @@ EXCLUDE = re.compile(
     re.I,
 )
 
+# Wycofane / do osobnego ogarnięcia — nazwy zaczynające się od x. / xxx / xCzyściwo
+X_PREFIX_RE = re.compile(r"^(?:x\.|x{2,}|x(?=[A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż]))", re.I)
+
 CHEMICAL_VOLUME = re.compile(r"\b\d+\s*(?:ml|l|kg|g)\b", re.I)
 HARDWARE_VOLUME_OK = re.compile(
     r"pianownic|zbiornik|butelka.*lanc|lanca\s+pian|pojemno",
@@ -87,6 +99,7 @@ HARDWARE_VOLUME_OK = re.compile(
 )
 
 CATEGORY_MAP = {
+    r"papier|r[eę]cznik|czy[sś]ciw|bibu[lł]|chustecz|toalet|\bzz\b": "Papiery",
     "dysz": "Dysze",
     r"lanc": "Lance",
     r"w[aą]ż|węż": "Węże",
@@ -147,8 +160,28 @@ def detect_subcategory(name: str) -> str:
     return "Inne części"
 
 
+def is_paper_product(name: str) -> bool:
+    if X_PREFIX_RE.match(name.strip()):
+        return False
+    if re.search(r"wieszak|stojak", name, re.I):
+        return False
+    return bool(
+        re.search(
+            r"papier|r[eę]cznik|czy[sś]ciw|bibu[lł]|chustecz|toaletow|\bzz\b",
+            name,
+            re.I,
+        )
+    )
+
+
 def is_hardware(name: str, sku: str) -> bool:
     text = f"{name} {sku}"
+
+    if X_PREFIX_RE.match(name.strip()):
+        return False
+
+    if is_paper_product(name):
+        return True
 
     if EXCLUDE.search(text):
         return False

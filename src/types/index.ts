@@ -45,7 +45,15 @@ export interface Kit {
   createdAt: number;
 }
 
-export type View = 'catalog' | 'kits' | 'missing-images' | 'progress' | 'favorites' | 'labels' | 'admin';
+export type View =
+  | 'catalog'
+  | 'kits'
+  | 'missing-images'
+  | 'progress'
+  | 'favorites'
+  | 'labels'
+  | 'admin'
+  | 'crm';
 
 export const CATALOG_LABELS: Record<CatalogType, string> = {
   accessories: 'Akcesoria',
@@ -54,7 +62,7 @@ export const CATALOG_LABELS: Record<CatalogType, string> = {
 
 export const CATALOG_SUBTITLES: Record<CatalogType, string> = {
   accessories: 'Kenochem · drobnica / części do myjek',
-  shop: 'Kenochem · chemia i produkty sklepowe',
+  shop: 'Kenochem · chemia, banie i produkty sklepowe',
 };
 
 /** Kategorie katalogu akcesoriów (Wapro). */

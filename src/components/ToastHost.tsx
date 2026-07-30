@@ -37,7 +37,7 @@ export function ToastHost() {
 
   return (
     <div
-      className="pointer-events-none fixed inset-x-0 bottom-[max(1rem,env(safe-area-inset-bottom))] z-[100] flex flex-col items-center gap-2 px-3"
+      className="pointer-events-none fixed inset-x-0 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-[100] flex flex-col items-center gap-2 px-3 lg:bottom-[max(1rem,env(safe-area-inset-bottom))]"
       aria-live="polite"
     >
       {items.map((t) => {

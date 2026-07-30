@@ -13,6 +13,38 @@ import type { CatalogType } from '../types';
 
 let localCache: Product[] | null = null;
 let shopCache: Product[] | null = null;
+let accessorySkuCache: Set<string> | null = null;
+
+/** SKU z katalogu Akcesoria (WAPRO) — nie dublujemy ich w Produktach. */
+async function getAccessorySkuSet(): Promise<Set<string>> {
+  if (accessorySkuCache) return accessorySkuCache;
+  const acc = await loadBaseProducts('accessories');
+  const set = new Set<string>();
+  for (const p of acc) {
+    if (p.sku) set.add(String(p.sku).toUpperCase());
+    for (const v of p.variants || []) {
+      if (v.sku) set.add(String(v.sku).toUpperCase());
+    }
+  }
+  accessorySkuCache = set;
+  return set;
+}
+
+/**
+ * Produkty = cały Baselinker poza pozycjami, które są już w Akcesoriach (WAPRO).
+ * Nie filtrujemy po kategorii BL „Akcesoria sklepowe” — tam jest też chemia.
+ */
+export function isShopProductAllowed(p: Product, accessorySkus?: Set<string>): boolean {
+  if ((p.catalog || 'accessories') !== 'shop') return true;
+  if (!accessorySkus || accessorySkus.size === 0) return true;
+  const sku = String(p.sku || '').toUpperCase();
+  if (sku && accessorySkus.has(sku)) return false;
+  return true;
+}
+
+function filterShopProducts(list: Product[], accessorySkus?: Set<string>): Product[] {
+  return list.filter((p) => isShopProductAllowed(p, accessorySkus));
+}
 
 async function loadBaseProducts(catalog: CatalogType = 'accessories'): Promise<Product[]> {
   if (catalog === 'shop') {
@@ -20,10 +52,14 @@ async function loadBaseProducts(catalog: CatalogType = 'accessories'): Promise<P
     try {
       const res = await fetch('/data/shop-products.json');
       if (!res.ok) return [];
-      shopCache = ((await res.json()) as Product[]).map((p) => ({
-        ...p,
-        catalog: 'shop' as const,
-      }));
+      const accessorySkus = await getAccessorySkuSet();
+      shopCache = filterShopProducts(
+        ((await res.json()) as Product[]).map((p) => ({
+          ...p,
+          catalog: 'shop' as const,
+        })),
+        accessorySkus,
+      );
       return shopCache;
     } catch {
       return [];
@@ -41,17 +77,21 @@ async function loadBaseProducts(catalog: CatalogType = 'accessories'): Promise<P
 
 export async function fetchProducts(catalog?: CatalogType): Promise<Product[]> {
   const local = getLocalProducts();
+  const accessorySkus = await getAccessorySkuSet();
 
   if (!isSupabaseConfigured || !supabase) {
     if (catalog) {
       const base = await loadBaseProducts(catalog);
-      return mergeProducts(base, local.filter((p) => (p.catalog || 'accessories') === catalog));
+      return filterShopProducts(
+        mergeProducts(base, local.filter((p) => (p.catalog || 'accessories') === catalog)),
+        accessorySkus,
+      );
     }
     const [acc, shop] = await Promise.all([
       loadBaseProducts('accessories'),
       loadBaseProducts('shop'),
     ]);
-    return mergeProducts([...acc, ...shop], local);
+    return filterShopProducts(mergeProducts([...acc, ...shop], local), accessorySkus);
   }
 
   const all: ProductRow[] = [];
@@ -74,10 +114,13 @@ export async function fetchProducts(catalog?: CatalogType): Promise<Product[]> {
   if (!all.length) {
     if (catalog) {
       const base = await loadBaseProducts(catalog);
-      return mergeProducts(base, local.filter((p) => (p.catalog || 'accessories') === catalog));
+      return filterShopProducts(
+        mergeProducts(base, local.filter((p) => (p.catalog || 'accessories') === catalog)),
+        accessorySkus,
+      );
     }
     const base = await loadBaseProducts('accessories');
-    return mergeProducts(base, local);
+    return filterShopProducts(mergeProducts(base, local), accessorySkus);
   }
 
   const mapped = all.map(rowToProduct);
@@ -92,10 +135,10 @@ export async function fetchProducts(catalog?: CatalogType): Promise<Product[]> {
     ? local.filter((p) => (p.catalog || 'accessories') === catalog)
     : local;
   const merged = mergeProducts(combined, localFiltered);
-  if (catalog) {
-    return merged.filter((p) => (p.catalog || 'accessories') === catalog);
-  }
-  return merged;
+  const scoped = catalog
+    ? merged.filter((p) => (p.catalog || 'accessories') === catalog)
+    : merged;
+  return filterShopProducts(scoped, accessorySkus);
 }
 
 export async function fetchProductById(productId: string): Promise<Product | null> {

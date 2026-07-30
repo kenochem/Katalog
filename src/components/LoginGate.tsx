@@ -1,14 +1,46 @@
-import { useState, type FormEvent } from 'react';
-import { Loader2, LogIn, Eye } from 'lucide-react';
+import { useEffect, useState, type FormEvent } from 'react';
+import { Download, Eye, Loader2, LogIn } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { isSupabaseConfigured } from '../lib/supabase';
+import {
+  clearDeferredInstall,
+  getDeferredInstall,
+} from '../lib/pwaInstall';
+
+function isStandalone(): boolean {
+  if (typeof window === 'undefined') return false;
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    Boolean((navigator as any).standalone)
+  );
+}
+
+function isIos(): boolean {
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
 
 export function LoginGate() {
   const { signIn, continueAsGuest, authError } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
+  const [installBusy, setInstallBusy] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [installHint, setInstallHint] = useState<string | null>(null);
+  const [canInstall, setCanInstall] = useState(false);
+
+  useEffect(() => {
+    if (isStandalone()) return;
+    const sync = () => setCanInstall(Boolean(getDeferredInstall()));
+    sync();
+    window.__katalogInstallReady = sync;
+    return () => {
+      if (window.__katalogInstallReady === sync) {
+        window.__katalogInstallReady = null;
+      }
+    };
+  }, []);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -19,6 +51,35 @@ export function LoginGate() {
       if (res.error) setLocalError(res.error);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function onInstall() {
+    setInstallHint(null);
+    const promptEvent = getDeferredInstall();
+    if (promptEvent) {
+      setInstallBusy(true);
+      try {
+        await promptEvent.prompt();
+        const choice = await promptEvent.userChoice;
+        clearDeferredInstall();
+        setCanInstall(false);
+        if (choice.outcome === 'accepted') {
+          setInstallHint('Zainstalowano — otwórz Katalog z ikony.');
+        }
+      } catch {
+        setInstallHint('Nie udało się — użyj menu przeglądarki → Zainstaluj.');
+      } finally {
+        setInstallBusy(false);
+      }
+      return;
+    }
+    if (isIos()) {
+      setInstallHint('iPhone: Udostępnij → Do ekranu początkowego');
+    } else {
+      setInstallHint(
+        'Chrome / Edge: ikona instalacji w pasku adresu albo menu → Zainstaluj Katalog',
+      );
     }
   }
 
@@ -102,6 +163,29 @@ export function LoginGate() {
           <Eye className="h-4 w-4 text-slate-400" />
           Przeglądaj jako gość
         </button>
+
+        {!isStandalone() && (
+          <div className="space-y-2">
+            <button
+              type="button"
+              disabled={installBusy}
+              onClick={() => void onInstall()}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-brand-500/40 bg-brand-500/10 py-3.5 text-sm font-semibold text-brand-200 hover:bg-brand-500/20 disabled:opacity-50"
+            >
+              {installBusy ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              {canInstall ? 'Zainstaluj aplikację' : 'Zainstaluj / dodaj do telefonu'}
+            </button>
+            {installHint && (
+              <p className="text-center text-xs leading-relaxed text-slate-400">
+                {installHint}
+              </p>
+            )}
+          </div>
+        )}
 
         <p className="text-center text-[11px] leading-relaxed text-slate-500">
           Konta zakłada administrator. Brak publicznej rejestracji.

@@ -22,15 +22,26 @@ async function callAdminUsers(
   body: Record<string, unknown>,
 ): Promise<{ ok: boolean; data?: unknown; error?: string }> {
   if (!supabase) return { ok: false, error: 'Brak Supabase' };
+
   const { data, error } = await supabase.functions.invoke('admin-users', {
     body,
     headers: { Authorization: `Bearer ${accessToken}` },
   });
+
   if (error) {
-    return {
-      ok: false,
-      error: error.message || 'Błąd funkcji admin-users',
-    };
+    // supabase-js często zwraca tylko „non-2xx” — wyciągnij treść z body
+    let detail = error.message || 'Błąd funkcji admin-users';
+    try {
+      const ctx = (error as { context?: Response }).context;
+      if (ctx && typeof ctx.json === 'function') {
+        const payload = (await ctx.json()) as { error?: string; msg?: string };
+        if (payload?.error) detail = payload.error;
+        else if (payload?.msg) detail = payload.msg;
+      }
+    } catch {
+      /* ignore */
+    }
+    return { ok: false, error: detail };
   }
   if (data && typeof data === 'object' && 'error' in data && data.error) {
     return { ok: false, error: String((data as { error: string }).error) };
@@ -57,27 +68,29 @@ export function AdminUsersPanel({ onClose }: AdminUsersPanelProps) {
   const token = session?.access_token;
 
   const load = useCallback(async () => {
-    if (!token) return;
+    if (!supabase) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await callAdminUsers(token, { action: 'list' });
+      const { data: sessData } = await supabase.auth.getSession();
+      const accessToken = sessData.session?.access_token || token;
+      if (!accessToken) {
+        setError('Brak sesji — zaloguj się ponownie');
+        return;
+      }
+      const res = await callAdminUsers(accessToken, { action: 'list' });
       if (!res.ok) {
         // Fallback: bezpośredni SELECT (RLS admin)
-        if (supabase) {
-          const { data, error: qErr } = await supabase
-            .from('profiles')
-            .select('id, email, display_name, role, active, created_at')
-            .order('created_at', { ascending: true });
-          if (qErr) throw qErr;
-          setUsers((data || []) as AdminUserRow[]);
-          if (res.error) {
-            setError(
-              `Edge Function niedostępna (${res.error}). Lista z bazy OK — tworzenie kont wymaga deploy funkcji admin-users.`,
-            );
-          }
-        } else {
-          setError(res.error || 'Nie udało się pobrać użytkowników');
+        const { data, error: qErr } = await supabase
+          .from('profiles')
+          .select('id, email, display_name, role, active, created_at')
+          .order('created_at', { ascending: true });
+        if (qErr) throw qErr;
+        setUsers((data || []) as AdminUserRow[]);
+        if (res.error) {
+          setError(
+            `Funkcja admin-users: ${res.error}. Lista z bazy OK — tworzenie kont wymaga działającej funkcji.`,
+          );
         }
         return;
       }
@@ -94,13 +107,20 @@ export function AdminUsersPanel({ onClose }: AdminUsersPanelProps) {
     void load();
   }, [load]);
 
+  async function freshToken(): Promise<string | null> {
+    if (!supabase) return token || null;
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token || token || null;
+  }
+
   async function onCreate(e: FormEvent) {
     e.preventDefault();
-    if (!token) return;
+    const accessToken = await freshToken();
+    if (!accessToken) return;
     setBusy(true);
     setError(null);
     try {
-      const res = await callAdminUsers(token, {
+      const res = await callAdminUsers(accessToken, {
         action: 'create',
         email: email.trim(),
         password,
@@ -125,11 +145,12 @@ export function AdminUsersPanel({ onClose }: AdminUsersPanelProps) {
     id: string,
     patch: Partial<{ role: AccountRole; active: boolean; display_name: string }>,
   ) {
-    if (!token) return;
+    const accessToken = await freshToken();
+    if (!accessToken) return;
     setBusy(true);
     setError(null);
     try {
-      const res = await callAdminUsers(token, {
+      const res = await callAdminUsers(accessToken, {
         action: 'update',
         id,
         ...patch,
@@ -155,6 +176,37 @@ export function AdminUsersPanel({ onClose }: AdminUsersPanelProps) {
         }
       }
       await load();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resetPassword(id: string, email: string) {
+    const accessToken = await freshToken();
+    if (!accessToken) return;
+    const suggested = `Tmp${Math.random().toString(36).slice(2, 8)}!a1`;
+    const pwd = window.prompt(
+      `Nowe hasło dla ${email} (min. 8 znaków). Podaj własne albo zostaw propozycję:`,
+      suggested,
+    );
+    if (!pwd) return;
+    if (pwd.length < 8) {
+      setError('Hasło musi mieć min. 8 znaków');
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await callAdminUsers(accessToken, {
+        action: 'resetPassword',
+        id,
+        password: pwd,
+      });
+      if (!res.ok) {
+        setError(res.error || 'Nie udało się zmienić hasła');
+        return;
+      }
+      window.alert(`Hasło ustawione dla ${email}:\n\n${pwd}\n\nPrzekaż je użytkownikowi.`);
     } finally {
       setBusy(false);
     }
@@ -297,6 +349,14 @@ export function AdminUsersPanel({ onClose }: AdminUsersPanelProps) {
                       className="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:bg-slate-800"
                     >
                       {u.active ? 'Wyłącz' : 'Włącz'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void resetPassword(u.id, u.email)}
+                      className="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:bg-slate-800"
+                    >
+                      Reset hasła
                     </button>
                   </div>
                 </li>
