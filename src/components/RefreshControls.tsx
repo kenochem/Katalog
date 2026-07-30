@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Loader2, RefreshCw, Database } from 'lucide-react';
 import { requestWaproStockSync } from '../lib/stockSync';
 import { showToast } from '../lib/toast';
