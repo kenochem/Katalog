@@ -4,7 +4,6 @@ import {
   Layers,
   ImageOff,
   Loader2,
-  RefreshCw,
   Plus,
   BarChart3,
   Wrench,
@@ -19,6 +18,9 @@ import {
   LogOut,
   Users,
   Download,
+  LayoutGrid,
+  Rows2,
+  Square,
 } from 'lucide-react';
 import type { Product, Kit, View, CatalogType } from './types';
 import {
@@ -37,6 +39,7 @@ import {
 } from './lib/search';
 import { useTheme } from './lib/theme';
 import { getFavoriteIds, toggleFavorite } from './lib/favorites';
+import { showToast } from './lib/toast';
 import {
   getLabelQueue,
   removeFromLabelQueue,
@@ -53,6 +56,7 @@ import { VisualSearchModal } from './components/VisualSearchModal';
 import { InstallAppHint, resetInstallHint } from './components/InstallAppHint';
 import { LoginGate } from './components/LoginGate';
 import { AdminUsersPanel } from './components/AdminUsersPanel';
+import { RefreshControls } from './components/RefreshControls';
 import {
   getDeferredInstall,
 } from './lib/pwaInstall';
@@ -61,6 +65,26 @@ import { roleCan, ROLE_LABELS } from './lib/roles';
 
 const CATALOG_STORAGE_KEY = 'katalog-active-catalog';
 const SORT_STORAGE_KEY = 'katalog-sort';
+const GRID_DENSITY_KEY = 'katalog-grid-density';
+
+type GridDensity = 'sm' | 'md' | 'lg';
+
+function loadGridDensity(): GridDensity {
+  try {
+    const v = localStorage.getItem(GRID_DENSITY_KEY);
+    if (v === 'sm' || v === 'md' || v === 'lg') return v;
+  } catch {
+    /* ignore */
+  }
+  return 'md';
+}
+
+const GRID_CLASS: Record<GridDensity, string> = {
+  sm: 'grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10',
+  md: 'grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7',
+  lg: 'grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
+};
+
 
 function loadSavedSort(): CatalogSort {
   try {
@@ -111,6 +135,16 @@ export default function App() {
   const [showVisualSearch, setShowVisualSearch] = useState(false);
   const [showAdminUsers, setShowAdminUsers] = useState(false);
   const [missingCategory, setMissingCategory] = useState('Wszystkie');
+  const [gridDensity, setGridDensity] = useState<GridDensity>(loadGridDensity);
+
+  function changeGridDensity(next: GridDensity) {
+    setGridDensity(next);
+    try {
+      localStorage.setItem(GRID_DENSITY_KEY, next);
+    } catch {
+      /* ignore */
+    }
+  }
 
   useEffect(() => {
     if (!roleCan(role, 'editStock')) setEditMode(false);
@@ -202,8 +236,9 @@ export default function App() {
   }, []);
 
   const handleToggleFavorite = useCallback((productId: string) => {
-    toggleFavorite(productId);
+    const on = toggleFavorite(productId);
     setFavoriteIds(getFavoriteIds());
+    showToast(on ? 'Dodano do ulubionych' : 'Usunięto z ulubionych', on ? 'ok' : 'info');
   }, []);
 
   const refreshLabelQueue = useCallback(() => {
@@ -222,6 +257,7 @@ export default function App() {
       );
       try {
         await updateProduct(product.id, { stock: next, stockManual: true });
+        showToast(`Stan: ${next}`, 'ok', 1800);
       } catch (err) {
         console.error(err);
         setAllProducts((prev) =>
@@ -231,7 +267,7 @@ export default function App() {
               : p,
           ),
         );
-        alert('Nie udało się zapisać stanu.');
+        showToast('Nie udało się zapisać stanu', 'error');
       } finally {
         setStockBusyId(null);
       }
@@ -345,15 +381,13 @@ export default function App() {
               >
                 {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               </button>
-              <button
-                type="button"
-                onClick={loadData}
-                disabled={loading}
-                className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-slate-100 disabled:opacity-50"
-                title="Odśwież"
-              >
-                <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
-              </button>
+              <RefreshControls
+                loading={loading}
+                onRefresh={loadData}
+                canRequestStockSync={
+                  mode === 'signed_in' && roleCan(role, 'editStock')
+                }
+              />
             </div>
           </div>
 
@@ -456,15 +490,14 @@ export default function App() {
             >
               {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </button>
-            <button
-              type="button"
-              onClick={loadData}
-              disabled={loading}
-              className="hidden rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-slate-100 disabled:opacity-50 lg:inline-flex"
-              title="Odśwież"
-            >
-              <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
-            </button>
+            <RefreshControls
+              className="hidden lg:flex"
+              loading={loading}
+              onRefresh={loadData}
+              canRequestStockSync={
+                mode === 'signed_in' && roleCan(role, 'editStock')
+              }
+            />
             <button
               type="button"
               onClick={() => {
@@ -633,6 +666,8 @@ export default function App() {
             onStockDelta={handleStockDelta}
             stockBusyId={stockBusyId}
             emptyFavorites={view === 'favorites' && favoriteCount === 0}
+            gridDensity={gridDensity}
+            onGridDensityChange={changeGridDensity}
           />
         ) : view === 'labels' ? (
           <LabelsView
@@ -641,10 +676,12 @@ export default function App() {
             onRemove={(id) => {
               removeFromLabelQueue(id);
               refreshLabelQueue();
+              showToast('Usunięto z kolejki', 'info', 1800);
             }}
             onClear={() => {
               clearLabelQueue();
               refreshLabelQueue();
+              showToast('Wyczyszczono kolejkę etykiet', 'info');
             }}
             onPrintAll={() => printShelfLabels(labelQueue)}
             onPrintOne={(item) => printShelfLabels([item])}
@@ -738,7 +775,7 @@ function CatalogSwitch({
       className={`flex min-w-0 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium transition sm:gap-2 sm:px-3 sm:text-sm ${
         active
           ? 'bg-brand-600 text-white shadow'
-          : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+          : 'text-slate-400 hover:bg-slate-800 hover:text-slate-50'
       }`}
     >
       {icon}
@@ -770,8 +807,8 @@ function NavTab({
         active
           ? 'bg-brand-600 text-white'
           : highlight
-            ? 'bg-amber-500/15 text-amber-300 hover:bg-amber-500/25'
-            : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            ? 'bg-amber-500 text-amber-950 hover:bg-amber-600'
+            : 'text-slate-400 hover:bg-slate-800 hover:text-slate-50'
       }`}
     >
       {icon}
@@ -779,7 +816,11 @@ function NavTab({
       {count !== undefined && (
         <span
           className={`rounded-full px-1.5 py-0.5 text-[10px] sm:text-xs ${
-            active ? 'bg-white/20' : 'bg-slate-700 text-slate-400'
+            active
+              ? 'bg-black/20 text-white'
+              : highlight
+                ? 'bg-amber-950/15 text-amber-950'
+                : 'bg-slate-700 text-slate-400'
           }`}
         >
           {count}
@@ -809,6 +850,8 @@ function CatalogView({
   onStockDelta,
   stockBusyId = null,
   emptyFavorites = false,
+  gridDensity = 'md',
+  onGridDensityChange,
 }: {
   search: string;
   category: string;
@@ -829,6 +872,8 @@ function CatalogView({
   onStockDelta?: (product: Product, delta: number) => void;
   stockBusyId?: string | null;
   emptyFavorites?: boolean;
+  gridDensity?: GridDensity;
+  onGridDensityChange?: (v: GridDensity) => void;
 }) {
   const searching = search.trim().length >= 2;
 
@@ -939,6 +984,36 @@ function CatalogView({
             ))}
           </select>
         </label>
+
+        {onGridDensityChange && (
+          <div
+            className="flex shrink-0 items-center rounded-lg border border-slate-700 p-0.5"
+            title="Rozmiar kafelków"
+          >
+            {(
+              [
+                { id: 'sm' as const, icon: LayoutGrid, label: 'Małe' },
+                { id: 'md' as const, icon: Rows2, label: 'Średnie' },
+                { id: 'lg' as const, icon: Square, label: 'Duże' },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => onGridDensityChange(opt.id)}
+                className={`rounded-md p-1.5 transition ${
+                  gridDensity === opt.id
+                    ? 'bg-brand-600 text-white'
+                    : 'text-slate-400 hover:text-slate-100'
+                }`}
+                title={opt.label}
+                aria-label={`Widok: ${opt.label}`}
+              >
+                <opt.icon className="h-4 w-4" />
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <p className="text-sm text-slate-500">
@@ -954,7 +1029,7 @@ function CatalogView({
           <p className="mt-1 text-sm">Spróbuj innego SKU, nazwy albo filtrów</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
+        <div className={`grid ${GRID_CLASS[gridDensity]}`}>
           {filtered.map((product) => (
             <ProductCard
               key={product.id}
@@ -965,6 +1040,7 @@ function CatalogView({
               onToggleFavorite={onToggleFavorite}
               onStockDelta={onStockDelta}
               stockBusy={stockBusyId === product.id}
+              density={gridDensity}
             />
           ))}
         </div>
@@ -1116,13 +1192,13 @@ function MissingImagesView({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
-        <p className="text-sm text-amber-200">
+      <div className="rounded-xl border border-amber-500/40 bg-amber-500/15 px-4 py-3">
+        <p className="text-sm text-amber-950 dark:text-amber-100">
           <strong>{products.length}</strong> produktów bez zdjęcia.
           Zrób zdjęcie telefonem lub wgraj plik — od razu trafi do katalogu.
         </p>
         {topCategories.length > 0 && (
-          <p className="mt-2 text-xs text-amber-200/70">
+          <p className="mt-2 text-xs text-amber-900/80 dark:text-amber-200/80">
             Najwięcej braków:{' '}
             {topCategories.map(([cat, count], i) => (
               <span key={cat}>
@@ -1151,7 +1227,7 @@ function MissingImagesView({
             onClick={() => setCategory(cat)}
             className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition ${
               category === cat
-                ? 'bg-amber-500/20 text-amber-200 ring-1 ring-amber-500/40'
+                ? 'bg-amber-500 text-amber-950'
                 : 'bg-slate-800 text-slate-400 hover:text-slate-100'
             }`}
           >

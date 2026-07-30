@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import type { Product, CatalogType } from '../types';
 import { ACCESSORY_CATEGORIES, deriveCategories } from '../types';
 import { createProduct } from '../lib/products';
+import { showToast } from '../lib/toast';
 
 interface AddProductModalProps {
   onClose: () => void;
@@ -44,7 +45,7 @@ export function AddProductModal({
 
   async function handleSave() {
     if (!sku.trim() || !name.trim()) {
-      alert('Podaj SKU i nazwę produktu.');
+      showToast('Podaj SKU i nazwę produktu', 'warn');
       return;
     }
 
@@ -65,10 +66,11 @@ export function AddProductModal({
         },
         imageFile || undefined,
       );
+      showToast('Produkt zapisany', 'ok');
       onSaved(product);
     } catch (err) {
       console.error(err);
-      alert('Błąd zapisu produktu.');
+      showToast('Błąd zapisu produktu', 'error');
     } finally {
       setSaving(false);
     }

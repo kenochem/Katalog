@@ -5,6 +5,7 @@ import { saveKit, deleteKit } from '../lib/products';
 import { SearchBar } from './ProductCard';
 import { BarcodeScanner } from './BarcodeScanner';
 import { filterProducts } from '../lib/search';
+import { showToast } from '../lib/toast';
 
 interface KitsViewProps {
   kits: Kit[];
@@ -229,7 +230,7 @@ function KitEditor({
 
   async function handleSave() {
     if (!name.trim() || items.length === 0) {
-      alert('Podaj nazwę zestawu i dodaj co najmniej 1 element.');
+      showToast('Podaj nazwę i dodaj co najmniej 1 element', 'warn');
       return;
     }
     setSaving(true);
@@ -242,10 +243,11 @@ function KitEditor({
         items,
         createdAt: kit?.createdAt ?? Date.now(),
       });
+      showToast('Zestaw zapisany', 'ok');
       onSaved();
     } catch (err) {
       console.error(err);
-      alert('Błąd zapisu zestawu.');
+      showToast('Błąd zapisu zestawu', 'error');
     } finally {
       setSaving(false);
     }

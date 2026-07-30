@@ -116,6 +116,15 @@ npx supabase functions deploy admin-users
 
 SQL: `INDEKS_KATALOGOWY` + `STAN` (`scripts/sql/wapro-stock-export.sql`).
 
+**Ręczny sync z aplikacji:** strzałka przy Odśwież → „Synchronizuj stany WAPRO”.  
+Wymaga migracji `supabase/migration-stock-sync-requests.sql` oraz drugiego zadania Harmonogramu co **2 min**:
+
+```text
+powershell.exe -ExecutionPolicy Bypass -File C:\katalog-sync\sync-wapro-stock-server.ps1 -OnlyIfPending
+```
+
+(podmień też `.ps1` na serwerze po aktualizacji).
+
 ## Import danych
 
 ```bash

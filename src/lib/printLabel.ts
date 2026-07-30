@@ -1,5 +1,6 @@
 import JsBarcode from 'jsbarcode';
 import type { LabelQueueItem } from './labelQueue';
+import { showToast } from './toast';
 
 function escapeHtml(s: string): string {
   return s
@@ -131,7 +132,7 @@ function buildPrintDocument(items: LabelQueueItem[]): string {
  */
 export function printShelfLabels(items: LabelQueueItem[]): void {
   if (!items.length) {
-    alert('Brak etykiet do druku.');
+    showToast('Brak etykiet do druku', 'warn');
     return;
   }
 
@@ -152,7 +153,7 @@ export function printShelfLabels(items: LabelQueueItem[]): void {
   const doc = iframe.contentDocument || iframe.contentWindow?.document;
   if (!doc) {
     iframe.remove();
-    alert('Nie udało się przygotować podglądu druku.');
+    showToast('Nie udało się przygotować podglądu druku', 'error');
     return;
   }
 
@@ -163,7 +164,7 @@ export function printShelfLabels(items: LabelQueueItem[]): void {
   const win = iframe.contentWindow;
   if (!win) {
     iframe.remove();
-    alert('Nie udało się otworzyć okna druku.');
+    showToast('Nie udało się otworzyć okna druku', 'error');
     return;
   }
 
@@ -172,9 +173,14 @@ export function printShelfLabels(items: LabelQueueItem[]): void {
     try {
       win.focus();
       win.print();
+      showToast(
+        items.length === 1 ? 'Otwarto podgląd druku' : `Druk: ${items.length} etykiet`,
+        'info',
+        2200,
+      );
     } catch (err) {
       console.error(err);
-      alert('Druk nieudany. Spróbuj ponownie lub użyj Ctrl+P w podglądzie.');
+      showToast('Druk nieudany — spróbuj Ctrl+P w podglądzie', 'error');
     } finally {
       // nie usuwaj od razu — niektóre przeglądarki potrzebują iframe do czasu dialogu
       setTimeout(() => {

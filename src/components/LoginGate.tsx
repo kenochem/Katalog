@@ -74,7 +74,7 @@ export function LoginGate() {
           )}
 
           {!isSupabaseConfigured && (
-            <p className="rounded-xl bg-amber-500/20 px-3 py-2 text-xs text-amber-200">
+            <p className="rounded-xl bg-amber-500/20 px-3 py-2 text-xs text-amber-950 dark:text-amber-100">
               Brak VITE_SUPABASE_* w .env — logowanie niedostępne. Możesz wejść jako
               gość.
             </p>

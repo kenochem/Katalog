@@ -1,0 +1,12 @@
+---
+description: Ostrzegaj przed pracami wymagającymi serwera / RDP / Harmonogramu
+alwaysApply: true
+---
+
+# Prace serwerowe — ostrzeżenie
+
+Gdy plan lub implementacja wymaga działań **poza samym frontendem** (serwer WAPRO, RDP, SQL Server, Harmonogram zadań Windows, udziały sieciowe, Edge Functions deploy, migracje SQL w Supabase Dashboard, klucze service_role na serwerze):
+
+1. **Na początku** jasno napisz, że będzie potrzebna praca na serwerze / w Dashboardzie (nie tylko deploy Firebase).
+2. Podaj **krótko**: co na serwerze, co w Supabase, co lokalnie.
+3. Nie zakładaj, że użytkownik domyśli się kroków RDP / Harmonogramu bez instrukcji.

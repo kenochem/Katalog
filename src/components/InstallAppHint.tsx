@@ -129,7 +129,7 @@ export function InstallAppHint() {
 
   return (
     <div
-      className="pointer-events-auto fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-3 right-3 z-[80] mx-auto max-w-lg rounded-2xl border border-brand-500/50 bg-slate-950 p-3.5 shadow-2xl shadow-black/50 ring-1 ring-white/10 sm:left-auto sm:right-4"
+      className="pointer-events-auto fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-3 right-3 z-[80] mx-auto max-w-lg rounded-2xl border border-brand-500/60 bg-[#0b1220] p-3.5 shadow-2xl shadow-black/50 sm:left-auto sm:right-4"
       role="dialog"
       aria-label="Zainstaluj aplikację"
     >
@@ -143,35 +143,36 @@ export function InstallAppHint() {
         />
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <p className="text-base font-bold text-white">
+            <p className="text-base font-bold text-[#f8fafc]">
               {isDesktop() ? 'Katalog na komputer' : 'Katalog na telefon'}
             </p>
             <button
               type="button"
               onClick={dismiss}
-              className="relative z-[1] -mr-1 -mt-1 shrink-0 rounded-full p-2 text-slate-300 hover:bg-slate-800 hover:text-white"
+              className="relative z-[1] -mr-1 -mt-1 shrink-0 rounded-full p-2 text-[#94a3b8] hover:bg-white/10 hover:text-[#f8fafc]"
               aria-label="Zamknij"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
-          <p className="mt-1 text-sm leading-snug text-slate-200">
+          <p className="mt-1 text-sm leading-snug text-[#cbd5e1]">
             {isIos() ? (
               <>
-                Safari → <Share className="inline h-4 w-4 text-brand-300" />{' '}
-                <strong className="text-white">Udostępnij</strong> →{' '}
-                <strong className="text-white">Do ekranu początkowego</strong>
+                Safari → <Share className="inline h-4 w-4 text-brand-400" />{' '}
+                <strong className="text-[#f8fafc]">Udostępnij</strong> →{' '}
+                <strong className="text-[#f8fafc]">Do ekranu początkowego</strong>
               </>
             ) : isSamsungBrowser() && !canPrompt ? (
               <>
-                Menu <MoreVertical className="inline h-4 w-4 text-brand-300" /> →{' '}
-                <strong className="text-white">Dodaj stronę do</strong> →{' '}
-                <strong className="text-white">Ekran główny</strong>
+                Menu <MoreVertical className="inline h-4 w-4 text-brand-400" /> →{' '}
+                <strong className="text-[#f8fafc]">Dodaj stronę do</strong> →{' '}
+                <strong className="text-[#f8fafc]">Ekran główny</strong>
               </>
             ) : isDesktop() && !canPrompt ? (
               <>
-                Chrome / Edge: ikona <strong className="text-white">instalacji</strong> w
-                pasku adresu (albo menu → <strong className="text-white">Zainstaluj Katalog</strong>
+                Chrome / Edge: ikona <strong className="text-[#f8fafc]">instalacji</strong> w
+                pasku adresu (albo menu →{' '}
+                <strong className="text-[#f8fafc]">Zainstaluj Katalog</strong>
                 ). Powstanie ikona na pulpicie / w menu Start.
               </>
             ) : canPrompt ? (
@@ -182,9 +183,9 @@ export function InstallAppHint() {
               </>
             ) : (
               <>
-                Menu przeglądarki <MoreVertical className="inline h-4 w-4 text-brand-300" /> →{' '}
-                <strong className="text-white">Zainstaluj aplikację</strong> /{' '}
-                <strong className="text-white">Dodaj do ekranu głównego</strong>
+                Menu przeglądarki <MoreVertical className="inline h-4 w-4 text-brand-400" /> →{' '}
+                <strong className="text-[#f8fafc]">Zainstaluj aplikację</strong> /{' '}
+                <strong className="text-[#f8fafc]">Dodaj do ekranu głównego</strong>
               </>
             )}
           </p>
@@ -211,9 +212,10 @@ export function InstallAppHint() {
           )}
 
           {!canPrompt && isAndroid() && !isIos() && (
-            <p className="mt-2 text-xs text-slate-400">
-              Jeśli nie widzisz opcji: otwórz stronę w <strong className="text-slate-200">Chrome</strong>{' '}
-              — tam instalacja działa najczęściej.
+            <p className="mt-2 text-xs text-[#94a3b8]">
+              Jeśli nie widzisz opcji: otwórz stronę w{' '}
+              <strong className="text-[#e2e8f0]">Chrome</strong> — tam instalacja
+              działa najczęściej.
             </p>
           )}
         </div>

@@ -35,6 +35,7 @@ import {
 import { formatStock } from './PhotoProgressView';
 import { printShelfLabels } from '../lib/printLabel';
 import { addToLabelQueue } from '../lib/labelQueue';
+import { showToast } from '../lib/toast';
 
 interface ProductCardProps {
   product: Product;
@@ -46,6 +47,7 @@ interface ProductCardProps {
   onStockDelta?: (product: Product, delta: number) => void;
   onImageUpdated?: (productId: string, url: string) => void;
   stockBusy?: boolean;
+  density?: 'sm' | 'md' | 'lg';
 }
 
 export function ProductCard({
@@ -58,20 +60,24 @@ export function ProductCard({
   onStockDelta,
   onImageUpdated,
   stockBusy = false,
+  density = 'md',
 }: ProductCardProps) {
   const imageUrl = getProductImage(product);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
+  const compact = density === 'sm';
+  const cozy = density === 'lg';
 
   async function handleUpload(file: File) {
     setUploading(true);
     try {
       const url = await updateProductImage(product.id, file);
       onImageUpdated?.(product.id, url);
+      showToast('Zdjęcie zapisane', 'ok');
     } catch (err) {
       console.error(err);
-      alert('Błąd wgrywania zdjęcia. Sprawdź połączenie z Firebase.');
+      showToast('Błąd wgrywania zdjęcia', 'error');
     } finally {
       setUploading(false);
     }
@@ -81,7 +87,7 @@ export function ProductCard({
     <article
       className={`group relative flex flex-col overflow-hidden rounded-2xl border bg-slate-900/80 transition-all hover:border-brand-500/50 hover:shadow-lg hover:shadow-brand-500/10 ${
         isFavorite ? 'border-amber-400/60' : 'border-slate-800'
-      }`}
+      } ${cozy ? 'sm:flex-row sm:items-stretch' : ''}`}
     >
       {onToggleFavorite && (
         <button
@@ -107,24 +113,32 @@ export function ProductCard({
         onClick={onClick}
         className="flex flex-1 flex-col text-left"
       >
-        <div className="relative aspect-square overflow-hidden bg-slate-800">
+        <div className={`relative overflow-hidden bg-slate-800 ${
+          cozy ? 'aspect-[4/3] sm:aspect-auto sm:w-44 sm:shrink-0' : 'aspect-square'
+        }`}>
           {imageUrl ? (
             <img
               src={imageUrl}
               alt={product.displayName}
-              className="h-full w-full object-contain p-3 transition-transform group-hover:scale-105"
+              className={`h-full w-full object-contain transition-transform group-hover:scale-105 ${
+                compact ? 'p-1.5' : cozy ? 'p-4' : 'p-3'
+              }`}
               loading="lazy"
             />
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-2 text-slate-500">
-              <ImageOff className="h-10 w-10" />
-              <span className="text-xs">Brak zdjęcia</span>
+              <ImageOff className={compact ? 'h-6 w-6' : 'h-10 w-10'} />
+              {!compact && <span className="text-xs">Brak zdjęcia</span>}
             </div>
           )}
-          <span className="absolute left-2 top-2 rounded-md bg-slate-950/80 px-2 py-0.5 font-mono text-xs text-brand-300 backdrop-blur">
+          <span
+            className={`absolute left-2 top-2 rounded-md bg-slate-950/80 font-mono text-brand-300 backdrop-blur ${
+              compact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.5 text-xs'
+            }`}
+          >
             {product.isGroup ? `${product.variants?.length ?? 0} wariantów` : product.sku}
           </span>
-          {product.isGroup && (
+          {product.isGroup && !compact && (
             <span className="absolute bottom-2 left-2 flex items-center gap-1 rounded-md bg-brand-600/90 px-2 py-0.5 text-xs text-white backdrop-blur">
               <Layers className="h-3 w-3" />
               Grupa
@@ -132,7 +146,9 @@ export function ProductCard({
           )}
           {!editMode && (
             <span
-              className={`absolute bottom-2 right-2 rounded-md px-2 py-0.5 text-xs font-medium backdrop-blur ${
+              className={`absolute bottom-2 right-2 rounded-md font-medium backdrop-blur ${
+                compact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.5 text-xs'
+              } ${
                 product.stock <= 0
                   ? 'bg-red-950/80 text-red-300'
                   : 'bg-slate-950/80 text-slate-300'
@@ -144,11 +160,16 @@ export function ProductCard({
           )}
         </div>
 
-        <div className="flex flex-1 flex-col gap-1 p-3">
-          <h3 className="line-clamp-2 text-sm font-medium leading-snug text-slate-100">
+        <div className={`flex flex-1 flex-col gap-1 ${compact ? 'p-2' : cozy ? 'p-4' : 'p-3'}`}>
+          <h3
+            className={`font-medium leading-snug text-slate-100 ${
+              compact ? 'line-clamp-2 text-xs' : cozy ? 'line-clamp-3 text-base' : 'line-clamp-2 text-sm'
+            }`}
+          >
             {product.displayName}
           </h3>
           {product.isGroup && product.variants && product.variants.length > 0 ? (
+            !compact && (
             <ul className="mt-1 max-h-24 space-y-0.5 overflow-y-auto scrollbar-none">
               {product.variants.map((v) => (
                 <li
@@ -166,8 +187,13 @@ export function ProductCard({
                 </li>
               ))}
             </ul>
+            )
           ) : (
-            <p className="mt-auto text-xs text-slate-500">{product.category}</p>
+            !compact && (
+              <p className={`mt-auto text-slate-500 ${cozy ? 'text-sm' : 'text-xs'}`}>
+                {product.category}
+              </p>
+            )
           )}
         </div>
       </button>
@@ -362,9 +388,10 @@ export function ProductDetail({
         customImageUrl: url,
         hasImage: true,
       });
+      showToast('Zdjęcie zapisane', 'ok');
     } catch (err) {
       console.error(err);
-      alert('Błąd wgrywania zdjęcia.');
+      showToast('Błąd wgrywania zdjęcia', 'error');
     } finally {
       setUploading(false);
     }
@@ -382,9 +409,10 @@ export function ProductDetail({
         extraImageUrls: extras,
         hasImage: true,
       });
+      showToast('Dodano zdjęcie', 'ok');
     } catch (err) {
       console.error(err);
-      alert('Błąd wgrywania dodatkowego zdjęcia.');
+      showToast('Błąd wgrywania dodatkowego zdjęcia', 'error');
     } finally {
       setUploadingExtra(false);
     }
@@ -417,9 +445,10 @@ export function ProductDetail({
           onImageUpdated?.(product.id, getProductImage(refreshed) || '');
         }
       }
+      showToast('Zdjęcie usunięte', 'info');
     } catch (err) {
       console.error(err);
-      alert('Błąd usuwania zdjęcia.');
+      showToast('Błąd usuwania zdjęcia', 'error');
     } finally {
       setDeleting(false);
     }
@@ -442,9 +471,10 @@ export function ProductDetail({
       onProductUpdated?.({ ...detail, ...updates });
       setDetail((prev) => ({ ...prev, ...updates }));
       setEditing(false);
+      showToast('Zapisano zmiany', 'ok');
     } catch (err) {
       console.error(err);
-      alert('Błąd zapisu.');
+      showToast('Błąd zapisu', 'error');
     } finally {
       setSaving(false);
     }
@@ -694,38 +724,6 @@ export function ProductDetail({
             </>
           )}
 
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() =>
-                printShelfLabels([
-                  {
-                    id: detail.id,
-                    sku: detail.sku,
-                    displayName: detail.displayName,
-                    ean: ean || detail.ean || detail.sku,
-                    catalog: detail.catalog || 'accessories',
-                  },
-                ])
-              }
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 py-3 text-sm font-medium text-slate-300 transition hover:bg-slate-800"
-            >
-              <Printer className="h-4 w-4" />
-              Drukuj etykietę
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                addToLabelQueue(detail);
-                onLabelQueueChange?.();
-              }}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-600 py-3 text-sm font-medium text-white transition hover:bg-brand-500"
-            >
-              <Tag className="h-4 w-4" />
-              Do kolejki druku
-            </button>
-          </div>
-
           <div className="space-y-2">
             <div className="flex gap-2">
               <input
@@ -824,6 +822,45 @@ export function ProductDetail({
                 </button>
               </div>
             )}
+          </div>
+
+          <div className="border-t border-slate-800 pt-3">
+            <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-slate-500">
+              Etykiety
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  printShelfLabels([
+                    {
+                      id: detail.id,
+                      sku: detail.sku,
+                      displayName: detail.displayName,
+                      ean: ean || detail.ean || detail.sku,
+                      catalog: detail.catalog || 'accessories',
+                    },
+                  ]);
+                  showToast('Otwarto podgląd druku etykiety', 'info');
+                }}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 py-2.5 text-sm font-medium text-slate-400 transition hover:bg-slate-800 hover:text-slate-200"
+              >
+                <Printer className="h-4 w-4" />
+                Drukuj
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  addToLabelQueue(detail);
+                  onLabelQueueChange?.();
+                  showToast('Dodano do kolejki druku', 'ok');
+                }}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 py-2.5 text-sm font-medium text-slate-400 transition hover:bg-slate-800 hover:text-slate-200"
+              >
+                <Tag className="h-4 w-4" />
+                Do kolejki
+              </button>
+            </div>
           </div>
         </div>
       </div>
