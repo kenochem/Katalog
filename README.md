@@ -95,6 +95,27 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...
 
 Sesja zostaje w przeglądarce (PWA) — po zalogowaniu nie trzeba wpisywać hasła przy każdym wejściu. Gość: wybór na czas karty (`sessionStorage`).
 
+### Edge Function `admin-users` (tworzenie kont z panelu)
+
+```bash
+npx supabase login
+npx supabase link --project-ref fgkkvbniyjysgqcjuxpl
+npx supabase functions deploy admin-users
+```
+
+## Sync stanów z WAPRO (cykliczny, stałe)
+
+**Nie potrzeba SSH ani udziału sieciowego.** Job na serwerze WAPRO sam czyta SQL i wysyła stany do Supabase:
+
+1. Na serwerze: folder `C:\katalog-sync\`
+2. Skopiuj `scripts/sync-wapro-stock-server.ps1`
+3. Plik `C:\katalog-sync\katalog-sync.env` (wzorzec `scripts/katalog-sync.env.example`) z `SUPABASE_URL` + **service_role**
+4. Test: `powershell -ExecutionPolicy Bypass -File C:\katalog-sync\sync-wapro-stock-server.ps1`
+5. Harmonogram zadań → codziennie (np. 7:00) → ta sama komenda
+6. Log: `C:\katalog-sync\sync.log`
+
+SQL: `INDEKS_KATALOGOWY` + `STAN` (`scripts/sql/wapro-stock-export.sql`).
+
 ## Import danych
 
 ```bash

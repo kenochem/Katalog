@@ -12,6 +12,7 @@
     "import:supabase:shop": "node --env-file=.env scripts/upload-to-supabase.mjs shop",
     "import:wapro": "py scripts/import-wapro.py",
     "import:baselinker": "py scripts/import-baselinker.py",
+    "sync:wapro-stock": "node --env-file=.env scripts/sync-wapro-stock.mjs",
     "embeddings:shop": "node scripts/build-shop-embeddings.mjs",
     "embeddings:enrich": "node scripts/enrich-shop-embeddings.mjs",
     "deploy": "npm run build && firebase deploy --only hosting"

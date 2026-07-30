@@ -1,0 +1,36 @@
+-- Stany z WAPRO Mag → CSV dla Katalogu (Akcesoria)
+-- Serwer: 192.168.1.100 (lub lokalny DESKTOP-…)
+-- Baza: WAPRO
+-- Kolumny potwierdzone: INDEKS_KATALOGOWY, STAN, ID_MAGAZYNU
+
+-- === A) Podgląd (SSMS) ===
+SELECT TOP 20
+  LTRIM(RTRIM(INDEKS_KATALOGOWY)) AS sku,
+  ID_MAGAZYNU,
+  STAN AS stock,
+  NAZWA
+FROM dbo.ARTYKUL
+WHERE INDEKS_KATALOGOWY IS NOT NULL
+  AND LTRIM(RTRIM(INDEKS_KATALOGOWY)) <> ''
+ORDER BY INDEKS_KATALOGOWY, ID_MAGAZYNU;
+
+-- === B) Eksport do sync (SUMA po wszystkich magazynach) ===
+-- Użyj tego, jeśli w Katalogu ma być łączny stan.
+SELECT
+  LTRIM(RTRIM(INDEKS_KATALOGOWY)) AS sku,
+  CAST(SUM(COALESCE(STAN, 0)) AS DECIMAL(18, 3)) AS stock
+FROM dbo.ARTYKUL
+WHERE INDEKS_KATALOGOWY IS NOT NULL
+  AND LTRIM(RTRIM(INDEKS_KATALOGOWY)) <> ''
+GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY))
+ORDER BY sku;
+
+-- === C) Tylko jeden magazyn (podstaw ID) ===
+-- SELECT
+--   LTRIM(RTRIM(INDEKS_KATALOGOWY)) AS sku,
+--   CAST(COALESCE(STAN, 0) AS DECIMAL(18, 3)) AS stock
+-- FROM dbo.ARTYKUL
+-- WHERE ID_MAGAZYNU = 1
+--   AND INDEKS_KATALOGOWY IS NOT NULL
+--   AND LTRIM(RTRIM(INDEKS_KATALOGOWY)) <> ''
+-- ORDER BY sku;
