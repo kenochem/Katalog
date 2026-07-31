@@ -12,7 +12,7 @@ Katalog łączy dwa źródła produktów w jednej aplikacji webowej (PWA):
 | Katalog | Źródło | Przeznaczenie |
 |---------|--------|----------------|
 | **Akcesoria** | Wapro / części do myjek | Magazyn części, braki zdjęć, zestawy |
-| **Produkty** | Baselinker / sklep | Asortyment handlowy, stany, Lens (EAN + OCR) |
+| **Produkty** | Baselinker / sklep | Asortyment handlowy, stany, Lens (rozpoznawanie po zdjęciu) |
 
 Stack: **React + Vite + TypeScript + Tailwind**, baza / Auth / storage w **Supabase**, hosting na **Firebase Hosting**.
 
@@ -24,7 +24,8 @@ Stack: **React + Vite + TypeScript + Tailwind**, baza / Auth / storage w **Supab
 - Karty produktów ze stanem i zdjęciami
 - Edycja, dodawanie, zestawy, etykiety (wg roli)
 - PWA
-- **Lens** (Produkty): EAN + OCR z bramką marki
+- **Lens** (Produkty): porównanie wyglądu (CLIP) ze zdjęciami katalogu — przód butelki/opakowania (top 3). Czytnik EAN osobno.
+- Po dużym imporcie shop: `npm run embeddings:shop` (indeks `/data/shop-embeddings.json`)
 
 ## Szybki start
 
@@ -115,11 +116,15 @@ Klienci i historia są **tylko Twoje** (RLS po `auth.uid()`).
 
 | Rola | Uprawnienia |
 |------|-------------|
-| Gość | Podgląd katalogu ze zdjęciami — bez edycji, etykiet, zamówień, usuwania |
-| Handlowiec | Zamówienia, oferty, zdjęcia (+), katalog — bez stanów, usuwania zdjęć, kont |
-| Magazynier | Stany, etykiety, dodawanie zdjęć — bez zamówień, zestawów, edycji produktów |
-| Operator | Pełna praca — bez panelu kont |
-| Admin | + panel **Konta** |
+| Gość | Podgląd katalogu ze zdjęciami — bez edycji, etykiet, zamówień, cen |
+| Handlowiec | Zamówienia, oferty, zdjęcia (+), katalog, **ceny/marża** — bez stanów, usuwania zdjęć, kont |
+| Magazynier | Stany, etykiety, dodawanie zdjęć — bez zamówień, zestawów, edycji produktów, cen |
+| Operator | Pełna praca (w tym ceny) — bez panelu kont |
+| Admin | + **Konta**, podgląd **Uprawnień**, **Higiena EAN** |
+
+Ceny (zakup/sprzedaż netto + sprzedaż brutto z WAPRO; marża = (sprzedaż−zakup)/sprzedaż netto, jak w WAPRO) widać tylko handlowiec / operator / admin — w karcie produktu (Akcesoria i Produkty po wspólnym SKU). Migracja: `supabase/migration-product-prices.sql`. Dopisanie cen/stanów do Produktów z XLS: `npm run import:shop-prices` (generuje też `data/wapro-stock.csv`) → `npm run sync:wapro-stock` (oba katalogi w Supabase).
+
+Admin → **Uprawnienia**: podgląd macierzy ról (edycja w przyszłości). **EAN**: lista podejrzanych kodów (brak / format / checksum / duplikaty).
 
 Sesja zostaje w przeglądarce (PWA) — po zalogowaniu nie trzeba wpisywać hasła przy każdym wejściu. Gość: wybór na czas karty (`sessionStorage`).
 
@@ -137,15 +142,21 @@ npx supabase functions deploy nip-lookup
 **Nie potrzeba SSH ani udziału sieciowego.** Job na serwerze WAPRO sam czyta SQL i wysyła stany do Supabase:
 
 1. Na serwerze: folder `C:\katalog-sync\`
-2. Skopiuj `scripts/sync-wapro-stock-server.ps1`
+2. Skopiuj skrypt (albo uruchom `powershell -File scripts\install-katalog-sync.ps1` z repo)
 3. Plik `C:\katalog-sync\katalog-sync.env` (wzorzec `scripts/katalog-sync.env.example`) z `SUPABASE_URL` + **service_role**
 4. Test: `powershell -ExecutionPolicy Bypass -File C:\katalog-sync\sync-wapro-stock-server.ps1`
 5. Harmonogram zadań → codziennie (np. 7:00) → ta sama komenda
 6. Log: `C:\katalog-sync\sync.log`
 
-SQL: `INDEKS_KATALOGOWY` + `STAN` (`scripts/sql/wapro-stock-export.sql`).
+SQL: stany (+ opcjonalnie ceny netto) — `scripts/sql/wapro-stock-export.sql`.  
+CSV może zawierać `sku;stock;price_purchase_net;price_sale_net;price_sale_gross`.
 
-**Ręczny sync z aplikacji:** strzałka przy Odśwież → „Synchronizuj stany WAPRO”.  
+**Ręczny sync z aplikacji:** strzałka przy Odśwież → „Synchronizuj stany WAPRO”.
+Sync ustawia **stany i ceny dokładnie jak w Mag** (w górę i w dół). Zakres = **aktywna zakładka** (Akcesoria albo Produkty).
+
+Po wdrożeniu aktualnego `scripts/sync-wapro-stock-server.ps1` na `C:\katalog-sync\` **skopiuj ponownie** `.ps1` na serwer WAPRO (oraz migracja `migration-stock-sync-catalog.sql`).
+
+Jeśli toast pokazuje `brak w WAPRO: …` / `SKU z SQL: 0` — eksport SQL się wywalił; sprawdź `C:\katalog-sync\sync.log` i `wapro-stock.raw`.  
 Wymaga migracji `supabase/migration-stock-sync-requests.sql` oraz drugiego zadania Harmonogramu co **2 min**:
 
 ```text
@@ -159,10 +170,13 @@ powershell.exe -ExecutionPolicy Bypass -File C:\katalog-sync\sync-wapro-stock-se
 ```bash
 npm run import:wapro
 npm run import:baselinker
+npm run import:sonax          # merge dziedziczonego katalogu sonax.sklep.pl (tag Sonax, bez duplikatów)
+npm run import:shop-prices    # ceny WAPRO → Produkty po SKU
 npm run import:supabase
 npm run import:supabase:shop
 ```
 
+Mały eksport Sonax (~500 SKU) nie nadpisuje pełnego katalogu przy `import:baselinker` — do merge używaj `import:sonax`. Migracja tagów: `supabase/migration-product-tags.sql`.
 ## Publikacja (Firebase Hosting)
 
 ```bash

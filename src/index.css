@@ -124,7 +124,28 @@ input[type="search"]::-webkit-search-cancel-button {
 /* Długie listy produktów: przeglądarka pomija layout poza viewportem */
 .product-card-cv {
   content-visibility: auto;
-  contain-intrinsic-size: auto 280px;
+  contain-intrinsic-size: auto 260px;
+}
+
+/* Na telefonie mniej animacji / blur — płynniejszy scroll */
+@media (max-width: 639px) {
+  .product-card-cv {
+    contain-intrinsic-size: auto 220px;
+  }
+}
+
+@media (hover: none) {
+  .product-card-cv:hover {
+    border-color: inherit;
+    background-color: inherit;
+    box-shadow: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in {
+    animation: none;
+  }
 }
 
 .scrollbar-none {

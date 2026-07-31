@@ -1,6 +1,13 @@
 import { Loader2, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
-import { requestWaproStockSync } from '../lib/stockSync';
+import type { CatalogType } from '../types';
+import { CATALOG_LABELS } from '../types';
+import {
+  getLatestStockSync,
+  requestWaproStockSync,
+  stockSyncScopeLabel,
+  type StockSyncScope,
+} from '../lib/stockSync';
 import { showToast } from '../lib/toast';
 import { DatabaseSyncIcon } from './DatabaseSyncIcon';
 
@@ -8,34 +15,70 @@ interface RefreshControlsProps {
   loading: boolean;
   onRefresh: () => void;
   canRequestStockSync: boolean;
+  /** Sync WAPRO tylko dla aktywnej zakładki (domyślnie). */
+  catalog?: CatalogType;
   className?: string;
 }
 
 /**
  * Dwa różne przyciski:
  * - Odśwież = przeładuj katalog z Supabase (to co widać)
- * - Sync WAPRO = zleć pobranie stanów z WAPRO na serwer (nie to samo!)
+ * - Sync WAPRO = zleć pobranie stanów/cen z WAPRO na serwer (dla aktywnej zakładki)
  */
 export function RefreshControls({
   loading,
   onRefresh,
   canRequestStockSync,
+  catalog = 'accessories',
   className = '',
 }: RefreshControlsProps) {
   const [syncBusy, setSyncBusy] = useState(false);
+  const scope: StockSyncScope = catalog;
+  const scopeLabel = stockSyncScopeLabel(scope);
 
   async function onSyncStock() {
     setSyncBusy(true);
     try {
-      const res = await requestWaproStockSync();
+      const res = await requestWaproStockSync(scope);
       if (!res.ok) {
         showToast(res.error || 'Nie udało się zlecić syncu WAPRO', 'error');
         return;
       }
       showToast(
-        'Zlecono sync stanów z WAPRO (~1–2 min). Potem Odśwież katalog.',
+        `Sync WAPRO (${scopeLabel}): stany i ceny jak w Mag — czekam…`,
         'info',
-        5000,
+        4000,
+      );
+
+      const started = Date.now();
+      while (Date.now() - started < 180_000) {
+        await new Promise((r) => setTimeout(r, 4000));
+        const last = await getLatestStockSync();
+        if (!last) continue;
+        if (res.id && last.id !== res.id) {
+          // Inne zlecenie na wierzchu — nadal czekaj na nasze po id
+          if (last.status === 'pending' || last.status === 'running') continue;
+        }
+        if (last.id === res.id || !res.id) {
+          if (last.status === 'done') {
+            showToast(
+              last.message || `Sync ${scopeLabel} zakończony. Odświeżam.`,
+              'ok',
+              7000,
+            );
+            onRefresh();
+            return;
+          }
+          if (last.status === 'error') {
+            showToast(last.message || 'Sync WAPRO zakończył się błędem', 'error', 8000);
+            return;
+          }
+        }
+      }
+      showToast(
+        'Sync nadal trwa / brak wyniku. Sprawdź C:\\katalog-sync\\sync.log na serwerze WAPRO.',
+        'info',
+        8000,
       );
     } finally {
       setSyncBusy(false);
@@ -66,8 +109,8 @@ export function RefreshControls({
           onClick={() => void onSyncStock()}
           disabled={busy}
           className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-brand-300 disabled:opacity-50"
-          title="Sync WAPRO — pobierz stany magazynowe z WAPRO do chmury"
-          aria-label="Synchronizuj stany z WAPRO"
+          title={`Sync WAPRO — stany i ceny dla: ${CATALOG_LABELS[catalog]} (jak w Mag, w górę i w dół)`}
+          aria-label={`Synchronizuj stany WAPRO (${CATALOG_LABELS[catalog]})`}
         >
           {syncBusy ? (
             <Loader2 className="h-5 w-5 animate-spin text-brand-400" />

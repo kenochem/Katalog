@@ -23,6 +23,14 @@ export interface Product {
   hasImage: boolean;
   stock: number;
   stockManual?: boolean;
+  /** Cena zakupu netto (WAPRO) */
+  pricePurchaseNet?: number;
+  /** Cena sprzedaży netto (WAPRO) */
+  priceSaleNet?: number;
+  /** Cena sprzedaży brutto (WAPRO) — sklep / klient */
+  priceSaleGross?: number;
+  /** Tag źródła / oznaczenia (np. Sonax = katalog z sonax.sklep.pl) */
+  tags?: string[];
   catalog: CatalogType;
   variants?: ProductVariant[];
   isGroup?: boolean;
@@ -53,7 +61,10 @@ export type View =
   | 'favorites'
   | 'labels'
   | 'admin'
-  | 'crm';
+  | 'crm'
+  | 'ean-hygiene'
+  | 'role-matrix'
+  | 'ops';
 
 export const CATALOG_LABELS: Record<CatalogType, string> = {
   accessories: 'Akcesoria',
@@ -98,8 +109,33 @@ export function deriveCategories(products: Product[]): string[] {
   for (const p of products) {
     counts.set(p.category, (counts.get(p.category) || 0) + 1);
   }
-  const cats = [...counts.entries()]
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'pl'))
-    .map(([c]) => c);
-  return ['Wszystkie', ...cats];
+
+  const isShop = products.some((p) => (p.catalog || 'accessories') === 'shop');
+  /** Produkty: najważniejsze kategorie handlowe na początku. */
+  const shopPriority = [
+    'Chemia',
+    'Odświeżacze',
+    'Abel Auto',
+    'Dom i ogród',
+    'Smary',
+    'Mycie i dezynfekcja',
+    'Inne',
+  ];
+
+  const rest = [...counts.keys()].sort(
+    (a, b) => (counts.get(b) || 0) - (counts.get(a) || 0) || a.localeCompare(b, 'pl'),
+  );
+
+  if (!isShop) {
+    return ['Wszystkie', ...rest];
+  }
+
+  const prioritized: string[] = [];
+  for (const name of shopPriority) {
+    if (counts.has(name)) prioritized.push(name);
+  }
+  for (const name of rest) {
+    if (!prioritized.includes(name)) prioritized.push(name);
+  }
+  return ['Wszystkie', ...prioritized];
 }

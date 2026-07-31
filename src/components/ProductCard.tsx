@@ -11,7 +11,7 @@ import {
 import { memo, useRef, useState } from 'react';
 import type { Product } from '../types';
 import { getProductImage, updateProductImage } from '../lib/products';
-import { formatStock } from '../lib/format';
+import { formatStock, formatPricePln, formatMarginPercent, marginPercent } from '../lib/format';
 import { showToast } from '../lib/toast';
 
 interface ProductCardProps {
@@ -30,9 +30,12 @@ interface ProductCardProps {
   hideImages?: boolean;
   stockBusy?: boolean;
   density?: 'sm' | 'md' | 'lg';
+  /** Pokazuj cenę brutto (+ marżę) — role z viewPrices. */
+  showPrices?: boolean;
 }
 
-export const ProductCard = memo(function ProductCard({
+export const ProductCard = memo(
+  function ProductCard({
   product,
   onClick,
   showUpload = false,
@@ -46,6 +49,7 @@ export const ProductCard = memo(function ProductCard({
   hideImages = false,
   stockBusy = false,
   density = 'md',
+  showPrices = false,
 }: ProductCardProps) {
   const imageUrl = hideImages ? null : getProductImage(product);
   const [uploading, setUploading] = useState(false);
@@ -53,6 +57,12 @@ export const ProductCard = memo(function ProductCard({
   const cameraRef = useRef<HTMLInputElement>(null);
   const compact = density === 'sm';
   const cozy = density === 'lg';
+  const hasPrice =
+    showPrices &&
+    (product.priceSaleGross != null ||
+      product.priceSaleNet != null ||
+      product.pricePurchaseNet != null);
+  const margin = marginPercent(product.pricePurchaseNet, product.priceSaleNet);
 
   async function handleUpload(file: File) {
     setUploading(true);
@@ -71,7 +81,9 @@ export const ProductCard = memo(function ProductCard({
   return (
     <article
       className={`product-card-cv relative flex flex-col overflow-hidden rounded-2xl border bg-slate-900/80 ${
-        isFavorite ? 'border-amber-400/60' : 'border-slate-800'
+        isFavorite
+          ? 'border-amber-400/60 hover:border-amber-400 hover:bg-slate-800/90'
+          : 'border-slate-800 hover:border-brand-500/45 hover:bg-slate-800/80'
       }`}
     >
       {onToggleFavorite && (
@@ -81,7 +93,7 @@ export const ProductCard = memo(function ProductCard({
             e.stopPropagation();
             onToggleFavorite(product.id);
           }}
-          className={`absolute right-2 top-2 z-20 rounded-full p-1.5 ${
+          className={`group/fav absolute right-2 top-2 z-20 rounded-full p-1.5 ${
             isFavorite
               ? 'bg-amber-400 text-amber-950'
               : 'bg-black/55 text-white/85 hover:bg-black/70'
@@ -90,6 +102,12 @@ export const ProductCard = memo(function ProductCard({
           aria-label={isFavorite ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}
         >
           <Star className={`h-4 w-4 ${isFavorite ? 'fill-current' : ''}`} />
+          <span
+            className="pointer-events-none absolute right-0 top-full z-30 mt-1.5 hidden whitespace-nowrap rounded-md bg-black/90 px-2 py-1 text-[10px] font-medium text-white shadow-lg group-hover/fav:block"
+            role="tooltip"
+          >
+            {isFavorite ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}
+          </span>
         </button>
       )}
 
@@ -105,6 +123,7 @@ export const ProductCard = memo(function ProductCard({
             }`}
             loading="lazy"
             decoding="async"
+            sizes={compact ? '(max-width:640px) 30vw, 120px' : '(max-width:640px) 45vw, 180px'}
           />
         ) : (
           <div className="pointer-events-none flex h-full items-center justify-center text-slate-500">
@@ -217,6 +236,20 @@ export const ProductCard = memo(function ProductCard({
         >
           {product.displayName}
         </h3>
+        {hasPrice && (
+          <p
+            className={`tabular-nums font-semibold text-brand-300 ${
+              compact ? 'text-[11px]' : cozy ? 'text-sm' : 'text-xs'
+            }`}
+          >
+            {formatPricePln(product.priceSaleGross ?? product.priceSaleNet)}
+            {margin != null && !compact && (
+              <span className="ml-1.5 font-medium text-slate-500">
+                {formatMarginPercent(margin)}
+              </span>
+            )}
+          </p>
+        )}
         {!compact && !product.isGroup && (
           <p className={`mt-auto text-slate-500 ${cozy ? 'text-sm' : 'text-xs'}`}>
             {product.category}
@@ -307,4 +340,15 @@ export const ProductCard = memo(function ProductCard({
       )}
     </article>
   );
-});
+},
+  (prev, next) =>
+    prev.product === next.product &&
+    prev.isFavorite === next.isFavorite &&
+    prev.orderQty === next.orderQty &&
+    prev.editMode === next.editMode &&
+    prev.stockBusy === next.stockBusy &&
+    prev.density === next.density &&
+    prev.showPrices === next.showPrices &&
+    prev.hideImages === next.hideImages &&
+    prev.showUpload === next.showUpload,
+);

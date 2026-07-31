@@ -51,6 +51,7 @@ export function CrmClientsPanel({ cloudEnabled, onPickClient }: CrmClientsPanelP
       (c) =>
         c.displayName.toLowerCase().includes(s) ||
         (c.legalName || '').toLowerCase().includes(s) ||
+        (c.note || '').toLowerCase().includes(s) ||
         (c.nip || '').includes(s.replace(/\D/g, '')),
     );
   }, [clients, q]);
@@ -172,6 +173,11 @@ export function CrmClientsPanel({ cloudEnabled, onPickClient }: CrmClientsPanelP
                 <p className="mt-0.5 font-mono text-[11px] text-brand-400">
                   {c.nip || 'bez NIP'}
                 </p>
+                {c.note?.trim() && (
+                  <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-slate-400">
+                    {c.note}
+                  </p>
+                )}
               </button>
               <button
                 type="button"
@@ -282,11 +288,14 @@ export function CrmClientsPanel({ cloudEnabled, onPickClient }: CrmClientsPanelP
               </label>
 
               <label className="block">
-                <span className="mb-1 text-xs text-slate-500">Notatka</span>
+                <span className="mb-1 text-xs text-slate-500">
+                  Notatka (preferencje, płatność, uwagi)
+                </span>
                 <textarea
                   value={editing.note || ''}
                   onChange={(e) => setEditing((p) => ({ ...p, note: e.target.value }))}
-                  rows={2}
+                  rows={3}
+                  placeholder="np. przelew 14 dni, woli oferty PDF, nie dzwonić po 16…"
                   className="input-field resize-none"
                 />
               </label>

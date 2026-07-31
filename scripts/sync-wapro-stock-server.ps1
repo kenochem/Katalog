@@ -1,19 +1,17 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Na serwerze WAPRO: SQL → stany → Supabase (katalog Akcesoria).
+  Na serwerze WAPRO: SQL → stany (+ ceny jeśli dostępne) → Supabase (Akcesoria + Produkty).
 
 .SETUP
   1. Skopiuj do C:\katalog-sync\sync-wapro-stock-server.ps1
   2. C:\katalog-sync\katalog-sync.env z SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY
-  3. Harmonogram codzienny:
-       powershell.exe -ExecutionPolicy Bypass -File C:\katalog-sync\sync-wapro-stock-server.ps1
-  4. Harmonogram co 2 min (ręczne zlecenia z aplikacji):
-       powershell.exe -ExecutionPolicy Bypass -File C:\katalog-sync\sync-wapro-stock-server.ps1 -OnlyIfPending
+  3. Harmonogram codzienny / co 2 min z -OnlyIfPending (jak wcześniej)
 
 .NOTES
   Nie nadpisuje products.stock_manual = true.
-  Przycisk w apce wstawia wiersz do stock_sync_requests (status=pending).
+  Przycisk w apce → stock_sync_requests (pending).
+  Oba katalogi (accessories + shop) po wspólnym SKU.
 #>
 param(
   [switch]$OnlyIfPending
@@ -44,6 +42,30 @@ function Get-EnvMap([string]$path) {
   return $map
 }
 
+function Write-Utf8NoBom([string]$path, [string[]]$lines) {
+  $utf8 = New-Object System.Text.UTF8Encoding $false
+  [System.IO.File]::WriteAllLines($path, $lines, $utf8)
+}
+
+function ConvertTo-DoubleOrNull([string]$raw) {
+  if ([string]::IsNullOrWhiteSpace($raw)) { return $null }
+  $n = 0.0
+  $ok = [double]::TryParse(
+    $raw.Trim().Replace(',', '.'),
+    [System.Globalization.NumberStyles]::Any,
+    [System.Globalization.CultureInfo]::InvariantCulture,
+    [ref]$n
+  )
+  if ($ok) { return $n }
+  return $null
+}
+
+function Invoke-WaproQuery([string]$query, [string]$outFile) {
+  if (Test-Path $outFile) { Remove-Item $outFile -Force }
+  & sqlcmd -S $SqlServer -d $SqlDatabase -E -W -h-1 -s ';' -f 65001 -Q $query -o $outFile
+  return $LASTEXITCODE
+}
+
 if (-not (Test-Path $SyncDir)) { New-Item -ItemType Directory -Path $SyncDir | Out-Null }
 if (-not (Test-Path $EnvFile)) {
   Write-Log ('BRAK pliku {0}' -f $EnvFile)
@@ -71,10 +93,21 @@ $jsonHeaders = $headers + @{
 
 # --- Zlecenia z aplikacji ---
 $pendingIds = @()
+$syncScope = 'all'
 try {
-  $pendingUri = '{0}/rest/v1/stock_sync_requests?status=eq.pending&select=id&order=requested_at.asc' -f $SupabaseUrl
+  $pendingUri = '{0}/rest/v1/stock_sync_requests?status=eq.pending&select=id,catalog&order=requested_at.asc' -f $SupabaseUrl
   $pending = @(Invoke-RestMethod -Uri $pendingUri -Headers $headers -Method Get)
   $pendingIds = @($pending | ForEach-Object { $_.id })
+  $scopes = @(
+    $pending | ForEach-Object {
+      if ($_.catalog -and $_.catalog -ne '') { $_.catalog } else { 'all' }
+    } | Select-Object -Unique
+  )
+  if ($scopes.Count -eq 1 -and $scopes[0] -in @('accessories', 'shop')) {
+    $syncScope = $scopes[0]
+  } else {
+    $syncScope = 'all'
+  }
 } catch {
   if ($OnlyIfPending) {
     Write-Log ('Brak tabeli stock_sync_requests lub blad: {0}' -f $_.Exception.Message)
@@ -87,7 +120,7 @@ if ($OnlyIfPending -and $pendingIds.Count -eq 0) {
 }
 
 if ($pendingIds.Count -gt 0) {
-  Write-Log ('Zlecenia pending: {0}' -f $pendingIds.Count)
+  Write-Log ('Zlecenia pending: {0}, zakres: {1}' -f $pendingIds.Count, $syncScope)
   $now = (Get-Date).ToUniversalTime().ToString('o')
   foreach ($id in $pendingIds) {
     $body = @{ status = 'running'; started_at = $now } | ConvertTo-Json -Compress
@@ -98,10 +131,26 @@ if ($pendingIds.Count -gt 0) {
   }
 }
 
-Write-Log 'Start sync WAPRO -> Supabase'
+Write-Log ('Start sync WAPRO -> Supabase (zakres: {0})' -f $syncScope)
 
 try {
-  $query = @'
+  $tmpRaw = Join-Path $SyncDir 'wapro-stock.raw'
+  $csvPath = Join-Path $SyncDir 'wapro-stock.csv'
+
+  $queryWithPrices = @'
+SET NOCOUNT ON;
+SELECT LTRIM(RTRIM(INDEKS_KATALOGOWY)) AS sku,
+       CAST(SUM(COALESCE(STAN, 0)) AS DECIMAL(18, 3)) AS stock,
+       CAST(MAX(CENA_ZAKUPU_NETTO) AS DECIMAL(18, 4)) AS price_purchase_net,
+       CAST(MAX(CENA_SPRZEDAZY_NETTO) AS DECIMAL(18, 4)) AS price_sale_net,
+       CAST(MAX(CENA_SPRZEDAZY_BRUTTO) AS DECIMAL(18, 4)) AS price_sale_gross
+FROM dbo.ARTYKUL
+WHERE INDEKS_KATALOGOWY IS NOT NULL
+  AND LTRIM(RTRIM(INDEKS_KATALOGOWY)) <> ''
+GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
+'@
+
+  $queryStockOnly = @'
 SET NOCOUNT ON;
 SELECT LTRIM(RTRIM(INDEKS_KATALOGOWY)) AS sku,
        CAST(SUM(COALESCE(STAN, 0)) AS DECIMAL(18, 3)) AS stock
@@ -111,36 +160,108 @@ WHERE INDEKS_KATALOGOWY IS NOT NULL
 GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
 '@
 
-  $csvPath = Join-Path $SyncDir 'wapro-stock.csv'
-  $tmpRaw = Join-Path $SyncDir 'wapro-stock.raw'
+  $code = Invoke-WaproQuery $queryWithPrices $tmpRaw
+  $rawText = ''
+  if (Test-Path $tmpRaw) {
+    $rawText = [System.IO.File]::ReadAllText($tmpRaw)
+  }
+  $looksLikeError = ($code -ne 0) -or ($rawText -match 'Msg \d+') -or ($rawText -match 'Invalid column')
 
-  & sqlcmd -S $SqlServer -d $SqlDatabase -E -W -h-1 -s ';' -Q $query -o $tmpRaw
-  if ($LASTEXITCODE -ne 0) {
-    throw ('sqlcmd failed (kod {0})' -f $LASTEXITCODE)
+  if ($looksLikeError) {
+    Write-Log ('SQL z cenami nieudane (kod {0}) — fallback tylko stany' -f $code)
+    $code = Invoke-WaproQuery $queryStockOnly $tmpRaw
+    if ($code -ne 0) {
+      throw ('sqlcmd failed (kod {0})' -f $code)
+    }
+    $rawText = [System.IO.File]::ReadAllText($tmpRaw)
+    if ($rawText -match 'Msg \d+') {
+      throw ('sqlcmd blad: {0}' -f ($rawText.Substring(0, [Math]::Min(200, $rawText.Length))))
+    }
   }
 
-  'sku;stock' | Set-Content -Path $csvPath -Encoding UTF8
-  Get-Content $tmpRaw | Where-Object { $_.Trim() -ne '' } | Add-Content -Path $csvPath -Encoding UTF8
-
+  # Parsuj ręcznie (bez Import-Csv / BOM) — kolumny: sku;stock[;buy;sale;gross]
   $stockBySku = @{}
-  Import-Csv -Path $csvPath -Delimiter ';' | ForEach-Object {
-    $sku = ([string]$_.sku).Trim().ToUpperInvariant()
-    $stock = 0.0
-    [void][double]::TryParse(
-      ([string]$_.stock).Replace(',', '.'),
-      [System.Globalization.NumberStyles]::Any,
-      [System.Globalization.CultureInfo]::InvariantCulture,
-      [ref]$stock
-    )
-    if ($sku) { $stockBySku[$sku] = $stock }
+  $lineNo = 0
+  foreach ($line in [System.IO.File]::ReadAllLines($tmpRaw)) {
+    $lineNo++
+    $t = $line.Trim()
+    if (-not $t) { continue }
+    if ($t -match '^(Msg |Changed database|---)') { continue }
+    $parts = $t.Split(';')
+    if ($parts.Count -lt 2) { continue }
+    $sku = $parts[0].Trim().TrimStart([char]0xFEFF).ToUpperInvariant()
+    if (-not $sku -or $sku -eq 'SKU') { continue }
+    $stockVal = ConvertTo-DoubleOrNull $parts[1]
+    if ($null -eq $stockVal) { continue }
+    $buy = $null
+    $sale = $null
+    $gross = $null
+    if ($parts.Count -ge 5) {
+      $buy = ConvertTo-DoubleOrNull $parts[2]
+      $sale = ConvertTo-DoubleOrNull $parts[3]
+      $gross = ConvertTo-DoubleOrNull $parts[4]
+    }
+    $stockBySku[$sku] = @{
+      stock              = [double]$stockVal
+      price_purchase_net = $buy
+      price_sale_net     = $sale
+      price_sale_gross   = $gross
+    }
   }
-  Write-Log ('Wczytano {0} SKU z WAPRO' -f $stockBySku.Count)
+
+  Write-Log ('Wczytano {0} SKU z WAPRO (linie raw: {1})' -f $stockBySku.Count, $lineNo)
+  if ($stockBySku.Count -eq 0) {
+    $preview = if ($rawText.Length -gt 300) { $rawText.Substring(0, 300) } else { $rawText }
+    throw ('Brak SKU po eksporcie SQL — sprawdz wapro-stock.raw. Podglad: {0}' -f $preview)
+  }
+
+  # Znormalizowane SKU (ADB00001 ↔ ADB000001, spacje)
+  $stockByNorm = @{}
+  foreach ($k in @($stockBySku.Keys)) {
+    $nk = ($k -replace '[^A-Z0-9]', '')
+    if ($nk -match '^([A-Z]+)0*([0-9]+)$') {
+      $nk = $Matches[1] + ([int]$Matches[2]).ToString()
+    }
+    if (-not $stockByNorm.ContainsKey($nk)) {
+      $stockByNorm[$nk] = $stockBySku[$k]
+    }
+  }
+
+  function Get-WaproRow([string]$sku) {
+    $u = $sku.Trim().ToUpperInvariant()
+    if ($stockBySku.ContainsKey($u)) { return $stockBySku[$u] }
+    $nk = ($u -replace '[^A-Z0-9]', '')
+    if ($nk -match '^([A-Z]+)0*([0-9]+)$') {
+      $nk = $Matches[1] + ([int]$Matches[2]).ToString()
+    }
+    if ($stockByNorm.ContainsKey($nk)) { return $stockByNorm[$nk] }
+    return $null
+  }
+
+  # Debug CSV (opcjonalny podgląd)
+  $csvLines = New-Object System.Collections.Generic.List[string]
+  [void]$csvLines.Add('sku;stock;price_purchase_net;price_sale_net;price_sale_gross')
+  foreach ($sku in ($stockBySku.Keys | Sort-Object)) {
+    $r = $stockBySku[$sku]
+    $b = if ($null -eq $r.price_purchase_net) { '' } else { $r.price_purchase_net }
+    $sn = if ($null -eq $r.price_sale_net) { '' } else { $r.price_sale_net }
+    $g = if ($null -eq $r.price_sale_gross) { '' } else { $r.price_sale_gross }
+    [void]$csvLines.Add(('{0};{1};{2};{3};{4}' -f $sku, $r.stock, $b, $sn, $g))
+  }
+  Write-Utf8NoBom $csvPath $csvLines.ToArray()
+
+  $sample = ($stockBySku.Keys | Select-Object -First 3) -join ', '
+  Write-Log ('Przyklad SKU: {0}' -f $sample)
 
   $products = New-Object System.Collections.Generic.List[object]
   $from = 0
   $page = 1000
   do {
-    $uri = '{0}/rest/v1/products?catalog=eq.accessories&select=id,sku,stock,stock_manual,is_group,variants&offset={1}&limit={2}&order=id' -f $SupabaseUrl, $from, $page
+    if ($syncScope -eq 'accessories' -or $syncScope -eq 'shop') {
+      $uri = '{0}/rest/v1/products?catalog=eq.{1}&select=id,sku,stock,stock_manual,is_group,variants,price_purchase_net,price_sale_net,price_sale_gross,catalog&offset={2}&limit={3}&order=id' -f $SupabaseUrl, $syncScope, $from, $page
+    } else {
+      $uri = '{0}/rest/v1/products?select=id,sku,stock,stock_manual,is_group,variants,price_purchase_net,price_sale_net,price_sale_gross,catalog&offset={1}&limit={2}&order=id' -f $SupabaseUrl, $from, $page
+    }
     $batch = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
     if ($null -eq $batch) { break }
     $arr = @($batch)
@@ -150,34 +271,45 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
     $from += $page
   } while ($true)
 
-  Write-Log ('Pobrano {0} produktow z Supabase' -f $products.Count)
+  Write-Log ('Pobrano {0} produktow z Supabase (zakres {1})' -f $products.Count, $syncScope)
 
   $updated = 0
   $skippedManual = 0
   $skippedMissing = 0
+  $unchanged = 0
   $patchHeaders = $headers + @{
     'Content-Type' = 'application/json'
     Prefer         = 'return=minimal'
   }
 
   foreach ($p in $products) {
-    if ($p.stock_manual -eq $true) { $skippedManual++; continue }
-
     if ($p.is_group -eq $true -and $p.variants) {
+      if ($p.stock_manual -eq $true) { $skippedManual++; continue }
       $variants = @($p.variants)
       $touched = $false
+      $priceBuy = $null
+      $priceSale = $null
+      $priceGross = $null
       $next = foreach ($v in $variants) {
         $vsku = ([string]$v.sku).Trim().ToUpperInvariant()
-        if ($stockBySku.ContainsKey($vsku)) {
+        $row = Get-WaproRow $vsku
+        if ($null -ne $row) {
           $touched = $true
-          $v | Add-Member -NotePropertyName stock -NotePropertyValue $stockBySku[$vsku] -Force
+          $v | Add-Member -NotePropertyName stock -NotePropertyValue $row.stock -Force
+          if ($null -ne $row.price_purchase_net) { $priceBuy = $row.price_purchase_net }
+          if ($null -ne $row.price_sale_net) { $priceSale = $row.price_sale_net }
+          if ($null -ne $row.price_sale_gross) { $priceGross = $row.price_sale_gross }
         }
         $v
       }
       if (-not $touched) { $skippedMissing++; continue }
       $sum = 0.0
       foreach ($v in $next) { $sum += [double]$v.stock }
-      $body = @{ stock = $sum; variants = @($next) } | ConvertTo-Json -Depth 8 -Compress
+      $payload = @{ stock = $sum; variants = @($next) }
+      if ($null -ne $priceBuy) { $payload.price_purchase_net = $priceBuy }
+      if ($null -ne $priceSale) { $payload.price_sale_net = $priceSale }
+      if ($null -ne $priceGross) { $payload.price_sale_gross = $priceGross }
+      $body = $payload | ConvertTo-Json -Depth 8 -Compress
       $patchUri = '{0}/rest/v1/products?id=eq.{1}' -f $SupabaseUrl, $p.id
       Invoke-RestMethod -Uri $patchUri -Headers $patchHeaders -Method Patch -Body $body | Out-Null
       $updated++
@@ -185,16 +317,58 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
     }
 
     $sku = ([string]$p.sku).Trim().ToUpperInvariant()
-    if (-not $stockBySku.ContainsKey($sku)) { $skippedMissing++; continue }
-    $stock = $stockBySku[$sku]
-    if ([double]$p.stock -eq $stock) { continue }
-    $body = @{ stock = $stock } | ConvertTo-Json -Compress
+    $row = Get-WaproRow $sku
+    if ($null -eq $row) { $skippedMissing++; continue }
+    $payload = @{}
+    $changed = $false
+
+    if ($p.stock_manual -eq $true) {
+      $skippedManual++
+    } else {
+      $oldStock = 0.0
+      [void][double]::TryParse(
+        ([string]$p.stock).Replace(',', '.'),
+        [System.Globalization.NumberStyles]::Any,
+        [System.Globalization.CultureInfo]::InvariantCulture,
+        [ref]$oldStock
+      )
+      if ([Math]::Abs($oldStock - [double]$row.stock) -gt 0.0005) {
+        $payload.stock = $row.stock
+        $changed = $true
+      }
+    }
+
+    if ($null -ne $row.price_purchase_net) {
+      $old = ConvertTo-DoubleOrNull ([string]$p.price_purchase_net)
+      if ($null -eq $old -or [Math]::Abs([double]$old - [double]$row.price_purchase_net) -gt 0.00005) {
+        $payload.price_purchase_net = $row.price_purchase_net
+        $changed = $true
+      }
+    }
+    if ($null -ne $row.price_sale_net) {
+      $old = ConvertTo-DoubleOrNull ([string]$p.price_sale_net)
+      if ($null -eq $old -or [Math]::Abs([double]$old - [double]$row.price_sale_net) -gt 0.00005) {
+        $payload.price_sale_net = $row.price_sale_net
+        $changed = $true
+      }
+    }
+    if ($null -ne $row.price_sale_gross) {
+      $old = ConvertTo-DoubleOrNull ([string]$p.price_sale_gross)
+      if ($null -eq $old -or [Math]::Abs([double]$old - [double]$row.price_sale_gross) -gt 0.00005) {
+        $payload.price_sale_gross = $row.price_sale_gross
+        $changed = $true
+      }
+    }
+
+    if (-not $changed) { $unchanged++; continue }
+    $body = $payload | ConvertTo-Json -Compress
     $patchUri = '{0}/rest/v1/products?id=eq.{1}' -f $SupabaseUrl, $p.id
     Invoke-RestMethod -Uri $patchUri -Headers $patchHeaders -Method Patch -Body $body | Out-Null
     $updated++
   }
 
-  $msg = 'Zaktualizowano: {0}, reczne: {1}, brak w WAPRO: {2}' -f $updated, $skippedManual, $skippedMissing
+  $msg = 'Zakres: {0}. Zaktualizowano: {1}, bez zmian: {2}, reczne: {3}, brak w WAPRO: {4}, SKU z SQL: {5}' -f `
+    $syncScope, $updated, $unchanged, $skippedManual, $skippedMissing, $stockBySku.Count
   Write-Log ('Koniec. {0}' -f $msg)
 
   if ($pendingIds.Count -gt 0) {

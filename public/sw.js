@@ -1,5 +1,5 @@
-/* Minimalny service worker — PWA + świeży HTML przy każdym wejściu online. */
-const CACHE = 'katalog-shell-v7';
+/* Minimalny service worker — PWA bez auto skipWaiting (mniej białych ekranów). */
+const CACHE = 'katalog-shell-v8';
 const SHELL = [
   '/manifest.webmanifest',
   '/favicon.svg',
@@ -11,7 +11,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE).then((cache) => cache.addAll(SHELL).catch(() => undefined)),
   );
-  self.skipWaiting();
+  // Nie wołamy skipWaiting() — aktywacja po zgodzie użytkownika
 });
 
 self.addEventListener('activate', (event) => {
@@ -23,6 +23,12 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
@@ -30,7 +36,6 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   if (url.pathname.startsWith('/data/')) return;
 
-  // Nawigacja / HTML — zawsze sieć (żeby PWA dostała nowy deploy)
   const isHtml =
     req.mode === 'navigate' ||
     url.pathname === '/' ||
@@ -46,7 +51,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Reszta: sieć, przy braku sieci — cache
   event.respondWith(
     fetch(req)
       .then((res) => {

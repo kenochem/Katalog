@@ -15,6 +15,19 @@ let localCache: Product[] | null = null;
 let shopCache: Product[] | null = null;
 let accessorySkuCache: Set<string> | null = null;
 
+/** Krótki cache w pamięci — unika ponownego stronicowania Supabase przy przełączaniu katalogów. */
+const FETCH_TTL_MS = 90_000;
+const fetchMem = new Map<string, { at: number; data: Product[]; inflight?: Promise<Product[]> }>();
+
+function fetchCacheKey(catalog?: CatalogType): string {
+  return catalog || 'all';
+}
+
+export function invalidateProductsCache(catalog?: CatalogType): void {
+  if (catalog) fetchMem.delete(catalog);
+  else fetchMem.clear();
+}
+
 /** SKU z katalogu Akcesoria (WAPRO) — nie dublujemy ich w Produktach. */
 async function getAccessorySkuSet(): Promise<Set<string>> {
   if (accessorySkuCache) return accessorySkuCache;
@@ -75,7 +88,38 @@ async function loadBaseProducts(catalog: CatalogType = 'accessories'): Promise<P
   return localCache;
 }
 
-export async function fetchProducts(catalog?: CatalogType): Promise<Product[]> {
+export async function fetchProducts(
+  catalog?: CatalogType,
+  opts?: { force?: boolean },
+): Promise<Product[]> {
+  const key = fetchCacheKey(catalog);
+  const hit = fetchMem.get(key);
+  if (!opts?.force && hit) {
+    if (hit.inflight) return hit.inflight;
+    if (Date.now() - hit.at < FETCH_TTL_MS) return hit.data;
+  }
+
+  const inflight = (async () => {
+    const data = await fetchProductsUncached(catalog);
+    fetchMem.set(key, { at: Date.now(), data });
+    return data;
+  })();
+
+  fetchMem.set(key, {
+    at: hit?.at ?? 0,
+    data: hit?.data ?? [],
+    inflight,
+  });
+
+  try {
+    return await inflight;
+  } catch (err) {
+    fetchMem.delete(key);
+    throw err;
+  }
+}
+
+async function fetchProductsUncached(catalog?: CatalogType): Promise<Product[]> {
   const local = getLocalProducts();
   const accessorySkus = await getAccessorySkuSet();
 
@@ -98,8 +142,11 @@ export async function fetchProducts(catalog?: CatalogType): Promise<Product[]> {
   const pageSize = 1000;
   let from = 0;
 
+  const LIST_SELECT =
+    'id,sku,name,display_name,category,manufacturer,ean,image_url,custom_image_url,has_image,stock,stock_manual,price_purchase_net,price_sale_net,price_sale_gross,tags,catalog,variants,is_group';
+
   while (true) {
-    let pageQuery = supabase.from('products').select('*').order('sku');
+    let pageQuery = supabase.from('products').select(LIST_SELECT).order('sku');
     if (catalog) {
       pageQuery = pageQuery.eq('catalog', catalog);
     }

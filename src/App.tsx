@@ -23,17 +23,16 @@ import {
   SlidersHorizontal,
   X,
   ShoppingCart,
+  Calculator,
 } from 'lucide-react';
 import type { Product, Kit, View, CatalogType } from './types';
-import {
-  CATALOG_LABELS,
-  deriveCategories,
-} from './types';
-import { fetchProducts, fetchKits, getProductImage, updateProduct } from './lib/products';
+import { CATALOG_LABELS, deriveCategories } from './types';
+import { fetchProducts, fetchKits, getProductImage, updateProduct, invalidateProductsCache } from './lib/products';
 import {
   applyCatalogFilters,
   filterProducts,
   CATALOG_SORT_OPTIONS,
+  LOW_STOCK_MAX,
   type CatalogSort,
   type StockFilter,
   type ImageFilter,
@@ -60,7 +59,7 @@ import { InstallAppHint, resetInstallHint } from './components/InstallAppHint';
 import { LoginGate } from './components/LoginGate';
 import { RefreshControls } from './components/RefreshControls';
 import { MobileBottomNav, MobileMoreSheet } from './components/MobileNav';
-import { requestWaproStockSync } from './lib/stockSync';
+import { requestWaproStockSync, getLatestStockSync } from './lib/stockSync';
 import {
   getDeferredInstall,
 } from './lib/pwaInstall';
@@ -85,11 +84,20 @@ const VisualSearchModal = lazy(() =>
 const AdminUsersPanel = lazy(() =>
   import('./components/AdminUsersPanel').then((m) => ({ default: m.AdminUsersPanel })),
 );
+const RoleMatrixPanel = lazy(() =>
+  import('./components/RoleMatrixPanel').then((m) => ({ default: m.RoleMatrixPanel })),
+);
+const EanHygieneView = lazy(() =>
+  import('./components/EanHygieneView').then((m) => ({ default: m.EanHygieneView })),
+);
 const ProductDetail = lazy(() =>
   import('./components/ProductDetail').then((m) => ({ default: m.ProductDetail })),
 );
 const CrmOrderView = lazy(() =>
   import('./components/CrmOrderView').then((m) => ({ default: m.CrmOrderView })),
+);
+const OpsHubView = lazy(() =>
+  import('./components/OpsHubView').then((m) => ({ default: m.OpsHubView })),
 );
 const CrmOrderSidePanel = lazy(() =>
   import('./components/CrmOrderSidePanel').then((m) => ({
@@ -178,6 +186,7 @@ export default function App() {
   const [showScanner, setShowScanner] = useState(false);
   const [showVisualSearch, setShowVisualSearch] = useState(false);
   const [showAdminUsers, setShowAdminUsers] = useState(false);
+  const [showRoleMatrix, setShowRoleMatrix] = useState(false);
   const [missingCategory, setMissingCategory] = useState('Wszystkie');
   const [gridDensity, setGridDensity] = useState<GridDensity>(loadGridDensity);
   const [showMobileMore, setShowMobileMore] = useState(false);
@@ -228,12 +237,31 @@ export default function App() {
   async function handleSyncStock() {
     setSyncBusy(true);
     try {
-      const res = await requestWaproStockSync();
+      const res = await requestWaproStockSync(activeCatalog);
       if (!res.ok) {
         showToast(res.error || 'Nie udało się zlecić syncu', 'error');
         return;
       }
-      showToast('Zlecono sync WAPRO — zwykle 1–2 min, potem Odśwież', 'info', 4500);
+      const label = activeCatalog === 'shop' ? 'Produkty' : 'Akcesoria';
+      showToast(`Sync WAPRO (${label}): stany i ceny — czekam…`, 'info', 4000);
+      const started = Date.now();
+      while (Date.now() - started < 180_000) {
+        await new Promise((r) => setTimeout(r, 4000));
+        const last = await getLatestStockSync();
+        if (!last) continue;
+        if (res.id && last.id !== res.id) continue;
+        if (last.status === 'done') {
+          showToast(last.message || `Sync ${label} zakończony`, 'ok', 7000);
+          invalidateProductsCache();
+          void loadData();
+          return;
+        }
+        if (last.status === 'error') {
+          showToast(last.message || 'Sync WAPRO — błąd', 'error', 8000);
+          return;
+        }
+      }
+      showToast('Sync nadal trwa — sprawdź sync.log na serwerze WAPRO', 'info', 8000);
     } finally {
       setSyncBusy(false);
     }
@@ -245,6 +273,15 @@ export default function App() {
     if (!roleCan(role, 'viewProgress') && view === 'progress') setView('catalog');
     if (!roleCan(role, 'manageFavorites') && view === 'favorites') setView('catalog');
     if (!roleCan(role, 'manageKits') && view === 'kits') setView('catalog');
+    if (!roleCan(role, 'viewOps') && view === 'ops') setView('catalog');
+    if (!roleCan(role, 'viewRoleMatrix') && view === 'role-matrix') setView('catalog');
+    if (
+      !roleCan(role, 'editProduct') &&
+      !roleCan(role, 'manageUsers') &&
+      view === 'ean-hygiene'
+    ) {
+      setView('catalog');
+    }
   }, [role, view]);
 
   useEffect(() => {
@@ -286,7 +323,7 @@ export default function App() {
 
   const loadCatalog = useCallback(async (catalog: CatalogType, force = false) => {
     if (!force && (catalogCacheRef.current[catalog]?.length ?? 0) > 0) return;
-    const prods = await fetchProducts(catalog);
+    const prods = await fetchProducts(catalog, { force });
     setCatalogCache((prev) => ({ ...prev, [catalog]: prods }));
   }, []);
 
@@ -294,7 +331,8 @@ export default function App() {
     setLoading(true);
     setError(null);
     try {
-      const prods = await fetchProducts(activeCatalog);
+      invalidateProductsCache(activeCatalog);
+      const prods = await fetchProducts(activeCatalog, { force: true });
       setCatalogCache((prev) => ({ ...prev, [activeCatalog]: prods }));
       void fetchKits()
         .then(setKits)
@@ -340,6 +378,41 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- tylko przy zmianie katalogu
   }, [activeCatalog]);
 
+  /** Prefetch drugiego katalogu dopiero gdy UI jest wolne — mniej zamulania na telefonie. */
+  useEffect(() => {
+    if (loading) return;
+    if ((catalogCache[activeCatalog]?.length ?? 0) === 0) return;
+    const other: CatalogType =
+      activeCatalog === 'shop' ? 'accessories' : 'shop';
+    if ((catalogCache[other]?.length ?? 0) > 0) return;
+
+    let cancelled = false;
+    const run = () => {
+      if (cancelled || document.visibilityState === 'hidden') return;
+      void loadCatalog(other);
+    };
+
+    let idleId: number | undefined;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    if (typeof w.requestIdleCallback === 'function') {
+      idleId = w.requestIdleCallback(run, { timeout: 4000 });
+    } else {
+      timeoutId = setTimeout(run, 2500);
+    }
+
+    return () => {
+      cancelled = true;
+      if (idleId != null && typeof w.cancelIdleCallback === 'function') {
+        w.cancelIdleCallback(idleId);
+      }
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [loading, activeCatalog, catalogCache, loadCatalog]);
+
   useEffect(() => {
     if (view === 'favorites') {
       void loadCatalog('accessories');
@@ -348,9 +421,18 @@ export default function App() {
   }, [view, loadCatalog]);
 
   useEffect(() => {
-    void fetchKits()
-      .then(setKits)
-      .catch((err) => console.warn('kits', err));
+    let cancelled = false;
+    const load = () => {
+      if (cancelled) return;
+      void fetchKits()
+        .then(setKits)
+        .catch((err) => console.warn('kits', err));
+    };
+    const t = setTimeout(load, 800);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
   }, []);
 
   const switchCatalog = useCallback((next: CatalogType) => {
@@ -629,6 +711,30 @@ export default function App() {
                 Konta
               </button>
             )}
+            {roleCan(role, 'viewRoleMatrix') && (
+              <button
+                type="button"
+                onClick={() => setShowRoleMatrix(true)}
+                className="flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800"
+                title="Podgląd uprawnień ról"
+              >
+                Uprawnienia
+              </button>
+            )}
+            {(roleCan(role, 'editProduct') || roleCan(role, 'manageUsers')) && (
+              <button
+                type="button"
+                onClick={() => setView('ean-hygiene')}
+                className={`flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                  view === 'ean-hygiene'
+                    ? 'border-amber-500/50 bg-amber-500/15 text-amber-200'
+                    : 'border-slate-700 text-slate-300 hover:bg-slate-800'
+                }`}
+                title="Higiena EAN"
+              >
+                EAN
+              </button>
+            )}
             {roleCan(role, 'addProduct') && (
               <button
                 type="button"
@@ -674,6 +780,7 @@ export default function App() {
             <RefreshControls
               loading={loading}
               onRefresh={loadData}
+              catalog={activeCatalog}
               canRequestStockSync={
                 mode === 'signed_in' && roleCan(role, 'editStock')
               }
@@ -723,6 +830,14 @@ export default function App() {
                 label="Ulubione"
                 count={favoriteCount}
                 highlight={favoriteCount > 0}
+              />
+            )}
+            {roleCan(role, 'viewOps') && (
+              <NavTab
+                active={view === 'ops'}
+                onClick={() => setView('ops')}
+                icon={<Calculator className="h-4 w-4" />}
+                label="Operacje"
               />
             )}
             {activeCatalog === 'accessories' && roleCan(role, 'manageKits') && (
@@ -795,7 +910,7 @@ export default function App() {
 
       {/* Wyszukiwarka sticky — tylko mobile/tablet; na lg jest w headerze */}
       {(view === 'catalog' || view === 'favorites') && (
-        <div className="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/95 px-3 py-2 shadow-md shadow-black/10 backdrop-blur-xl sm:px-4 lg:hidden">
+        <div className="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/95 px-3 py-2 shadow-md shadow-black/10 sm:px-4 lg:hidden supports-[backdrop-filter]:backdrop-blur-md">
           <div className="flex gap-2">
             <div className="min-w-0 flex-1">
               <SearchBar
@@ -811,8 +926,8 @@ export default function App() {
                 type="button"
                 onClick={() => setShowVisualSearch(true)}
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-brand-500/40 bg-brand-500/10 text-brand-200 transition hover:bg-brand-500/20"
-                title="Lens — EAN, potem OCR etykiety"
-                aria-label="Lens — EAN, potem OCR etykiety"
+                title="Lens — rozpoznaj produkt po zdjęciu"
+                aria-label="Lens — rozpoznaj produkt po zdjęciu"
               >
                 <Sparkles className="h-5 w-5" />
               </button>
@@ -828,12 +943,12 @@ export default function App() {
             : ''
         }`}
       >
-        {loading && allProducts.length === 0 ? (
+        {loading && products.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24">
             <Loader2 className="h-10 w-10 animate-spin text-brand-500" />
             <p className="mt-4 text-slate-400">Ładowanie katalogu...</p>
           </div>
-        ) : error && allProducts.length === 0 ? (
+        ) : error && products.length === 0 && allProducts.length === 0 ? (
           <div className="rounded-2xl border border-red-900/50 bg-red-950/30 p-6 text-center">
             <p className="text-red-300">{error}</p>
             <button
@@ -870,6 +985,7 @@ export default function App() {
             onOrderDelta={roleCan(role, 'useCrm') ? handleOrderDelta : undefined}
             orderQtys={orderQtys}
             hideImages={!roleCan(role, 'viewImages')}
+            showPrices={roleCan(role, 'viewPrices')}
           />
         ) : view === 'labels' ? (
           <LabelsView
@@ -896,6 +1012,14 @@ export default function App() {
               });
             }}
           />
+        ) : view === 'ean-hygiene' &&
+          (roleCan(role, 'editProduct') || roleCan(role, 'manageUsers')) ? (
+          <Suspense fallback={<ViewFallback />}>
+            <EanHygieneView
+              products={allProducts}
+              onOpenProduct={setSelectedProduct}
+            />
+          </Suspense>
         ) : view === 'crm' && roleCan(role, 'useCrm') ? (
           <Suspense fallback={<ViewFallback />}>
             <CrmOrderView
@@ -903,6 +1027,24 @@ export default function App() {
               products={allProducts}
               cloudEnabled={mode === 'signed_in'}
               onChanged={refreshOrderCount}
+            />
+          </Suspense>
+        ) : view === 'ops' && roleCan(role, 'viewOps') ? (
+          <Suspense fallback={<ViewFallback />}>
+            <OpsHubView
+              products={allProducts}
+              canManageKits={roleCan(role, 'manageKits')}
+              onOpenKits={() => {
+                if (activeCatalog !== 'accessories') {
+                  setActiveCatalog('accessories');
+                  try {
+                    localStorage.setItem(CATALOG_STORAGE_KEY, 'accessories');
+                  } catch {
+                    /* ignore */
+                  }
+                }
+                setView('kits');
+              }}
             />
           </Suspense>
         ) : view === 'kits' &&
@@ -1006,6 +1148,11 @@ export default function App() {
           <AdminUsersPanel onClose={() => setShowAdminUsers(false)} />
         </Suspense>
       )}
+      {showRoleMatrix && roleCan(role, 'viewRoleMatrix') && (
+        <Suspense fallback={null}>
+          <RoleMatrixPanel onClose={() => setShowRoleMatrix(false)} />
+        </Suspense>
+      )}
 
       <MobileBottomNav
         view={view}
@@ -1044,6 +1191,7 @@ export default function App() {
         onAddProduct={() => setShowAddProduct(true)}
         onLens={() => setShowVisualSearch(true)}
         onAdminUsers={() => setShowAdminUsers(true)}
+        onRoleMatrix={() => setShowRoleMatrix(true)}
         onInstallApp={triggerInstallApp}
         onToggleTheme={toggleTheme}
         isDark={isDark}
@@ -1167,6 +1315,7 @@ function CatalogView({
   onOrderDelta,
   orderQtys = {},
   hideImages = false,
+  showPrices = false,
 }: {
   search: string;
   category: string;
@@ -1192,6 +1341,7 @@ function CatalogView({
   onOrderDelta?: (product: Product, delta: number) => void;
   orderQtys?: Record<string, number>;
   hideImages?: boolean;
+  showPrices?: boolean;
 }) {
   const searching = search.trim().length >= 2;
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -1250,6 +1400,7 @@ function CatalogView({
         [
           { id: 'all' as const, label: 'Wszystkie' },
           { id: 'in-stock' as const, label: 'Na stanie' },
+          { id: 'low' as const, label: `Niski (≤${LOW_STOCK_MAX})` },
           { id: 'out' as const, label: 'Brak' },
         ] as const
       ).map((opt) => (
@@ -1427,6 +1578,7 @@ function CatalogView({
                     [
                       { id: 'all' as const, label: 'Wszystkie' },
                       { id: 'in-stock' as const, label: 'Na stanie' },
+                      { id: 'low' as const, label: `Niski (≤${LOW_STOCK_MAX})` },
                       { id: 'out' as const, label: 'Brak' },
                     ] as const
                   ).map((opt) => (
@@ -1523,6 +1675,7 @@ function CatalogView({
               orderQty={orderQtys[product.id] ?? 0}
               onOrderDelta={onOrderDelta}
               hideImages={hideImages}
+              showPrices={showPrices}
             />
           )}
         />

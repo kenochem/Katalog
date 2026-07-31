@@ -22,7 +22,31 @@ def find_baselinker_csv() -> Path:
     )
     if not candidates:
         raise FileNotFoundError(f"Brak eksportu Baselinker w {DOWNLOADS}")
-    return candidates[0]
+
+    # Nie nadpisuj pełnego katalogu małym eksportem (np. sonax.sklep.pl ~500 pozycji).
+    existing_count = 0
+    if OUTPUT_PATH.exists():
+        try:
+            existing_count = len(json.loads(OUTPUT_PATH.read_text(encoding="utf-8")))
+        except (json.JSONDecodeError, OSError):
+            existing_count = 0
+
+    for path in candidates:
+        with path.open("r", encoding="utf-8-sig", newline="") as f:
+            # szybki szacunek: liczba linii danych
+            n = max(0, sum(1 for _ in f) - 1)
+        if existing_count and n < max(800, int(existing_count * 0.4)):
+            print(
+                f"Pomijam {path.name} ({n} wierszy) — za mały vs obecny katalog ({existing_count})."
+            )
+            print("  Do merge Sonax użyj: npm run import:sonax")
+            continue
+        return path
+
+    raise FileNotFoundError(
+        "Brak pełnego eksportu Baselinker (Kenochem). "
+        "Małe CSV Sonax importuj przez: npm run import:sonax"
+    )
 
 
 def parse_stock(value: str) -> float:
@@ -30,6 +54,30 @@ def parse_stock(value: str) -> float:
         return float(str(value).replace(",", ".").strip() or 0)
     except (TypeError, ValueError):
         return 0.0
+
+
+def strip_html(html: str, max_len: int = 500) -> str:
+    if not html:
+        return ""
+    text = re.sub(r"(?i)<\s*br\s*/?>", "\n", html)
+    text = re.sub(r"(?i)</\s*p\s*>", "\n", text)
+    text = re.sub(r"(?i)<\s*li[^>]*>", "• ", text)
+    text = re.sub(r"<[^>]+>", " ", text)
+    for a, b in (
+        ("&nbsp;", " "),
+        ("&amp;", "&"),
+        ("&lt;", "<"),
+        ("&gt;", ">"),
+        ("&quot;", '"'),
+        ("&#39;", "'"),
+    ):
+        text = text.replace(a, b)
+    text = re.sub(r"[ \t]+\n", "\n", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    text = re.sub(r"[ \t]{2,}", " ", text).strip()
+    if max_len > 0 and len(text) > max_len:
+        text = text[: max_len - 1].rstrip() + "…"
+    return text
 
 
 def normalize_category(raw: str) -> str:
@@ -139,9 +187,9 @@ def main() -> None:
             extras = collect_extra_images(row)
             category = normalize_category(row.get("kategoria_nazwa") or "")
             manufacturer = (row.get("producent_nazwa") or "").strip()
-            description = (row.get("opis_dodatkowy_1") or row.get("opis") or "").strip()
-            if len(description) > 500:
-                description = description[:497] + "..."
+            description = strip_html(
+                row.get("opis_dodatkowy_1") or row.get("opis") or ""
+            )
 
             product = {
                 "id": f"shop-{sku}",

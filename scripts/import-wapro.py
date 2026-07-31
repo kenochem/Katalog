@@ -238,6 +238,16 @@ def parse_stock(value) -> float:
         return 0.0
 
 
+def parse_price(value) -> float | None:
+    try:
+        if value is None or value == "":
+            return None
+        n = float(value)
+        return n if n == n else None  # NaN check
+    except (TypeError, ValueError):
+        return None
+
+
 def group_nozzle_products(products: list[dict]) -> list[dict]:
     """Grupuj identyczne wizualnie dysze wody w jedną pozycję z wariantami."""
     groups: dict[str, list[dict]] = {}
@@ -284,6 +294,9 @@ def group_nozzle_products(products: list[dict]) -> list[dict]:
             "hasImage": any(p.get("hasImage") for p in items),
             "stock": sum(p.get("stock", 0) for p in items),
             "stockManual": False,
+            "pricePurchaseNet": rep.get("pricePurchaseNet"),
+            "priceSaleNet": rep.get("priceSaleNet"),
+            "priceSaleGross": rep.get("priceSaleGross"),
             "catalog": "accessories",
             "isGroup": True,
             "variants": variants,
@@ -320,6 +333,9 @@ def main():
         image_url = bl_images.get(sku, "")
         ean = bl_eans.get(sku, "")
         stock = parse_stock(sh.cell_value(r, 3))
+        purchase_net = parse_price(sh.cell_value(r, 6))
+        sale_net = parse_price(sh.cell_value(r, 7))
+        sale_gross = parse_price(sh.cell_value(r, 2))
         products.append({
             "id": sku,
             "sku": sku,
@@ -333,6 +349,9 @@ def main():
             "hasImage": bool(image_url),
             "stock": stock,
             "stockManual": False,
+            "pricePurchaseNet": purchase_net,
+            "priceSaleNet": sale_net,
+            "priceSaleGross": sale_gross,
             "catalog": "accessories",
         })
 

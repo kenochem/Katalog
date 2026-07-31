@@ -138,8 +138,23 @@ export function CrmOrderView({
     });
     setClientSuggestOpen(false);
     setTab('current');
-    showToast(`Klient: ${c.displayName}`, 'ok', 1400);
+    if (c.note?.trim()) {
+      showToast(`${c.displayName}: ${c.note.trim()}`, 'info', 3500);
+    } else {
+      showToast(`Klient: ${c.displayName}`, 'ok', 1400);
+    }
   }
+
+  const selectedClient = useMemo(
+    () =>
+      draft.clientId
+        ? clients.find((c) => c.id === draft.clientId)
+        : clients.find(
+            (c) =>
+              c.displayName.toLowerCase() === draft.clientName.trim().toLowerCase(),
+          ),
+    [clients, draft.clientId, draft.clientName],
+  );
 
   function bumpQty(productId: string, delta: number) {
     const items = draft.items
@@ -441,6 +456,11 @@ export function CrmOrderView({
                       <span className="font-mono text-[11px] text-slate-500">
                         {c.nip || 'bez NIP'}
                       </span>
+                      {c.note?.trim() && (
+                        <span className="line-clamp-1 text-[11px] text-slate-400">
+                          {c.note}
+                        </span>
+                      )}
                     </button>
                   </li>
                 ))}
@@ -448,13 +468,20 @@ export function CrmOrderView({
             )}
           </div>
 
+          {selectedClient?.note?.trim() && (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs leading-snug text-amber-950 dark:text-amber-100">
+              <span className="font-semibold">Notatka klienta: </span>
+              {selectedClient.note}
+            </div>
+          )}
+
           <label className="block">
-            <span className="mb-1 text-xs text-slate-500">Notatka</span>
+            <span className="mb-1 text-xs text-slate-500">Notatka do zamówienia</span>
             <textarea
               value={draft.note}
               onChange={(e) => updateMeta({ note: e.target.value })}
               rows={2}
-              placeholder="Termin, uwagi, adres…"
+              placeholder="Termin, uwagi, adres dostawy…"
               className="input-field resize-none"
             />
           </label>

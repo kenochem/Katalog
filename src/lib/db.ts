@@ -15,6 +15,10 @@ export interface ProductRow {
   has_image: boolean;
   stock?: number;
   stock_manual?: boolean;
+  price_purchase_net?: number | null;
+  price_sale_net?: number | null;
+  price_sale_gross?: number | null;
+  tags?: string[] | null;
   catalog?: string;
   variants?: ProductVariant[];
   is_group?: boolean;
@@ -42,10 +46,23 @@ export function rowToProduct(row: ProductRow): Product {
     imageUrl: row.image_url,
     customImageUrl: row.custom_image_url || undefined,
     extraImageUrls: row.extra_images?.length ? row.extra_images : undefined,
-    description: row.description,
+    description: row.description || '',
     hasImage: row.has_image,
     stock: Number(row.stock ?? 0),
     stockManual: row.stock_manual || false,
+    pricePurchaseNet:
+      row.price_purchase_net != null && Number.isFinite(Number(row.price_purchase_net))
+        ? Number(row.price_purchase_net)
+        : undefined,
+    priceSaleNet:
+      row.price_sale_net != null && Number.isFinite(Number(row.price_sale_net))
+        ? Number(row.price_sale_net)
+        : undefined,
+    priceSaleGross:
+      row.price_sale_gross != null && Number.isFinite(Number(row.price_sale_gross))
+        ? Number(row.price_sale_gross)
+        : undefined,
+    tags: row.tags?.length ? row.tags : undefined,
     catalog: (row.catalog === 'shop' ? 'shop' : 'accessories') as CatalogType,
     variants: row.variants?.length ? row.variants : undefined,
     isGroup: row.is_group || !!(row.variants?.length),
@@ -68,6 +85,17 @@ export function productToRow(p: Product): ProductRow {
     has_image: p.hasImage,
     stock: p.stock ?? 0,
     stock_manual: p.stockManual || false,
+    price_purchase_net:
+      p.pricePurchaseNet != null && Number.isFinite(p.pricePurchaseNet)
+        ? p.pricePurchaseNet
+        : null,
+    price_sale_net:
+      p.priceSaleNet != null && Number.isFinite(p.priceSaleNet) ? p.priceSaleNet : null,
+    price_sale_gross:
+      p.priceSaleGross != null && Number.isFinite(p.priceSaleGross)
+        ? p.priceSaleGross
+        : null,
+    tags: p.tags?.length ? p.tags : [],
     catalog: p.catalog || 'accessories',
     variants: p.variants || [],
     is_group: p.isGroup || false,

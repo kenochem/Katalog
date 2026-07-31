@@ -19,6 +19,9 @@ import {
   RefreshCw,
   Loader2,
   ShoppingCart,
+  AlertTriangle,
+  Shield,
+  Calculator,
 } from 'lucide-react';
 import type { View, CatalogType } from '../types';
 import type { AppRole } from '../lib/roles';
@@ -44,7 +47,15 @@ export function MobileBottomNav({
   orderCount = 0,
   role,
 }: MobileBottomNavProps) {
-  const moreActive = ['kits', 'progress', 'missing-images', 'admin'].includes(view);
+  const moreActive = [
+    'kits',
+    'progress',
+    'missing-images',
+    'admin',
+    'ean-hygiene',
+    'role-matrix',
+    'ops',
+  ].includes(view);
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-800 bg-slate-950/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
@@ -150,6 +161,7 @@ interface MobileMoreSheetProps {
   onAddProduct: () => void;
   onLens: () => void;
   onAdminUsers: () => void;
+  onRoleMatrix: () => void;
   onInstallApp: () => void;
   onToggleTheme: () => void;
   isDark: boolean;
@@ -178,6 +190,7 @@ export function MobileMoreSheet({
   onAddProduct,
   onLens,
   onAdminUsers,
+  onRoleMatrix,
   onInstallApp,
   onToggleTheme,
   isDark,
@@ -232,6 +245,14 @@ export function MobileMoreSheet({
               Widoki
             </p>
             <div className="grid grid-cols-2 gap-2">
+              {roleCan(role, 'viewOps') && (
+                <SheetAction
+                  active={view === 'ops'}
+                  icon={<Calculator className="h-4 w-4" />}
+                  label="Operacje"
+                  onClick={() => go('ops')}
+                />
+              )}
               {activeCatalog === 'accessories' && roleCan(role, 'manageKits') && (
                 <SheetAction
                   active={view === 'kits'}
@@ -262,6 +283,14 @@ export function MobileMoreSheet({
                   icon={<Printer className="h-4 w-4" />}
                   label="Etykiety"
                   onClick={() => go('labels')}
+                />
+              )}
+              {(roleCan(role, 'editProduct') || roleCan(role, 'manageUsers')) && (
+                <SheetAction
+                  active={view === 'ean-hygiene'}
+                  icon={<AlertTriangle className="h-4 w-4" />}
+                  label="Higiena EAN"
+                  onClick={() => go('ean-hygiene')}
                 />
               )}
               {roleCan(role, 'useCrm') && (
@@ -317,6 +346,16 @@ export function MobileMoreSheet({
                   label="Konta"
                   onClick={() => {
                     onAdminUsers();
+                    onClose();
+                  }}
+                />
+              )}
+              {roleCan(role, 'viewRoleMatrix') && (
+                <SheetAction
+                  icon={<Shield className="h-4 w-4" />}
+                  label="Uprawnienia"
+                  onClick={() => {
+                    onRoleMatrix();
                     onClose();
                   }}
                 />

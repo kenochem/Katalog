@@ -30,6 +30,10 @@ export function mergeProducts(base: Product[], local: Product[]): Product[] {
       map.set(p.id, {
         ...existing,
         ...p,
+        // lokalne null/undefined nie nadpisuje cen z bazy
+        pricePurchaseNet: p.pricePurchaseNet ?? existing.pricePurchaseNet,
+        priceSaleNet: p.priceSaleNet ?? existing.priceSaleNet,
+        priceSaleGross: p.priceSaleGross ?? existing.priceSaleGross,
         variants: p.variants?.length ? p.variants : existing.variants,
         isGroup: p.isGroup ?? existing.isGroup,
         stock: p.stockManual

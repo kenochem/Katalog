@@ -50,7 +50,23 @@ function loadProgress() {
 }
 
 function saveProgress(map) {
-  writeFileSync(PROGRESS_PATH, JSON.stringify(map));
+  const tmp = PROGRESS_PATH + '.tmp';
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      writeFileSync(tmp, JSON.stringify(map));
+      writeFileSync(PROGRESS_PATH, readFileSync(tmp));
+      return;
+    } catch (err) {
+      if (attempt === 4) {
+        console.warn('saveProgress failed:', err.message || err);
+        return;
+      }
+      const end = Date.now() + 250 * (attempt + 1);
+      while (Date.now() < end) {
+        /* retry backoff */
+      }
+    }
+  }
 }
 
 const products = JSON.parse(readFileSync(PRODUCTS_PATH, 'utf8'));

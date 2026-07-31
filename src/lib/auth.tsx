@@ -134,12 +134,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     let cancelled = false;
+
     void supabase.auth.getSession().then(({ data }) => {
       if (cancelled) return;
       void applySession(data.session);
     });
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, next) => {
+      // Start obsługuje getSession — bez podwójnego apply i migania UI
+      if (event === 'INITIAL_SESSION') return;
+      if (event === 'TOKEN_REFRESHED') {
+        setSession(next);
+        return;
+      }
       void applySession(next);
     });
 

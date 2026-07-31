@@ -12,6 +12,8 @@ export const ACCOUNT_ROLES: AccountRole[] = [
   'handlowiec',
 ];
 
+export const APP_ROLES: AppRole[] = ['guest', ...ACCOUNT_ROLES];
+
 export const ROLE_LABELS: Record<AppRole, string> = {
   guest: 'Gość',
   handlowiec: 'Handlowiec',
@@ -23,11 +25,12 @@ export const ROLE_LABELS: Record<AppRole, string> = {
 export const ROLE_DESCRIPTIONS: Record<AppRole, string> = {
   guest: 'Podgląd katalogu ze zdjęciami — bez edycji, etykiet, zamówień i usuwania',
   handlowiec:
-    'Zamówienia, oferty, zdjęcia (dodawanie), katalog — bez stanów, usuwania zdjęć i kont',
+    'Zamówienia, oferty, zdjęcia (dodawanie), katalog, ceny, operacje — bez stanów, usuwania zdjęć i kont',
   magazynier:
-    'Stany, etykiety, dodawanie zdjęć — bez zamówień, zestawów, edycji produktów i kont',
-  operator: 'Pełna praca (stany, produkty, zestawy, zamówienia) — bez panelu kont',
-  admin: 'Pełny dostęp + zarządzanie użytkownikami',
+    'Stany, etykiety, dodawanie zdjęć — bez zamówień, zestawów, edycji produktów, cen i kont',
+  operator:
+    'Pełna praca (stany, produkty, zestawy, zamówienia, ceny, operacje) — bez panelu kont',
+  admin: 'Pełny dostęp + zarządzanie użytkownikami i podgląd uprawnień',
 };
 
 export function isAccountRole(v: unknown): v is AccountRole {
@@ -57,8 +60,35 @@ export type RoleAction =
   | 'switchCatalog'
   | 'viewProgress'
   | 'viewImages'
+  | 'viewPrices'
   | 'manageUsers'
-  | 'useCrm';
+  | 'useCrm'
+  | 'viewRoleMatrix'
+  | 'viewOps';
+
+export const ROLE_ACTION_LABELS: Record<RoleAction, string> = {
+  editStock: 'Edycja stanów',
+  editProduct: 'Edycja produktów',
+  addProduct: 'Dodawanie produktów',
+  uploadImage: 'Dodawanie zdjęć',
+  deleteImage: 'Usuwanie zdjęć',
+  useLens: 'Lens (zdjęcie)',
+  printLabels: 'Etykiety',
+  manageFavorites: 'Ulubione',
+  manageKits: 'Zestawy',
+  switchCatalog: 'Przełączanie katalogów',
+  viewProgress: 'Postęp zdjęć',
+  viewImages: 'Podgląd zdjęć',
+  viewPrices: 'Ceny i marża',
+  manageUsers: 'Zarządzanie kontami',
+  useCrm: 'Zamówienia / CRM',
+  viewRoleMatrix: 'Podgląd uprawnień',
+  viewOps: 'Operacje / kalkulatory',
+};
+
+export const ROLE_ACTIONS: RoleAction[] = Object.keys(
+  ROLE_ACTION_LABELS,
+) as RoleAction[];
 
 const ALL_FALSE: Record<RoleAction, boolean> = {
   editStock: false,
@@ -73,15 +103,19 @@ const ALL_FALSE: Record<RoleAction, boolean> = {
   switchCatalog: false,
   viewProgress: false,
   viewImages: false,
+  viewPrices: false,
   manageUsers: false,
   useCrm: false,
+  viewRoleMatrix: false,
+  viewOps: false,
 };
 
-const MATRIX: Record<AppRole, Record<RoleAction, boolean>> = {
+/** Domyślna macierz — później można nadpisać z DB. */
+export const DEFAULT_ROLE_MATRIX: Record<AppRole, Record<RoleAction, boolean>> = {
   guest: {
     ...ALL_FALSE,
     switchCatalog: true,
-    viewImages: true, // zdjęcia tak; upload/delete zostają false
+    viewImages: true,
   },
   handlowiec: {
     ...ALL_FALSE,
@@ -95,7 +129,9 @@ const MATRIX: Record<AppRole, Record<RoleAction, boolean>> = {
     switchCatalog: true,
     viewProgress: true,
     viewImages: true,
+    viewPrices: true,
     useCrm: true,
+    viewOps: true,
   },
   magazynier: {
     ...ALL_FALSE,
@@ -121,8 +157,11 @@ const MATRIX: Record<AppRole, Record<RoleAction, boolean>> = {
     switchCatalog: true,
     viewProgress: true,
     viewImages: true,
+    viewPrices: true,
     manageUsers: false,
     useCrm: true,
+    viewRoleMatrix: false,
+    viewOps: true,
   },
   admin: {
     editStock: true,
@@ -137,10 +176,15 @@ const MATRIX: Record<AppRole, Record<RoleAction, boolean>> = {
     switchCatalog: true,
     viewProgress: true,
     viewImages: true,
+    viewPrices: true,
     manageUsers: true,
     useCrm: true,
+    viewRoleMatrix: true,
+    viewOps: true,
   },
 };
+
+const MATRIX = DEFAULT_ROLE_MATRIX;
 
 export function roleCan(role: AppRole, action: RoleAction): boolean {
   return MATRIX[role][action];

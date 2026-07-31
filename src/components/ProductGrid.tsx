@@ -1,7 +1,15 @@
-import { useEffect, useRef, useState, Fragment } from 'react';
+import { useEffect, useRef, useState, Fragment, startTransition } from 'react';
 import type { Product } from '../types';
 
-const BATCH = 32;
+function initialBatch(): number {
+  if (typeof window === 'undefined') return 24;
+  return window.innerWidth < 640 ? 16 : 28;
+}
+
+function loadBatch(): number {
+  if (typeof window === 'undefined') return 32;
+  return window.innerWidth < 640 ? 16 : 32;
+}
 
 interface ProductGridProps {
   products: Product[];
@@ -12,11 +20,15 @@ interface ProductGridProps {
 
 /** Montuje karty partiami przy scrollu — unika 1000+ węzłów DOM naraz. */
 export function ProductGrid({ products, className, resetKey, renderItem }: ProductGridProps) {
-  const [visible, setVisible] = useState(() => Math.min(BATCH, products.length));
+  const [visible, setVisible] = useState(() =>
+    Math.min(initialBatch(), products.length),
+  );
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const batchRef = useRef(loadBatch());
 
   useEffect(() => {
-    setVisible(Math.min(BATCH, products.length));
+    batchRef.current = loadBatch();
+    setVisible(Math.min(initialBatch(), products.length));
   }, [resetKey, products.length]);
 
   useEffect(() => {
@@ -26,9 +38,16 @@ export function ProductGrid({ products, className, resetKey, renderItem }: Produ
     const io = new IntersectionObserver(
       (entries) => {
         if (!entries.some((e) => e.isIntersecting)) return;
-        setVisible((v) => Math.min(v + BATCH, products.length));
+        startTransition(() => {
+          setVisible((v) => Math.min(v + batchRef.current, products.length));
+        });
       },
-      { rootMargin: '800px 0px' },
+      {
+        // Mniejszy rootMargin na telefonie = mniej kart „z wyprzedzeniem”
+        rootMargin: typeof window !== 'undefined' && window.innerWidth < 640
+          ? '280px 0px'
+          : '600px 0px',
+      },
     );
     io.observe(el);
     return () => io.disconnect();

@@ -22,6 +22,12 @@
         } catch (e) {}
       })();
     </script>
+    <style>
+      /* Bez białego flashu zanim wczyta się CSS / React */
+      html, body { margin: 0; min-height: 100%; background: #f5f7fb; color: #0f172a; }
+      html.dark, html.dark body { background: #020617; color: #e2e8f0; }
+      #root { min-height: 100dvh; }
+    </style>
   </head>
   <body>
     <div id="root"></div>

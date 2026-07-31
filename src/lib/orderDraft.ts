@@ -204,16 +204,17 @@ export async function sendOrderDraftToDiscord(
   const color = isQuote ? 0xf59e0b : 0x16a34a;
 
   const embeds = draft.items.slice(0, 10).map((i) => {
-    const kit = i.fromKit ? `\nzestaw: ${i.fromKit}` : '';
     const embed: Record<string, unknown> = {
       title: `${i.quantity}× ${i.displayName}`.slice(0, 256),
-      description: `SKU: ${i.sku}${kit}`.slice(0, 400),
       color,
       fields: [
         { name: 'SKU', value: `\`${i.sku}\``, inline: true },
         { name: 'Ilość', value: String(i.quantity), inline: true },
       ],
     };
+    if (i.fromKit) {
+      embed.description = `zestaw: ${i.fromKit}`.slice(0, 400);
+    }
     if (i.imageUrl && /^https?:\/\//i.test(i.imageUrl)) {
       embed.thumbnail = { url: i.imageUrl };
     }

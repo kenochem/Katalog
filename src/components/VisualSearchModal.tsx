@@ -1,20 +1,18 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   X,
   Camera,
   Upload,
   Loader2,
   Sparkles,
-  ScanLine,
   ImageOff,
 } from 'lucide-react';
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import type { Product } from '../types';
 import {
   getProductImageSafe,
-  matchByEan,
   recognizeProductFromImage,
   type VisualMatch,
+  type RecognizeMethod,
 } from '../lib/visualSearch';
 import { formatStock } from '../lib/format';
 
@@ -24,8 +22,6 @@ interface VisualSearchModalProps {
   onSelect: (product: Product) => void;
 }
 
-type Mode = 'ean' | 'photo';
-
 export function VisualSearchModal({
   products,
   onClose,
@@ -33,40 +29,32 @@ export function VisualSearchModal({
 }: VisualSearchModalProps) {
   const cameraRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const [mode, setMode] = useState<Mode>('ean');
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [statusText, setStatusText] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [matches, setMatches] = useState<VisualMatch[] | null>(null);
-  const [barcode, setBarcode] = useState<string | null>(null);
-  const [ocrText, setOcrText] = useState<string | null>(null);
-  const [method, setMethod] = useState<'ean' | 'ocr' | 'none' | null>(null);
+  const [method, setMethod] = useState<RecognizeMethod | null>(null);
 
   function finishWithMatches(
     list: VisualMatch[],
     opts?: {
-      code?: string | null;
       warn?: string;
-      method?: 'ean' | 'ocr' | 'none';
-      ocr?: string;
-      /** Auto-otwórz tylko przy pewnym EAN / mocnym OCR */
-      autoOpen?: boolean;
+      method?: RecognizeMethod;
     },
   ) {
     setMatches(list);
-    if (opts?.code !== undefined) setBarcode(opts.code);
     if (opts?.warn) setWarning(opts.warn);
     if (opts?.method) setMethod(opts.method);
-    if (opts?.ocr) setOcrText(opts.ocr.slice(0, 180));
 
-    const canAuto =
-      opts?.autoOpen !== false &&
-      list.length === 1 &&
-      (opts?.method === 'ean' || (opts?.method === 'ocr' && list[0].score >= 88));
+    // Auto-otwórz tylko gdy jeden wynik wyraźnie wygrywa
+    const clearWinner =
+      list.length >= 1 &&
+      list[0].score >= 72 &&
+      (list.length === 1 || list[0].score - list[1].score >= 8);
 
-    if (canAuto) {
+    if (clearWinner) {
       onSelect(list[0].product);
       onClose();
       return;
@@ -74,7 +62,7 @@ export function VisualSearchModal({
     if (list.length === 0) {
       setError(
         opts?.warn ||
-          'Brak wyniku. Nakieruj na kod EAN albo zrób zbliżenie na markę + nazwę.',
+          'Brak wyniku. Zrób zdjęcie przodu produktu jak w katalogu.',
       );
     }
   }
@@ -83,48 +71,35 @@ export function VisualSearchModal({
     setError(null);
     setWarning(null);
     setMatches(null);
-    setBarcode(null);
-    setOcrText(null);
     setMethod(null);
     if (preview) URL.revokeObjectURL(preview);
     setPreview(URL.createObjectURL(file));
     setBusy(true);
-    setStatusText('Przygotowuję zdjęcie...');
+    setStatusText('Przygotowuję zdjęcie…');
 
     try {
       const result = await recognizeProductFromImage(
         file,
         products,
-        (status, detail) => {
-          if (status === 'barcode') setStatusText(detail || 'Szukam EAN...');
-          else if (status === 'ocr') setStatusText(detail || 'Czytam etykietę...');
+        (_status, detail) => {
+          setStatusText(detail || 'Porównuję ze zdjęciami katalogu…');
         },
       );
       finishWithMatches(result.matches, {
-        code: result.barcode,
         warn: result.warning,
         method: result.method,
-        ocr: result.ocrText,
       });
     } catch (err) {
       console.error(err);
       setError(
         err instanceof Error && err.message.length < 120
           ? err.message
-          : 'Błąd analizy. Użyj kamery EAN.',
+          : 'Błąd rozpoznawania. Spróbuj ponownie.',
       );
     } finally {
       setBusy(false);
       setStatusText('');
     }
-  }
-
-  function handleLiveEan(code: string) {
-    setError(null);
-    setWarning(null);
-    setOcrText(null);
-    const found = matchByEan(products, code);
-    finishWithMatches(found, { code, method: 'ean', autoOpen: true });
   }
 
   return (
@@ -144,7 +119,7 @@ export function VisualSearchModal({
                 Lens
               </h2>
               <p className="truncate text-xs text-slate-400">
-                1. EAN · 2. OCR marki · max 3 · bez zgadywania
+                Rozpoznaj po zdjęciu · jak w katalogu · top 3
               </p>
             </div>
             <button
@@ -155,129 +130,76 @@ export function VisualSearchModal({
               <X className="h-5 w-5" />
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-1 px-3 pb-3 sm:px-4">
-            <button
-              type="button"
-              onClick={() => {
-                setMode('ean');
-                setError(null);
-                setWarning(null);
-              }}
-              className={`rounded-xl px-3 py-2.5 text-sm font-semibold ${
-                mode === 'ean'
-                  ? 'bg-brand-600 text-white'
-                  : 'bg-slate-800 text-slate-300'
-              }`}
-            >
-              Kamera EAN
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMode('photo');
-                setError(null);
-                setWarning(null);
-              }}
-              className={`rounded-xl px-3 py-2.5 text-sm font-semibold ${
-                mode === 'photo'
-                  ? 'bg-brand-600 text-white'
-                  : 'bg-slate-800 text-slate-300'
-              }`}
-            >
-              Zdjęcie
-            </button>
-          </div>
         </div>
 
         <div className="space-y-3 p-3 sm:p-4">
-          {mode === 'ean' ? (
-            <LiveEanPanel onScan={handleLiveEan} disabled={busy} />
-          ) : (
-            <>
-              <p className="text-xs leading-relaxed text-slate-400">
-                Najpewniej: <strong className="text-slate-200">kod EAN</strong>.
-                Jeśli nie ma kodu — zbliż na{' '}
-                <strong className="text-slate-200">markę + nazwę</strong> (OCR lokalnie,
-                tylko w tej marce). Bez „zgadywania” z całego katalogu.
-              </p>
+          <p className="text-xs leading-relaxed text-slate-400">
+            Zrób zdjęcie <strong className="text-slate-200">przodu</strong>{' '}
+            butelki / opakowania — tak jak na zdjęciu produktu w katalogu.
+            Lens porównuje wygląd, nie czyta kodu EAN (do tego osobny czytnik).
+          </p>
 
-              <div className="relative mx-auto flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-2xl border border-dashed border-slate-600 bg-slate-800">
-                {preview ? (
-                  <img src={preview} alt="" className="h-full w-full object-contain" />
-                ) : (
-                  <div className="flex flex-col items-center gap-2 px-6 text-center text-slate-500">
-                    <Camera className="h-10 w-10 opacity-40" />
-                    <p className="text-sm">EAN lub etykieta (marka)</p>
-                  </div>
-                )}
-                {busy && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/65 px-4 text-center">
-                    <Loader2 className="h-8 w-8 animate-spin text-brand-400" />
-                    <p className="text-sm text-white">{statusText || 'Analiza...'}</p>
-                  </div>
-                )}
+          <div className="relative mx-auto flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-2xl border border-dashed border-slate-600 bg-slate-800">
+            {preview ? (
+              <img src={preview} alt="" className="h-full w-full object-contain" />
+            ) : (
+              <div className="flex flex-col items-center gap-2 px-6 text-center text-slate-500">
+                <Camera className="h-10 w-10 opacity-40" />
+                <p className="text-sm">Przód produktu w kadrze</p>
               </div>
-
-              <input
-                ref={cameraRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) void handleFile(f);
-                  e.target.value = '';
-                }}
-              />
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) void handleFile(f);
-                  e.target.value = '';
-                }}
-              />
-
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => cameraRef.current?.click()}
-                  className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-600 py-3 text-sm font-medium text-white disabled:opacity-50"
-                >
-                  <Camera className="h-5 w-5" />
-                  Zdjęcie
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => fileRef.current?.click()}
-                  className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-700 py-3 text-sm font-medium text-slate-300 disabled:opacity-50"
-                >
-                  <Upload className="h-5 w-5" />
-                  Galeria
-                </button>
+            )}
+            {busy && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/65 px-4 text-center">
+                <Loader2 className="h-8 w-8 animate-spin text-brand-400" />
+                <p className="text-sm text-white">{statusText || 'Analiza…'}</p>
               </div>
-            </>
-          )}
+            )}
+          </div>
 
-          {barcode && (
-            <p className="flex items-center gap-1.5 text-xs text-slate-400">
-              <ScanLine className="h-3.5 w-3.5 text-brand-400" />
-              EAN: <span className="font-mono text-slate-200">{barcode}</span>
-            </p>
-          )}
+          <input
+            ref={cameraRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void handleFile(f);
+              e.target.value = '';
+            }}
+          />
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void handleFile(f);
+              e.target.value = '';
+            }}
+          />
 
-          {ocrText && (
-            <p className="rounded-xl border border-slate-700 bg-slate-950/50 px-3 py-2 text-[11px] leading-snug text-slate-400">
-              <span className="font-medium text-slate-500">OCR: </span>
-              {ocrText}
-            </p>
-          )}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => cameraRef.current?.click()}
+              className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-600 py-3 text-sm font-medium text-white disabled:opacity-50"
+            >
+              <Camera className="h-5 w-5" />
+              Zdjęcie
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => fileRef.current?.click()}
+              className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-700 py-3 text-sm font-medium text-slate-300 disabled:opacity-50"
+            >
+              <Upload className="h-5 w-5" />
+              Galeria
+            </button>
+          </div>
 
           {warning && !error && (
             <p className="rounded-xl bg-amber-500 px-3 py-2.5 text-sm font-semibold text-amber-950">
@@ -295,7 +217,7 @@ export function VisualSearchModal({
             <div className="space-y-2">
               <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Propozycje ({matches.length}
-                {method === 'ean' ? ' · EAN' : method === 'ocr' ? ' · OCR' : ''})
+                {method === 'clip' ? ' · wygląd' : ''})
               </h3>
               <ul className="space-y-2">
                 {matches.map((m) => {
@@ -341,106 +263,6 @@ export function VisualSearchModal({
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-function LiveEanPanel({
-  onScan,
-  disabled,
-}: {
-  onScan: (code: string) => void;
-  disabled?: boolean;
-}) {
-  const containerId = useId().replace(/:/g, '');
-  const scannerRef = useRef<Html5Qrcode | null>(null);
-  const [starting, setStarting] = useState(true);
-  const [camError, setCamError] = useState<string | null>(null);
-  const onScanRef = useRef(onScan);
-  onScanRef.current = onScan;
-  const scannedRef = useRef(false);
-
-  useEffect(() => {
-    if (disabled) return;
-    let active = true;
-    scannedRef.current = false;
-    const scanner = new Html5Qrcode(containerId, {
-      formatsToSupport: [
-        Html5QrcodeSupportedFormats.EAN_13,
-        Html5QrcodeSupportedFormats.EAN_8,
-        Html5QrcodeSupportedFormats.UPC_A,
-        Html5QrcodeSupportedFormats.UPC_E,
-        Html5QrcodeSupportedFormats.CODE_128,
-      ],
-      verbose: false,
-    });
-    scannerRef.current = scanner;
-
-    async function start() {
-      try {
-        await scanner.start(
-          { facingMode: 'environment' },
-          {
-            fps: 12,
-            qrbox: { width: 300, height: 160 },
-            aspectRatio: 1.4,
-          },
-          (decoded) => {
-            if (scannedRef.current) return;
-            const code = decoded.trim();
-            if (!code) return;
-            scannedRef.current = true;
-            try {
-              navigator.vibrate?.(40);
-            } catch {
-              /* ignore */
-            }
-            onScanRef.current(code);
-            void scanner.stop().catch(() => undefined);
-          },
-          () => {},
-        );
-        if (active) setStarting(false);
-      } catch (err) {
-        console.error(err);
-        if (active) {
-          setCamError(
-            'Brak kamery. Zezwól na aparat albo użyj „Zdjęcie”.',
-          );
-          setStarting(false);
-        }
-      }
-    }
-
-    void start();
-
-    return () => {
-      active = false;
-      const s = scannerRef.current;
-      scannerRef.current = null;
-      if (s?.isScanning) void s.stop().catch(() => undefined);
-    };
-  }, [containerId, disabled]);
-
-  return (
-    <div className="space-y-2">
-      <p className="text-xs leading-relaxed text-slate-400">
-        Nakieruj na <strong className="text-slate-200">kod EAN</strong> — to
-        najpewniejsza metoda. Produkt otworzy się po skanie.
-      </p>
-      <div className="relative overflow-hidden rounded-2xl bg-black">
-        {starting && !camError && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60">
-            <Loader2 className="h-8 w-8 animate-spin text-brand-400" />
-          </div>
-        )}
-        <div id={containerId} className="min-h-[280px] w-full" />
-      </div>
-      {camError && (
-        <p className="rounded-xl bg-red-600 px-3 py-2.5 text-sm font-semibold text-white">
-          {camError}
-        </p>
-      )}
     </div>
   );
 }

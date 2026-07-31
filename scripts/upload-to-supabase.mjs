@@ -86,7 +86,13 @@ const existingOverrides = new Map(
 function toRow(p, catalog) {
   const existing = existingOverrides.get(p.id);
   const stockManual = existing?.stockManual || p.stockManual || false;
-  const stock = stockManual ? Number(existing?.stock ?? p.stock ?? 0) : (p.stock ?? 0);
+  // Nie nadpisuj stanów z syncu WAPRO przy reimportcie JSON (Baselinker ma inne stany).
+  // Nowe produkty: bierz stock z JSON. Istniejące + nie-ręczne: zostaw stock z DB.
+  const stock = stockManual
+    ? Number(existing?.stock ?? p.stock ?? 0)
+    : existing
+      ? Number(existing.stock ?? p.stock ?? 0)
+      : Number(p.stock ?? 0);
   const extraImages = existing?.extraImages?.length
     ? existing.extraImages
     : (p.extraImageUrls || []);
@@ -106,6 +112,19 @@ function toRow(p, catalog) {
     has_image: !!(customImageUrl || p.imageUrl || extraImages.length || p.hasImage),
     stock,
     stock_manual: stockManual,
+    price_purchase_net:
+      p.pricePurchaseNet != null && Number.isFinite(Number(p.pricePurchaseNet))
+        ? Number(p.pricePurchaseNet)
+        : null,
+    price_sale_net:
+      p.priceSaleNet != null && Number.isFinite(Number(p.priceSaleNet))
+        ? Number(p.priceSaleNet)
+        : null,
+    price_sale_gross:
+      p.priceSaleGross != null && Number.isFinite(Number(p.priceSaleGross))
+        ? Number(p.priceSaleGross)
+        : null,
+    tags: Array.isArray(p.tags) ? p.tags.filter(Boolean) : [],
     extra_images: extraImages,
     variants: p.variants || [],
     is_group: p.isGroup || false,

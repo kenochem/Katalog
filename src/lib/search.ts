@@ -9,8 +9,11 @@ export type CatalogSort =
   | 'stock-desc'
   | 'stock-asc';
 
-export type StockFilter = 'all' | 'in-stock' | 'out';
+export type StockFilter = 'all' | 'in-stock' | 'low' | 'out';
 export type ImageFilter = 'all' | 'with' | 'without';
+
+/** Próg „niski stan” (włącznie), powyżej 0. */
+export const LOW_STOCK_MAX = 5;
 
 export const CATALOG_SORT_OPTIONS: { value: CatalogSort; label: string }[] = [
   { value: 'category', label: 'Kategoria + nazwa' },
@@ -80,6 +83,11 @@ export function applyCatalogFilters(
 
   if (opts.stockFilter === 'in-stock') {
     result = result.filter((p) => (p.stock ?? 0) > 0);
+  } else if (opts.stockFilter === 'low') {
+    result = result.filter((p) => {
+      const s = p.stock ?? 0;
+      return s > 0 && s <= LOW_STOCK_MAX;
+    });
   } else if (opts.stockFilter === 'out') {
     result = result.filter((p) => (p.stock ?? 0) <= 0);
   }
@@ -102,6 +110,7 @@ type FuseProduct = Product & {
   variantNames: string;
   variantEans: string;
   eanNormalized: string;
+  tagsText: string;
 };
 
 export function createProductSearch(products: Product[]) {
@@ -111,6 +120,7 @@ export function createProductSearch(products: Product[]) {
     variantNames: p.variants?.map((v) => v.name).join(' ') || '',
     variantEans: p.variants?.map((v) => v.ean || '').join(' ') || '',
     eanNormalized: normalizeEan(p.ean || ''),
+    tagsText: (p.tags || []).join(' '),
   }));
 
   return new Fuse(expanded, {
@@ -124,6 +134,7 @@ export function createProductSearch(products: Product[]) {
       { name: 'variantNames', weight: 0.05 },
       { name: 'name', weight: 0.03 },
       { name: 'manufacturer', weight: 0.01 },
+      { name: 'tagsText', weight: 0.02 },
       { name: 'category', weight: 0.01 },
     ],
     threshold: 0.35,
@@ -204,5 +215,5 @@ export function filterProducts(
   );
   if (containsSku.length > 0 && containsSku.length <= 30) return containsSku;
 
-  return fuse.search(q).map((r) => r.item);
+  return fuse.search(q, { limit: 60 }).map((r) => r.item);
 }

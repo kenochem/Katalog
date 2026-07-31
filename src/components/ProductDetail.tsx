@@ -9,7 +9,7 @@ import {
   getProductImage, getProductImages, updateProductImage, addProductExtraImage,
   updateProduct, deleteProductImage, deleteProductExtraImage, fetchProductById,
 } from '../lib/products';
-import { formatStock } from '../lib/format';
+import { formatStock, formatPricePln, formatMarginPercent, marginPercent, stripHtml } from '../lib/format';
 import { addToLabelQueue } from '../lib/labelQueue';
 import { addToOrderDraft } from '../lib/orderDraft';
 import { showToast } from '../lib/toast';
@@ -41,7 +41,7 @@ export function ProductDetail({
   const [saving, setSaving] = useState(false);
   const [displayName, setDisplayName] = useState(product.displayName);
   const [category, setCategory] = useState(product.category);
-  const [description, setDescription] = useState(product.description);
+  const [description, setDescription] = useState(() => stripHtml(product.description));
   const [ean, setEan] = useState(product.ean || '');
   const [stock, setStock] = useState(product.stock ?? 0);
   const [selectedIdx, setSelectedIdx] = useState(0);
@@ -69,7 +69,7 @@ export function ProductDetail({
     setDetail(product);
     setDisplayName(product.displayName);
     setCategory(product.category);
-    setDescription(product.description);
+    setDescription(stripHtml(product.description));
     setEan(product.ean || '');
     setStock(product.stock ?? 0);
     setLocalPrimaryImage(null);
@@ -80,6 +80,7 @@ export function ProductDetail({
     fetchProductById(product.id).then((full) => {
       if (full) {
         setDetail(full);
+        setDescription(stripHtml(full.description));
         setEan(full.ean || '');
         setStock(full.stock ?? 0);
       }
@@ -405,22 +406,75 @@ export function ProductDetail({
             <>
               <div>
                 <h2 className="text-lg font-semibold text-slate-100">{displayName}</h2>
-                <p className="mt-1 text-sm text-slate-400">{detail.name}</p>
+                {detail.name.trim() &&
+                  detail.name.trim().toLowerCase() !== displayName.trim().toLowerCase() && (
+                    <p className="mt-1 text-sm text-slate-400">{detail.name}</p>
+                  )}
               </div>
 
               <div className="flex flex-wrap gap-2">
                 <Badge label={category} />
-                {detail.manufacturer && <Badge label={detail.manufacturer} muted />}
+                {detail.manufacturer &&
+                  detail.manufacturer.trim().toLowerCase() !== 'wapro' &&
+                  !displayName
+                    .toLowerCase()
+                    .includes(detail.manufacturer.trim().toLowerCase()) && (
+                    <Badge label={detail.manufacturer} muted />
+                  )}
                 {detail.ean && <Badge label={`EAN: ${detail.ean}`} muted />}
                 {!detail.ean && !editing && (
                   <Badge label="Brak EAN" muted />
                 )}
                 <Badge
-                  label={`Stan: ${formatStock(detail.stock ?? 0)}${detail.stockManual ? ' â[}' : ''}`}
+                  label={`Stan: ${formatStock(detail.stock ?? 0)}${
+                    detail.stockManual ? ' · ręczny' : ''
+                  }`}
                   muted={detail.stock > 0}
                   warning={detail.stock <= 0}
                 />
               </div>
+
+              {roleCan(role, 'viewPrices') &&
+                (detail.pricePurchaseNet != null ||
+                  detail.priceSaleNet != null ||
+                  detail.priceSaleGross != null) && (
+                  <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-800 bg-slate-950/40 p-3 sm:grid-cols-4">
+                    <div>
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                        Zakup netto
+                      </p>
+                      <p className="mt-0.5 text-sm font-semibold tabular-nums text-slate-100">
+                        {formatPricePln(detail.pricePurchaseNet)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                        Sprzedaż netto
+                      </p>
+                      <p className="mt-0.5 text-sm font-semibold tabular-nums text-slate-100">
+                        {formatPricePln(detail.priceSaleNet)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-brand-400">
+                        Sprzedaż brutto
+                      </p>
+                      <p className="mt-0.5 text-sm font-semibold tabular-nums text-brand-300">
+                        {formatPricePln(detail.priceSaleGross)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                        Marża
+                      </p>
+                      <p className="mt-0.5 text-sm font-semibold tabular-nums text-slate-100">
+                        {formatMarginPercent(
+                          marginPercent(detail.pricePurchaseNet, detail.priceSaleNet),
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
               {description && (
                 <p className="text-sm leading-relaxed text-slate-400">{description}</p>
