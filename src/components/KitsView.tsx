@@ -33,7 +33,7 @@ export function KitsView({
         <div>
           <h2 className="text-lg font-semibold text-slate-100">Gotowe zestawy</h2>
           <p className="text-sm text-slate-400">
-            Składane przez Piotrka — gotowe komplety na tacy
+            Komplety z produktów aktywnego katalogu
           </p>
         </div>
         <button

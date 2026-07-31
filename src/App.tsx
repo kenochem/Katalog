@@ -56,6 +56,7 @@ import { ProductCard } from './components/ProductCard';
 import { SearchBar } from './components/SearchBar';
 import { ProductGrid } from './components/ProductGrid';
 import { InstallAppHint, resetInstallHint } from './components/InstallAppHint';
+import { ChatDrawer } from './components/ChatDrawer';
 import { LoginGate } from './components/LoginGate';
 import { RefreshControls } from './components/RefreshControls';
 import { MobileBottomNav, MobileMoreSheet } from './components/MobileNav';
@@ -93,8 +94,8 @@ const EanHygieneView = lazy(() =>
 const ProductDetail = lazy(() =>
   import('./components/ProductDetail').then((m) => ({ default: m.ProductDetail })),
 );
-const CrmOrderView = lazy(() =>
-  import('./components/CrmOrderView').then((m) => ({ default: m.CrmOrderView })),
+const CrmHubView = lazy(() =>
+  import('./components/CrmHubView').then((m) => ({ default: m.CrmHubView })),
 );
 const OpsHubView = lazy(() =>
   import('./components/OpsHubView').then((m) => ({ default: m.OpsHubView })),
@@ -274,6 +275,7 @@ export default function App() {
     if (!roleCan(role, 'manageFavorites') && view === 'favorites') setView('catalog');
     if (!roleCan(role, 'manageKits') && view === 'kits') setView('catalog');
     if (!roleCan(role, 'viewOps') && view === 'ops') setView('catalog');
+    if (!roleCan(role, 'useCrm') && view === 'crm') setView('catalog');
     if (!roleCan(role, 'viewRoleMatrix') && view === 'role-matrix') setView('catalog');
     if (
       !roleCan(role, 'editProduct') &&
@@ -316,6 +318,16 @@ export default function App() {
   const products = useMemo(
     () => allProducts.filter((p) => (p.catalog || 'accessories') === activeCatalog),
     [allProducts, activeCatalog],
+  );
+
+  const catalogKits = useMemo(
+    () =>
+      kits.filter((k) =>
+        k.items.some((item) =>
+          products.some((p) => p.id === item.productId || p.sku === item.sku),
+        ),
+      ),
+    [kits, products],
   );
 
   const catalogCacheRef = useRef(catalogCache);
@@ -673,20 +685,50 @@ export default function App() {
             </div>
           </div>
 
-          <div className="w-full shrink-0 lg:w-auto lg:min-w-[16rem]">
-            <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-900 p-1 ring-1 ring-slate-800">
+          <div className="w-full shrink-0 lg:w-auto lg:min-w-[18rem] xl:min-w-[22rem]">
+            <div
+              className={`grid gap-1 rounded-xl bg-slate-900 p-1 ring-1 ring-slate-800 ${
+                roleCan(role, 'viewOps') && roleCan(role, 'useCrm')
+                  ? 'grid-cols-4'
+                  : roleCan(role, 'viewOps') || roleCan(role, 'useCrm')
+                    ? 'grid-cols-3'
+                    : 'grid-cols-2'
+              }`}
+            >
               <CatalogSwitch
-                active={activeCatalog === 'accessories'}
+                active={
+                  view !== 'ops' &&
+                  view !== 'crm' &&
+                  activeCatalog === 'accessories'
+                }
                 onClick={() => switchCatalog('accessories')}
                 icon={<Wrench className="h-4 w-4 shrink-0" />}
                 label={CATALOG_LABELS.accessories}
               />
               <CatalogSwitch
-                active={activeCatalog === 'shop'}
+                active={
+                  view !== 'ops' && view !== 'crm' && activeCatalog === 'shop'
+                }
                 onClick={() => switchCatalog('shop')}
                 icon={<ShoppingBag className="h-4 w-4 shrink-0" />}
                 label={CATALOG_LABELS.shop}
               />
+              {roleCan(role, 'viewOps') && (
+                <CatalogSwitch
+                  active={view === 'ops'}
+                  onClick={() => setView('ops')}
+                  icon={<Calculator className="h-4 w-4 shrink-0" />}
+                  label="Operacje"
+                />
+              )}
+              {roleCan(role, 'useCrm') && (
+                <CatalogSwitch
+                  active={view === 'crm'}
+                  onClick={() => setView('crm')}
+                  icon={<ShoppingCart className="h-4 w-4 shrink-0" />}
+                  label="CRM"
+                />
+              )}
             </div>
           </div>
 
@@ -735,7 +777,9 @@ export default function App() {
                 EAN
               </button>
             )}
-            {roleCan(role, 'addProduct') && (
+            {view !== 'ops' &&
+              view !== 'crm' &&
+              roleCan(role, 'addProduct') && (
               <button
                 type="button"
                 onClick={() => setShowAddProduct(true)}
@@ -745,7 +789,10 @@ export default function App() {
                 Dodaj
               </button>
             )}
-            {activeCatalog === 'shop' && roleCan(role, 'useLens') && (
+            {view !== 'ops' &&
+              view !== 'crm' &&
+              activeCatalog === 'shop' &&
+              roleCan(role, 'useLens') && (
               <button
                 type="button"
                 onClick={() => setShowVisualSearch(true)}
@@ -802,7 +849,8 @@ export default function App() {
           </div>
         </div>
 
-        {/* Desktop nav tabs */}
+        {/* Desktop nav tabs — tylko w trybie katalogu (nie Operacje / CRM) */}
+        {view !== 'ops' && view !== 'crm' && (
         <div className="hidden border-t border-slate-800/60 px-3 py-2 sm:px-4 lg:flex lg:items-center lg:gap-4 xl:px-6">
           <nav className="flex min-w-0 flex-1 flex-wrap gap-1">
             <NavTab
@@ -812,16 +860,6 @@ export default function App() {
               label="Katalog"
               count={products.length}
             />
-            {roleCan(role, 'useCrm') && (
-              <NavTab
-                active={view === 'crm'}
-                onClick={() => setView('crm')}
-                icon={<ShoppingCart className="h-4 w-4" />}
-                label="Zamówienie"
-                count={orderCount}
-                highlight={orderCount > 0}
-              />
-            )}
             {roleCan(role, 'manageFavorites') && (
               <NavTab
                 active={view === 'favorites'}
@@ -832,21 +870,13 @@ export default function App() {
                 highlight={favoriteCount > 0}
               />
             )}
-            {roleCan(role, 'viewOps') && (
-              <NavTab
-                active={view === 'ops'}
-                onClick={() => setView('ops')}
-                icon={<Calculator className="h-4 w-4" />}
-                label="Operacje"
-              />
-            )}
-            {activeCatalog === 'accessories' && roleCan(role, 'manageKits') && (
+            {roleCan(role, 'manageKits') && (
               <NavTab
                 active={view === 'kits'}
                 onClick={() => setView('kits')}
                 icon={<Layers className="h-4 w-4" />}
                 label="Zestawy"
-                count={kits.length}
+                count={catalogKits.length}
               />
             )}
             {roleCan(role, 'viewProgress') && (
@@ -906,6 +936,7 @@ export default function App() {
             </div>
           )}
         </div>
+        )}
       </header>
 
       {/* Wyszukiwarka sticky — tylko mobile/tablet; na lg jest w headerze */}
@@ -1022,37 +1053,24 @@ export default function App() {
           </Suspense>
         ) : view === 'crm' && roleCan(role, 'useCrm') ? (
           <Suspense fallback={<ViewFallback />}>
-            <CrmOrderView
+            <CrmHubView
               authorLabel={displayLabel}
+              displayLabel={displayLabel}
+              roleLabel={ROLE_LABELS[role]}
               products={allProducts}
               cloudEnabled={mode === 'signed_in'}
+              orderCount={orderCount}
               onChanged={refreshOrderCount}
             />
           </Suspense>
         ) : view === 'ops' && roleCan(role, 'viewOps') ? (
           <Suspense fallback={<ViewFallback />}>
-            <OpsHubView
-              products={allProducts}
-              canManageKits={roleCan(role, 'manageKits')}
-              onOpenKits={() => {
-                if (activeCatalog !== 'accessories') {
-                  setActiveCatalog('accessories');
-                  try {
-                    localStorage.setItem(CATALOG_STORAGE_KEY, 'accessories');
-                  } catch {
-                    /* ignore */
-                  }
-                }
-                setView('kits');
-              }}
-            />
+            <OpsHubView products={allProducts} />
           </Suspense>
-        ) : view === 'kits' &&
-          activeCatalog === 'accessories' &&
-          roleCan(role, 'manageKits') ? (
+        ) : view === 'kits' && roleCan(role, 'manageKits') ? (
           <Suspense fallback={<ViewFallback />}>
             <KitsView
-              kits={kits}
+              kits={catalogKits}
               products={products}
               onKitsChange={loadData}
               canAddToOrder={roleCan(role, 'useCrm')}
@@ -1181,7 +1199,7 @@ export default function App() {
         syncBusy={syncBusy}
         canRequestStockSync={mode === 'signed_in' && roleCan(role, 'editStock')}
         missingCount={missingImages.length}
-        kitsCount={kits.length}
+        kitsCount={catalogKits.length}
         onView={(v) => {
           if (v === 'labels') refreshLabelQueue();
           if (v === 'missing-images') openMissingImages();
@@ -1205,6 +1223,7 @@ export default function App() {
       />
 
       <InstallAppHint />
+      <ChatDrawer />
     </div>
   );
 }

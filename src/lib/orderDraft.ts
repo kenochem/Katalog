@@ -9,6 +9,9 @@ export interface OrderDraftItem {
   imageUrl?: string;
   /** Pozycja pochodzi z zestawu (informacyjnie). */
   fromKit?: string;
+  /** Snapshot ceny w momencie oferty/zamówienia (jak OfferItem w CRM-Base). */
+  unitPriceNet?: number | null;
+  unitPriceGross?: number | null;
 }
 
 export type OrderKind = 'order' | 'quote';

@@ -101,6 +101,8 @@ Bez webhooka przycisk **Discord** kopiuje tekst do schowka (można wkleić ręcz
 
 ### CRM — klienci, NIP, historia
 
+Rozwój lejka (oferty, statusy, audyt) — mapa z CRM-Base: [`docs/crm-from-crm-base.md`](docs/crm-from-crm-base.md).
+
 1. W Supabase SQL Editor uruchom [`supabase/migration-crm-clients-orders.sql`](supabase/migration-crm-clients-orders.sql).
 2. Deploy Edge Function (lookup NIP → biała lista VAT MF):
    ```bash
@@ -111,6 +113,18 @@ Bez webhooka przycisk **Discord** kopiuje tekst do schowka (można wkleić ręcz
 5. Po **Discord** zamówienie trafia do historii (i draft się czyści). **Zapisz** zapisuje bez wysyłki.
 
 Klienci i historia są **tylko Twoje** (RLS po `auth.uid()`).
+
+### Czat (ogólny + DM)
+
+Kompaktowy panel (desktop: małe okienko prawy-dół; mobile: sheet od dołu) — tylko dla zalogowanych.
+
+1. W Supabase SQL Editor uruchom [`supabase/migration-chat.sql`](supabase/migration-chat.sql) (tabele + Realtime + RLS).
+2. Po deployu: zielona bańka → **Ogólny** lub DM.
+
+### CRM — mapa i trasy
+
+1. Migracja geo: [`supabase/migration-crm-client-geo.sql`](supabase/migration-crm-client-geo.sql) (`lat`/`lng` na klientach).
+2. W CRM: **Mapa klientów** / **Trasy** — pinezki (klik mapę lub geokod z adresu), budowa trasy z czasami (OSRM + OpenStreetMap).
 
 ## Role (skrót)
 

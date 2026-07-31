@@ -25,11 +25,11 @@ export const ROLE_LABELS: Record<AppRole, string> = {
 export const ROLE_DESCRIPTIONS: Record<AppRole, string> = {
   guest: 'Podgląd katalogu ze zdjęciami — bez edycji, etykiet, zamówień i usuwania',
   handlowiec:
-    'Zamówienia, oferty, zdjęcia (dodawanie), katalog, ceny, operacje — bez stanów, usuwania zdjęć i kont',
+    'Katalog, CRM (panel handlowca), oferty, ceny, operacje — bez stanów, usuwania zdjęć i kont',
   magazynier:
     'Stany, etykiety, dodawanie zdjęć — bez zamówień, zestawów, edycji produktów, cen i kont',
   operator:
-    'Pełna praca (stany, produkty, zestawy, zamówienia, ceny, operacje) — bez panelu kont',
+    'Pełna praca (stany, produkty, zestawy, CRM, ceny, operacje) — bez panelu kont',
   admin: 'Pełny dostęp + zarządzanie użytkownikami i podgląd uprawnień',
 };
 
@@ -81,7 +81,7 @@ export const ROLE_ACTION_LABELS: Record<RoleAction, string> = {
   viewImages: 'Podgląd zdjęć',
   viewPrices: 'Ceny i marża',
   manageUsers: 'Zarządzanie kontami',
-  useCrm: 'Zamówienia / CRM',
+  useCrm: 'CRM / panel handlowca',
   viewRoleMatrix: 'Podgląd uprawnień',
   viewOps: 'Operacje / kalkulatory',
 };

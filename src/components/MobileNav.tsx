@@ -21,7 +21,6 @@ import {
   ShoppingCart,
   AlertTriangle,
   Shield,
-  Calculator,
 } from 'lucide-react';
 import type { View, CatalogType } from '../types';
 import type { AppRole } from '../lib/roles';
@@ -54,7 +53,6 @@ export function MobileBottomNav({
     'admin',
     'ean-hygiene',
     'role-matrix',
-    'ops',
   ].includes(view);
   return (
     <nav
@@ -245,15 +243,7 @@ export function MobileMoreSheet({
               Widoki
             </p>
             <div className="grid grid-cols-2 gap-2">
-              {roleCan(role, 'viewOps') && (
-                <SheetAction
-                  active={view === 'ops'}
-                  icon={<Calculator className="h-4 w-4" />}
-                  label="Operacje"
-                  onClick={() => go('ops')}
-                />
-              )}
-              {activeCatalog === 'accessories' && roleCan(role, 'manageKits') && (
+              {roleCan(role, 'manageKits') && (
                 <SheetAction
                   active={view === 'kits'}
                   icon={<Layers className="h-4 w-4" />}

@@ -1,0 +1,779 @@
+{
+  "meta": {
+    "title": "Finanse sklepu Kenochem",
+    "note": "Wynik netto ≈ sprzedaż − koszt towaru − koszty biznesu. Przybliżenie operacyjne z arkusza kosztów — nie pełna księgowość.",
+    "currency": "PLN",
+    "sourceFile": "Internet_Koszty_v8_kaniec (2).xlsx",
+    "defaultMonth": "2026-05"
+  },
+  "months": [
+    {
+      "month": "2026-01",
+      "sprzedaz": 91302.76,
+      "kosztTowaru": 48458.0,
+      "marzaNetto": 42844.76,
+      "marketplace": 16411.82,
+      "dostawa": 9620.56,
+      "operacyjne": 7979.47,
+      "kosztyRazem": 82469.85,
+      "marzaPct": 0.469260294,
+      "wynikDoSprzedazy": 0.09674307765,
+      "kosztDoSprzedazy": 0.9032569224,
+      "wynikNetto": 8832.91
+    },
+    {
+      "month": "2026-02",
+      "sprzedaz": 94890.18,
+      "kosztTowaru": 49461.0,
+      "marzaNetto": 45429.18,
+      "marketplace": 14253.2,
+      "dostawa": 6853.68,
+      "operacyjne": 6388.32,
+      "kosztyRazem": 76956.2,
+      "marzaPct": 0.4787553359,
+      "wynikDoSprzedazy": 0.1889972176,
+      "kosztDoSprzedazy": 0.8110027824,
+      "wynikNetto": 17933.98
+    },
+    {
+      "month": "2026-03",
+      "sprzedaz": 159160.82,
+      "kosztTowaru": 78052.0,
+      "marzaNetto": 81108.82,
+      "marketplace": 26327.87,
+      "dostawa": 8726.14,
+      "operacyjne": 9090.76,
+      "kosztyRazem": 122196.77,
+      "marzaPct": 0.5096029287,
+      "wynikDoSprzedazy": 0.2322434001,
+      "kosztDoSprzedazy": 0.7677565999,
+      "wynikNetto": 36964.05
+    },
+    {
+      "month": "2026-04",
+      "sprzedaz": 129055.87,
+      "kosztTowaru": 69239.0,
+      "marzaNetto": 59816.87,
+      "marketplace": 23448.81,
+      "dostawa": 7154.44,
+      "operacyjne": 7460.22,
+      "kosztyRazem": 107302.47,
+      "marzaPct": 0.4634959262,
+      "wynikDoSprzedazy": 0.1685580051,
+      "kosztDoSprzedazy": 0.8314419949,
+      "wynikNetto": 21753.4
+    },
+    {
+      "month": "2026-05",
+      "sprzedaz": 145869.37,
+      "kosztTowaru": 74686.0,
+      "marzaNetto": 71183.37,
+      "marketplace": 28219.37,
+      "dostawa": 7880.87,
+      "operacyjne": 11957.1,
+      "kosztyRazem": 122743.34,
+      "marzaPct": 0.4879939497,
+      "wynikDoSprzedazy": 0.158539315,
+      "kosztDoSprzedazy": 0.841460685,
+      "wynikNetto": 23126.03
+    },
+    {
+      "month": "2026-06",
+      "sprzedaz": 133945.71,
+      "kosztTowaru": 65793.0,
+      "marzaNetto": 68152.71,
+      "marketplace": 22885.32,
+      "dostawa": 7676.54,
+      "operacyjne": 9365.19,
+      "kosztyRazem": 105720.05,
+      "marzaPct": 0.5088084568,
+      "wynikDoSprzedazy": 0.2107246287,
+      "kosztDoSprzedazy": 0.7892753713,
+      "wynikNetto": 28225.66
+    }
+  ],
+  "channelsByMonth": {
+    "2026-01": [
+      {
+        "channel": "Allegro kenochemcom",
+        "amount": 49621.0
+      },
+      {
+        "channel": "Kenochem.com",
+        "amount": 24608.0
+      },
+      {
+        "channel": "Zamówienia telefoniczne/ręczne/mail",
+        "amount": 7643.0
+      },
+      {
+        "channel": "Erli",
+        "amount": 7611.0
+      },
+      {
+        "channel": "Empik",
+        "amount": 1104.0
+      },
+      {
+        "channel": "Czystomania.pl",
+        "amount": 715.76
+      }
+    ],
+    "2026-02": [
+      {
+        "channel": "Allegro kenochemcom",
+        "amount": 55184.0
+      },
+      {
+        "channel": "Kenochem.com",
+        "amount": 25030.0
+      },
+      {
+        "channel": "Erli",
+        "amount": 5990.0
+      },
+      {
+        "channel": "Zamówienia telefoniczne/ręczne/mail",
+        "amount": 5304.0
+      },
+      {
+        "channel": "Allegro czystomania.pl",
+        "amount": 1918.0
+      },
+      {
+        "channel": "Empik",
+        "amount": 885.96
+      },
+      {
+        "channel": "Sonax.sklep.pl",
+        "amount": 315.83
+      },
+      {
+        "channel": "Czystomania.pl",
+        "amount": 262.39
+      }
+    ],
+    "2026-03": [
+      {
+        "channel": "Allegro kenochemcom",
+        "amount": 92158.0
+      },
+      {
+        "channel": "Kenochem.com",
+        "amount": 19754.0
+      },
+      {
+        "channel": "Allegro czystomania.pl",
+        "amount": 19066.0
+      },
+      {
+        "channel": "Zamówienia telefoniczne/ręczne/mail",
+        "amount": 12474.0
+      },
+      {
+        "channel": "Erli",
+        "amount": 9582.0
+      },
+      {
+        "channel": "Allegro sonax_sklep",
+        "amount": 2791.0
+      },
+      {
+        "channel": "Sonax.sklep.pl",
+        "amount": 1494.0
+      },
+      {
+        "channel": "Empik",
+        "amount": 1194.0
+      },
+      {
+        "channel": "Czystomania.pl",
+        "amount": 647.82
+      }
+    ],
+    "2026-04": [
+      {
+        "channel": "Allegro kenochemcom",
+        "amount": 65180.0
+      },
+      {
+        "channel": "Allegro czystomania.pl",
+        "amount": 21991.0
+      },
+      {
+        "channel": "Kenochem.com",
+        "amount": 15339.0
+      },
+      {
+        "channel": "Zamówienia telefoniczne/ręczne/mail",
+        "amount": 12009.0
+      },
+      {
+        "channel": "Erli",
+        "amount": 6283.0
+      },
+      {
+        "channel": "Allegro sonax_sklep",
+        "amount": 4263.0
+      },
+      {
+        "channel": "Empik",
+        "amount": 1572.0
+      },
+      {
+        "channel": "Sonax.sklep.pl",
+        "amount": 1271.0
+      },
+      {
+        "channel": "Czystomania.pl",
+        "amount": 792.5
+      },
+      {
+        "channel": "Kaufland",
+        "amount": 355.37
+      }
+    ],
+    "2026-05": [
+      {
+        "channel": "Allegro kenochemcom",
+        "amount": 89712.0
+      },
+      {
+        "channel": "Allegro czystomania.pl",
+        "amount": 20329.0
+      },
+      {
+        "channel": "Kenochem.com",
+        "amount": 15420.0
+      },
+      {
+        "channel": "Erli",
+        "amount": 5688.0
+      },
+      {
+        "channel": "Allegro sonax_sklep",
+        "amount": 5483.0
+      },
+      {
+        "channel": "Zamówienia telefoniczne/ręczne/mail",
+        "amount": 5025.0
+      },
+      {
+        "channel": "Empik",
+        "amount": 2318.0
+      },
+      {
+        "channel": "Sonax.sklep.pl",
+        "amount": 1111.0
+      },
+      {
+        "channel": "Kaufland",
+        "amount": 783.37
+      }
+    ],
+    "2026-06": [
+      {
+        "channel": "Allegro kenochemcom",
+        "amount": 65072.0
+      },
+      {
+        "channel": "Kenochem.com",
+        "amount": 28129.0
+      },
+      {
+        "channel": "Allegro czystomania.pl",
+        "amount": 15648.0
+      },
+      {
+        "channel": "Zamówienia telefoniczne/ręczne/mail",
+        "amount": 8324.0
+      },
+      {
+        "channel": "Allegro sonax_sklep",
+        "amount": 6904.0
+      },
+      {
+        "channel": "Erli",
+        "amount": 4490.0
+      },
+      {
+        "channel": "Sonax.sklep.pl",
+        "amount": 2513.0
+      },
+      {
+        "channel": "Empik",
+        "amount": 1404.0
+      },
+      {
+        "channel": "Czystomania.pl",
+        "amount": 1218.0
+      },
+      {
+        "channel": "Kaufland",
+        "amount": 243.71
+      }
+    ]
+  },
+  "sourcesByMonth": {
+    "2026-01": [
+      {
+        "name": "Allegro kenochemcom - PL",
+        "amount": 13049.22
+      },
+      {
+        "name": "GLS",
+        "amount": 5037.96
+      },
+      {
+        "name": "Google ADS",
+        "amount": 3187.81
+      },
+      {
+        "name": "Silverfox",
+        "amount": 2570.0
+      },
+      {
+        "name": "InPost",
+        "amount": 2363.17
+      },
+      {
+        "name": "Kartony",
+        "amount": 2219.43
+      },
+      {
+        "name": "Erli prowizje",
+        "amount": 1989.73
+      },
+      {
+        "name": "SaaS / Aplikacje",
+        "amount": 1438.29
+      },
+      {
+        "name": "Allegro Fabian",
+        "amount": 1000.0
+      },
+      {
+        "name": "Baselinker",
+        "amount": 783.37
+      },
+      {
+        "name": "Allegro kenochemcom - CZ",
+        "amount": 216.82
+      },
+      {
+        "name": "Allegro kenochemcom - SK",
+        "amount": 129.96
+      },
+      {
+        "name": "Allegro kenochemcom - HU",
+        "amount": 26.09
+      }
+    ],
+    "2026-02": [
+      {
+        "name": "Allegro kenochemcom - PL",
+        "amount": 11484.41
+      },
+      {
+        "name": "GLS",
+        "amount": 3798.66
+      },
+      {
+        "name": "InPost",
+        "amount": 2716.56
+      },
+      {
+        "name": "Silverfox",
+        "amount": 2570.0
+      },
+      {
+        "name": "Google ADS",
+        "amount": 1843.94
+      },
+      {
+        "name": "SaaS / Aplikacje",
+        "amount": 1142.82
+      },
+      {
+        "name": "Erli prowizje",
+        "amount": 1073.16
+      },
+      {
+        "name": "Allegro Fabian",
+        "amount": 1000.0
+      },
+      {
+        "name": "Baselinker",
+        "amount": 831.56
+      },
+      {
+        "name": "Kartony",
+        "amount": 338.46
+      },
+      {
+        "name": "Allegro czystomania.pl - PL",
+        "amount": 332.86
+      },
+      {
+        "name": "Allegro kenochemcom - CZ",
+        "amount": 146.64
+      },
+      {
+        "name": "Allegro kenochemcom - SK",
+        "amount": 118.43
+      },
+      {
+        "name": "Allegro kenochemcom - HU",
+        "amount": 65.28
+      },
+      {
+        "name": "Allegro czystomania.pl - HU",
+        "amount": 18.79
+      },
+      {
+        "name": "Allegro czystomania.pl - CZ",
+        "amount": 13.63
+      }
+    ],
+    "2026-03": [
+      {
+        "name": "Allegro kenochemcom - PL",
+        "amount": 19097.28
+      },
+      {
+        "name": "InPost",
+        "amount": 4647.95
+      },
+      {
+        "name": "GLS",
+        "amount": 3793.19
+      },
+      {
+        "name": "Allegro czystomania.pl - PL",
+        "amount": 3132.15
+      },
+      {
+        "name": "Silverfox",
+        "amount": 2570.0
+      },
+      {
+        "name": "Kartony",
+        "amount": 2285.0
+      },
+      {
+        "name": "Google ADS",
+        "amount": 2214.19
+      },
+      {
+        "name": "Erli prowizje",
+        "amount": 1378.41
+      },
+      {
+        "name": "SaaS / Aplikacje",
+        "amount": 1175.6
+      },
+      {
+        "name": "Baselinker",
+        "amount": 1130.97
+      },
+      {
+        "name": "Allegro Fabian",
+        "amount": 1000.0
+      },
+      {
+        "name": "Allegro sonax_sklep - PL",
+        "amount": 362.04
+      },
+      {
+        "name": "Allegro czystomania.pl - CZ",
+        "amount": 302.05
+      },
+      {
+        "name": "Allegro kenochemcom - CZ",
+        "amount": 285.91
+      },
+      {
+        "name": "Allegro kenochemcom - SK",
+        "amount": 220.45
+      },
+      {
+        "name": "Allegro czystomania.pl - HU",
+        "amount": 196.64
+      },
+      {
+        "name": "Allegro kenochemcom - HU",
+        "amount": 145.95
+      },
+      {
+        "name": "Allegro czystomania.pl - SK",
+        "amount": 118.52
+      },
+      {
+        "name": "Allegro sonax_sklep - CZ",
+        "amount": 43.88
+      },
+      {
+        "name": "Allegro sonax_sklep - SK",
+        "amount": 35.67
+      },
+      {
+        "name": "Allegro sonax_sklep - HU",
+        "amount": 8.92
+      }
+    ],
+    "2026-04": [
+      {
+        "name": "Allegro kenochemcom - PL",
+        "amount": 15946.54
+      },
+      {
+        "name": "GLS",
+        "amount": 3847.17
+      },
+      {
+        "name": "InPost",
+        "amount": 3307.27
+      },
+      {
+        "name": "Allegro czystomania.pl - PL",
+        "amount": 3259.98
+      },
+      {
+        "name": "Silverfox",
+        "amount": 2570.0
+      },
+      {
+        "name": "Google ADS",
+        "amount": 2005.67
+      },
+      {
+        "name": "Baselinker",
+        "amount": 1294.5
+      },
+      {
+        "name": "SaaS / Aplikacje",
+        "amount": 1203.93
+      },
+      {
+        "name": "Allegro Fabian",
+        "amount": 1000.0
+      },
+      {
+        "name": "Erli prowizje",
+        "amount": 930.93
+      },
+      {
+        "name": "Allegro sonax_sklep - PL",
+        "amount": 505.79
+      },
+      {
+        "name": "Allegro kenochemcom - SK",
+        "amount": 441.67
+      },
+      {
+        "name": "Kartony",
+        "amount": 386.12
+      },
+      {
+        "name": "Allegro czystomania.pl - HU",
+        "amount": 346.26
+      },
+      {
+        "name": "Allegro czystomania.pl - CZ",
+        "amount": 207.94
+      },
+      {
+        "name": "Allegro czystomania.pl - SK",
+        "amount": 202.08
+      },
+      {
+        "name": "Allegro kenochemcom - CZ",
+        "amount": 167.27
+      },
+      {
+        "name": "Allegro kenochemcom - HU",
+        "amount": 159.88
+      },
+      {
+        "name": "Allegro sonax_sklep - HU",
+        "amount": 150.1
+      },
+      {
+        "name": "Allegro sonax_sklep - CZ",
+        "amount": 83.4
+      },
+      {
+        "name": "Allegro sonax_sklep - SK",
+        "amount": 46.97
+      }
+    ],
+    "2026-05": [
+      {
+        "name": "Allegro kenochemcom - PL",
+        "amount": 19905.81
+      },
+      {
+        "name": "GLS",
+        "amount": 3959.5
+      },
+      {
+        "name": "InPost",
+        "amount": 3921.37
+      },
+      {
+        "name": "Kartony",
+        "amount": 3430.74
+      },
+      {
+        "name": "Google ADS",
+        "amount": 3409.14
+      },
+      {
+        "name": "Allegro czystomania.pl - PL",
+        "amount": 3097.7
+      },
+      {
+        "name": "Silverfox",
+        "amount": 2570.0
+      },
+      {
+        "name": "Baselinker",
+        "amount": 1371.92
+      },
+      {
+        "name": "SaaS / Aplikacje",
+        "amount": 1175.3
+      },
+      {
+        "name": "Allegro czystomania.pl - CZ",
+        "amount": 1015.48
+      },
+      {
+        "name": "Allegro Fabian",
+        "amount": 1000.0
+      },
+      {
+        "name": "Erli prowizje",
+        "amount": 786.72
+      },
+      {
+        "name": "Allegro sonax_sklep - PL",
+        "amount": 683.59
+      },
+      {
+        "name": "Allegro czystomania.pl - HU",
+        "amount": 419.88
+      },
+      {
+        "name": "Allegro czystomania.pl - SK",
+        "amount": 310.05
+      },
+      {
+        "name": "Allegro sonax_sklep - CZ",
+        "amount": 209.53
+      },
+      {
+        "name": "Allegro kenochemcom - HU",
+        "amount": 204.86
+      },
+      {
+        "name": "Allegro sonax_sklep - HU",
+        "amount": 203.31
+      },
+      {
+        "name": "Allegro kenochemcom - CZ",
+        "amount": 177.09
+      },
+      {
+        "name": "Allegro kenochemcom - SK",
+        "amount": 154.14
+      },
+      {
+        "name": "Allegro sonax_sklep - SK",
+        "amount": 51.21
+      }
+    ],
+    "2026-06": [
+      {
+        "name": "Allegro kenochemcom - PL",
+        "amount": 15822.11
+      },
+      {
+        "name": "Google ADS",
+        "amount": 4135.0
+      },
+      {
+        "name": "InPost",
+        "amount": 3971.39
+      },
+      {
+        "name": "GLS",
+        "amount": 3705.15
+      },
+      {
+        "name": "Silverfox",
+        "amount": 2750.0
+      },
+      {
+        "name": "Allegro czystomania.pl - PL",
+        "amount": 2496.78
+      },
+      {
+        "name": "Baselinker",
+        "amount": 1253.42
+      },
+      {
+        "name": "SaaS / Aplikacje",
+        "amount": 1226.77
+      },
+      {
+        "name": "Allegro Fabian",
+        "amount": 1000.0
+      },
+      {
+        "name": "Allegro sonax_sklep - PL",
+        "amount": 873.89
+      },
+      {
+        "name": "Allegro czystomania.pl - HU",
+        "amount": 810.74
+      },
+      {
+        "name": "Erli prowizje",
+        "amount": 575.58
+      },
+      {
+        "name": "Allegro czystomania.pl - SK",
+        "amount": 295.17
+      },
+      {
+        "name": "Allegro czystomania.pl - CZ",
+        "amount": 210.87
+      },
+      {
+        "name": "Allegro kenochemcom - HU",
+        "amount": 157.36
+      },
+      {
+        "name": "Allegro sonax_sklep - HU",
+        "amount": 155.69
+      },
+      {
+        "name": "Allegro kenochemcom - SK",
+        "amount": 155.65
+      },
+      {
+        "name": "Allegro kenochemcom - CZ",
+        "amount": 151.16
+      },
+      {
+        "name": "Allegro sonax_sklep - CZ",
+        "amount": 134.69
+      },
+      {
+        "name": "Allegro sonax_sklep - SK",
+        "amount": 45.63
+      }
+    ]
+  }
+}

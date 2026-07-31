@@ -47,6 +47,8 @@ interface CrmOrderViewProps {
   products?: Product[];
   cloudEnabled?: boolean;
   onChanged?: () => void;
+  /** Zakładka startowa (np. z hubu CRM). */
+  initialTab?: CrmTab;
 }
 
 export function CrmOrderView({
@@ -54,8 +56,9 @@ export function CrmOrderView({
   products = [],
   cloudEnabled = false,
   onChanged,
+  initialTab = 'current',
 }: CrmOrderViewProps) {
-  const [tab, setTab] = useState<CrmTab>('current');
+  const [tab, setTab] = useState<CrmTab>(initialTab);
   const [draft, setDraft] = useState<OrderDraft>(() => getOrderDraft());
   const [sending, setSending] = useState(false);
   const [savingHistory, setSavingHistory] = useState(false);
@@ -71,6 +74,10 @@ export function CrmOrderView({
     displayName: string;
   } | null>(null);
   const hasWebhook = Boolean(import.meta.env.VITE_DISCORD_ORDERS_WEBHOOK);
+
+  useEffect(() => {
+    setTab(initialTab);
+  }, [initialTab]);
 
   useEffect(() => {
     setDraft(getOrderDraft());
@@ -202,8 +209,20 @@ export function CrmOrderView({
     if (!draft.items.length) return false;
     try {
       const clientId = await ensureClientId();
+      const current = getOrderDraft();
+      // Snapshot cen katalogu — historia oferty nie „pływa” po zmianie cennika
+      const items = current.items.map((i) => {
+        const p =
+          products.find((x) => x.id === i.productId) ||
+          products.find((x) => x.sku === i.sku);
+        return {
+          ...i,
+          unitPriceNet: i.unitPriceNet ?? p?.priceSaleNet ?? null,
+          unitPriceGross: i.unitPriceGross ?? p?.priceSaleGross ?? null,
+        };
+      });
       await saveCrmOrder({
-        draft: getOrderDraft(),
+        draft: { ...current, items },
         clientId,
         status,
       });
@@ -390,10 +409,10 @@ export function CrmOrderView({
             <button
               type="button"
               onClick={() => updateMeta({ kind: 'order' })}
-              className={`rounded-lg py-2 text-xs font-medium transition ${
+              className={`rounded-lg py-2 text-xs font-semibold transition ${
                 draft.kind !== 'quote'
-                  ? 'bg-brand-500/20 text-brand-200'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-brand-600 text-white shadow'
+                  : 'text-slate-400 hover:bg-slate-800/80 hover:text-slate-200'
               }`}
             >
               Zamówienie
@@ -401,10 +420,10 @@ export function CrmOrderView({
             <button
               type="button"
               onClick={() => updateMeta({ kind: 'quote' })}
-              className={`rounded-lg py-2 text-xs font-medium transition ${
+              className={`rounded-lg py-2 text-xs font-semibold transition ${
                 draft.kind === 'quote'
-                  ? 'bg-amber-500/20 text-amber-200'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-amber-400 text-amber-950 shadow ring-1 ring-amber-200/40'
+                  : 'text-slate-400 hover:bg-slate-800/80 hover:text-slate-200'
               }`}
             >
               Prośba o ofertę

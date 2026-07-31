@@ -18,6 +18,7 @@
     "sync:wapro-stock": "node --env-file=.env scripts/sync-wapro-stock.mjs",
     "embeddings:shop": "node scripts/build-shop-embeddings.mjs",
     "embeddings:enrich": "node scripts/enrich-shop-embeddings.mjs",
+    "export:finance": "py scripts/export-finance-koszty.py",
     "deploy": "npm run build && firebase deploy --only hosting"
   },
   "dependencies": {
@@ -26,13 +27,16 @@
     "fuse.js": "^7.1.0",
     "html5-qrcode": "^2.3.8",
     "jsbarcode": "^3.12.3",
+    "leaflet": "^1.9.4",
     "lucide-react": "^0.487.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "recharts": "^2.15.0",
     "tesseract.js": "^5.1.1"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.4",
+    "@types/leaflet": "^1.9.21",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "@vitejs/plugin-react": "^4.4.1",

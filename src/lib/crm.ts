@@ -9,6 +9,8 @@ export interface CrmClient {
   nip?: string;
   address?: string;
   note?: string;
+  lat?: number;
+  lng?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -60,6 +62,14 @@ export function isValidNip(nip: string): boolean {
 }
 
 function mapClient(row: Record<string, unknown>): CrmClient {
+  const lat =
+    row.lat != null && Number.isFinite(Number(row.lat))
+      ? Number(row.lat)
+      : undefined;
+  const lng =
+    row.lng != null && Number.isFinite(Number(row.lng))
+      ? Number(row.lng)
+      : undefined;
   return {
     id: String(row.id),
     userId: String(row.user_id),
@@ -68,6 +78,8 @@ function mapClient(row: Record<string, unknown>): CrmClient {
     nip: row.nip ? String(row.nip) : undefined,
     address: row.address ? String(row.address) : undefined,
     note: row.note ? String(row.note) : undefined,
+    lat,
+    lng,
     createdAt: String(row.created_at || ''),
     updatedAt: String(row.updated_at || ''),
   };
@@ -105,6 +117,8 @@ export async function upsertCrmClient(input: {
   nip?: string;
   address?: string;
   note?: string;
+  lat?: number | null;
+  lng?: number | null;
 }): Promise<CrmClient> {
   if (!supabase) throw new Error('Brak Supabase');
   const {
@@ -113,7 +127,7 @@ export async function upsertCrmClient(input: {
   if (!user) throw new Error('Zaloguj się, żeby zapisać klienta');
 
   const nip = input.nip ? normalizeNip(input.nip) : null;
-  const payload = {
+  const payload: Record<string, unknown> = {
     user_id: user.id,
     display_name: input.displayName.trim(),
     legal_name: input.legalName?.trim() || null,
@@ -122,6 +136,15 @@ export async function upsertCrmClient(input: {
     note: input.note?.trim() || null,
     updated_at: new Date().toISOString(),
   };
+
+  if (input.lat !== undefined) {
+    payload.lat =
+      input.lat != null && Number.isFinite(input.lat) ? input.lat : null;
+  }
+  if (input.lng !== undefined) {
+    payload.lng =
+      input.lng != null && Number.isFinite(input.lng) ? input.lng : null;
+  }
 
   if (!payload.display_name) throw new Error('Podaj nazwę klienta');
 
@@ -140,6 +163,32 @@ export async function upsertCrmClient(input: {
   const { data, error } = await supabase
     .from('crm_clients')
     .insert(payload)
+    .select('*')
+    .single();
+  if (error) throw new Error(error.message);
+  return mapClient(data as Record<string, unknown>);
+}
+
+export async function updateCrmClientGeo(
+  id: string,
+  lat: number | null,
+  lng: number | null
+): Promise<CrmClient> {
+  if (!supabase) throw new Error('Brak Supabase');
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error('Zaloguj się');
+
+  const { data, error } = await supabase
+    .from('crm_clients')
+    .update({
+      lat,
+      lng,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .eq('user_id', user.id)
     .select('*')
     .single();
   if (error) throw new Error(error.message);
