@@ -1,0 +1,142 @@
+[
+  {
+    "id": "shop-MER000141",
+    "sku": "MER000141",
+    "name": "Mop Ritorto Ricambio 140g",
+    "display_name": "Mop Ritorto Ricambio 140g",
+    "category": "Inne",
+    "manufacturer": "",
+    "ean": "",
+    "image_url": "",
+    "custom_image_url": "",
+    "description": "",
+    "has_image": false,
+    "stock": 119.0,
+    "stock_manual": false,
+    "price_purchase_net": 4.73,
+    "price_sale_net": 12.19,
+    "price_sale_gross": 14.99,
+    "tags": [
+      "wapro-import"
+    ],
+    "extra_images": [],
+    "variants": [],
+    "is_group": false,
+    "catalog": "shop",
+    "product_meta": {
+      "waproImport": true
+    }
+  },
+  {
+    "id": "shop-CHE000081",
+    "sku": "CHE000081",
+    "name": "POKROWCE OCHRONNE na kierownicę rolka z rączką",
+    "display_name": "POKROWCE OCHRONNE na kierownicę rolka z rączką",
+    "category": "Inne",
+    "manufacturer": "",
+    "ean": "",
+    "image_url": "",
+    "custom_image_url": "",
+    "description": "",
+    "has_image": false,
+    "stock": 74.0,
+    "stock_manual": false,
+    "price_purchase_net": 9.0,
+    "price_sale_net": 17.88,
+    "price_sale_gross": 21.99,
+    "tags": [
+      "wapro-import"
+    ],
+    "extra_images": [],
+    "variants": [],
+    "is_group": false,
+    "catalog": "shop",
+    "product_meta": {
+      "waproImport": true
+    }
+  },
+  {
+    "id": "shop-INNE0361",
+    "sku": "INNE0361",
+    "name": "PALETA",
+    "display_name": "PALETA",
+    "category": "Inne",
+    "manufacturer": "",
+    "ean": "",
+    "image_url": "",
+    "custom_image_url": "",
+    "description": "",
+    "has_image": false,
+    "stock": 72.0,
+    "stock_manual": false,
+    "price_purchase_net": 49.0,
+    "price_sale_net": 17.07,
+    "price_sale_gross": 20.99,
+    "tags": [
+      "wapro-import"
+    ],
+    "extra_images": [],
+    "variants": [],
+    "is_group": false,
+    "catalog": "shop",
+    "product_meta": {
+      "waproImport": true
+    }
+  },
+  {
+    "id": "shop-INNE0322",
+    "sku": "INNE0322",
+    "name": "KANISTER 5L z nakrętką",
+    "display_name": "KANISTER 5L z nakrętką",
+    "category": "Inne",
+    "manufacturer": "",
+    "ean": "",
+    "image_url": "",
+    "custom_image_url": "",
+    "description": "",
+    "has_image": false,
+    "stock": 57.0,
+    "stock_manual": false,
+    "price_purchase_net": 2.0,
+    "price_sale_net": 4.06,
+    "price_sale_gross": 4.99,
+    "tags": [
+      "wapro-import"
+    ],
+    "extra_images": [],
+    "variants": [],
+    "is_group": false,
+    "catalog": "shop",
+    "product_meta": {
+      "waproImport": true
+    }
+  },
+  {
+    "id": "shop-INNE0820",
+    "sku": "INNE0820",
+    "name": "RĘKAWICA BIAŁA NAKRAPIANA 9 RTENA WB9",
+    "display_name": "RĘKAWICA BIAŁA NAKRAPIANA 9 RTENA WB9",
+    "category": "Inne",
+    "manufacturer": "",
+    "ean": "",
+    "image_url": "",
+    "custom_image_url": "",
+    "description": "",
+    "has_image": false,
+    "stock": 55.0,
+    "stock_manual": false,
+    "price_purchase_net": 1.01,
+    "price_sale_net": 1.84,
+    "price_sale_gross": 2.26,
+    "tags": [
+      "wapro-import"
+    ],
+    "extra_images": [],
+    "variants": [],
+    "is_group": false,
+    "catalog": "shop",
+    "product_meta": {
+      "waproImport": true
+    }
+  }
+]

@@ -1,11 +1,52 @@
 export type CatalogType = 'accessories' | 'shop';
 
+import type { ProductMeta } from '../lib/productMeta';
+import type { WarehouseLocation } from '../lib/warehouseLocation';
+import { deriveShopCategoryOptions } from '../lib/shopCategoryTree';
+
+export type { WarehouseLocation };
+
+/** Filtr listy: oba katalogi naraz albo jeden z nich. */
+export type CatalogListFilter = 'all' | CatalogType;
+
 export interface ProductVariant {
   sku: string;
   name: string;
   ean?: string;
   /** Stan magazynowy tego SKU (w grupach dysz itd.) */
   stock?: number;
+}
+
+export interface WaproSalesPeriod {
+  months: 1 | 3 | 6 | 12;
+  qty: number;
+  netValue?: number | null;
+}
+
+export interface WaproSalesMonthBucket {
+  /** Klucz yyyy-MM (kalendarz). */
+  month: string;
+  qty: number;
+  netValue?: number | null;
+}
+
+export interface WaproSalesPrevPeriod {
+  qty: number;
+  netValue?: number | null;
+}
+
+export interface WaproSalesResult {
+  sku: string;
+  skus?: string[];
+  fetchedAt: string;
+  periods: WaproSalesPeriod[];
+  /** 12 miesięcy kalendarzowych (najstarszy → najnowszy). */
+  monthly?: WaproSalesMonthBucket[];
+  /** Rolling 12–24 m wstecz (do porównania z bieżącymi 12 m). */
+  prev12m?: WaproSalesPrevPeriod;
+  lastSaleDate?: string | null;
+  source?: string;
+  schemaVersion?: number;
 }
 
 export interface Product {
@@ -34,6 +75,11 @@ export interface Product {
   catalog: CatalogType;
   variants?: ProductVariant[];
   isGroup?: boolean;
+  warehouseLocation?: WarehouseLocation;
+  meta?: ProductMeta;
+  /** Cache statystyk sprzedaży Mag (sync zbiorczy) */
+  waproSalesStats?: WaproSalesResult;
+  waproSalesSyncedAt?: string;
 }
 
 export interface KitItem {
@@ -54,16 +100,17 @@ export interface Kit {
 }
 
 export type View =
+  | 'home'
   | 'catalog'
+  | 'collections'
   | 'kits'
   | 'missing-images'
   | 'progress'
   | 'favorites'
   | 'labels'
+  | 'warehouse'
   | 'admin'
   | 'crm'
-  | 'ean-hygiene'
-  | 'role-matrix'
   | 'ops';
 
 export const CATALOG_LABELS: Record<CatalogType, string> = {
@@ -104,38 +151,57 @@ export const ACCESSORY_CATEGORIES = [
 /** @deprecated używaj ACCESSORY_CATEGORIES albo deriveCategories() */
 export const CATEGORIES = ACCESSORY_CATEGORIES;
 
-export function deriveCategories(products: Product[]): string[] {
+function orderAccessoryCategories(categories: string[]): string[] {
+  const order = ACCESSORY_CATEGORIES as readonly string[];
+  const inList: string[] = [];
+  const rest: string[] = [];
+  for (const c of categories) {
+    if (order.includes(c)) inList.push(c);
+    else rest.push(c);
+  }
+  inList.sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  rest.sort((a, b) => a.localeCompare(b, 'pl'));
+  return [...inList, ...rest];
+}
+
+export function deriveCategories(
+  products: Product[],
+  catalogListFilter: CatalogListFilter = 'all',
+): string[] {
   const counts = new Map<string, number>();
   for (const p of products) {
-    counts.set(p.category, (counts.get(p.category) || 0) + 1);
+    const c = p.category?.trim();
+    if (c) counts.set(c, (counts.get(c) || 0) + 1);
   }
-
-  const isShop = products.some((p) => (p.catalog || 'accessories') === 'shop');
-  /** Produkty: najważniejsze kategorie handlowe na początku. */
-  const shopPriority = [
-    'Chemia',
-    'Odświeżacze',
-    'Abel Auto',
-    'Dom i ogród',
-    'Smary',
-    'Mycie i dezynfekcja',
-    'Inne',
-  ];
 
   const rest = [...counts.keys()].sort(
     (a, b) => (counts.get(b) || 0) - (counts.get(a) || 0) || a.localeCompare(b, 'pl'),
   );
 
-  if (!isShop) {
-    return ['Wszystkie', ...rest];
+  if (catalogListFilter === 'shop') {
+    return deriveShopCategoryOptions(products);
   }
 
-  const prioritized: string[] = [];
-  for (const name of shopPriority) {
-    if (counts.has(name)) prioritized.push(name);
+  if (catalogListFilter === 'accessories') {
+    return ['Wszystkie', ...orderAccessoryCategories(rest)];
   }
-  for (const name of rest) {
-    if (!prioritized.includes(name)) prioritized.push(name);
+
+  const shopProducts = products.filter((p) => (p.catalog || 'accessories') === 'shop');
+  const accProducts = products.filter((p) => (p.catalog || 'accessories') !== 'shop');
+
+  if (shopProducts.length && accProducts.length) {
+    const shopCats = deriveShopCategoryOptions(shopProducts).filter((c) => c !== 'Wszystkie');
+    const accCats = orderAccessoryCategories(
+      [...new Set(accProducts.map((p) => p.category?.trim()).filter(Boolean) as string[])],
+    );
+    const seen = new Set(shopCats);
+    const mergedAcc = accCats.filter((c) => !seen.has(c));
+    return ['Wszystkie', ...shopCats, ...mergedAcc];
   }
-  return ['Wszystkie', ...prioritized];
+
+  if (shopProducts.length) {
+    return deriveShopCategoryOptions(shopProducts);
+  }
+
+  return ['Wszystkie', ...orderAccessoryCategories(rest)];
 }

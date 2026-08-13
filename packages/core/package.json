@@ -1,0 +1,7 @@
+{
+  "name": "@kenochem/core",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Szkielet pakietu współdzielonego (auth, role, theme) — migracja stopniowa z src/lib.",
+  "type": "module"
+}

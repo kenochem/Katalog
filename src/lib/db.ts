@@ -1,4 +1,6 @@
-import type { Product, Kit, KitItem, ProductVariant, CatalogType } from '../types';
+import type { Product, Kit, KitItem, ProductVariant, CatalogType, WaproSalesResult } from '../types';
+import type { WarehouseLocation } from './warehouseLocation';
+import { normalizeProductMeta } from './productMeta';
 
 export interface ProductRow {
   id: string;
@@ -22,6 +24,10 @@ export interface ProductRow {
   catalog?: string;
   variants?: ProductVariant[];
   is_group?: boolean;
+  warehouse_location?: WarehouseLocation | null;
+  product_meta?: unknown;
+  wapro_sales_stats?: unknown;
+  wapro_sales_synced_at?: string | null;
 }
 
 export interface KitRow {
@@ -32,6 +38,13 @@ export interface KitRow {
   items: KitItem[];
   image_url: string;
   created_at: number;
+}
+
+function normalizeWaproSalesStats(raw: unknown): WaproSalesResult | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const o = raw as Record<string, unknown>;
+  if (!Array.isArray(o.periods) || o.periods.length === 0) return undefined;
+  return raw as WaproSalesResult;
 }
 
 export function rowToProduct(row: ProductRow): Product {
@@ -66,7 +79,24 @@ export function rowToProduct(row: ProductRow): Product {
     catalog: (row.catalog === 'shop' ? 'shop' : 'accessories') as CatalogType,
     variants: row.variants?.length ? row.variants : undefined,
     isGroup: row.is_group || !!(row.variants?.length),
+    warehouseLocation: normalizeWarehouseLocation(row.warehouse_location),
+    meta: normalizeProductMeta(row.product_meta),
+    waproSalesStats: normalizeWaproSalesStats(row.wapro_sales_stats),
+    waproSalesSyncedAt: row.wapro_sales_synced_at ?? undefined,
   };
+}
+
+function normalizeWarehouseLocation(raw: unknown): WarehouseLocation | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const o = raw as Record<string, unknown>;
+  const loc: WarehouseLocation = {
+    zone: o.zone ? String(o.zone) : undefined,
+    aisle: o.aisle ? String(o.aisle) : undefined,
+    rack: o.rack ? String(o.rack) : undefined,
+    shelf: o.shelf ? String(o.shelf) : undefined,
+    bin: o.bin ? String(o.bin) : undefined,
+  };
+  return Object.values(loc).some(Boolean) ? loc : undefined;
 }
 
 export function productToRow(p: Product): ProductRow {
@@ -99,6 +129,8 @@ export function productToRow(p: Product): ProductRow {
     catalog: p.catalog || 'accessories',
     variants: p.variants || [],
     is_group: p.isGroup || false,
+    warehouse_location: p.warehouseLocation ?? null,
+    product_meta: p.meta ?? {},
   };
 }
 

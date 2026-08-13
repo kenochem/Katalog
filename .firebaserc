@@ -5,9 +5,32 @@
   "targets": {
     "kenochem-f4a5b": {
       "hosting": {
-        "katalog": ["kenochem-katalog"],
-        "default": ["kenochem-f4a5b"]
+        "katalog": [
+          "kenochem-katalog"
+        ],
+        "suite": [
+          "kenochem-f4a5b"
+        ],
+        "sell": [
+          "kenochem-sell"
+        ],
+        "stock": [
+          "kenochem-stock"
+        ],
+        "ops": [
+          "kenochem-ops"
+        ],
+        "talk": [
+          "kenochem-talk"
+        ],
+        "logistics": [
+          "kenochem-logistics"
+        ],
+        "calendar": [
+          "kenochem-calendar"
+        ]
       }
     }
-  }
+  },
+  "etags": {}
 }

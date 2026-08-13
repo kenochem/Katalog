@@ -1,0 +1,17 @@
+---
+description: Po poprawkach UI katalogu — od razu deploy Firebase hosting:katalog
+alwaysApply: true
+---
+
+# Deploy katalogu po poprawkach
+
+Gdy w ramach zadania wprowadzasz **gotowe zmiany w aplikacji katalog** (frontend współdzielony z `ProductDetail`, `CatalogCommandPalette`, widok produktów, `npm run build:catalog`):
+
+1. **Na końcu tego samego zadania** uruchom deploy: `npm run deploy:catalog` (PowerShell: `$env:NODE_OPTIONS="--max-old-space-size=8192"` przy OOM).
+2. W odpowiedzi podaj URL: https://kenochem-katalog.web.app
+3. **Nie pytaj**, czy wdrażać — użytkownik tego oczekuje dla tego typu poprawek.
+
+Wyjątki (deploy opisz osobno, nie tylko Firebase):
+
+- Wymagana nowa Edge Function / migracja SQL / praca na serwerze WAPRO — najpierw ostrzeżenie z reguły `server-side-warning`, potem deploy frontendu gdy ma sens.
+- Zmiany **tylko** w suite / CRM bez wpływu na build catalog — użyj `deploy:suite` tylko gdy użytkownik prosi o suite.

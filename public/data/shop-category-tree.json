@@ -1,0 +1,1980 @@
+{
+  "fetchedAt": "2026-08-07T12:47:59.868Z",
+  "roots": [
+    {
+      "id": 1033,
+      "name": "Chemia profesjonalna",
+      "slug": "chemia-profesjonalna",
+      "parent": 0,
+      "count": 507,
+      "children": [
+        {
+          "id": 1173,
+          "name": "Chemia obiektowa",
+          "slug": "chemia-profesjonalna-chemia-obiektowa",
+          "parent": 1033,
+          "count": 143,
+          "children": [
+            {
+              "id": 1178,
+              "name": "Ekologiczne środki czystości",
+              "slug": "chemia-obiektowa-ekologiczne-srodki-czystosci",
+              "parent": 1173,
+              "count": 8,
+              "children": []
+            },
+            {
+              "id": 1175,
+              "name": "Łazienki i sanitariaty",
+              "slug": "chemia-obiektowa-azienki-i-sanitariaty",
+              "parent": 1173,
+              "count": 50,
+              "children": []
+            },
+            {
+              "id": 1176,
+              "name": "Mycie powierzchni",
+              "slug": "chemia-obiektowa-mycie-powierzchni",
+              "parent": 1173,
+              "count": 28,
+              "children": []
+            },
+            {
+              "id": 1174,
+              "name": "Podłogi i posadzki",
+              "slug": "chemia-obiektowa-podogi-i-posadzki",
+              "parent": 1173,
+              "count": 60,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1203,
+          "name": "Czyściwa i papier",
+          "slug": "czysciwa-i-papier",
+          "parent": 1033,
+          "count": 31,
+          "children": [
+            {
+              "id": 1208,
+              "name": "Chusteczki i ściereczki",
+              "slug": "chusteczki-i-sciereczki",
+              "parent": 1203,
+              "count": 15,
+              "children": []
+            },
+            {
+              "id": 1204,
+              "name": "Czyściwa przemysłowe",
+              "slug": "czysciwa-przemyslowe",
+              "parent": 1203,
+              "count": 5,
+              "children": []
+            },
+            {
+              "id": 1206,
+              "name": "Papier toaletowy",
+              "slug": "papier-toaletowy",
+              "parent": 1203,
+              "count": 3,
+              "children": []
+            },
+            {
+              "id": 1207,
+              "name": "Podajniki i dozowniki",
+              "slug": "podajniki-i-dozowniki",
+              "parent": 1203,
+              "count": 3,
+              "children": []
+            },
+            {
+              "id": 1205,
+              "name": "Ręczniki papierowe",
+              "slug": "reczniki-papierowe",
+              "parent": 1203,
+              "count": 5,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1209,
+          "name": "Dla obiektów i branż",
+          "slug": "dla-obiektow-i-branz",
+          "parent": 1033,
+          "count": 401,
+          "children": [
+            {
+              "id": 1213,
+              "name": "Biura",
+              "slug": "biura",
+              "parent": 1209,
+              "count": 163,
+              "children": []
+            },
+            {
+              "id": 1214,
+              "name": "Firmy sprzątające",
+              "slug": "firmy-sprzatajace",
+              "parent": 1209,
+              "count": 296,
+              "children": []
+            },
+            {
+              "id": 1212,
+              "name": "Hotele i pensjonaty",
+              "slug": "hotele-i-pensjonaty",
+              "parent": 1209,
+              "count": 229,
+              "children": []
+            },
+            {
+              "id": 1211,
+              "name": "Placówki medyczne",
+              "slug": "placowki-medyczne",
+              "parent": 1209,
+              "count": 46,
+              "children": []
+            },
+            {
+              "id": 1210,
+              "name": "Szkoły, przedszkola i żłobki",
+              "slug": "szkoly-przedszkola-i-zlobki",
+              "parent": 1209,
+              "count": 149,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1197,
+          "name": "Higiena rąk, BHP i dozowniki",
+          "slug": "chemia-profesjonalna-higiena-rak-bhp-i-dozowniki",
+          "parent": 1033,
+          "count": 80,
+          "children": [
+            {
+              "id": 1201,
+              "name": "Dezynfekcja rąk",
+              "slug": "dezynfekcja-rak-chemia-profesjonalna-higiena-rak-bhp-i-dozowniki",
+              "parent": 1197,
+              "count": 5,
+              "children": []
+            },
+            {
+              "id": 1202,
+              "name": "Dozowniki do mydła",
+              "slug": "dozowniki-do-mydla-chemia-profesjonalna-higiena-rak-bhp-i-dozowniki",
+              "parent": 1197,
+              "count": 5,
+              "children": []
+            },
+            {
+              "id": 1200,
+              "name": "Kremy do rąk",
+              "slug": "kremy-do-rak",
+              "parent": 1197,
+              "count": 11,
+              "children": []
+            },
+            {
+              "id": 1198,
+              "name": "Mydła i żele do rąk",
+              "slug": "mydla-i-zele-do-rak",
+              "parent": 1197,
+              "count": 38,
+              "children": []
+            },
+            {
+              "id": 1199,
+              "name": "Pasty BHP",
+              "slug": "pasty-bhp-chemia-profesjonalna-higiena-rak-bhp-i-dozowniki",
+              "parent": 1197,
+              "count": 21,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1179,
+          "name": "Kuchnia i gastronomia",
+          "slug": "chemia-profesjonalna-kuchnia-i-gastronomia",
+          "parent": 1033,
+          "count": 70,
+          "children": [
+            {
+              "id": 1181,
+              "name": "Chemia do zmywarek",
+              "slug": "kuchnia-i-gastronomia-chemia-do-zmywarek",
+              "parent": 1179,
+              "count": 5,
+              "children": []
+            },
+            {
+              "id": 1184,
+              "name": "Czyszczenie pieców, grilli i frytkownic",
+              "slug": "kuchnia-i-gastronomia-czyszczenie-piecow-grilli-i-frytkownic",
+              "parent": 1179,
+              "count": 24,
+              "children": []
+            },
+            {
+              "id": 1411,
+              "name": "Mycie urządzeń gastronomicznych",
+              "slug": "kuchnia-i-gastronomia-mycie-urzadzen-gastronomicznych",
+              "parent": 1179,
+              "count": 4,
+              "children": []
+            },
+            {
+              "id": 1185,
+              "name": "Odkamienianie urządzeń",
+              "slug": "kuchnia-i-gastronomia-odkamienianie-urzadzen",
+              "parent": 1179,
+              "count": 9,
+              "children": []
+            },
+            {
+              "id": 1183,
+              "name": "Odtłuszczanie kuchni",
+              "slug": "kuchnia-i-gastronomia-odtuszczanie-kuchni",
+              "parent": 1179,
+              "count": 9,
+              "children": []
+            },
+            {
+              "id": 1182,
+              "name": "Płyny nabłyszczające do zmywarek",
+              "slug": "kuchnia-i-gastronomia-pyny-nabyszczajace-do-zmywarek",
+              "parent": 1179,
+              "count": 4,
+              "children": []
+            },
+            {
+              "id": 1180,
+              "name": "Ręczne mycie naczyń",
+              "slug": "kuchnia-i-gastronomia-reczne-mycie-naczyn",
+              "parent": 1179,
+              "count": 15,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1192,
+          "name": "Pranie dywanów i tapicerki",
+          "slug": "chemia-profesjonalna-dywany-i-tapicerka",
+          "parent": 1033,
+          "count": 50,
+          "children": [
+            {
+              "id": 1195,
+              "name": "Odplamiacze do dywanów i tapicerki",
+              "slug": "dywany-i-tapicerka-odplamiacze",
+              "parent": 1192,
+              "count": 11,
+              "children": []
+            },
+            {
+              "id": 1194,
+              "name": "Pranie tapicerki",
+              "slug": "dywany-i-tapicerka-pranie-tapicerki",
+              "parent": 1192,
+              "count": 41,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1186,
+          "name": "Pranie i tekstylia",
+          "slug": "chemia-profesjonalna-pranie-i-tekstylia",
+          "parent": 1033,
+          "count": 23,
+          "children": [
+            {
+              "id": 1191,
+              "name": "Odplamiacze do tkanin",
+              "slug": "pranie-i-tekstylia-odplamiacze",
+              "parent": 1186,
+              "count": 7,
+              "children": []
+            },
+            {
+              "id": 1189,
+              "name": "Płyny do płukania",
+              "slug": "pranie-i-tekstylia-pyny-do-pukania",
+              "parent": 1186,
+              "count": 1,
+              "children": []
+            },
+            {
+              "id": 1188,
+              "name": "Płyny i żele do prania",
+              "slug": "pranie-i-tekstylia-pyny-i-zele-do-prania",
+              "parent": 1186,
+              "count": 5,
+              "children": []
+            },
+            {
+              "id": 1190,
+              "name": "Pranie odzieży roboczej",
+              "slug": "pranie-i-tekstylia-pranie-odziezy-roboczej",
+              "parent": 1186,
+              "count": 7,
+              "children": []
+            },
+            {
+              "id": 1187,
+              "name": "Proszki do prania",
+              "slug": "pranie-i-tekstylia-proszki-do-prania",
+              "parent": 1186,
+              "count": 3,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1547,
+          "name": "Zestawy dla firm i obiektów",
+          "slug": "zestawy-dla-firm-i-obiektow",
+          "parent": 1033,
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": 1030,
+      "name": "Chemia samochodowa",
+      "slug": "chemia-samochodowa",
+      "parent": 0,
+      "count": 601,
+      "children": [
+        {
+          "id": 1097,
+          "name": "Elementy zewnętrzne",
+          "slug": "chemia-samochodowa-elementy-zewnetrzne",
+          "parent": 1030,
+          "count": 31,
+          "children": [
+            {
+              "id": 1100,
+              "name": "Chrom i metale",
+              "slug": "elementy-zewnetrzne-chrom-i-metale",
+              "parent": 1097,
+              "count": 12,
+              "children": []
+            },
+            {
+              "id": 1102,
+              "name": "Czyszczenie silnika",
+              "slug": "elementy-zewnetrzne-czyszczenie-silnika",
+              "parent": 1097,
+              "count": 11,
+              "children": []
+            },
+            {
+              "id": 1101,
+              "name": "Dachy cabrio",
+              "slug": "elementy-zewnetrzne-dachy-cabrio",
+              "parent": 1097,
+              "count": 2,
+              "children": []
+            },
+            {
+              "id": 1099,
+              "name": "Gumy i uszczelki",
+              "slug": "elementy-zewnetrzne-gumy-i-uszczelki",
+              "parent": 1097,
+              "count": 1,
+              "children": []
+            },
+            {
+              "id": 1416,
+              "name": "Konserwacja podwozia",
+              "slug": "elementy-zewnetrzne-konserwacja-podwozia",
+              "parent": 1097,
+              "count": 1,
+              "children": []
+            },
+            {
+              "id": 1098,
+              "name": "Plastiki zewnętrzne",
+              "slug": "elementy-zewnetrzne-plastiki-zewnetrzne",
+              "parent": 1097,
+              "count": 4,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1073,
+          "name": "Felgi i opony",
+          "slug": "chemia-samochodowa-felgi-i-opony",
+          "parent": 1030,
+          "count": 70,
+          "children": [
+            {
+              "id": 1078,
+              "name": "Dressingi i czernidła do opon",
+              "slug": "felgi-i-opony-dressingi-i-czernida-do-opon",
+              "parent": 1073,
+              "count": 37,
+              "children": []
+            },
+            {
+              "id": 1075,
+              "name": "Krwawa felga",
+              "slug": "felgi-i-opony-krwawa-felga",
+              "parent": 1073,
+              "count": 4,
+              "children": []
+            },
+            {
+              "id": 1077,
+              "name": "Kwaśne płyny do felg",
+              "slug": "felgi-i-opony-kwasne-pyny-do-felg",
+              "parent": 1073,
+              "count": 7,
+              "children": []
+            },
+            {
+              "id": 1076,
+              "name": "Neutralne płyny do felg",
+              "slug": "felgi-i-opony-neutralne-pyny-do-felg",
+              "parent": 1073,
+              "count": 1,
+              "children": []
+            },
+            {
+              "id": 1074,
+              "name": "Płyny do felg",
+              "slug": "felgi-i-opony-pyny-do-felg",
+              "parent": 1073,
+              "count": 20,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1061,
+          "name": "Mycie samochodu",
+          "slug": "chemia-samochodowa-mycie-samochodu",
+          "parent": 1030,
+          "count": 86,
+          "children": [
+            {
+              "id": 1062,
+              "name": "Aktywne piany",
+              "slug": "mycie-samochodu-aktywne-piany",
+              "parent": 1061,
+              "count": 52,
+              "children": []
+            },
+            {
+              "id": 1065,
+              "name": "APC do samochodu",
+              "slug": "mycie-samochodu-apc-do-samochodu",
+              "parent": 1061,
+              "count": 14,
+              "children": []
+            },
+            {
+              "id": 1064,
+              "name": "Pre-wash i TFR",
+              "slug": "mycie-samochodu-pre-wash-i-tfr",
+              "parent": 1061,
+              "count": 4,
+              "children": []
+            },
+            {
+              "id": 1067,
+              "name": "Preparaty do mocnych zabrudzeń",
+              "slug": "mycie-samochodu-preparaty-do-mocnych-zabrudzen",
+              "parent": 1061,
+              "count": 3,
+              "children": []
+            },
+            {
+              "id": 1063,
+              "name": "Szampony samochodowe",
+              "slug": "mycie-samochodu-szampony-samochodowe",
+              "parent": 1061,
+              "count": 13,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1091,
+          "name": "Pielęgnacja lakieru",
+          "slug": "chemia-samochodowa-pielegnacja-lakieru",
+          "parent": 1030,
+          "count": 154,
+          "children": [
+            {
+              "id": 1093,
+              "name": "Cleanery, politury i AIO",
+              "slug": "pielegnacja-lakieru-cleanery-politury-i-aio",
+              "parent": 1091,
+              "count": 37,
+              "children": []
+            },
+            {
+              "id": 1092,
+              "name": "Pasty polerskie",
+              "slug": "pielegnacja-lakieru-pasty-polerskie",
+              "parent": 1091,
+              "count": 42,
+              "children": []
+            },
+            {
+              "id": 1096,
+              "name": "Powłoki ceramiczne i ochronne",
+              "slug": "pielegnacja-lakieru-powoki-ceramiczne-i-ochronne",
+              "parent": 1091,
+              "count": 27,
+              "children": []
+            },
+            {
+              "id": 1094,
+              "name": "Quick detailery",
+              "slug": "pielegnacja-lakieru-quick-detailery",
+              "parent": 1091,
+              "count": 12,
+              "children": []
+            },
+            {
+              "id": 1095,
+              "name": "Woski samochodowe",
+              "slug": "pielegnacja-lakieru-woski-samochodowe",
+              "parent": 1091,
+              "count": 36,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1079,
+          "name": "Szyby i szkło",
+          "slug": "chemia-samochodowa-szyby-i-szko",
+          "parent": 1030,
+          "count": 58,
+          "children": [
+            {
+              "id": 1083,
+              "name": "Antypara",
+              "slug": "szyby-i-szko-antypara",
+              "parent": 1079,
+              "count": 3,
+              "children": []
+            },
+            {
+              "id": 1081,
+              "name": "Niewidzialne wycieraczki",
+              "slug": "szyby-i-szko-niewidzialne-wycieraczki",
+              "parent": 1079,
+              "count": 5,
+              "children": []
+            },
+            {
+              "id": 1082,
+              "name": "Odmrażacze do szyb",
+              "slug": "szyby-i-szko-odmrazacze-do-szyb",
+              "parent": 1079,
+              "count": 7,
+              "children": []
+            },
+            {
+              "id": 1084,
+              "name": "Płyny do spryskiwaczy",
+              "slug": "szyby-i-szko-pyny-do-spryskiwaczy",
+              "parent": 1079,
+              "count": 16,
+              "children": []
+            },
+            {
+              "id": 1080,
+              "name": "Płyny do szyb samochodowych",
+              "slug": "szyby-i-szko-pyny-do-szyb-samochodowych",
+              "parent": 1079,
+              "count": 27,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1068,
+          "name": "Trudne zabrudzenia",
+          "slug": "chemia-samochodowa-trudne-zabrudzenia",
+          "parent": 1030,
+          "count": 40,
+          "children": [
+            {
+              "id": 1071,
+              "name": "Deironizery i osady metaliczne",
+              "slug": "trudne-zabrudzenia-deironizery-i-osady-metaliczne",
+              "parent": 1068,
+              "count": 6,
+              "children": []
+            },
+            {
+              "id": 1069,
+              "name": "Usuwanie owadów",
+              "slug": "trudne-zabrudzenia-usuwanie-owadow",
+              "parent": 1068,
+              "count": 17,
+              "children": []
+            },
+            {
+              "id": 1070,
+              "name": "Usuwanie smoły, asfaltu, kleju i żywicy",
+              "slug": "trudne-zabrudzenia-usuwanie-smoy-asfaltu-kleju-i-zywicy",
+              "parent": 1068,
+              "count": 17,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1085,
+          "name": "Wnętrze samochodu",
+          "slug": "chemia-samochodowa-wnetrze-samochodu",
+          "parent": 1030,
+          "count": 168,
+          "children": [
+            {
+              "id": 1089,
+              "name": "Klimatyzacja samochodowa",
+              "slug": "wnetrze-samochodu-klimatyzacja-samochodowa",
+              "parent": 1085,
+              "count": 7,
+              "children": []
+            },
+            {
+              "id": 1086,
+              "name": "Kokpit i plastiki",
+              "slug": "wnetrze-samochodu-kokpit-i-plastiki",
+              "parent": 1085,
+              "count": 55,
+              "children": []
+            },
+            {
+              "id": 1088,
+              "name": "Skóra samochodowa",
+              "slug": "wnetrze-samochodu-skora-samochodowa",
+              "parent": 1085,
+              "count": 25,
+              "children": []
+            },
+            {
+              "id": 1087,
+              "name": "Tapicerka materiałowa",
+              "slug": "wnetrze-samochodu-tapicerka-materiaowa",
+              "parent": 1085,
+              "count": 17,
+              "children": []
+            },
+            {
+              "id": 1090,
+              "name": "Zapachy i neutralizatory do samochodu",
+              "slug": "wnetrze-samochodu-zapachy-i-neutralizatory-do-samochodu",
+              "parent": 1085,
+              "count": 66,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1549,
+          "name": "Zestawy do pielęgnacji samochodu",
+          "slug": "zestawy-do-pielegnacji-samochodu",
+          "parent": 1030,
+          "count": 0,
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": 1036,
+      "name": "Chemia specjalistyczna",
+      "slug": "chemia-specjalistyczna",
+      "parent": 0,
+      "count": 142,
+      "children": [
+        {
+          "id": 1037,
+          "name": "Chemia warsztatowa i techniczna",
+          "slug": "chemia-warsztatowa-techniczna",
+          "parent": 1036,
+          "count": 34,
+          "children": [
+            {
+              "id": 1039,
+              "name": "Czyściwa warsztatowe",
+              "slug": "czysciwa-warsztatowe",
+              "parent": 1037,
+              "count": 11,
+              "children": []
+            },
+            {
+              "id": 1414,
+              "name": "Dodatki do paliwa",
+              "slug": "chemia-warsztatowa-dodatki-do-paliwa",
+              "parent": 1037,
+              "count": 2,
+              "children": []
+            },
+            {
+              "id": 1038,
+              "name": "Mycie części i narzędzi",
+              "slug": "mycie-czesci-i-narzedzi",
+              "parent": 1037,
+              "count": 3,
+              "children": []
+            },
+            {
+              "id": 1266,
+              "name": "Utrzymanie czystości w warsztacie",
+              "slug": "utrzymanie-czystosci-w-warsztacie",
+              "parent": 1037,
+              "count": 32,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1056,
+          "name": "Dezynfekcja specjalistyczna",
+          "slug": "dezynfekcja-specjalistyczna",
+          "parent": 1036,
+          "count": 50,
+          "children": [
+            {
+              "id": 1274,
+              "name": "Dezynfekcja pojazdów specjalistyczna",
+              "slug": "dezynfekcja-pojazdow-specjalistyczna",
+              "parent": 1056,
+              "count": 4,
+              "children": []
+            },
+            {
+              "id": 1058,
+              "name": "Dezynfekcja powierzchni",
+              "slug": "dezynfekcja-powierzchni",
+              "parent": 1056,
+              "count": 32,
+              "children": []
+            },
+            {
+              "id": 1059,
+              "name": "Produkty specjalistyczne",
+              "slug": "produkty-specjalistyczne",
+              "parent": 1056,
+              "count": 14,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1049,
+          "name": "Myjki ultradźwiękowe i DPF",
+          "slug": "myjki-ultradzwiekowe-dpf",
+          "parent": 1036,
+          "count": 9,
+          "children": [
+            {
+              "id": 1050,
+              "name": "Czyszczenie DPF/FAP",
+              "slug": "czyszczenie-dpf-fap",
+              "parent": 1049,
+              "count": 1,
+              "children": []
+            },
+            {
+              "id": 1267,
+              "name": "Płyny do myjek ultradźwiękowych",
+              "slug": "plyny-do-myjek-ultradzwiekowych-myjki-ultradzwiekowe-dpf",
+              "parent": 1049,
+              "count": 8,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1051,
+          "name": "Rolnictwo i gospodarstwo",
+          "slug": "rolnictwo-gospodarstwo",
+          "parent": 1036,
+          "count": 13,
+          "children": [
+            {
+              "id": 1052,
+              "name": "Chemia do wędzarni",
+              "slug": "chemia-do-wedzarni",
+              "parent": 1051,
+              "count": 3,
+              "children": []
+            },
+            {
+              "id": 1270,
+              "name": "Higiena budynków inwentarskich",
+              "slug": "higiena-budynkow-inwentarskich-rolnictwo-gospodarstwo",
+              "parent": 1051,
+              "count": 3,
+              "children": []
+            },
+            {
+              "id": 1271,
+              "name": "Mycie i dezynfekcja urządzeń udojowych",
+              "slug": "mycie-i-dezynfekcja-urzadzen-udojowych-rolnictwo-gospodarstwo",
+              "parent": 1051,
+              "count": 3,
+              "children": []
+            },
+            {
+              "id": 1269,
+              "name": "Mycie maszyn rolniczych",
+              "slug": "mycie-maszyn-rolniczych-rolnictwo-gospodarstwo",
+              "parent": 1051,
+              "count": 4,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1045,
+          "name": "Smary i preparaty techniczne",
+          "slug": "smary-preparaty-techniczne",
+          "parent": 1036,
+          "count": 18,
+          "children": [
+            {
+              "id": 1047,
+              "name": "Smary ceramiczne, miedziowe i grafitowe",
+              "slug": "smary-ceramiczne-miedziowe-grafitowe",
+              "parent": 1045,
+              "count": 3,
+              "children": []
+            },
+            {
+              "id": 1046,
+              "name": "Smary do łańcuchów",
+              "slug": "smary-do-lancuchow",
+              "parent": 1045,
+              "count": 3,
+              "children": []
+            },
+            {
+              "id": 306,
+              "name": "Smary techniczne",
+              "slug": "smary-techniczne",
+              "parent": 1045,
+              "count": 7,
+              "children": []
+            },
+            {
+              "id": 1048,
+              "name": "Testery i kleje techniczne",
+              "slug": "testery-kleje-techniczne",
+              "parent": 1045,
+              "count": 5,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1053,
+          "name": "Transport i pojazdy specjalne",
+          "slug": "transport-pojazdy-specjalne",
+          "parent": 1036,
+          "count": 13,
+          "children": [
+            {
+              "id": 1273,
+              "name": "Dezynfekcja pojazdów",
+              "slug": "dezynfekcja-pojazdow-transport-pojazdy-specjalne",
+              "parent": 1053,
+              "count": 4,
+              "children": []
+            },
+            {
+              "id": 1055,
+              "name": "Komory ładunkowe i chłodnie",
+              "slug": "komory-ladunkowe-chlodnie",
+              "parent": 1053,
+              "count": 9,
+              "children": []
+            },
+            {
+              "id": 1054,
+              "name": "Mycie pojazdów ciężarowych",
+              "slug": "mycie-pojazdow-ciezarowych",
+              "parent": 1053,
+              "count": 4,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1413,
+          "name": "Uzdatnianie wody",
+          "slug": "chemia-specjalistyczna-uzdatnianie-wody",
+          "parent": 1036,
+          "count": 4,
+          "children": []
+        },
+        {
+          "id": 1554,
+          "name": "Zestawy chemii specjalistycznej",
+          "slug": "zestawy-chemii-specjalistycznej",
+          "parent": 1036,
+          "count": 0,
+          "children": []
+        },
+        {
+          "id": 1040,
+          "name": "Zmywacze, odtłuszczacze i odrdzewiacze",
+          "slug": "zmywacze-odtluszczacze-odrdzewiacze",
+          "parent": 1036,
+          "count": 19,
+          "children": [
+            {
+              "id": 1043,
+              "name": "Odrdzewiacze",
+              "slug": "odrdzewiacze",
+              "parent": 1040,
+              "count": 2,
+              "children": []
+            },
+            {
+              "id": 1042,
+              "name": "Odtłuszczacze przemysłowe",
+              "slug": "odtluszczacze-przemyslowe",
+              "parent": 1040,
+              "count": 8,
+              "children": []
+            },
+            {
+              "id": 1044,
+              "name": "Usuwanie kleju i etykiet",
+              "slug": "usuwanie-kleju-i-etykiet",
+              "parent": 1040,
+              "count": 3,
+              "children": []
+            },
+            {
+              "id": 1041,
+              "name": "Zmywacze do hamulców",
+              "slug": "zmywacze-do-hamulcow",
+              "parent": 1040,
+              "count": 4,
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1034,
+      "name": "Dom i ogród",
+      "slug": "dom-ogrod-powierzchnie",
+      "parent": 0,
+      "count": 635,
+      "children": [
+        {
+          "id": 1396,
+          "name": "Akcesoria domowe",
+          "slug": "akcesoria-domowe",
+          "parent": 1034,
+          "count": 153,
+          "children": [
+            {
+              "id": 1401,
+              "name": "Miotły i szczotki",
+              "slug": "akcesoria-domowe-miotly-i-szczotki",
+              "parent": 1396,
+              "count": 56,
+              "children": []
+            },
+            {
+              "id": 1402,
+              "name": "Mopy i wiadra",
+              "slug": "akcesoria-domowe-mopy-i-wiadra",
+              "parent": 1396,
+              "count": 51,
+              "children": []
+            },
+            {
+              "id": 1397,
+              "name": "Mycie okien",
+              "slug": "akcesoria-domowe-mycie-okien",
+              "parent": 1396,
+              "count": 10,
+              "children": []
+            },
+            {
+              "id": 1398,
+              "name": "Mycie podłóg",
+              "slug": "akcesoria-domowe-mycie-podlog",
+              "parent": 1396,
+              "count": 4,
+              "children": []
+            },
+            {
+              "id": 1399,
+              "name": "Ściereczki do kurzu",
+              "slug": "akcesoria-domowe-sciereczki-do-kurzu",
+              "parent": 1396,
+              "count": 18,
+              "children": []
+            },
+            {
+              "id": 1400,
+              "name": "Worki na śmieci",
+              "slug": "akcesoria-domowe-worki-na-smieci",
+              "parent": 1396,
+              "count": 6,
+              "children": []
+            },
+            {
+              "id": 1403,
+              "name": "Zmywanie naczyń",
+              "slug": "akcesoria-domowe-zmywanie-naczyn",
+              "parent": 1396,
+              "count": 8,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1215,
+          "name": "Chemia do domu",
+          "slug": "chemia-do-domu",
+          "parent": 1034,
+          "count": 75,
+          "children": [
+            {
+              "id": 1221,
+              "name": "Dywany i tapicerka domowa",
+              "slug": "dywany-i-tapicerka",
+              "parent": 1215,
+              "count": 20,
+              "children": []
+            },
+            {
+              "id": 1216,
+              "name": "Kuchnia i odtłuszczanie",
+              "slug": "kuchnia-i-odtluszczanie",
+              "parent": 1215,
+              "count": 2,
+              "children": []
+            },
+            {
+              "id": 1217,
+              "name": "Łazienka i WC",
+              "slug": "lazienka-i-wc",
+              "parent": 1215,
+              "count": 13,
+              "children": []
+            },
+            {
+              "id": 1222,
+              "name": "Meble",
+              "slug": "meble-chemia-do-domu",
+              "parent": 1215,
+              "count": 5,
+              "children": []
+            },
+            {
+              "id": 1219,
+              "name": "Mycie szyb i luster",
+              "slug": "szyby-i-lustra",
+              "parent": 1215,
+              "count": 1,
+              "children": []
+            },
+            {
+              "id": 1218,
+              "name": "Podłogi",
+              "slug": "podlogi-chemia-do-domu",
+              "parent": 1215,
+              "count": 24,
+              "children": []
+            },
+            {
+              "id": 1220,
+              "name": "Pranie",
+              "slug": "pranie",
+              "parent": 1215,
+              "count": 7,
+              "children": []
+            },
+            {
+              "id": 1395,
+              "name": "Środki ekologiczne",
+              "slug": "srodki-ekologiczne",
+              "parent": 1215,
+              "count": 6,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1223,
+          "name": "Czyszczenie zewnętrzne",
+          "slug": "czyszczenie-zewnetrzne",
+          "parent": 1034,
+          "count": 38,
+          "children": [
+            {
+              "id": 1226,
+              "name": "Dachy",
+              "slug": "dachy",
+              "parent": 1223,
+              "count": 1,
+              "children": []
+            },
+            {
+              "id": 1225,
+              "name": "Elewacje",
+              "slug": "elewacje",
+              "parent": 1223,
+              "count": 3,
+              "children": []
+            },
+            {
+              "id": 1224,
+              "name": "Kostka brukowa i kamień",
+              "slug": "kostka-brukowa-i-kamien-czyszczenie-zewnetrzne",
+              "parent": 1223,
+              "count": 9,
+              "children": []
+            },
+            {
+              "id": 1412,
+              "name": "Markizy i zadaszenia",
+              "slug": "czyszczenie-zewnetrzne-markizy-i-zadaszenia",
+              "parent": 1223,
+              "count": 4,
+              "children": []
+            },
+            {
+              "id": 1227,
+              "name": "Mycie paneli fotowoltaicznych",
+              "slug": "mycie-paneli-fotowoltaicznych",
+              "parent": 1223,
+              "count": 17,
+              "children": []
+            },
+            {
+              "id": 1228,
+              "name": "Usuwanie mchu i zabrudzeń",
+              "slug": "usuwanie-mchu-i-zabrudzen",
+              "parent": 1223,
+              "count": 5,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1240,
+          "name": "Odświeżanie domu",
+          "slug": "odswiezanie-domu",
+          "parent": 1034,
+          "count": 369,
+          "children": [
+            {
+              "id": 1242,
+              "name": "Neutralizatory zapachów do domu",
+              "slug": "neutralizatory-zapachow",
+              "parent": 1240,
+              "count": 1,
+              "children": []
+            },
+            {
+              "id": 1241,
+              "name": "Odświeżacze powietrza",
+              "slug": "odswiezacze-powietrza",
+              "parent": 1240,
+              "count": 89,
+              "children": []
+            },
+            {
+              "id": 1243,
+              "name": "Zapachy do domu",
+              "slug": "zapachy-do-domu-odswiezanie-domu",
+              "parent": 1240,
+              "count": 279,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1552,
+          "name": "Zestawy do domu i ogrodu",
+          "slug": "zestawy-do-domu-i-ogrodu",
+          "parent": 1034,
+          "count": 0,
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": 1031,
+      "name": "Myjnie i urządzenia",
+      "slug": "myjnie-i-urzadzenia",
+      "parent": 0,
+      "count": 628,
+      "children": [
+        {
+          "id": 1103,
+          "name": "Chemia do myjni",
+          "slug": "myjnie-i-urzadzenia-chemia-do-myjni",
+          "parent": 1031,
+          "count": 101,
+          "children": [
+            {
+              "id": 1104,
+              "name": "Aktywne piany do myjni",
+              "slug": "chemia-do-myjni-aktywne-piany-do-myjni",
+              "parent": 1103,
+              "count": 16,
+              "children": []
+            },
+            {
+              "id": 1137,
+              "name": "Chemia specjalistyczna do myjni",
+              "slug": "chemia-do-myjni-chemia-specjalistyczna-do-myjni",
+              "parent": 1103,
+              "count": 49,
+              "children": []
+            },
+            {
+              "id": 1136,
+              "name": "Płyny do szyb do myjni",
+              "slug": "chemia-do-myjni-plyny-do-szyb-do-myjni",
+              "parent": 1103,
+              "count": 11,
+              "children": []
+            },
+            {
+              "id": 1404,
+              "name": "Portalowa",
+              "slug": "chemia-do-myjni-portalowa",
+              "parent": 1103,
+              "count": 3,
+              "children": []
+            },
+            {
+              "id": 1108,
+              "name": "Preparaty do felg do myjni",
+              "slug": "chemia-do-myjni-preparaty-do-felg-do-myjni",
+              "parent": 1103,
+              "count": 9,
+              "children": []
+            },
+            {
+              "id": 1109,
+              "name": "Preparaty do owadów, smoły i asfaltu",
+              "slug": "chemia-do-myjni-preparaty-do-owadow-smoy-i-asfaltu",
+              "parent": 1103,
+              "count": 18,
+              "children": []
+            },
+            {
+              "id": 1105,
+              "name": "Proszki do myjni samochodowych",
+              "slug": "chemia-do-myjni-proszki-do-myjni-samochodowych",
+              "parent": 1103,
+              "count": 3,
+              "children": []
+            },
+            {
+              "id": 1406,
+              "name": "Ręczna",
+              "slug": "chemia-do-myjni-reczna",
+              "parent": 1103,
+              "count": 4,
+              "children": []
+            },
+            {
+              "id": 1407,
+              "name": "Samoobsługowa",
+              "slug": "chemia-do-myjni-samoobslugowa",
+              "parent": 1103,
+              "count": 4,
+              "children": []
+            },
+            {
+              "id": 1106,
+              "name": "Szampony do myjni",
+              "slug": "chemia-do-myjni-szampony-do-myjni",
+              "parent": 1103,
+              "count": 2,
+              "children": []
+            },
+            {
+              "id": 1405,
+              "name": "Tunelowa",
+              "slug": "chemia-do-myjni-tunelowa",
+              "parent": 1103,
+              "count": 2,
+              "children": []
+            },
+            {
+              "id": 1107,
+              "name": "Woski osuszające i hydrowoski",
+              "slug": "chemia-do-myjni-woski-osuszajace-i-hydrowoski",
+              "parent": 1103,
+              "count": 15,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1115,
+          "name": "Części do myjek",
+          "slug": "myjnie-i-urzadzenia-czesci-do-myjek",
+          "parent": 1031,
+          "count": 408,
+          "children": [
+            {
+              "id": 1410,
+              "name": "Akcesoria do myjek",
+              "slug": "czesci-do-myjek-akcesoria-do-myjek",
+              "parent": 1115,
+              "count": 3,
+              "children": []
+            },
+            {
+              "id": 1118,
+              "name": "Dysze do myjek",
+              "slug": "czesci-do-myjek-dysze-do-myjek",
+              "parent": 1115,
+              "count": 165,
+              "children": []
+            },
+            {
+              "id": 1120,
+              "name": "Filtry, redukcje i zawory",
+              "slug": "czesci-do-myjek-filtry-redukcje-i-zawory",
+              "parent": 1115,
+              "count": 22,
+              "children": []
+            },
+            {
+              "id": 1116,
+              "name": "Lance i pistolety",
+              "slug": "czesci-do-myjek-lance-i-pistolety",
+              "parent": 1115,
+              "count": 89,
+              "children": []
+            },
+            {
+              "id": 1119,
+              "name": "Szybkozłącza i adaptery",
+              "slug": "czesci-do-myjek-szybkozacza-i-adaptery",
+              "parent": 1115,
+              "count": 66,
+              "children": []
+            },
+            {
+              "id": 1117,
+              "name": "Węże i bębny",
+              "slug": "czesci-do-myjek-weze-i-bebny",
+              "parent": 1115,
+              "count": 64,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1126,
+          "name": "Odkurzacze i tapicerka",
+          "slug": "myjnie-i-urzadzenia-odkurzacze-i-tapicerka",
+          "parent": 1031,
+          "count": 29,
+          "children": [
+            {
+              "id": 1131,
+              "name": "Akcesoria do odkurzaczy",
+              "slug": "odkurzacze-i-tapicerka-akcesoria-do-odkurzaczy",
+              "parent": 1126,
+              "count": 16,
+              "children": []
+            },
+            {
+              "id": 1127,
+              "name": "Odkurzacze",
+              "slug": "odkurzacze-i-tapicerka-odkurzacze",
+              "parent": 1126,
+              "count": 1,
+              "children": []
+            },
+            {
+              "id": 1128,
+              "name": "Odkurzacze piorące",
+              "slug": "odkurzacze-i-tapicerka-odkurzacze-piorace",
+              "parent": 1126,
+              "count": 1,
+              "children": []
+            },
+            {
+              "id": 1129,
+              "name": "Pistolety piorące",
+              "slug": "odkurzacze-i-tapicerka-pistolety-piorace",
+              "parent": 1126,
+              "count": 12,
+              "children": []
+            },
+            {
+              "id": 1130,
+              "name": "Tornadory",
+              "slug": "odkurzacze-i-tapicerka-tornadory",
+              "parent": 1126,
+              "count": 11,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1121,
+          "name": "Pianownice i oprysk",
+          "slug": "myjnie-i-urzadzenia-pianownice-i-oprysk",
+          "parent": 1031,
+          "count": 66,
+          "children": [
+            {
+              "id": 1124,
+              "name": "Opryskiwacze ciśnieniowe do myjni",
+              "slug": "pianownice-i-oprysk-opryskiwacze-cisnieniowe",
+              "parent": 1121,
+              "count": 18,
+              "children": []
+            },
+            {
+              "id": 1125,
+              "name": "Opryskiwacze pianujące",
+              "slug": "pianownice-i-oprysk-opryskiwacze-pianujace",
+              "parent": 1121,
+              "count": 48,
+              "children": []
+            },
+            {
+              "id": 1123,
+              "name": "Pianownice do myjek",
+              "slug": "pianownice-i-oprysk-pianownice-do-myjek",
+              "parent": 1121,
+              "count": 36,
+              "children": []
+            },
+            {
+              "id": 1122,
+              "name": "Pianownice ręczne",
+              "slug": "pianownice-i-oprysk-pianownice-reczne",
+              "parent": 1121,
+              "count": 3,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1132,
+          "name": "Wyposażenie stanowisk mycia",
+          "slug": "myjnie-i-urzadzenia-wyposazenie-stanowisk-mycia",
+          "parent": 1031,
+          "count": 35,
+          "children": [
+            {
+              "id": 1408,
+              "name": "Pokrowce i folie na stanowiska mycia",
+              "slug": "wyposazenie-stanowisk-mycia-pokrowce-i-folie-ochronne",
+              "parent": 1132,
+              "count": 3,
+              "children": []
+            },
+            {
+              "id": 1133,
+              "name": "Szczotki do myjni",
+              "slug": "wyposazenie-stanowisk-mycia-szczotki-do-myjni",
+              "parent": 1132,
+              "count": 4,
+              "children": []
+            },
+            {
+              "id": 1134,
+              "name": "Ściągaczki do wody na myjni",
+              "slug": "wyposazenie-stanowisk-mycia-sciagaczki-do-wody",
+              "parent": 1132,
+              "count": 27,
+              "children": []
+            },
+            {
+              "id": 1409,
+              "name": "Uchwyty do dywaników",
+              "slug": "wyposazenie-stanowisk-mycia-uchwyty-do-dywanikow",
+              "parent": 1132,
+              "count": 1,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1550,
+          "name": "Zestawy do myjni samochodowych",
+          "slug": "zestawy-do-myjni-samochodowych",
+          "parent": 1031,
+          "count": 0,
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": 1032,
+      "name": "Sprzęt i akcesoria czyszczące",
+      "slug": "sprzet-akcesoria-czyszczace",
+      "parent": 0,
+      "count": 383,
+      "children": [
+        {
+          "id": 1151,
+          "name": "Mikrofibry, gąbki i pady",
+          "slug": "sprzet-i-akcesoria-czyszczace-mikrofibry-gabki-i-pady",
+          "parent": 1032,
+          "count": 69,
+          "children": [
+            {
+              "id": 1155,
+              "name": "Gąbki i rękawice",
+              "slug": "mikrofibry-gabki-i-pady-gabki-i-rekawice",
+              "parent": 1151,
+              "count": 12,
+              "children": []
+            },
+            {
+              "id": 1152,
+              "name": "Mikrofibry uniwersalne",
+              "slug": "mikrofibry-gabki-i-pady-mikrofibry-uniwersalne",
+              "parent": 1151,
+              "count": 48,
+              "children": []
+            },
+            {
+              "id": 1156,
+              "name": "Pady i futra polerskie",
+              "slug": "mikrofibry-gabki-i-pady-pady-i-futra-polerskie",
+              "parent": 1151,
+              "count": 5,
+              "children": []
+            },
+            {
+              "id": 1154,
+              "name": "Ręczniki do osuszania",
+              "slug": "mikrofibry-gabki-i-pady-reczniki-do-osuszania",
+              "parent": 1151,
+              "count": 4,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1157,
+          "name": "Mopy i systemy sprzątania",
+          "slug": "sprzet-i-akcesoria-czyszczace-mopy-i-systemy-sprzatania",
+          "parent": 1032,
+          "count": 66,
+          "children": [
+            {
+              "id": 1159,
+              "name": "Kije i drążki teleskopowe",
+              "slug": "mopy-i-systemy-sprzatania-kije-i-drazki-teleskopowe",
+              "parent": 1157,
+              "count": 25,
+              "children": []
+            },
+            {
+              "id": 1158,
+              "name": "Mopy i stelaże",
+              "slug": "mopy-i-systemy-sprzatania-mopy-i-stelaze",
+              "parent": 1157,
+              "count": 26,
+              "children": []
+            },
+            {
+              "id": 1160,
+              "name": "Wiadra i wyciskarki",
+              "slug": "mopy-i-systemy-sprzatania-wiadra-i-wyciskarki",
+              "parent": 1157,
+              "count": 11,
+              "children": []
+            },
+            {
+              "id": 1162,
+              "name": "Worki na odpady",
+              "slug": "mopy-i-systemy-sprzatania-worki-na-odpady",
+              "parent": 1157,
+              "count": 2,
+              "children": []
+            },
+            {
+              "id": 1161,
+              "name": "Wózki sprzątające",
+              "slug": "mopy-i-systemy-sprzatania-wozki-sprzatajace",
+              "parent": 1157,
+              "count": 3,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1169,
+          "name": "Ochrona osobista",
+          "slug": "sprzet-i-akcesoria-czyszczace-ochrona-osobista",
+          "parent": 1032,
+          "count": 20,
+          "children": [
+            {
+              "id": 1170,
+              "name": "Rękawiczki",
+              "slug": "ochrona-osobista-rekawiczki",
+              "parent": 1169,
+              "count": 18,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1163,
+          "name": "Opryskiwacze i dozowanie",
+          "slug": "sprzet-i-akcesoria-czyszczace-opryskiwacze-i-dozowanie",
+          "parent": 1032,
+          "count": 44,
+          "children": [
+            {
+              "id": 1168,
+              "name": "Butelki i opakowania",
+              "slug": "opryskiwacze-i-dozowanie-butelki-i-opakowania",
+              "parent": 1163,
+              "count": 10,
+              "children": []
+            },
+            {
+              "id": 1166,
+              "name": "Dozowniki",
+              "slug": "opryskiwacze-i-dozowanie-dozowniki",
+              "parent": 1163,
+              "count": 29,
+              "children": []
+            },
+            {
+              "id": 1164,
+              "name": "Opryskiwacze ciśnieniowe uniwersalne",
+              "slug": "opryskiwacze-i-dozowanie-opryskiwacze-cisnieniowe",
+              "parent": 1163,
+              "count": 4,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1138,
+          "name": "Szczotki, miotły i zmiotki",
+          "slug": "sprzet-i-akcesoria-czyszczace-szczotki-mioty-i-zmiotki",
+          "parent": 1032,
+          "count": 148,
+          "children": [
+            {
+              "id": 1143,
+              "name": "Miotły przemysłowe",
+              "slug": "szczotki-mioty-i-zmiotki-mioty-przemysowe",
+              "parent": 1138,
+              "count": 12,
+              "children": []
+            },
+            {
+              "id": 1140,
+              "name": "Szczotki do kostki brukowej",
+              "slug": "szczotki-mioty-i-zmiotki-szczotki-do-kostki-brukowej",
+              "parent": 1138,
+              "count": 3,
+              "children": []
+            },
+            {
+              "id": 1141,
+              "name": "Szczotki do mycia samochodu",
+              "slug": "szczotki-mioty-i-zmiotki-szczotki-do-mycia-samochodu",
+              "parent": 1138,
+              "count": 43,
+              "children": []
+            },
+            {
+              "id": 1142,
+              "name": "Szczotki do podłóg",
+              "slug": "szczotki-mioty-i-zmiotki-szczotki-do-podog",
+              "parent": 1138,
+              "count": 34,
+              "children": []
+            },
+            {
+              "id": 1139,
+              "name": "Szczotki Vikan",
+              "slug": "szczotki-mioty-i-zmiotki-szczotki-vikan",
+              "parent": 1138,
+              "count": 50,
+              "children": []
+            },
+            {
+              "id": 1144,
+              "name": "Zmiotki i szufelki",
+              "slug": "szczotki-mioty-i-zmiotki-zmiotki-i-szufelki",
+              "parent": 1138,
+              "count": 6,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1145,
+          "name": "Ściągaczki i zbieranie wody",
+          "slug": "sprzet-i-akcesoria-czyszczace-sciagaczki-i-zbieranie-wody",
+          "parent": 1032,
+          "count": 37,
+          "children": [
+            {
+              "id": 1150,
+              "name": "Akcesoria do ściągaczek",
+              "slug": "sciagaczki-i-zbieranie-wody-akcesoria-do-sciagaczek",
+              "parent": 1145,
+              "count": 6,
+              "children": []
+            },
+            {
+              "id": 1149,
+              "name": "Gumowe ściągaczki Vikan",
+              "slug": "sciagaczki-i-zbieranie-wody-gumowe-sciagaczki-vikan",
+              "parent": 1145,
+              "count": 19,
+              "children": []
+            },
+            {
+              "id": 1415,
+              "name": "Skrobaczki do szyb",
+              "slug": "sciagaczki-i-zbieranie-wody-skrobaczki-do-szyb",
+              "parent": 1145,
+              "count": 3,
+              "children": []
+            },
+            {
+              "id": 1147,
+              "name": "Ściągaczki do podłogi",
+              "slug": "sciagaczki-i-zbieranie-wody-sciagaczki-do-podogi",
+              "parent": 1145,
+              "count": 4,
+              "children": []
+            },
+            {
+              "id": 1146,
+              "name": "Ściągaczki do szyb",
+              "slug": "sciagaczki-i-zbieranie-wody-sciagaczki-do-szyb",
+              "parent": 1145,
+              "count": 8,
+              "children": []
+            },
+            {
+              "id": 1148,
+              "name": "Ściągaczki do szyb i wody",
+              "slug": "sciagaczki-i-zbieranie-wody-sciagaczki-do-wody",
+              "parent": 1145,
+              "count": 2,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1551,
+          "name": "Zestawy akcesoriów czyszczących",
+          "slug": "zestawy-akcesoriow-czyszczacych",
+          "parent": 1032,
+          "count": 0,
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": 1035,
+      "name": "Zapachy i aromamarketing",
+      "slug": "zapachy-aromamarketing",
+      "parent": 0,
+      "count": 485,
+      "children": [
+        {
+          "id": 1260,
+          "name": "Aromamarketing",
+          "slug": "aromamarketing-zapachy-aromamarketing",
+          "parent": 1035,
+          "count": 145,
+          "children": [
+            {
+              "id": 1261,
+              "name": "Dyfuzory zapachowe",
+              "slug": "dyfuzory-zapachowe-aromamarketing-zapachy-aromamarketing",
+              "parent": 1260,
+              "count": 18,
+              "children": []
+            },
+            {
+              "id": 1262,
+              "name": "Olejki do dyfuzorów",
+              "slug": "olejki-do-dyfuzorow",
+              "parent": 1260,
+              "count": 131,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1249,
+          "name": "Odświeżacze i neutralizatory",
+          "slug": "odswiezacze-i-neutralizatory",
+          "parent": 1035,
+          "count": 123,
+          "children": [
+            {
+              "id": 1253,
+              "name": "Automatyczne odświeżacze i wkłady",
+              "slug": "automatyczne-odswiezacze-i-wklady-odswiezacze-i-neutralizatory",
+              "parent": 1249,
+              "count": 3,
+              "children": []
+            },
+            {
+              "id": 1254,
+              "name": "Neutralizatory do pomieszczeń i pojazdów",
+              "slug": "neutralizatory-do-pomieszczen-i-pojazdow",
+              "parent": 1249,
+              "count": 16,
+              "children": []
+            },
+            {
+              "id": 1252,
+              "name": "Neutralizatory zapachów",
+              "slug": "neutralizatory-zapachow-odswiezacze-i-neutralizatory",
+              "parent": 1249,
+              "count": 26,
+              "children": []
+            },
+            {
+              "id": 1250,
+              "name": "Odświeżacze w sprayu",
+              "slug": "odswiezacze-w-sprayu",
+              "parent": 1249,
+              "count": 48,
+              "children": []
+            },
+            {
+              "id": 1251,
+              "name": "One Shot",
+              "slug": "one-shot-odswiezacze-i-neutralizatory",
+              "parent": 1249,
+              "count": 46,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1255,
+          "name": "Zapachy do domu i biura",
+          "slug": "zapachy-do-domu-i-biura",
+          "parent": 1035,
+          "count": 142,
+          "children": [
+            {
+              "id": 1259,
+              "name": "Olejki i esencje zapachowe",
+              "slug": "olejki-i-esencje-zapachowe",
+              "parent": 1255,
+              "count": 58,
+              "children": []
+            },
+            {
+              "id": 1257,
+              "name": "Patyczki zapachowe",
+              "slug": "patyczki-zapachowe",
+              "parent": 1255,
+              "count": 60,
+              "children": []
+            },
+            {
+              "id": 1256,
+              "name": "Saszetki zapachowe",
+              "slug": "saszetki-zapachowe",
+              "parent": 1255,
+              "count": 15,
+              "children": []
+            },
+            {
+              "id": 1258,
+              "name": "Świece zapachowe",
+              "slug": "swiece-zapachowe-zapachy-do-domu-i-biura",
+              "parent": 1255,
+              "count": 9,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1244,
+          "name": "Zapachy samochodowe",
+          "slug": "zapachy-samochodowe",
+          "parent": 1035,
+          "count": 124,
+          "children": [
+            {
+              "id": 1245,
+              "name": "Perfumy samochodowe",
+              "slug": "perfumy-samochodowe",
+              "parent": 1244,
+              "count": 66,
+              "children": []
+            },
+            {
+              "id": 1247,
+              "name": "Puszki zapachowe",
+              "slug": "puszki-zapachowe-zapachy-samochodowe",
+              "parent": 1244,
+              "count": 64,
+              "children": []
+            },
+            {
+              "id": 1248,
+              "name": "Zapachy do klimatyzacji",
+              "slug": "zapachy-do-klimatyzacji",
+              "parent": 1244,
+              "count": 4,
+              "children": []
+            },
+            {
+              "id": 1246,
+              "name": "Zawieszki zapachowe",
+              "slug": "zawieszki-zapachowe-zapachy-samochodowe",
+              "parent": 1244,
+              "count": 8,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 1553,
+          "name": "Zestawy zapachowe",
+          "slug": "zestawy-zapachowe",
+          "parent": 1035,
+          "count": 0,
+          "children": []
+        }
+      ]
+    }
+  ]
+}

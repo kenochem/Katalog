@@ -14,10 +14,17 @@ const ICONS: Record<ToastTone, typeof Check> = {
 };
 
 const STYLES: Record<ToastTone, string> = {
-  ok: 'bg-emerald-600 text-white',
-  info: 'bg-[#1e293b] text-[#f1f5f9] ring-1 ring-white/10',
-  warn: 'bg-amber-500 text-amber-950',
-  error: 'bg-red-600 text-white',
+  ok: 'toast-host-item toast-host-item--ok border border-emerald-500/30 bg-white shadow-xl dark:bg-slate-950 dark:text-slate-50',
+  info: 'toast-host-item toast-host-item--info border border-slate-300 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50',
+  warn: 'toast-host-item toast-host-item--warn border border-amber-400/60 bg-amber-50 shadow-xl dark:bg-amber-950 dark:text-amber-50',
+  error: 'toast-host-item toast-host-item--error border border-red-500/50 bg-red-50 shadow-xl dark:bg-red-950 dark:text-red-50',
+};
+
+const ICON_STYLES: Record<ToastTone, string> = {
+  ok: 'text-emerald-700 dark:text-emerald-300',
+  info: 'text-slate-600 dark:text-slate-300',
+  warn: 'text-amber-700 dark:text-amber-300',
+  error: 'text-red-700 dark:text-red-300',
 };
 
 export function ToastHost() {
@@ -46,9 +53,9 @@ export function ToastHost() {
         return (
           <div
             key={t.id}
-            className={`animate-fade-in pointer-events-auto flex max-w-md items-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium shadow-xl ${STYLES[tone]}`}
+            className={`animate-fade-in pointer-events-auto flex max-w-md items-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold shadow-xl backdrop-blur ${STYLES[tone]}`}
           >
-            <Icon className="h-4 w-4 shrink-0 opacity-90" />
+            <Icon className={`h-4 w-4 shrink-0 ${ICON_STYLES[tone]}`} />
             <span>{t.message}</span>
           </div>
         );

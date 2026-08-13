@@ -1,4 +1,6 @@
 import type { Product } from '../types';
+import { formatLocationCode } from './warehouseLocation';
+import { resolveProductLocation } from './locationStore';
 
 const QUEUE_KEY = 'katalog-label-queue';
 
@@ -8,6 +10,8 @@ export interface LabelQueueItem {
   displayName: string;
   ean: string;
   catalog: string;
+  /** Adres magazynowy na etykiecie */
+  locationCode?: string;
 }
 
 function readQueue(): LabelQueueItem[] {
@@ -29,15 +33,23 @@ export function getLabelQueue(): LabelQueueItem[] {
   return readQueue();
 }
 
+function locationForProduct(product: Product): string {
+  return formatLocationCode(
+    resolveProductLocation(product.id, product.warehouseLocation),
+  );
+}
+
 export function addToLabelQueue(product: Product): LabelQueueItem[] {
   const queue = readQueue().filter((q) => q.id !== product.id);
   const code = (product.ean || product.sku || '').trim();
+  const loc = locationForProduct(product);
   queue.push({
     id: product.id,
     sku: product.sku,
     displayName: product.displayName,
     ean: code,
     catalog: product.catalog || 'accessories',
+    locationCode: loc || undefined,
   });
   // dla grup — dodaj też warianty z EAN/SKU
   if (product.isGroup && product.variants?.length) {
@@ -50,6 +62,7 @@ export function addToLabelQueue(product: Product): LabelQueueItem[] {
         displayName: v.name || product.displayName,
         ean: (v.ean || v.sku).trim(),
         catalog: product.catalog || 'accessories',
+        locationCode: loc || undefined,
       });
     }
   }

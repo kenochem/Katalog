@@ -156,6 +156,7 @@ def merge_duplicate(existing: dict, incoming: dict) -> dict:
         "imageUrl": base.get("imageUrl") or other.get("imageUrl") or "",
         "description": base.get("description") or other.get("description") or "",
         "manufacturer": base.get("manufacturer") or other.get("manufacturer") or "",
+        "meta": {**(other.get("meta") or {}), **(base.get("meta") or {})},
     }
 
 
@@ -190,6 +191,27 @@ def main() -> None:
             description = strip_html(
                 row.get("opis_dodatkowy_1") or row.get("opis") or ""
             )
+            meta: dict = {}
+            if bl_id:
+                meta["baselinkerProductId"] = bl_id
+            w = (row.get("waga") or row.get("waga_brutto") or "").strip().replace(",", ".")
+            if w:
+                try:
+                    meta["weightKg"] = float(w)
+                except ValueError:
+                    pass
+            unit = (row.get("jednostka") or row.get("produkt_jednostka") or "").strip()
+            if unit:
+                meta["unit"] = unit
+            vat_raw = (row.get("stawka_vat") or row.get("vat") or "").strip().replace(",", ".")
+            if vat_raw:
+                try:
+                    meta["vatRate"] = float(re.sub(r"[^\d.]", "", vat_raw) or 0)
+                except ValueError:
+                    pass
+            short = strip_html(row.get("opis_krotki") or row.get("opis_dodatkowy_2") or "", max_len=0)
+            if short and len(short) <= 500:
+                meta["shortDescription"] = short[:500]
 
             product = {
                 "id": f"shop-{sku}",
@@ -207,6 +229,8 @@ def main() -> None:
                 "stockManual": False,
                 "catalog": "shop",
             }
+            if meta:
+                product["meta"] = meta
 
             if sku in by_sku:
                 duplicates += 1

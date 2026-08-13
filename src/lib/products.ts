@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured, STORAGE_BUCKET } from './supabase';
-import { getLocalProducts, saveLocalProduct, mergeProducts } from './localStore';
+import { getLocalProducts, saveLocalProduct, mergeProducts, hideProductId, removeLocalProduct, getHiddenProductIds } from './localStore';
 import {
   rowToProduct,
   productToRow,
@@ -24,8 +24,13 @@ function fetchCacheKey(catalog?: CatalogType): string {
 }
 
 export function invalidateProductsCache(catalog?: CatalogType): void {
-  if (catalog) fetchMem.delete(catalog);
-  else fetchMem.clear();
+  if (catalog) {
+    fetchMem.delete(`${catalog}:auto`);
+    fetchMem.delete(`${catalog}:json`);
+  } else {
+    fetchMem.clear();
+  }
+  void import('./productSearchIndex').then((m) => m.invalidateProductSearchIndex());
 }
 
 /** SKU z katalogu Akcesoria (WAPRO) — nie dublujemy ich w Produktach. */
@@ -59,6 +64,16 @@ function filterShopProducts(list: Product[], accessorySkus?: Set<string>): Produ
   return list.filter((p) => isShopProductAllowed(p, accessorySkus));
 }
 
+function withoutHiddenProducts(list: Product[]): Product[] {
+  const hidden = getHiddenProductIds();
+  if (!hidden.size) return list;
+  return list.filter((p) => !hidden.has(p.id));
+}
+
+function visibleShopProducts(list: Product[], accessorySkus?: Set<string>): Product[] {
+  return filterShopProducts(withoutHiddenProducts(list), accessorySkus);
+}
+
 async function loadBaseProducts(catalog: CatalogType = 'accessories'): Promise<Product[]> {
   if (catalog === 'shop') {
     if (shopCache) return shopCache;
@@ -90,22 +105,24 @@ async function loadBaseProducts(catalog: CatalogType = 'accessories'): Promise<P
 
 export async function fetchProducts(
   catalog?: CatalogType,
-  opts?: { force?: boolean },
+  opts?: { force?: boolean; source?: 'auto' | 'json' },
 ): Promise<Product[]> {
   const key = fetchCacheKey(catalog);
-  const hit = fetchMem.get(key);
+  const source = opts?.source ?? 'auto';
+  const cacheKey = `${key}:${source}`;
+  const hit = fetchMem.get(cacheKey);
   if (!opts?.force && hit) {
     if (hit.inflight) return hit.inflight;
     if (Date.now() - hit.at < FETCH_TTL_MS) return hit.data;
   }
 
   const inflight = (async () => {
-    const data = await fetchProductsUncached(catalog);
-    fetchMem.set(key, { at: Date.now(), data });
+    const data = await fetchProductsUncached(catalog, source);
+    fetchMem.set(cacheKey, { at: Date.now(), data });
     return data;
   })();
 
-  fetchMem.set(key, {
+  fetchMem.set(cacheKey, {
     at: hit?.at ?? 0,
     data: hit?.data ?? [],
     inflight,
@@ -114,20 +131,23 @@ export async function fetchProducts(
   try {
     return await inflight;
   } catch (err) {
-    fetchMem.delete(key);
+    fetchMem.delete(cacheKey);
     throw err;
   }
 }
 
-async function fetchProductsUncached(catalog?: CatalogType): Promise<Product[]> {
+async function fetchProductsUncached(
+  catalog?: CatalogType,
+  source: 'auto' | 'json' = 'auto',
+): Promise<Product[]> {
   const local = getLocalProducts();
   const accessorySkus = await getAccessorySkuSet();
 
-  if (!isSupabaseConfigured || !supabase) {
-    if (catalog) {
-      const base = await loadBaseProducts(catalog);
-      return filterShopProducts(
-        mergeProducts(base, local.filter((p) => (p.catalog || 'accessories') === catalog)),
+  const fromJsonAndLocal = async (cat?: CatalogType): Promise<Product[]> => {
+    if (cat) {
+      const base = await loadBaseProducts(cat);
+      return visibleShopProducts(
+        mergeProducts(base, local.filter((p) => (p.catalog || 'accessories') === cat)),
         accessorySkus,
       );
     }
@@ -135,7 +155,11 @@ async function fetchProductsUncached(catalog?: CatalogType): Promise<Product[]> 
       loadBaseProducts('accessories'),
       loadBaseProducts('shop'),
     ]);
-    return filterShopProducts(mergeProducts([...acc, ...shop], local), accessorySkus);
+    return visibleShopProducts(mergeProducts([...acc, ...shop], local), accessorySkus);
+  };
+
+  if (source === 'json' || !isSupabaseConfigured || !supabase) {
+    return fromJsonAndLocal(catalog);
   }
 
   const all: ProductRow[] = [];
@@ -143,7 +167,7 @@ async function fetchProductsUncached(catalog?: CatalogType): Promise<Product[]> 
   let from = 0;
 
   const LIST_SELECT =
-    'id,sku,name,display_name,category,manufacturer,ean,image_url,custom_image_url,has_image,stock,stock_manual,price_purchase_net,price_sale_net,price_sale_gross,tags,catalog,variants,is_group';
+    'id,sku,name,display_name,category,manufacturer,ean,image_url,custom_image_url,has_image,stock,stock_manual,price_purchase_net,price_sale_net,price_sale_gross,tags,catalog,variants,is_group,warehouse_location,product_meta';
 
   while (true) {
     let pageQuery = supabase.from('products').select(LIST_SELECT).order('sku');
@@ -161,13 +185,13 @@ async function fetchProductsUncached(catalog?: CatalogType): Promise<Product[]> 
   if (!all.length) {
     if (catalog) {
       const base = await loadBaseProducts(catalog);
-      return filterShopProducts(
+      return visibleShopProducts(
         mergeProducts(base, local.filter((p) => (p.catalog || 'accessories') === catalog)),
         accessorySkus,
       );
     }
     const base = await loadBaseProducts('accessories');
-    return filterShopProducts(mergeProducts(base, local), accessorySkus);
+    return visibleShopProducts(mergeProducts(base, local), accessorySkus);
   }
 
   const mapped = all.map(rowToProduct);
@@ -185,7 +209,7 @@ async function fetchProductsUncached(catalog?: CatalogType): Promise<Product[]> 
   const scoped = catalog
     ? merged.filter((p) => (p.catalog || 'accessories') === catalog)
     : merged;
-  return filterShopProducts(scoped, accessorySkus);
+  return visibleShopProducts(scoped, accessorySkus);
 }
 
 export async function fetchProductById(productId: string): Promise<Product | null> {
@@ -268,12 +292,44 @@ export async function updateProduct(
     if (updates.stockManual !== undefined) row.stock_manual = updates.stockManual;
     if (updates.extraImageUrls !== undefined) row.extra_images = updates.extraImageUrls;
     if (updates.catalog !== undefined) row.catalog = updates.catalog;
+    if (updates.sku !== undefined) row.sku = updates.sku.trim().toUpperCase();
+    if (updates.pricePurchaseNet !== undefined) row.price_purchase_net = updates.pricePurchaseNet;
+    if (updates.priceSaleNet !== undefined) row.price_sale_net = updates.priceSaleNet;
+    if (updates.priceSaleGross !== undefined) row.price_sale_gross = updates.priceSaleGross;
+    if (updates.warehouseLocation !== undefined) {
+      row.warehouse_location = updates.warehouseLocation ?? null;
+    }
+    if (updates.meta !== undefined) {
+      row.product_meta = updates.meta ?? {};
+    }
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('products')
       .update(row)
-      .eq('id', productId);
+      .eq('id', productId)
+      .select('id');
     if (error) throw error;
+
+    if (!data?.length) {
+      const existing = await fetchProductById(productId);
+      if (!existing) {
+        throw new Error('Nie znaleziono produktu do zapisu (brak w Supabase i w eksporcie JSON).');
+      }
+      const merged: Product = {
+        ...existing,
+        ...updates,
+        sku: updates.sku !== undefined ? updates.sku.trim().toUpperCase() : existing.sku,
+      };
+      const { error: upsertErr } = await supabase
+        .from('products')
+        .upsert(productToRow(merged), { onConflict: 'id' });
+      if (upsertErr) throw upsertErr;
+      invalidateProductsCache(merged.catalog);
+    } else {
+      invalidateProductsCache(
+        updates.catalog ?? (await fetchProductById(productId))?.catalog,
+      );
+    }
     return;
   }
 
@@ -291,15 +347,19 @@ async function uploadProductImageFile(
   file: File,
   suffix = '',
 ): Promise<string> {
-  const ext = file.name.split('.').pop() || 'jpg';
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
   const path = suffix
     ? `products/${productId}-${suffix}.${ext}`
     : `products/${productId}.${ext}`;
 
+  const contentType =
+    file.type ||
+    (ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg');
+
   if (isSupabaseConfigured && supabase) {
     const { error } = await supabase.storage
       .from(STORAGE_BUCKET)
-      .upload(path, file, { upsert: true, contentType: file.type });
+      .upload(path, file, { upsert: true, contentType });
     if (error) throw error;
 
     const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
@@ -354,6 +414,13 @@ export async function updateProductImage(
     extraImageUrls: existing?.extraImageUrls,
   });
   return url;
+}
+
+export async function uploadProductImageRevertBackup(
+  productId: string,
+  file: File,
+): Promise<string> {
+  return uploadProductImageFile(productId, file, 'revert');
 }
 
 export async function addProductExtraImage(
@@ -509,4 +576,55 @@ export function getProductImages(product: Product): string[] {
   const extras = product.extraImageUrls || [];
   if (!primary) return extras;
   return [primary, ...extras.filter((url) => url !== primary)];
+}
+
+export async function isProductSkuTaken(
+  catalog: CatalogType,
+  sku: string,
+  excludeProductId?: string,
+): Promise<boolean> {
+  const normalized = sku.trim().toUpperCase();
+  if (!normalized) return false;
+
+  if (isSupabaseConfigured && supabase) {
+    const { data, error } = await supabase
+      .from('products')
+      .select('id')
+      .eq('catalog', catalog)
+      .eq('sku', normalized);
+    if (error) throw error;
+    return (data || []).some((row) => row.id !== excludeProductId);
+  }
+
+  const [acc, shop] = await Promise.all([
+    loadBaseProducts('accessories'),
+    loadBaseProducts('shop'),
+  ]);
+  const accessorySkus = await getAccessorySkuSet();
+  const all = visibleShopProducts(
+    mergeProducts([...acc, ...shop], getLocalProducts()),
+    accessorySkus,
+  );
+  return all.some(
+    (p) =>
+      p.id !== excludeProductId &&
+      (p.catalog || 'accessories') === catalog &&
+      String(p.sku).toUpperCase() === normalized,
+  );
+}
+
+export async function deleteProduct(productId: string): Promise<void> {
+  if (isSupabaseConfigured && supabase) {
+    const { error } = await supabase.from('products').delete().eq('id', productId);
+    if (error) throw error;
+  }
+  removeLocalProduct(productId);
+  hideProductId(productId);
+  invalidateProductsCache();
+  try {
+    const { clearPrimaryImageRevert } = await import('./productImageRevert');
+    clearPrimaryImageRevert(productId);
+  } catch {
+    /* ignore */
+  }
 }

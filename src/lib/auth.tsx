@@ -13,7 +13,10 @@ import {
   isAccountRole,
   type AccountRole,
   type AppRole,
-} from './roles';
+} from './roleDefinitions';
+import { ROLE_MATRIX_CHANGED, hydrateRoleMatrixFromCloud } from './roleMatrixStore';
+import { hydrateUserPreferences } from './userPreferences';
+import { loadUserAvatar } from './userAvatar';
 
 export interface UserProfile {
   id: string;
@@ -38,6 +41,8 @@ interface AuthContextValue {
   continueAsGuest: () => void;
   exitGuest: () => void;
   refreshProfile: () => Promise<void>;
+  /** Inkrementowane po zmianie macierzy uprawnień (localStorage). */
+  roleMatrixRevision: number;
 }
 
 const GUEST_KEY = 'katalog-guest-session';
@@ -98,6 +103,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [roleMatrixRevision, setRoleMatrixRevision] = useState(0);
+
+  useEffect(() => {
+    const onMatrix = () => setRoleMatrixRevision((n) => n + 1);
+    window.addEventListener(ROLE_MATRIX_CHANGED, onMatrix);
+    return () => window.removeEventListener(ROLE_MATRIX_CHANGED, onMatrix);
+  }, []);
 
   const applySession = useCallback(async (next: Session | null) => {
     setSession(next);
@@ -124,6 +136,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setProfile(p);
     setMode('signed_in');
+    void hydrateRoleMatrixFromCloud();
+    void hydrateUserPreferences(next.user.id);
+    void loadUserAvatar(p.id);
   }, []);
 
   useEffect(() => {
@@ -226,6 +241,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       continueAsGuest,
       exitGuest,
       refreshProfile,
+      roleMatrixRevision,
     }),
     [
       mode,
@@ -239,6 +255,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       continueAsGuest,
       exitGuest,
       refreshProfile,
+      roleMatrixRevision,
     ],
   );
 

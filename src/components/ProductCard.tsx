@@ -8,11 +8,16 @@ import {
   Plus,
   Star,
 } from 'lucide-react';
-import { memo, useRef, useState } from 'react';
+import { memo, useRef, useState, type MouseEvent } from 'react';
 import type { Product } from '../types';
+import { CATALOG_LABELS } from '../types';
 import { getProductImage, updateProductImage } from '../lib/products';
 import { formatStock, formatPricePln, formatMarginPercent, marginPercent } from '../lib/format';
+import { resolveProductCatalogKind } from '../lib/catalogKind';
+import { isWaproSkeletonProduct } from '../lib/productMeta';
 import { showToast } from '../lib/toast';
+import { AddToCollectionMenu } from './AddToCollectionMenu';
+import { BaselinkerTag } from './BaselinkerTag';
 
 interface ProductCardProps {
   product: Product;
@@ -32,6 +37,11 @@ interface ProductCardProps {
   density?: 'sm' | 'md' | 'lg';
   /** Pokazuj cenę brutto (+ marżę) — role z viewPrices. */
   showPrices?: boolean;
+  /** Pokazuj etykietę Akcesoria / Produkty (widok „Wszystkie”). */
+  showCatalogKind?: boolean;
+  /** Zalogowany użytkownik — ikona folderu na karcie. */
+  collectionUserKey?: string;
+  onCollectionsChange?: () => void;
 }
 
 export const ProductCard = memo(
@@ -49,8 +59,11 @@ export const ProductCard = memo(
   hideImages = false,
   stockBusy = false,
   density = 'md',
-  showPrices = false,
-}: ProductCardProps) {
+    showPrices = false,
+    showCatalogKind = false,
+    collectionUserKey,
+    onCollectionsChange,
+  }: ProductCardProps) {
   const imageUrl = hideImages ? null : getProductImage(product);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -63,6 +76,21 @@ export const ProductCard = memo(
       product.priceSaleNet != null ||
       product.pricePurchaseNet != null);
   const margin = marginPercent(product.pricePurchaseNet, product.priceSaleNet);
+  const catalogKind = resolveProductCatalogKind(product);
+  const catalogKindShort =
+    catalogKind === 'shop' ? 'Produkty' : CATALOG_LABELS.accessories;
+  const waproSkeleton = isWaproSkeletonProduct(product);
+
+  async function copySku(e: MouseEvent) {
+    e.stopPropagation();
+    if (product.isGroup || !product.sku) return;
+    try {
+      await navigator.clipboard.writeText(product.sku);
+      showToast('Skopiowano SKU', 'ok');
+    } catch {
+      showToast('Nie udało się skopiować', 'error');
+    }
+  }
 
   async function handleUpload(file: File) {
     setUploading(true);
@@ -138,18 +166,62 @@ export const ProductCard = memo(
           aria-label={product.displayName}
         />
 
-        <span
-          className={`pointer-events-none absolute left-2 top-2 z-[2] rounded-md bg-black/70 font-mono text-[#7dcf82] ${
-            compact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.5 text-xs'
-          }`}
-        >
-          {product.isGroup ? `${product.variants?.length ?? 0} war.` : product.sku}
-        </span>
+        <div className="absolute left-2 top-2 z-[3] flex max-w-[calc(100%-1rem)] flex-col items-start gap-1">
+          {!product.isGroup && product.sku ? (
+            <div className="flex max-w-full items-center gap-1">
+              <button
+                type="button"
+                onClick={(e) => void copySku(e)}
+                className={`group/sku relative max-w-full truncate rounded-md bg-black/70 font-mono text-[#7dcf82] ring-1 ring-white/10 transition hover:bg-black/85 hover:ring-brand-400/50 ${
+                  compact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.5 text-xs'
+                }`}
+                title="Kliknij, aby skopiować SKU"
+                aria-label={`Skopiuj SKU ${product.sku}`}
+              >
+                {product.sku}
+                <span
+                  className="pointer-events-none absolute left-0 top-full z-30 mt-1.5 hidden whitespace-nowrap rounded-md bg-black/90 px-2 py-1 text-[10px] font-medium text-white shadow-lg group-hover/sku:block"
+                  role="tooltip"
+                >
+                  Kliknij, aby skopiować SKU
+                </span>
+              </button>
+              <BaselinkerTag product={product} />
+            </div>
+          ) : (
+            <div className="flex max-w-full items-center gap-1">
+              <span
+                className={`max-w-full truncate rounded-md bg-black/70 font-mono text-[#7dcf82] ${
+                  compact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.5 text-xs'
+                }`}
+              >
+                {product.isGroup ? `${product.variants?.length ?? 0} war.` : product.sku}
+              </span>
+              {!product.isGroup ? <BaselinkerTag product={product} /> : null}
+            </div>
+          )}
+          {collectionUserKey && (
+            <AddToCollectionMenu
+              userKey={collectionUserKey}
+              product={product}
+              onChanged={onCollectionsChange}
+            />
+          )}
+        </div>
 
         {product.isGroup && !compact && !onOrderDelta && (
           <span className="pointer-events-none absolute bottom-2 left-2 z-[2] flex items-center gap-1 rounded-md bg-brand-600/90 px-2 py-0.5 text-xs text-white">
             <Layers className="h-3 w-3" />
             Grupa
+          </span>
+        )}
+
+        {waproSkeleton && !compact && (
+          <span
+            className="pointer-events-none absolute bottom-2 right-2 z-[2] max-w-[min(100%,8rem)] truncate rounded-md bg-amber-600/95 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm"
+            title="Import z Mag WAPRO — uzupełnij zdjęcie i opis"
+          >
+            Mag WAPRO
           </span>
         )}
 
@@ -225,6 +297,15 @@ export const ProductCard = memo(
           compact ? 'p-2' : cozy ? 'p-4' : 'p-3'
         }`}
       >
+        {showCatalogKind && (
+          <span
+            className={`mb-1 inline-flex w-fit max-w-full truncate rounded-md border px-2 py-0.5 font-semibold leading-none ${
+              catalogKind === 'shop' ? 'hub-badge-violet' : 'hub-badge-sky'
+            } ${compact ? 'text-[9px]' : 'text-[10px]'}`}
+          >
+            {catalogKindShort}
+          </span>
+        )}
         <h3
           className={`font-medium leading-snug text-slate-100 ${
             compact
@@ -349,6 +430,8 @@ export const ProductCard = memo(
     prev.stockBusy === next.stockBusy &&
     prev.density === next.density &&
     prev.showPrices === next.showPrices &&
+    prev.showCatalogKind === next.showCatalogKind &&
     prev.hideImages === next.hideImages &&
-    prev.showUpload === next.showUpload,
+    prev.showUpload === next.showUpload &&
+    prev.collectionUserKey === next.collectionUserKey,
 );

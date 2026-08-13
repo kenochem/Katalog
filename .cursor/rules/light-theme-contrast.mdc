@@ -1,0 +1,24 @@
+---
+description: Light theme contrast rules for Kenochem apps
+globs: src/**/*.tsx,src/**/*.css
+alwaysApply: false
+---
+
+# Light Theme Contrast
+
+The default theme is light (`html` without `.dark`), but `src/index.css` has an inverted `slate` scale in the Tailwind theme. Do not assume that `text-slate-950` is dark or that `bg-slate-900` is dark in every app.
+
+Hard rules:
+
+1. On white or pastel backgrounds, text must be natural dark ink: `#0f172a`, `#1e293b`, or an explicitly dark semantic color such as `text-amber-950`, `text-red-900`, `text-emerald-900`.
+2. Never put pastel text such as `text-amber-200`, `text-emerald-200`, `text-sky-200`, `text-violet-200`, or low-opacity color text on light pastel cards unless it is guarded by `dark:`.
+3. If a panel is white/light in light mode, do not pair it with dark-mode text like `text-slate-100` unless a local app contrast layer intentionally maps it.
+4. For the Stock/Warehouse app, wrap screens in `.stock-app`; its CSS normalizes light mode to white panels, dark text, and neutral borders.
+5. Before deploy, check both light and dark mode for KPI cards, badges, table rows, form fields, side panels, and empty states.
+
+Preferred patterns:
+
+- Light card: `bg-white border-slate-200 text-slate-950 dark:bg-slate-900/60 dark:border-slate-800 dark:text-slate-100`
+- Pastel alert: `bg-amber-50 text-amber-950 dark:bg-amber-500/10 dark:text-amber-200`
+- Input: use `.input-field`
+- Generic panel: use `.surface-panel`

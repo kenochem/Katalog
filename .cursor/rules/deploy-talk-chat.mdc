@@ -1,0 +1,16 @@
+---
+description: Zmiany czatu Talk — deploy tylko hosting:talk, nie katalog
+alwaysApply: true
+---
+
+# Deploy Talk (czat)
+
+Gdy w ramach zadania wprowadzasz **zmiany w komunikatorze Talk** (TalkChatPage, push, głosówki, wygląd czatu, `TalkProductApp`, współdzielony kod używany przez Talk):
+
+1. **Na końcu zadania** uruchom wyłącznie: `npm run deploy:talk` (PowerShell: `$env:NODE_OPTIONS="--max-old-space-size=8192"` przy OOM).
+2. Podaj URL: https://kenochem-talk.web.app
+3. **Nie** uruchamiaj `deploy:catalog` ani `deploy:suite` dla tych zmian, chyba że użytkownik wyraźnie prosi.
+
+Push / webhook / migracje SQL — opisz według `supabase/TALK-CHAT-ETAP2.md` (praca poza samym Firebase).
+
+Wyjątek: poprawki **wyłącznie** katalogu produktów (`ProductDetail`, siatka produktów) — wtedy reguła `deploy-catalog-ui.mdc`.

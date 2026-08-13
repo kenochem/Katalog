@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo, useDeferredValue, lazy, Suspense, useRef } from 'react';
+import { useEffect, useLayoutEffect, useState, useCallback, useMemo, lazy, Suspense, useRef, type ReactNode } from 'react';
 import {
   Search,
   Layers,
@@ -6,17 +6,11 @@ import {
   Loader2,
   Plus,
   BarChart3,
-  Wrench,
-  ShoppingBag,
   Sparkles,
-  Sun,
-  Moon,
   Pencil,
   Star,
   Printer,
   Trash2,
-  LogOut,
-  Users,
   LayoutGrid,
   Rows2,
   Square,
@@ -24,21 +18,35 @@ import {
   X,
   ShoppingCart,
   Calculator,
+  FolderOpen,
+  ScanBarcode,
+  Boxes,
+  Home,
 } from 'lucide-react';
-import type { Product, Kit, View, CatalogType } from './types';
+import type { Product, Kit, View, CatalogType, CatalogListFilter } from './types';
 import { CATALOG_LABELS, deriveCategories } from './types';
+import { parseWaproSyncMessage } from './lib/waproSkuMatch';
 import { fetchProducts, fetchKits, getProductImage, updateProduct, invalidateProductsCache } from './lib/products';
+import { getProductSearchIndex } from './lib/productSearchIndex';
+import { isCatalogSearchPending, useDebouncedCatalogSearch } from './lib/useDebouncedCatalogSearch';
 import {
   applyCatalogFilters,
   filterProducts,
   CATALOG_SORT_OPTIONS,
-  LOW_STOCK_MAX,
   type CatalogSort,
   type StockFilter,
   type ImageFilter,
+  type KnowledgeFilter,
+  type BaselinkerFilter,
+  type WaproMagFilter,
 } from './lib/search';
 import { useTheme } from './lib/theme';
-import { loadAndMergeFavorites, getLocalFavoriteIds, setCloudFavorite, setLocalFavorite } from './lib/favorites';
+import { loadAndMergeFavorites, getLocalFavoriteIds, fetchCloudFavoriteIds, replaceLocalFavoriteIds, scheduleCloudFavoritesSync, flushCloudFavoritesSync } from './lib/favorites';
+import {
+  hydrateUserPreferences,
+  scheduleSaveUserPreferences,
+  getCachedCatalogPreferences,
+} from './lib/userPreferences';
 import {
   getOrderDraft,
   addToOrderDraft,
@@ -53,19 +61,55 @@ import {
   type LabelQueueItem,
 } from './lib/labelQueue';
 import { ProductCard } from './components/ProductCard';
+import { CatalogGridCard } from './components/CatalogGridCard';
 import { SearchBar } from './components/SearchBar';
 import { ProductGrid } from './components/ProductGrid';
 import { InstallAppHint, resetInstallHint } from './components/InstallAppHint';
-import { ChatDrawer } from './components/ChatDrawer';
 import { LoginGate } from './components/LoginGate';
 import { RefreshControls } from './components/RefreshControls';
 import { MobileBottomNav, MobileMoreSheet } from './components/MobileNav';
-import { requestWaproStockSync, getLatestStockSync } from './lib/stockSync';
+import { requestWaproStockSync, getLatestStockSync, type StockSyncScope } from './lib/stockSync';
 import {
   getDeferredInstall,
 } from './lib/pwaInstall';
 import { useAuth } from './lib/auth';
 import { roleCan, ROLE_LABELS } from './lib/roles';
+import { branding, moduleEnabled, APP_PRODUCT } from './app/moduleRegistry';
+import { canUseCrmModule, canViewOpsModule, canUseCommsModule } from './app/productAccess';
+import {
+  getInitialView,
+  showsCatalogSwitcher,
+  modeSwitcherColumns,
+  isCatalogProduct,
+  isStockProduct,
+} from './app/productLayout';
+import { CatalogCommandPalette } from './components/CatalogCommandPalette';
+import { CatalogStatsBar } from './components/CatalogStatsBar';
+import { CatalogFilterBar, type ShopCategoryGroup } from './components/CatalogFilterBar';
+import { CatalogHomeView, type CatalogHomeQuickAction } from './components/CatalogHomeView';
+import { AppHeaderActions } from './components/AppHeaderActions';
+import { canAccessAdminPanel } from './lib/adminAccess';
+import { computeCatalogStats } from './lib/catalogExport';
+import { getShopCategoryGroups } from './lib/shopCategoryTree';
+import { CATALOG_LENS_ENABLED } from './lib/catalogFeatures';
+import { resolveProductCatalogKind } from './lib/catalogKind';
+import {
+  catalogFilterNeedsAccessories,
+  catalogFilterNeedsShop,
+} from './lib/catalogLoadPlan';
+import { seedCatalogAlerts, seedOpsAlerts } from './lib/appNotifications';
+import { loadCollections, hydrateCollections } from './lib/productCollections';
+import { migrateLegacyLocationsToCloud } from './lib/locationStore';
+import { CrmHubView, CrmOrderSidePanel } from './modules/crm/loaders';
+import { OpsHubView } from './modules/ops/loaders';
+import { ChatDrawer } from './modules/comms/loaders';
+import { useSuiteHub } from './suite/SuiteHubContext';
+import { appViewToHubView, hubViewToAppView } from './suite/hubViewMap';
+import {
+  HubShell,
+  HubSegmentOverlay,
+} from './suite/hubLoaders';
+import { HubCatalogSubNav } from './components/hub/HubCatalogSubNav';
 
 const KitsView = lazy(() =>
   import('./components/KitsView').then((m) => ({ default: m.KitsView })),
@@ -76,43 +120,41 @@ const AddProductModal = lazy(() =>
 const BarcodeScanner = lazy(() =>
   import('./components/BarcodeScanner').then((m) => ({ default: m.BarcodeScanner })),
 );
-const PhotoProgressView = lazy(() =>
-  import('./components/PhotoProgressView').then((m) => ({ default: m.PhotoProgressView })),
+const CatalogProgressView = lazy(() =>
+  import('./components/progress/CatalogProgressView').then((m) => ({
+    default: m.CatalogProgressView,
+  })),
 );
 const VisualSearchModal = lazy(() =>
   import('./components/VisualSearchModal').then((m) => ({ default: m.VisualSearchModal })),
 );
-const AdminUsersPanel = lazy(() =>
-  import('./components/AdminUsersPanel').then((m) => ({ default: m.AdminUsersPanel })),
-);
-const RoleMatrixPanel = lazy(() =>
-  import('./components/RoleMatrixPanel').then((m) => ({ default: m.RoleMatrixPanel })),
-);
-const EanHygieneView = lazy(() =>
-  import('./components/EanHygieneView').then((m) => ({ default: m.EanHygieneView })),
+const AdminHubPanel = lazy(() =>
+  import('./components/AdminHubPanel').then((m) => ({ default: m.AdminHubPanel })),
 );
 const ProductDetail = lazy(() =>
   import('./components/ProductDetail').then((m) => ({ default: m.ProductDetail })),
 );
-const CrmHubView = lazy(() =>
-  import('./components/CrmHubView').then((m) => ({ default: m.CrmHubView })),
+const ProductCollectionsView = lazy(() =>
+  import('./components/ProductCollectionsView').then((m) => ({
+    default: m.ProductCollectionsView,
+  })),
 );
-const OpsHubView = lazy(() =>
-  import('./components/OpsHubView').then((m) => ({ default: m.OpsHubView })),
-);
-const CrmOrderSidePanel = lazy(() =>
-  import('./components/CrmOrderSidePanel').then((m) => ({
-    default: m.CrmOrderSidePanel,
+const WarehouseHubPanel = lazy(() =>
+  import('./components/warehouse/WarehouseHubPanel').then((m) => ({
+    default: m.WarehouseHubPanel,
   })),
 );
 
 const CATALOG_STORAGE_KEY = 'katalog-active-catalog';
+const CATALOG_LIST_FILTER_KEY = 'katalog-catalog-list-filter';
 const SORT_STORAGE_KEY = 'katalog-sort';
 const GRID_DENSITY_KEY = 'katalog-grid-density';
 
 type GridDensity = 'sm' | 'md' | 'lg';
 
 function loadGridDensity(): GridDensity {
+  const cached = getCachedCatalogPreferences().gridDensity;
+  if (cached === 'sm' || cached === 'md' || cached === 'lg') return cached;
   try {
     const v = localStorage.getItem(GRID_DENSITY_KEY);
     if (v === 'sm' || v === 'md' || v === 'lg') return v;
@@ -131,6 +173,8 @@ const GRID_CLASS: Record<GridDensity, string> = {
 
 
 function loadSavedSort(): CatalogSort {
+  const cached = getCachedCatalogPreferences().sort;
+  if (cached && CATALOG_SORT_OPTIONS.some((o) => o.value === cached)) return cached;
   try {
     const v = localStorage.getItem(SORT_STORAGE_KEY);
     if (CATALOG_SORT_OPTIONS.some((o) => o.value === v)) return v as CatalogSort;
@@ -138,6 +182,18 @@ function loadSavedSort(): CatalogSort {
     /* ignore */
   }
   return 'category';
+}
+
+function loadSavedCatalogListFilter(): CatalogListFilter {
+  const cached = getCachedCatalogPreferences().catalogListFilter;
+  if (cached === 'all' || cached === 'shop' || cached === 'accessories') return cached;
+  try {
+    const v = localStorage.getItem(CATALOG_LIST_FILTER_KEY);
+    if (v === 'all' || v === 'shop' || v === 'accessories') return v;
+  } catch {
+    /* ignore */
+  }
+  return 'all';
 }
 
 function loadSavedCatalog(): CatalogType {
@@ -150,6 +206,11 @@ function loadSavedCatalog(): CatalogType {
 }
 
 export default function App() {
+  const suiteHub = useSuiteHub();
+  const embeddedInHub = suiteHub?.embedded === true;
+  const catalogHeaderRef = useRef<HTMLDivElement>(null);
+  const opsStandalone = APP_PRODUCT === 'ops';
+  const sellStandalone = APP_PRODUCT === 'sell';
   const { toggleTheme, isDark } = useTheme();
   const {
     mode,
@@ -164,17 +225,36 @@ export default function App() {
   >({});
   const [kits, setKits] = useState<Kit[]>([]);
   const [loading, setLoading] = useState(true);
+  const [shopLoading, setShopLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeCatalog, setActiveCatalog] = useState<CatalogType>(loadSavedCatalog);
-  const [view, setView] = useState<View>('catalog');
+  const [catalogListFilter, setCatalogListFilter] = useState<CatalogListFilter>(
+    loadSavedCatalogListFilter,
+  );
+  const [view, setView] = useState<View>(() => getInitialView());
   const [search, setSearch] = useState('');
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+  }, []);
   const [category, setCategory] = useState('Wszystkie');
   const [sort, setSort] = useState<CatalogSort>(loadSavedSort);
   const [stockFilter, setStockFilter] = useState<StockFilter>('all');
   const [imageFilter, setImageFilter] = useState<ImageFilter>('all');
+  const [knowledgeFilter, setKnowledgeFilter] = useState<KnowledgeFilter>('all');
+  const [baselinkerFilter, setBaselinkerFilter] = useState<BaselinkerFilter>('all');
+  const [waproMagFilter, setWaproMagFilter] = useState<WaproMagFilter>('all');
   const [editMode, setEditMode] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<string[]>(() => getLocalFavoriteIds());
-  const [orderCount, setOrderCount] = useState(() => getOrderDraft().items.length);
+  const favoriteIdsRef = useRef(favoriteIds);
+  useEffect(() => {
+    favoriteIdsRef.current = favoriteIds;
+  }, [favoriteIds]);
+  const [orderCount, setOrderCount] = useState(() =>
+    moduleEnabled('crm') ? getOrderDraft().items.length : 0,
+  );
+
+  useEffect(() => {
+    document.title = branding.appTitle;
+  }, []);
   const [orderRevision, setOrderRevision] = useState(0);
   const [orderQtys, setOrderQtys] = useState<Record<string, number>>(() => {
     const items = getOrderDraft().items;
@@ -186,12 +266,78 @@ export default function App() {
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [showVisualSearch, setShowVisualSearch] = useState(false);
-  const [showAdminUsers, setShowAdminUsers] = useState(false);
-  const [showRoleMatrix, setShowRoleMatrix] = useState(false);
   const [missingCategory, setMissingCategory] = useState('Wszystkie');
   const [gridDensity, setGridDensity] = useState<GridDensity>(loadGridDensity);
   const [showMobileMore, setShowMobileMore] = useState(false);
   const [syncBusy, setSyncBusy] = useState(false);
+  const [collectionsRevision, setCollectionsRevision] = useState(0);
+
+  const collectionUserKey =
+    mode === 'signed_in' && user?.id ? user.id : mode === 'guest' ? 'guest' : '';
+
+  const syncCatalogPrefsToCloud = useCallback(
+    (
+      patch: Partial<{
+        sort: CatalogSort;
+        gridDensity: GridDensity;
+        catalogListFilter: CatalogListFilter;
+      }>,
+    ) => {
+      if (mode !== 'signed_in' || !user?.id) return;
+      scheduleSaveUserPreferences(user.id, {
+        catalog: {
+          sort: patch.sort ?? sort,
+          gridDensity: patch.gridDensity ?? gridDensity,
+          catalogListFilter: patch.catalogListFilter ?? catalogListFilter,
+        },
+      });
+    },
+    [mode, user?.id, sort, gridDensity, catalogListFilter],
+  );
+
+  useEffect(() => {
+    if (mode !== 'signed_in' || !user?.id) return;
+    void hydrateUserPreferences(user.id).then((prefs) => {
+      const c = prefs.catalog;
+      if (c?.sort && CATALOG_SORT_OPTIONS.some((o) => o.value === c.sort)) {
+        setSort(c.sort);
+        try {
+          localStorage.setItem(SORT_STORAGE_KEY, c.sort);
+        } catch {
+          /* ignore */
+        }
+      }
+      if (c?.gridDensity === 'sm' || c?.gridDensity === 'md' || c?.gridDensity === 'lg') {
+        setGridDensity(c.gridDensity);
+        try {
+          localStorage.setItem(GRID_DENSITY_KEY, c.gridDensity);
+        } catch {
+          /* ignore */
+        }
+      }
+      if (
+        c?.catalogListFilter === 'all' ||
+        c?.catalogListFilter === 'shop' ||
+        c?.catalogListFilter === 'accessories'
+      ) {
+        setCatalogListFilter(c.catalogListFilter);
+        try {
+          localStorage.setItem(CATALOG_LIST_FILTER_KEY, c.catalogListFilter);
+          if (c.catalogListFilter !== 'all') {
+            localStorage.setItem(CATALOG_STORAGE_KEY, c.catalogListFilter);
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+    });
+  }, [mode, user?.id]);
+
+  const collectionCount = useMemo(() => {
+    if (!collectionUserKey) return 0;
+    void collectionsRevision;
+    return loadCollections(collectionUserKey).length;
+  }, [collectionUserKey, collectionsRevision]);
 
   function patchProductInCache(
     productId: string,
@@ -220,6 +366,7 @@ export default function App() {
     } catch {
       /* ignore */
     }
+    syncCatalogPrefsToCloud({ gridDensity: next });
   }
 
   function triggerInstallApp() {
@@ -237,13 +384,20 @@ export default function App() {
 
   async function handleSyncStock() {
     setSyncBusy(true);
+    const scope: StockSyncScope =
+      catalogListFilter === 'all' ? 'all' : catalogListFilter;
     try {
-      const res = await requestWaproStockSync(activeCatalog);
+      const res = await requestWaproStockSync(scope);
       if (!res.ok) {
         showToast(res.error || 'Nie udało się zlecić syncu', 'error');
         return;
       }
-      const label = activeCatalog === 'shop' ? 'Produkty' : 'Akcesoria';
+      const label =
+        scope === 'all'
+          ? 'oba katalogi'
+          : scope === 'shop'
+            ? 'Produkty'
+            : 'Akcesoria';
       showToast(`Sync WAPRO (${label}): stany i ceny — czekam…`, 'info', 4000);
       const started = Date.now();
       while (Date.now() - started < 180_000) {
@@ -252,7 +406,11 @@ export default function App() {
         if (!last) continue;
         if (res.id && last.id !== res.id) continue;
         if (last.status === 'done') {
-          showToast(last.message || `Sync ${label} zakończony`, 'ok', 7000);
+          const parsed = parseWaproSyncMessage(last.message);
+          showToast(parsed.summary || `Sync ${label} zakończony`, 'ok', 9000);
+          if (parsed.warningHint) {
+            showToast(parsed.warningHint, 'warn', 10000);
+          }
           invalidateProductsCache();
           void loadData();
           return;
@@ -269,35 +427,118 @@ export default function App() {
   }
 
   useEffect(() => {
+    const fallback: View =
+      sellStandalone && canUseCrmModule(role)
+        ? 'crm'
+        : opsStandalone
+          ? 'ops'
+          : 'catalog';
     if (!roleCan(role, 'editStock')) setEditMode(false);
-    if (!roleCan(role, 'printLabels') && view === 'labels') setView('catalog');
-    if (!roleCan(role, 'viewProgress') && view === 'progress') setView('catalog');
-    if (!roleCan(role, 'manageFavorites') && view === 'favorites') setView('catalog');
-    if (!roleCan(role, 'manageKits') && view === 'kits') setView('catalog');
-    if (!roleCan(role, 'viewOps') && view === 'ops') setView('catalog');
-    if (!roleCan(role, 'useCrm') && view === 'crm') setView('catalog');
-    if (!roleCan(role, 'viewRoleMatrix') && view === 'role-matrix') setView('catalog');
-    if (
-      !roleCan(role, 'editProduct') &&
-      !roleCan(role, 'manageUsers') &&
-      view === 'ean-hygiene'
-    ) {
-      setView('catalog');
+    if (!canAccessAdminPanel(role) && view === 'admin') setView(fallback);
+    if (!roleCan(role, 'printLabels') && view === 'labels') setView(fallback);
+    if (!roleCan(role, 'viewProgress') && view === 'progress') setView(fallback);
+    if (!roleCan(role, 'manageFavorites') && view === 'favorites') setView(fallback);
+    if (!roleCan(role, 'manageKits') && view === 'kits') setView(fallback);
+    if (!canViewOpsModule(role) && view === 'ops') setView(fallback);
+    if (!canUseCrmModule(role) && view === 'crm') setView('catalog');
+    if (!moduleEnabled('crm') && view === 'crm') setView('catalog');
+    if (!moduleEnabled('ops') && view === 'ops') setView(fallback);
+    if (sellStandalone && !['crm', 'admin'].includes(view)) setView(fallback);
+  }, [opsStandalone, role, sellStandalone, view]);
+
+  useEffect(() => {
+    if (!opsStandalone) return;
+    if (view !== 'ops' && view !== 'admin') setView('ops');
+  }, [opsStandalone, view]);
+
+  useLayoutEffect(() => {
+    const syncTop = () => {
+      if (embeddedInHub) {
+        const hubHeader = document.querySelector('.hub-shell > header');
+        const height = hubHeader?.getBoundingClientRect().height ?? 0;
+        document.documentElement.style.setProperty('--catalog-sticky-top', `${height}px`);
+        return;
+      }
+      const header = catalogHeaderRef.current;
+      if (!header) {
+        document.documentElement.style.removeProperty('--catalog-sticky-top');
+        return;
+      }
+      document.documentElement.style.setProperty(
+        '--catalog-sticky-top',
+        `${header.getBoundingClientRect().height}px`,
+      );
+    };
+    syncTop();
+    const observed: Element[] = [];
+    if (embeddedInHub) {
+      const hubHeader = document.querySelector('.hub-shell > header');
+      if (hubHeader) observed.push(hubHeader);
+    } else if (catalogHeaderRef.current) {
+      observed.push(catalogHeaderRef.current);
     }
-  }, [role, view]);
+    const ro = new ResizeObserver(syncTop);
+    for (const el of observed) ro.observe(el);
+    window.addEventListener('resize', syncTop);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', syncTop);
+    };
+  }, [embeddedInHub, view]);
+
+  useEffect(() => {
+    if (!embeddedInHub || !suiteHub) return;
+    const mapped = hubViewToAppView(suiteHub.hubView);
+    if (mapped) setView(mapped);
+  }, [embeddedInHub, suiteHub?.hubView]);
+
+  useEffect(() => {
+    if (!embeddedInHub) return;
+    const onAppView = (e: Event) => {
+      const v = (e as CustomEvent<{ view: View }>).detail?.view;
+      if (v) setView(v);
+    };
+    window.addEventListener('katalog-app-view', onAppView);
+    return () => window.removeEventListener('katalog-app-view', onAppView);
+  }, [embeddedInHub]);
+
+  const hubNavigateView = useCallback(
+    (v: View) => {
+      setView(v);
+      if (embeddedInHub && suiteHub) suiteHub.setHubView(appViewToHubView(v));
+    },
+    [embeddedInHub, suiteHub],
+  );
 
   useEffect(() => {
     let cancelled = false;
+    const epoch = favoritesSyncEpoch.current;
     async function syncFavorites() {
       if (mode === 'signed_in' && user?.id) {
         try {
           const ids = await loadAndMergeFavorites(user.id);
-          if (!cancelled) setFavoriteIds(ids);
+          if (!cancelled && favoritesSyncEpoch.current === epoch) {
+            setFavoriteIds(ids);
+          }
         } catch (err) {
           console.warn('favorites load', err);
           if (!cancelled) {
-            setFavoriteIds(getLocalFavoriteIds());
-            showToast('Nie udało się wczytać ulubionych z chmury', 'warn');
+            const local = getLocalFavoriteIds();
+            if (local.length > 0 && favoritesSyncEpoch.current === epoch) {
+              setFavoriteIds(local);
+            } else {
+              try {
+                const ids = await fetchCloudFavoriteIds(user.id);
+                if (favoritesSyncEpoch.current === epoch) setFavoriteIds(ids);
+              } catch {
+                if (favoritesSyncEpoch.current === epoch) {
+                  setFavoriteIds(getLocalFavoriteIds());
+                }
+              }
+            }
+            const msg =
+              err instanceof Error ? err.message : 'Nie udało się wczytać ulubionych';
+            showToast(msg, 'error', 8000);
           }
         }
         return;
@@ -310,42 +551,133 @@ export default function App() {
     };
   }, [mode, user?.id]);
 
+  useEffect(() => {
+    if (mode !== 'signed_in' || !user?.id) return;
+    const onLeave = () => flushCloudFavoritesSync();
+    window.addEventListener('pagehide', onLeave);
+    return () => window.removeEventListener('pagehide', onLeave);
+  }, [mode, user?.id]);
+
+  useEffect(() => {
+    if (!collectionUserKey) return;
+    let cancelled = false;
+    void hydrateCollections(collectionUserKey).then(() => {
+      if (!cancelled) setCollectionsRevision((r) => r + 1);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [collectionUserKey]);
+
   const allProducts = useMemo(
     () => [...(catalogCache.accessories ?? []), ...(catalogCache.shop ?? [])],
     [catalogCache],
   );
 
-  const products = useMemo(
-    () => allProducts.filter((p) => (p.catalog || 'accessories') === activeCatalog),
-    [allProducts, activeCatalog],
+  const catalogKindCounts = useMemo(() => {
+    let accessories = 0;
+    let shop = 0;
+    for (const p of allProducts) {
+      if (resolveProductCatalogKind(p) === 'accessories') accessories += 1;
+      else shop += 1;
+    }
+    return {
+      all: allProducts.length,
+      accessories,
+      shop,
+    };
+  }, [allProducts]);
+
+  const locationsMigratedRef = useRef(false);
+  const favoritesSyncEpoch = useRef(0);
+  useEffect(() => {
+    if (locationsMigratedRef.current || mode !== 'signed_in' || !allProducts.length) return;
+    locationsMigratedRef.current = true;
+    void migrateLegacyLocationsToCloud(allProducts);
+  }, [mode, allProducts]);
+
+  const products = useMemo(() => {
+    if (catalogListFilter === 'all') return allProducts;
+    return allProducts.filter(
+      (p) => resolveProductCatalogKind(p) === catalogListFilter,
+    );
+  }, [allProducts, catalogListFilter]);
+
+  const defaultAddCatalog = useMemo(
+    (): CatalogType =>
+      catalogListFilter === 'all' ? loadSavedCatalog() : catalogListFilter,
+    [catalogListFilter],
   );
 
-  const catalogKits = useMemo(
+  const lensProducts = useMemo(
     () =>
-      kits.filter((k) =>
-        k.items.some((item) =>
-          products.some((p) => p.id === item.productId || p.sku === item.sku),
-        ),
-      ),
-    [kits, products],
+      allProducts.filter((p) => (p.catalog || 'accessories') === 'shop'),
+    [allProducts],
   );
+
+  const canOpenLens =
+    CATALOG_LENS_ENABLED &&
+    roleCan(role, 'useLens') &&
+    catalogListFilter !== 'accessories';
+
+  const syncScope: StockSyncScope =
+    catalogListFilter === 'all' ? 'all' : catalogListFilter;
+
+  const catalogExportLabel =
+    catalogListFilter === 'all'
+      ? 'Wszystkie'
+      : CATALOG_LABELS[catalogListFilter];
+
+  useEffect(() => {
+    if (opsStandalone || mode !== 'signed_in' || !user?.id || allProducts.length === 0) return;
+    const stats = computeCatalogStats(allProducts);
+    seedCatalogAlerts(user.id, {
+      lowStock: stats.lowStock,
+      outOfStock: stats.outOfStock,
+      withoutImage: stats.withoutImage,
+    });
+  }, [opsStandalone, mode, user?.id, allProducts]);
+
+  useEffect(() => {
+    if (mode !== 'signed_in' || !user?.id || !canViewOpsModule(role)) return;
+    if (!opsStandalone && view !== 'ops') return;
+    seedOpsAlerts(user.id);
+  }, [opsStandalone, mode, user?.id, role, view]);
+
+  const catalogKits = useMemo(() => kits, [kits]);
 
   const catalogCacheRef = useRef(catalogCache);
   catalogCacheRef.current = catalogCache;
 
   const loadCatalog = useCallback(async (catalog: CatalogType, force = false) => {
+    if (opsStandalone) return;
     if (!force && (catalogCacheRef.current[catalog]?.length ?? 0) > 0) return;
-    const prods = await fetchProducts(catalog, { force });
-    setCatalogCache((prev) => ({ ...prev, [catalog]: prods }));
-  }, []);
+    try {
+      const fast = await fetchProducts(catalog, { source: 'json' });
+      setCatalogCache((prev) => ({ ...prev, [catalog]: fast }));
+      const full = await fetchProducts(catalog, { force });
+      setCatalogCache((prev) => ({ ...prev, [catalog]: full }));
+    } catch (err) {
+      console.warn('loadCatalog', catalog, err);
+    }
+  }, [opsStandalone]);
 
   const loadData = useCallback(async () => {
+    if (opsStandalone) {
+      setLoading(false);
+      setError(null);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      invalidateProductsCache(activeCatalog);
-      const prods = await fetchProducts(activeCatalog, { force: true });
-      setCatalogCache((prev) => ({ ...prev, [activeCatalog]: prods }));
+      invalidateProductsCache('accessories');
+      invalidateProductsCache('shop');
+      const [acc, shop] = await Promise.all([
+        fetchProducts('accessories', { force: true }),
+        fetchProducts('shop', { force: true }),
+      ]);
+      setCatalogCache({ accessories: acc, shop });
       void fetchKits()
         .then(setKits)
         .catch((err) => console.warn('kits', err));
@@ -357,22 +689,89 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  }, [activeCatalog]);
+  }, [opsStandalone]);
 
   useEffect(() => {
+    if (opsStandalone) {
+      setLoading(false);
+      setShopLoading(false);
+      return;
+    }
     let cancelled = false;
+
+    async function loadCatalogFast(catalog: CatalogType) {
+      const fast = await fetchProducts(catalog, { source: 'json' });
+      if (cancelled) return fast;
+      setCatalogCache((prev) => ({ ...prev, [catalog]: fast }));
+      setLoading(false);
+      void fetchProducts(catalog)
+        .then((full) => {
+          if (!cancelled) setCatalogCache((prev) => ({ ...prev, [catalog]: full }));
+        })
+        .catch((err) => console.warn('catalog sync', catalog, err));
+      return fast;
+    }
+
     (async () => {
-      // cache hit — nie blokuj UI
-      if ((catalogCache[activeCatalog]?.length ?? 0) > 0) {
+      const filter = catalogListFilter;
+      const needAcc = catalogFilterNeedsAccessories(filter);
+      const needShop = catalogFilterNeedsShop(filter);
+      const hasAcc = (catalogCache.accessories?.length ?? 0) > 0;
+      const hasShop = (catalogCache.shop?.length ?? 0) > 0;
+
+      if ((!needAcc || hasAcc) && (!needShop || hasShop)) {
         setLoading(false);
         return;
       }
+
       setLoading(true);
       setError(null);
       try {
-        const prods = await fetchProducts(activeCatalog);
-        if (cancelled) return;
-        setCatalogCache((prev) => ({ ...prev, [activeCatalog]: prods }));
+        if (filter === 'all') {
+          if (!hasAcc && needAcc) {
+            await loadCatalogFast('accessories');
+          } else {
+            setLoading(false);
+          }
+
+          if (!hasShop && needShop) {
+            setShopLoading(true);
+            try {
+              const shopFast = await fetchProducts('shop', { source: 'json' });
+              if (cancelled) return;
+              setCatalogCache((prev) => ({ ...prev, shop: shopFast }));
+              void fetchProducts('shop')
+                .then((shop) => {
+                  if (!cancelled) setCatalogCache((prev) => ({ ...prev, shop }));
+                })
+                .catch((err) => console.warn('catalog sync shop', err));
+            } finally {
+              if (!cancelled) setShopLoading(false);
+            }
+          }
+          return;
+        }
+
+        if (filter === 'accessories' && !hasAcc) {
+          await loadCatalogFast('accessories');
+        } else if (filter === 'shop' && !hasShop) {
+          setShopLoading(true);
+          try {
+            const shopFast = await fetchProducts('shop', { source: 'json' });
+            if (cancelled) return;
+            setCatalogCache((prev) => ({ ...prev, shop: shopFast }));
+            setLoading(false);
+            void fetchProducts('shop')
+              .then((shop) => {
+                if (!cancelled) setCatalogCache((prev) => ({ ...prev, shop }));
+              })
+              .catch((err) => console.warn('catalog sync shop', err));
+          } finally {
+            if (!cancelled) setShopLoading(false);
+          }
+        } else {
+          setLoading(false);
+        }
       } catch (err) {
         console.error(err);
         if (!cancelled) {
@@ -381,58 +780,88 @@ export default function App() {
           );
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          setShopLoading(false);
+        }
       }
     })();
+
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- tylko przy zmianie katalogu
-  }, [activeCatalog]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- pierwsze wczytanie wg zapisanego filtra
+  }, []);
 
-  /** Prefetch drugiego katalogu dopiero gdy UI jest wolne — mniej zamulania na telefonie. */
   useEffect(() => {
+    if (opsStandalone || !isCatalogProduct()) return;
+    void fetch('/data/products.json', { cache: 'force-cache' }).catch(() => undefined);
+    void fetch('/data/shop-products.json', { cache: 'force-cache' }).catch(() => undefined);
+  }, [opsStandalone]);
+
+  /** Dociągnij brakujący katalog po zmianie filtra (np. Produkty / Wszystkie). */
+  useEffect(() => {
+    if (opsStandalone) return;
     if (loading) return;
-    if ((catalogCache[activeCatalog]?.length ?? 0) === 0) return;
-    const other: CatalogType =
-      activeCatalog === 'shop' ? 'accessories' : 'shop';
-    if ((catalogCache[other]?.length ?? 0) > 0) return;
+    if (
+      catalogFilterNeedsAccessories(catalogListFilter) &&
+      (catalogCache.accessories?.length ?? 0) === 0
+    ) {
+      void loadCatalog('accessories');
+    }
+    if (
+      catalogFilterNeedsShop(catalogListFilter) &&
+      (catalogCache.shop?.length ?? 0) === 0
+    ) {
+      setShopLoading(true);
+      void loadCatalog('shop').finally(() => setShopLoading(false));
+    }
+  }, [loading, catalogListFilter, catalogCache.accessories?.length, catalogCache.shop?.length, loadCatalog]);
+
+  /** W tle: produkty sklepu gdy użytkownik ogląda tylko akcesoria. */
+  useEffect(() => {
+    if (opsStandalone) return;
+    if (!isCatalogProduct()) return;
+    if (catalogListFilter !== 'accessories') return;
+    if ((catalogCache.shop?.length ?? 0) > 0) return;
+    if (loading || shopLoading) return;
 
     let cancelled = false;
     const run = () => {
-      if (cancelled || document.visibilityState === 'hidden') return;
-      void loadCatalog(other);
+      if (cancelled) return;
+      void loadCatalog('shop');
     };
-
-    let idleId: number | undefined;
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
-    const w = window as Window & {
-      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
-      cancelIdleCallback?: (id: number) => void;
-    };
-    if (typeof w.requestIdleCallback === 'function') {
-      idleId = w.requestIdleCallback(run, { timeout: 4000 });
-    } else {
-      timeoutId = setTimeout(run, 2500);
-    }
+    const idleId =
+      typeof requestIdleCallback !== 'undefined'
+        ? requestIdleCallback(run, { timeout: 4000 })
+        : undefined;
+    const timeoutId = idleId === undefined ? window.setTimeout(run, 2500) : undefined;
 
     return () => {
       cancelled = true;
-      if (idleId != null && typeof w.cancelIdleCallback === 'function') {
-        w.cancelIdleCallback(idleId);
+      if (idleId !== undefined && typeof cancelIdleCallback !== 'undefined') {
+        cancelIdleCallback(idleId);
       }
-      if (timeoutId) clearTimeout(timeoutId);
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
     };
-  }, [loading, activeCatalog, catalogCache, loadCatalog]);
+  }, [
+    catalogListFilter,
+    catalogCache.shop?.length,
+    loading,
+    shopLoading,
+    loadCatalog,
+  ]);
 
   useEffect(() => {
+    if (opsStandalone) return;
     if (view === 'favorites') {
       void loadCatalog('accessories');
       void loadCatalog('shop');
     }
-  }, [view, loadCatalog]);
+  }, [opsStandalone, view, loadCatalog]);
 
   useEffect(() => {
+    if (opsStandalone) return;
     let cancelled = false;
     const load = () => {
       if (cancelled) return;
@@ -445,46 +874,69 @@ export default function App() {
       cancelled = true;
       clearTimeout(t);
     };
-  }, []);
+  }, [opsStandalone]);
 
-  const switchCatalog = useCallback((next: CatalogType) => {
-    setActiveCatalog(next);
+  const setCatalogFilter = useCallback((next: CatalogListFilter) => {
+    setCatalogListFilter(next);
     try {
-      localStorage.setItem(CATALOG_STORAGE_KEY, next);
+      localStorage.setItem(CATALOG_LIST_FILTER_KEY, next);
+      if (next !== 'all') localStorage.setItem(CATALOG_STORAGE_KEY, next);
     } catch {
       /* ignore */
     }
-    setSearch('');
-    setCategory('Wszystkie');
-    setStockFilter('all');
-    setImageFilter('all');
+    syncCatalogPrefsToCloud({ catalogListFilter: next });
     setView('catalog');
     setSelectedProduct(null);
-    setMissingCategory('Wszystkie');
-  }, []);
+  }, [syncCatalogPrefsToCloud]);
 
-  const categoryList = useMemo(() => deriveCategories(products), [products]);
+  const categoryList = useMemo(
+    () => deriveCategories(products, catalogListFilter),
+    [products, catalogListFilter],
+  );
 
-  const deferredSearch = useDeferredValue(search);
+  const shopCategoryGroups = useMemo(() => {
+    if (catalogListFilter !== 'shop' && catalogListFilter !== 'all') return undefined;
+    if (!products.some((p) => (p.catalog || 'accessories') === 'shop')) return undefined;
+    return getShopCategoryGroups();
+  }, [catalogListFilter, products]);
+
+  const debouncedSearch = useDebouncedCatalogSearch(search, 90);
   const favoriteSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
 
+  useEffect(() => {
+    if (!products.length) return;
+    const warm = () => {
+      getProductSearchIndex(products);
+    };
+    if (typeof requestIdleCallback === 'function') {
+      const id = requestIdleCallback(warm, { timeout: 2500 });
+      return () => cancelIdleCallback(id);
+    }
+    const t = window.setTimeout(warm, 200);
+    return () => window.clearTimeout(t);
+  }, [products]);
+
   const filtered = useMemo(() => {
+    const catalogForFavorites = view === 'favorites' ? allProducts : products;
     const base =
       view === 'favorites'
-        ? products.filter((p) => favoriteSet.has(p.id))
+        ? catalogForFavorites.filter((p) => favoriteSet.has(p.id))
         : products;
     return applyCatalogFilters(base, {
-      search: deferredSearch,
+      search: debouncedSearch,
       category,
       sort,
       stockFilter,
       imageFilter,
+      knowledgeFilter,
+      baselinkerFilter,
+      waproMagFilter,
     });
-  }, [products, deferredSearch, category, sort, stockFilter, imageFilter, view, favoriteSet]);
+  }, [products, allProducts, debouncedSearch, category, sort, stockFilter, imageFilter, knowledgeFilter, baselinkerFilter, waproMagFilter, view, favoriteSet]);
 
   const favoriteCount = useMemo(
-    () => products.reduce((n, p) => n + (favoriteSet.has(p.id) ? 1 : 0), 0),
-    [products, favoriteSet],
+    () => allProducts.reduce((n, p) => n + (favoriteSet.has(p.id) ? 1 : 0), 0),
+    [allProducts, favoriteSet],
   );
 
   const handleSortChange = useCallback((next: CatalogSort) => {
@@ -494,38 +946,26 @@ export default function App() {
     } catch {
       /* ignore */
     }
-  }, []);
+    syncCatalogPrefsToCloud({ sort: next });
+  }, [syncCatalogPrefsToCloud]);
 
   const handleToggleFavorite = useCallback(
-    async (productId: string) => {
-      let wasOn = false;
-      let nextOn = false;
-      setFavoriteIds((prev) => {
-        wasOn = prev.includes(productId);
-        nextOn = !wasOn;
-        return nextOn
-          ? [productId, ...prev.filter((id) => id !== productId)]
-          : prev.filter((id) => id !== productId);
-      });
+    (productId: string) => {
+      favoritesSyncEpoch.current += 1;
+      const prev = favoriteIdsRef.current;
+      const nextOn = !prev.includes(productId);
+      const nextIds = nextOn
+        ? [productId, ...prev.filter((id) => id !== productId)]
+        : prev.filter((id) => id !== productId);
+
+      favoriteIdsRef.current = nextIds;
+      setFavoriteIds(nextIds);
+      replaceLocalFavoriteIds(nextIds);
+      showToast(nextOn ? 'Dodano do ulubionych' : 'Usunięto z ulubionych', nextOn ? 'ok' : 'info');
 
       if (mode === 'signed_in' && user?.id) {
-        try {
-          await setCloudFavorite(user.id, productId, nextOn);
-          showToast(nextOn ? 'Dodano do ulubionych' : 'Usunięto z ulubionych', nextOn ? 'ok' : 'info');
-        } catch (err) {
-          console.error(err);
-          setFavoriteIds((prev) =>
-            wasOn
-              ? [productId, ...prev.filter((id) => id !== productId)]
-              : prev.filter((id) => id !== productId),
-          );
-          showToast('Nie udało się zapisać ulubionych', 'error');
-        }
-        return;
+        scheduleCloudFavoritesSync(user.id, nextIds, (msg) => showToast(msg, 'error', 7000));
       }
-
-      setLocalFavorite(productId, nextOn);
-      showToast(nextOn ? 'Dodano do ulubionych' : 'Usunięto z ulubionych', nextOn ? 'ok' : 'info');
     },
     [mode, user?.id],
   );
@@ -590,6 +1030,29 @@ export default function App() {
     [products],
   );
 
+  const lowStockCount = useMemo(
+    () => products.filter((p) => p.stock <= 5).length,
+    [products],
+  );
+
+  const hubOverlay =
+    embeddedInHub && suiteHub && HubSegmentOverlay ? (
+      <Suspense fallback={<ViewFallback />}>
+        <HubSegmentOverlay
+          hubView={suiteHub.hubView}
+          onHubViewChange={suiteHub.setHubView}
+          role={role}
+          modeSignedIn={mode === 'signed_in'}
+          favoriteCount={favoriteCount}
+          orderCount={orderCount}
+          productCount={products.length}
+          missingImagesCount={missingImages.length}
+          lowStockCount={lowStockCount}
+          labelQueueCount={labelQueue.length}
+        />
+      </Suspense>
+    ) : null;
+
   const handleImageUpdated = useCallback(
     (productId: string, url: string) => {
       patchProductInCache(productId, { customImageUrl: url, hasImage: true });
@@ -609,10 +1072,147 @@ export default function App() {
     }
   }, [selectedProduct]);
 
+  const handleWarehouseLocationSaved = useCallback(
+    (productId: string, loc: Product['warehouseLocation']) => {
+      patchProductInCache(productId, { warehouseLocation: loc });
+      if (selectedProduct?.id === productId) {
+        setSelectedProduct((prev) => (prev ? { ...prev, warehouseLocation: loc } : null));
+      }
+    },
+    [selectedProduct],
+  );
+
+  const handleProductDeleted = useCallback((productId: string) => {
+    setSelectedProduct(null);
+    setCatalogCache((prev) => {
+      const next = { ...prev };
+      for (const key of ['accessories', 'shop'] as const) {
+        if (next[key]) {
+          next[key] = next[key]!.filter((p) => p.id !== productId);
+        }
+      }
+      return next;
+    });
+    invalidateProductsCache();
+  }, []);
+
   const openMissingImages = useCallback((categoryFilter = 'Wszystkie') => {
     setMissingCategory(categoryFilter);
     setView('missing-images');
   }, []);
+
+  const openKnowledgeGaps = useCallback((categoryFilter = 'Wszystkie') => {
+    setCategory(categoryFilter);
+    setKnowledgeFilter('weak');
+    setView('catalog');
+    setSelectedProduct(null);
+  }, []);
+
+  const catalogHomeQuickActions = useMemo((): CatalogHomeQuickAction[] => {
+    const items: CatalogHomeQuickAction[] = [];
+    if (roleCan(role, 'manageFavorites')) {
+      items.push({
+        id: 'favorites',
+        label: 'Ulubione',
+        icon: <Star className="h-4 w-4" />,
+        count: favoriteCount,
+        onClick: () => setView('favorites'),
+      });
+    }
+    if (roleCan(role, 'manageKits')) {
+      items.push({
+        id: 'kits',
+        label: 'Zestawy',
+        icon: <Layers className="h-4 w-4" />,
+        count: catalogKits.length,
+        onClick: () => setView('kits'),
+      });
+    }
+    if (isCatalogProduct() && collectionUserKey) {
+      items.push({
+        id: 'collections',
+        label: 'Foldery',
+        icon: <FolderOpen className="h-4 w-4" />,
+        count: collectionCount > 0 ? collectionCount : undefined,
+        onClick: () => setView('collections'),
+      });
+    }
+    if (
+      isStockProduct() &&
+      (roleCan(role, 'printLabels') || roleCan(role, 'editStock'))
+    ) {
+      items.push({
+        id: 'warehouse',
+        label: 'Magazyn',
+        icon: <Boxes className="h-4 w-4" />,
+        onClick: () => setView('warehouse'),
+      });
+    }
+    if (roleCan(role, 'viewProgress')) {
+      items.push({
+        id: 'missing-images',
+        label: 'Bez zdjęć',
+        icon: <ImageOff className="h-4 w-4" />,
+        count: missingImages.length,
+        onClick: () => openMissingImages(),
+      });
+    }
+    return items;
+  }, [
+    role,
+    favoriteCount,
+    catalogKits.length,
+    collectionCount,
+    collectionUserKey,
+    missingImages.length,
+    openMissingImages,
+  ]);
+
+  const renderCatalogSearch = useCallback(
+    (overlaySuggestions = true) =>
+      isCatalogProduct() ? (
+        <CatalogCommandPalette
+          search={search}
+          onSearchChange={handleSearchChange}
+          products={products}
+          onOpenProduct={setSelectedProduct}
+          onNavigate={setView}
+          onOpenMissingImages={() => openMissingImages()}
+          onOpenLens={
+            canOpenLens ? () => setShowVisualSearch(true) : undefined
+          }
+          onOpenScanner={() => setShowScanner(true)}
+          onSyncStock={() => void handleSyncStock()}
+          canSyncStock={
+            mode === 'signed_in' && roleCan(role, 'editStock') && !syncBusy
+          }
+          canFavorites={roleCan(role, 'manageFavorites')}
+          canKits={roleCan(role, 'manageKits')}
+          canCollections={isCatalogProduct() && !!collectionUserKey}
+          canLabels={roleCan(role, 'printLabels')}
+          canProgress={roleCan(role, 'viewProgress')}
+          overlaySuggestions={overlaySuggestions}
+        />
+      ) : (
+        <SearchBar
+          value={search}
+          onChange={handleSearchChange}
+          onScanClick={() => setShowScanner(true)}
+        />
+      ),
+    [
+      search,
+      handleSearchChange,
+      products,
+      canOpenLens,
+      role,
+      mode,
+      syncBusy,
+      openMissingImages,
+      handleSyncStock,
+      collectionUserKey,
+    ],
+  );
 
   const handleBarcodeScan = useCallback(
     (code: string) => {
@@ -621,10 +1221,6 @@ export default function App() {
       setView('catalog');
       setCategory('Wszystkie');
       setSearch(trimmed);
-      const matches = filterProducts(products, trimmed, 'Wszystkie');
-      if (matches.length === 1) {
-        setSelectedProduct(matches[0]);
-      }
     },
     [products],
   );
@@ -649,19 +1245,28 @@ export default function App() {
     return <LoginGate />;
   }
 
-  return (
+  const appShell = (
     <div
-      className={`app-shell relative mx-auto min-h-dvh w-full max-w-none pb-[calc(4.25rem+env(safe-area-inset-bottom))] lg:pb-0 ${
-        editMode ? 'ring-2 ring-inset ring-amber-500' : ''
-      }`}
+      className={`app-shell relative mx-auto min-h-dvh w-full max-w-none ${
+        embeddedInHub
+          ? 'pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-4'
+          : opsStandalone
+            ? 'pb-0'
+          : 'pb-[calc(4.25rem+env(safe-area-inset-bottom))] lg:pb-0'
+      } ${!opsStandalone && editMode ? 'ring-2 ring-inset ring-amber-500' : ''}`}
     >
-      {editMode && (
+      {!opsStandalone && editMode && (
         <div
           className="pointer-events-none fixed inset-0 z-[70] border-[3px] border-amber-500"
           aria-hidden
         />
       )}
-      <header className="border-b border-slate-800/80 bg-slate-950 pt-[env(safe-area-inset-top)]">
+      {!embeddedInHub && (
+      <div
+        ref={catalogHeaderRef}
+        className="sticky top-0 z-40 bg-slate-950/95 pt-[env(safe-area-inset-top)] shadow-md shadow-black/10 supports-[backdrop-filter]:backdrop-blur-md"
+      >
+      <header className="border-b border-slate-800/80">
         {/* Mobile: logo + switch; Desktop (lg+): pełny pasek */}
         <div className="flex flex-col gap-2 px-3 py-2 sm:px-4 lg:flex-row lg:items-center lg:gap-3 lg:py-3 xl:px-6">
           <div className="flex min-w-0 items-center gap-2 sm:gap-3 lg:min-w-[12rem]">
@@ -680,40 +1285,34 @@ export default function App() {
             </a>
             <div className="hidden min-w-0 flex-1 sm:block lg:hidden">
               <h1 className="truncate text-base font-bold tracking-tight text-slate-100">
-                Katalog
+                {branding.headerTitle}
               </h1>
+            </div>
+            <div className="ml-auto lg:hidden">
+              <AppHeaderActions
+                role={role}
+                view={view}
+                onOpenAdmin={() => setView('admin')}
+                onNavigate={setView}
+                showAdminShortcut={false}
+              />
             </div>
           </div>
 
           <div className="w-full shrink-0 lg:w-auto lg:min-w-[18rem] xl:min-w-[22rem]">
+            {showsCatalogSwitcher() &&
+            modeSwitcherColumns(canViewOpsModule(role), canUseCrmModule(role)) >
+              0 ? (
             <div
-              className={`grid gap-1 rounded-xl bg-slate-900 p-1 ring-1 ring-slate-800 ${
-                roleCan(role, 'viewOps') && roleCan(role, 'useCrm')
-                  ? 'grid-cols-4'
-                  : roleCan(role, 'viewOps') || roleCan(role, 'useCrm')
-                    ? 'grid-cols-3'
-                    : 'grid-cols-2'
-              }`}
+              className="grid gap-1 rounded-xl bg-slate-900 p-1 ring-1 ring-slate-800"
+              style={{
+                gridTemplateColumns: `repeat(${modeSwitcherColumns(
+                  canViewOpsModule(role),
+                  canUseCrmModule(role),
+                )}, minmax(0, 1fr))`,
+              }}
             >
-              <CatalogSwitch
-                active={
-                  view !== 'ops' &&
-                  view !== 'crm' &&
-                  activeCatalog === 'accessories'
-                }
-                onClick={() => switchCatalog('accessories')}
-                icon={<Wrench className="h-4 w-4 shrink-0" />}
-                label={CATALOG_LABELS.accessories}
-              />
-              <CatalogSwitch
-                active={
-                  view !== 'ops' && view !== 'crm' && activeCatalog === 'shop'
-                }
-                onClick={() => switchCatalog('shop')}
-                icon={<ShoppingBag className="h-4 w-4 shrink-0" />}
-                label={CATALOG_LABELS.shop}
-              />
-              {roleCan(role, 'viewOps') && (
+              {canViewOpsModule(role) && (
                 <CatalogSwitch
                   active={view === 'ops'}
                   onClick={() => setView('ops')}
@@ -721,7 +1320,7 @@ export default function App() {
                   label="Operacje"
                 />
               )}
-              {roleCan(role, 'useCrm') && (
+              {canUseCrmModule(role) && (
                 <CatalogSwitch
                   active={view === 'crm'}
                   onClick={() => setView('crm')}
@@ -730,55 +1329,27 @@ export default function App() {
                 />
               )}
             </div>
+            ) : APP_PRODUCT === 'ops' ? (
+              <div className="rounded-xl bg-slate-900 px-3 py-2.5 text-center text-sm font-medium text-slate-200 ring-1 ring-slate-800">
+                Finanse i analityka
+              </div>
+            ) : APP_PRODUCT === 'sell' ? (
+              <div className="rounded-xl bg-slate-900 px-3 py-2.5 text-center text-sm font-medium text-slate-200 ring-1 ring-slate-800">
+                CRM i sprzedaz
+              </div>
+            ) : null}
           </div>
 
           {/* Desktop actions — ukryte na mobile (są w Więcej) */}
-          <div className="ml-auto hidden gap-1.5 lg:flex lg:flex-wrap lg:justify-end">
-            <div
-              className="flex shrink-0 items-center rounded-lg border border-slate-700 px-2.5 py-1.5"
-              title={ROLE_LABELS[role]}
-            >
-              <span className="max-w-[10rem] truncate text-sm font-medium text-slate-200">
-                {displayLabel}
-              </span>
-            </div>
-            {roleCan(role, 'manageUsers') && (
-              <button
-                type="button"
-                onClick={() => setShowAdminUsers(true)}
-                className="flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800"
-                title="Zarządzaj użytkownikami"
-              >
-                <Users className="h-4 w-4" />
-                Konta
-              </button>
-            )}
-            {roleCan(role, 'viewRoleMatrix') && (
-              <button
-                type="button"
-                onClick={() => setShowRoleMatrix(true)}
-                className="flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800"
-                title="Podgląd uprawnień ról"
-              >
-                Uprawnienia
-              </button>
-            )}
-            {(roleCan(role, 'editProduct') || roleCan(role, 'manageUsers')) && (
-              <button
-                type="button"
-                onClick={() => setView('ean-hygiene')}
-                className={`flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition ${
-                  view === 'ean-hygiene'
-                    ? 'border-amber-500/50 bg-amber-500/15 text-amber-200'
-                    : 'border-slate-700 text-slate-300 hover:bg-slate-800'
-                }`}
-                title="Higiena EAN"
-              >
-                EAN
-              </button>
+          <div className="ml-auto hidden gap-1.5 lg:flex lg:flex-wrap lg:items-center lg:justify-end">
+            {(view === 'catalog' || view === 'favorites') && isCatalogProduct() && (
+              <div className="w-[min(100%,18rem)] shrink-0 xl:w-[min(100%,22rem)]">
+                {renderCatalogSearch(false)}
+              </div>
             )}
             {view !== 'ops' &&
               view !== 'crm' &&
+              view !== 'admin' &&
               roleCan(role, 'addProduct') && (
               <button
                 type="button"
@@ -791,8 +1362,8 @@ export default function App() {
             )}
             {view !== 'ops' &&
               view !== 'crm' &&
-              activeCatalog === 'shop' &&
-              roleCan(role, 'useLens') && (
+              view !== 'admin' &&
+              canOpenLens && (
               <button
                 type="button"
                 onClick={() => setShowVisualSearch(true)}
@@ -802,7 +1373,7 @@ export default function App() {
                 Lens
               </button>
             )}
-            {roleCan(role, 'editStock') && (
+            {!opsStandalone && !sellStandalone && view !== 'admin' && roleCan(role, 'editStock') && (
               <button
                 type="button"
                 onClick={() => setEditMode((v) => !v)}
@@ -816,43 +1387,37 @@ export default function App() {
                 {editMode ? 'Edycja ON' : 'Edycja'}
               </button>
             )}
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-              title={isDark ? 'Motyw jasny' : 'Motyw ciemny'}
-            >
-              {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </button>
-            <RefreshControls
-              loading={loading}
-              onRefresh={loadData}
-              catalog={activeCatalog}
-              canRequestStockSync={
-                mode === 'signed_in' && roleCan(role, 'editStock')
-              }
+            {!opsStandalone && !sellStandalone && view !== 'admin' && (
+              <RefreshControls
+                loading={loading}
+                onRefresh={loadData}
+                catalog={syncScope}
+                canRequestStockSync={
+                  mode === 'signed_in' && roleCan(role, 'editStock')
+                }
+              />
+            )}
+            <AppHeaderActions
+              role={role}
+              view={view}
+              onOpenAdmin={() => setView('admin')}
+              onNavigate={setView}
             />
-            <button
-              type="button"
-              onClick={() => {
-                if (mode === 'guest') exitGuest();
-                else void signOut();
-              }}
-              className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-700 px-3 py-2 text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-              title={mode === 'guest' ? 'Wróć do logowania' : 'Wyloguj'}
-            >
-              <LogOut className="h-4 w-4" />
-              <span className="hidden xl:inline">
-                {mode === 'guest' ? 'Logowanie' : 'Wyloguj'}
-              </span>
-            </button>
           </div>
         </div>
 
         {/* Desktop nav tabs — tylko w trybie katalogu (nie Operacje / CRM) */}
-        {view !== 'ops' && view !== 'crm' && (
+        {view !== 'ops' && view !== 'crm' && view !== 'admin' && (
         <div className="hidden border-t border-slate-800/60 px-3 py-2 sm:px-4 lg:flex lg:items-center lg:gap-4 xl:px-6">
           <nav className="flex min-w-0 flex-1 flex-wrap gap-1">
+            {isCatalogProduct() && (
+              <NavTab
+                active={view === 'home'}
+                onClick={() => setView('home')}
+                icon={<Home className="h-4 w-4" />}
+                label="Start"
+              />
+            )}
             <NavTab
               active={view === 'catalog'}
               onClick={() => setView('catalog')}
@@ -868,6 +1433,15 @@ export default function App() {
                 label="Ulubione"
                 count={favoriteCount}
                 highlight={favoriteCount > 0}
+              />
+            )}
+            {isCatalogProduct() && collectionUserKey && (
+              <NavTab
+                active={view === 'collections'}
+                onClick={() => setView('collections')}
+                icon={<FolderOpen className="h-4 w-4" />}
+                label="Foldery"
+                count={collectionCount > 0 ? collectionCount : undefined}
               />
             )}
             {roleCan(role, 'manageKits') && (
@@ -910,71 +1484,74 @@ export default function App() {
                 highlight={labelQueue.length > 0}
               />
             )}
+            {isStockProduct() &&
+              (roleCan(role, 'printLabels') || roleCan(role, 'editStock')) && (
+              <NavTab
+                active={view === 'warehouse'}
+                onClick={() => setView('warehouse')}
+                icon={<Boxes className="h-4 w-4" />}
+                label="Magazyn"
+              />
+            )}
           </nav>
-
-          {(view === 'catalog' || view === 'favorites') && (
-            <div className="hidden min-w-0 flex-[1.4] gap-2 lg:flex">
-              <div className="min-w-0 flex-1">
-                <SearchBar
-                  value={search}
-                  onChange={setSearch}
-                  onScanClick={() => setShowScanner(true)}
-                />
-              </div>
-              {activeCatalog === 'shop' &&
-                view === 'catalog' &&
-                roleCan(role, 'useLens') && (
-                  <button
-                    type="button"
-                    onClick={() => setShowVisualSearch(true)}
-                    className="flex shrink-0 items-center gap-2 rounded-xl border border-brand-500/40 bg-brand-500/10 px-4 py-2 text-sm font-medium text-brand-200 hover:bg-brand-500/20"
-                  >
-                    <Sparkles className="h-5 w-5" />
-                    Lens
-                  </button>
-                )}
-            </div>
-          )}
         </div>
         )}
       </header>
-
-      {/* Wyszukiwarka sticky — tylko mobile/tablet; na lg jest w headerze */}
-      {(view === 'catalog' || view === 'favorites') && (
-        <div className="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/95 px-3 py-2 shadow-md shadow-black/10 sm:px-4 lg:hidden supports-[backdrop-filter]:backdrop-blur-md">
-          <div className="flex gap-2">
-            <div className="min-w-0 flex-1">
-              <SearchBar
-                value={search}
-                onChange={setSearch}
-                onScanClick={() => setShowScanner(true)}
-              />
-            </div>
-            {activeCatalog === 'shop' &&
-              view === 'catalog' &&
-              roleCan(role, 'useLens') && (
-              <button
-                type="button"
-                onClick={() => setShowVisualSearch(true)}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-brand-500/40 bg-brand-500/10 text-brand-200 transition hover:bg-brand-500/20"
-                title="Lens — rozpoznaj produkt po zdjęciu"
-                aria-label="Lens — rozpoznaj produkt po zdjęciu"
-              >
-                <Sparkles className="h-5 w-5" />
-              </button>
-            )}
-          </div>
-        </div>
+      </div>
       )}
 
       <main
         className={`px-3 py-3 sm:px-4 sm:py-4 xl:px-6 xl:py-5 ${
-          roleCan(role, 'useCrm') && orderCount > 0 && view !== 'crm'
+          canUseCrmModule(role) && orderCount > 0 && view !== 'crm'
             ? 'xl:pr-[24rem]'
             : ''
         }`}
       >
-        {loading && products.length === 0 ? (
+        {(!embeddedInHub || !hubOverlay) &&
+          (view === 'catalog' || view === 'favorites') && (
+          <CatalogStickySearchBar active className={embeddedInHub ? '' : 'lg:hidden'}>
+            <div className={`flex gap-2 ${embeddedInHub ? 'lg:justify-end' : ''}`}>
+              <div
+                className={`min-w-0 flex-1 ${
+                  embeddedInHub ? 'lg:ml-auto lg:w-[min(100%,22rem)] lg:flex-none' : ''
+                }`}
+              >
+                {renderCatalogSearch(!embeddedInHub)}
+              </div>
+              {view === 'catalog' && (
+                <button
+                  type="button"
+                  onClick={() => setShowScanner(true)}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-brand-500/45 bg-brand-500/15 text-brand-800 transition hover:bg-brand-500/25 dark:text-brand-200 lg:hidden"
+                  title="Skanuj kod EAN"
+                  aria-label="Skanuj kod EAN"
+                >
+                  <ScanBarcode className="h-5 w-5" />
+                </button>
+              )}
+            </div>
+          </CatalogStickySearchBar>
+        )}
+        {embeddedInHub && !hubOverlay && view !== 'crm' && view !== 'ops' && view !== 'admin' && (
+          <HubCatalogSubNav
+            view={view}
+            onView={hubNavigateView}
+            counts={{
+              products: products.length,
+              favorites: favoriteCount,
+              kits: catalogKits.length,
+              missing: missingImages.length,
+              labels: labelQueue.length,
+            }}
+            role={{
+              favorites: roleCan(role, 'manageFavorites'),
+              kits: roleCan(role, 'manageKits'),
+              progress: roleCan(role, 'viewProgress'),
+              labels: roleCan(role, 'printLabels'),
+            }}
+          />
+        )}
+        {loading && products.length === 0 && !opsStandalone ? (
           <div className="flex flex-col items-center justify-center py-24">
             <Loader2 className="h-10 w-10 animate-spin text-brand-500" />
             <p className="mt-4 text-slate-400">Ładowanie katalogu...</p>
@@ -990,9 +1567,26 @@ export default function App() {
               Spróbuj ponownie
             </button>
           </div>
+        ) : view === 'home' && isCatalogProduct() ? (
+          <CatalogHomeView
+            accessoriesCount={catalogKindCounts.accessories}
+            shopCount={catalogKindCounts.shop}
+            allProducts={allProducts}
+            missingImagesCount={missingImages.length}
+            canSyncStock={mode === 'signed_in' && roleCan(role, 'editStock')}
+            quickActions={catalogHomeQuickActions}
+            onOpenCatalog={(filter) => setCatalogFilter(filter)}
+            onOpenMissingImages={() => openMissingImages()}
+            onFocusSearch={() => {
+              setView('catalog');
+              setSearch('');
+            }}
+            onOpenScanner={() => setShowScanner(true)}
+          />
         ) : view === 'catalog' || view === 'favorites' ? (
           <CatalogView
-            search={search}
+            filterSearch={debouncedSearch}
+            isSearchPending={isCatalogSearchPending(search, debouncedSearch)}
             category={category}
             onCategoryChange={setCategory}
             sort={sort}
@@ -1001,9 +1595,16 @@ export default function App() {
             onStockFilterChange={setStockFilter}
             imageFilter={imageFilter}
             onImageFilterChange={setImageFilter}
+            knowledgeFilter={knowledgeFilter}
+            onKnowledgeFilterChange={setKnowledgeFilter}
+            baselinkerFilter={baselinkerFilter}
+            onBaselinkerFilterChange={setBaselinkerFilter}
+            waproMagFilter={waproMagFilter}
+            onWaproMagFilterChange={setWaproMagFilter}
             filtered={filtered}
             categoryList={categoryList}
             categoryCounts={categoryCounts}
+            shopCategoryGroups={shopCategoryGroups}
             onProductClick={setSelectedProduct}
             editMode={editMode}
             favoriteIds={favoriteIds}
@@ -1013,11 +1614,49 @@ export default function App() {
             emptyFavorites={view === 'favorites' && favoriteCount === 0}
             gridDensity={gridDensity}
             onGridDensityChange={changeGridDensity}
-            onOrderDelta={roleCan(role, 'useCrm') ? handleOrderDelta : undefined}
+            onOrderDelta={canUseCrmModule(role) ? handleOrderDelta : undefined}
             orderQtys={orderQtys}
             hideImages={!roleCan(role, 'viewImages')}
             showPrices={roleCan(role, 'viewPrices')}
+            showCatalogStats={isCatalogProduct()}
+            catalogProducts={products}
+            catalogLabel={catalogExportLabel}
+            useHubFilters={isCatalogProduct()}
+            catalogFilter={showsCatalogSwitcher() ? catalogListFilter : undefined}
+            onCatalogFilterChange={
+              showsCatalogSwitcher() ? setCatalogFilter : undefined
+            }
+            catalogKindCounts={showsCatalogSwitcher() ? catalogKindCounts : undefined}
+            showCatalogKindBadge={catalogListFilter === 'all'}
+            shopLoading={shopLoading}
+            canAddProduct={roleCan(role, 'addProduct')}
+            onAddProduct={() => setShowAddProduct(true)}
+            collectionUserKey={collectionUserKey || undefined}
+            onCollectionsChange={() => setCollectionsRevision((r) => r + 1)}
           />
+        ) : view === 'collections' && isCatalogProduct() && collectionUserKey ? (
+          <Suspense fallback={<ViewFallback />}>
+            <ProductCollectionsView
+              userKey={collectionUserKey}
+              products={allProducts}
+              onOpenProduct={setSelectedProduct}
+              hideImages={!roleCan(role, 'viewImages')}
+              showPrices={roleCan(role, 'viewPrices')}
+              onCollectionsChange={() => setCollectionsRevision((r) => r + 1)}
+            />
+          </Suspense>
+        ) : view === 'warehouse' && isStockProduct() ? (
+          <Suspense fallback={<ViewFallback />}>
+            <WarehouseHubPanel
+              products={allProducts}
+              labelQueueCount={labelQueue.length}
+              onOpenLabels={() => {
+                refreshLabelQueue();
+                setView('labels');
+              }}
+              onLocationSaved={handleWarehouseLocationSaved}
+            />
+          </Suspense>
         ) : view === 'labels' ? (
           <LabelsView
             queue={labelQueue}
@@ -1043,15 +1682,21 @@ export default function App() {
               });
             }}
           />
-        ) : view === 'ean-hygiene' &&
-          (roleCan(role, 'editProduct') || roleCan(role, 'manageUsers')) ? (
+        ) : view === 'admin' && canAccessAdminPanel(role) ? (
           <Suspense fallback={<ViewFallback />}>
-            <EanHygieneView
-              products={allProducts}
-              onOpenProduct={setSelectedProduct}
+            <AdminHubPanel
+              onBack={() => setView(opsStandalone ? 'ops' : 'catalog')}
+              backLabel={opsStandalone ? 'Wroc do Operacji' : undefined}
+              title={opsStandalone ? 'Administracja Operacji' : undefined}
+              description={
+                opsStandalone
+                  ? 'Uzytkownicy, uprawnienia i kontrola dostepu do narzedzi finansowo-ksiegowych.'
+                  : undefined
+              }
+              product={opsStandalone ? 'ops' : 'catalog'}
             />
           </Suspense>
-        ) : view === 'crm' && roleCan(role, 'useCrm') ? (
+        ) : view === 'crm' && canUseCrmModule(role) && CrmHubView ? (
           <Suspense fallback={<ViewFallback />}>
             <CrmHubView
               authorLabel={displayLabel}
@@ -1061,27 +1706,29 @@ export default function App() {
               cloudEnabled={mode === 'signed_in'}
               orderCount={orderCount}
               onChanged={refreshOrderCount}
+              onOpenCatalog={sellStandalone ? undefined : () => setView('catalog')}
             />
           </Suspense>
-        ) : view === 'ops' && roleCan(role, 'viewOps') ? (
+        ) : view === 'ops' && canViewOpsModule(role) && OpsHubView ? (
           <Suspense fallback={<ViewFallback />}>
-            <OpsHubView products={allProducts} />
+            <OpsHubView />
           </Suspense>
         ) : view === 'kits' && roleCan(role, 'manageKits') ? (
           <Suspense fallback={<ViewFallback />}>
             <KitsView
               kits={catalogKits}
-              products={products}
+              products={allProducts}
               onKitsChange={loadData}
-              canAddToOrder={roleCan(role, 'useCrm')}
+              canAddToOrder={canUseCrmModule(role)}
               onOrderDraftChange={refreshOrderCount}
             />
           </Suspense>
         ) : view === 'progress' ? (
           <Suspense fallback={<ViewFallback />}>
-            <PhotoProgressView
+            <CatalogProgressView
               products={products}
               onOpenMissing={(cat) => openMissingImages(cat ?? 'Wszystkie')}
+              onOpenKnowledgeWeak={(cat) => openKnowledgeGaps(cat ?? 'Wszystkie')}
             />
           </Suspense>
         ) : (
@@ -1095,7 +1742,10 @@ export default function App() {
           />
         )}
 
-        {roleCan(role, 'useCrm') && orderCount > 0 && view !== 'crm' && (
+        {canUseCrmModule(role) &&
+          CrmOrderSidePanel &&
+          orderCount > 0 &&
+          view !== 'crm' && (
           <Suspense fallback={null}>
             <CrmOrderSidePanel
               products={allProducts}
@@ -1107,28 +1757,34 @@ export default function App() {
         )}
       </main>
 
-      {selectedProduct && (
+      {selectedProduct && !opsStandalone && (
         <Suspense fallback={null}>
           <ProductDetail
             product={selectedProduct}
             onClose={() => setSelectedProduct(null)}
             onImageUpdated={handleImageUpdated}
             onProductUpdated={handleProductUpdated}
+            onProductDeleted={handleProductDeleted}
             onLabelQueueChange={refreshLabelQueue}
             onOrderDraftChange={refreshOrderCount}
             role={role}
+            hubStyle={isCatalogProduct()}
+            isFavorite={favoriteIds.includes(selectedProduct.id)}
+            onToggleFavorite={handleToggleFavorite}
+            collectionUserKey={collectionUserKey || undefined}
+            onCollectionsChange={() => setCollectionsRevision((n) => n + 1)}
           />
         </Suspense>
       )}
 
-      {showAddProduct && (
+      {showAddProduct && !opsStandalone && (
         <Suspense fallback={null}>
           <AddProductModal
-            catalog={activeCatalog}
+            catalog={defaultAddCatalog}
             existingProducts={products}
             onClose={() => setShowAddProduct(false)}
             onSaved={(product) => {
-              const cat = product.catalog || activeCatalog;
+              const cat = product.catalog || defaultAddCatalog;
               setCatalogCache((prev) => ({
                 ...prev,
                 [cat]: [...(prev[cat] ?? []), product],
@@ -1139,7 +1795,7 @@ export default function App() {
         </Suspense>
       )}
 
-      {showScanner && (
+      {showScanner && !opsStandalone && (
         <Suspense fallback={null}>
           <BarcodeScanner
             onScan={handleBarcodeScan}
@@ -1148,10 +1804,10 @@ export default function App() {
         </Suspense>
       )}
 
-      {showVisualSearch && activeCatalog === 'shop' && roleCan(role, 'useLens') && (
+      {showVisualSearch && canOpenLens && !opsStandalone && (
         <Suspense fallback={null}>
           <VisualSearchModal
-            products={products}
+            products={lensProducts}
             onClose={() => setShowVisualSearch(false)}
             onSelect={(product) => {
               setSelectedProduct(product);
@@ -1161,23 +1817,17 @@ export default function App() {
         </Suspense>
       )}
 
-      {showAdminUsers && roleCan(role, 'manageUsers') && (
-        <Suspense fallback={null}>
-          <AdminUsersPanel onClose={() => setShowAdminUsers(false)} />
-        </Suspense>
-      )}
-      {showRoleMatrix && roleCan(role, 'viewRoleMatrix') && (
-        <Suspense fallback={null}>
-          <RoleMatrixPanel onClose={() => setShowRoleMatrix(false)} />
-        </Suspense>
-      )}
 
+      {!embeddedInHub && !opsStandalone && (
+      <>
       <MobileBottomNav
         view={view}
         role={role}
         favoriteCount={favoriteCount}
         labelCount={labelQueue.length}
         orderCount={orderCount}
+        showCatalog={!sellStandalone}
+        showCatalogTools={!sellStandalone}
         onMore={() => setShowMobileMore(true)}
         onView={(v) => {
           if (v === 'labels') refreshLabelQueue();
@@ -1192,7 +1842,7 @@ export default function App() {
         role={role}
         displayLabel={displayLabel}
         roleLabel={ROLE_LABELS[role]}
-        activeCatalog={activeCatalog}
+        lensAvailable={canOpenLens}
         view={view}
         editMode={editMode}
         loading={loading}
@@ -1200,6 +1850,8 @@ export default function App() {
         canRequestStockSync={mode === 'signed_in' && roleCan(role, 'editStock')}
         missingCount={missingImages.length}
         kitsCount={catalogKits.length}
+        collectionsCount={collectionCount}
+        showCollections={isCatalogProduct() && !!collectionUserKey}
         onView={(v) => {
           if (v === 'labels') refreshLabelQueue();
           if (v === 'missing-images') openMissingImages();
@@ -1208,8 +1860,7 @@ export default function App() {
         onToggleEdit={() => setEditMode((v) => !v)}
         onAddProduct={() => setShowAddProduct(true)}
         onLens={() => setShowVisualSearch(true)}
-        onAdminUsers={() => setShowAdminUsers(true)}
-        onRoleMatrix={() => setShowRoleMatrix(true)}
+        onOpenAdmin={() => setView('admin')}
         onInstallApp={triggerInstallApp}
         onToggleTheme={toggleTheme}
         isDark={isDark}
@@ -1220,12 +1871,67 @@ export default function App() {
           else void signOut();
         }}
         modeGuest={mode === 'guest'}
+        showCatalogTools={!sellStandalone}
       />
+      </>
+      )}
 
       <InstallAppHint />
-      <ChatDrawer />
+      {canUseCommsModule() && ChatDrawer && !embeddedInHub && (
+        <Suspense fallback={null}>
+          <ChatDrawer />
+        </Suspense>
+      )}
     </div>
   );
+
+  if (embeddedInHub && suiteHub && HubShell) {
+    return (
+      <Suspense fallback={<ViewFallback />}>
+        <HubShell
+          view={suiteHub.hubView}
+          onViewChange={suiteHub.setHubView}
+          overlay={hubOverlay}
+          signedIn={mode === 'signed_in'}
+          effectiveRole={role}
+          appView={view}
+          onAppNavigate={hubNavigateView}
+          onSignOut={() => {
+            if (mode === 'guest') exitGuest();
+            else void signOut();
+          }}
+          favoriteCount={favoriteCount}
+          productCount={products.length}
+          orderCount={orderCount}
+          catalogLoading={loading}
+          onRefreshCatalog={loadData}
+          stockSyncScope={syncScope}
+          canEditStock={roleCan(role, 'editStock')}
+          canUseCrm={canUseCrmModule(role)}
+          canViewOps={canViewOpsModule(role)}
+          canAdmin={canAccessAdminPanel(role)}
+          showCatalog={moduleEnabled('catalog')}
+          showComms={canUseCommsModule()}
+          editMode={editMode}
+          onToggleEdit={() => setEditMode((v) => !v)}
+          mobileMoreOpen={showMobileMore}
+          onMobileMoreOpen={setShowMobileMore}
+          userId={user?.id ?? 'guest'}
+          canGoBack={suiteHub.canGoBack}
+          backLabel={
+            suiteHub.previousHubView
+              ? `Wroc do ${hubBackLabel(suiteHub.previousHubView)}`
+              : undefined
+          }
+          onBack={suiteHub.goBack}
+        >
+          {appShell}
+        </HubShell>
+      </Suspense>
+    );
+  }
+
+  return appShell;
 }
 
 function ViewFallback() {
@@ -1234,6 +1940,34 @@ function ViewFallback() {
       <Loader2 className="h-8 w-8 animate-spin text-brand-400" />
     </div>
   );
+}
+
+function hubBackLabel(view: import('./app/hubNavigation').HubView): string {
+  const labels: Partial<Record<import('./app/hubNavigation').HubView, string>> = {
+    workspace: 'Pulpitu',
+    home: 'Pulpitu',
+    catalog: 'Katalogu',
+    favorites: 'Ulubionych',
+    kits: 'Zestawow',
+    warehouse: 'Magazynu',
+    logistics: 'Logistyki',
+    crm: 'CRM',
+    orders: 'Zamowien',
+    ops: 'Operacji',
+    finance: 'Finansow',
+    comms: 'Talk',
+    team: 'Zespolu',
+    admin: 'Admina',
+    inbox: 'Skrzynki',
+    integrations: 'Integracji',
+    departments: 'Dzialow',
+    downloads: 'Pobran',
+    guide: 'Bazy wiedzy',
+    assist: 'Assist',
+    calendar: 'Kalendarza',
+    social: 'Talk',
+  };
+  return labels[view] ?? 'poprzedniego widoku';
 }
 
 function CatalogSwitch({
@@ -1309,8 +2043,91 @@ function NavTab({
   );
 }
 
+function CatalogStickySearchBar({
+  active,
+  children,
+  className = '',
+}: {
+  active: boolean;
+  children: ReactNode;
+  className?: string;
+}) {
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
+  const [pinned, setPinned] = useState(false);
+  const [spacerHeight, setSpacerHeight] = useState(0);
+
+  useLayoutEffect(() => {
+    if (!active) {
+      setPinned(false);
+      setSpacerHeight(0);
+      return;
+    }
+    const anchor = anchorRef.current;
+    if (!anchor) return;
+
+    const readTopOffset = () =>
+      parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue('--catalog-sticky-top'),
+      ) || 0;
+
+    let observer: IntersectionObserver | null = null;
+
+    const mountObserver = () => {
+      observer?.disconnect();
+      const topOffset = readTopOffset();
+      observer = new IntersectionObserver(
+        ([entry]) => {
+          const shouldPin = !entry.isIntersecting;
+          if (shouldPin && barRef.current) {
+            setSpacerHeight(barRef.current.getBoundingClientRect().height);
+          } else if (!shouldPin) {
+            setSpacerHeight(0);
+          }
+          setPinned(shouldPin);
+        },
+        { root: null, threshold: 0, rootMargin: `-${topOffset}px 0px 0px 0px` },
+      );
+      observer.observe(anchor);
+    };
+
+    mountObserver();
+    window.addEventListener('resize', mountObserver);
+    const ro = new ResizeObserver(mountObserver);
+    ro.observe(anchor);
+    if (barRef.current) ro.observe(barRef.current);
+
+    return () => {
+      observer?.disconnect();
+      ro.disconnect();
+      window.removeEventListener('resize', mountObserver);
+    };
+  }, [active]);
+
+  if (!active) return null;
+
+  return (
+    <div className={`catalog-sticky-search-wrap -mx-3 mb-3 sm:-mx-4 xl:-mx-6 ${className}`}>
+      <div ref={anchorRef} className="pointer-events-none h-px w-full opacity-0" aria-hidden />
+      {pinned && spacerHeight > 0 ? (
+        <div style={{ height: spacerHeight }} aria-hidden />
+      ) : null}
+      <div
+        ref={barRef}
+        className={`catalog-sticky-search border-b border-slate-800/80 bg-slate-950/95 px-3 py-2 supports-[backdrop-filter]:backdrop-blur-md sm:px-4 xl:px-6 ${
+          pinned ? 'catalog-sticky-search--pinned' : ''
+        }`}
+        style={pinned ? { top: 'var(--catalog-sticky-top, 0px)' } : undefined}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function CatalogView({
-  search,
+  filterSearch,
+  isSearchPending = false,
   category,
   onCategoryChange,
   sort,
@@ -1319,6 +2136,12 @@ function CatalogView({
   onStockFilterChange,
   imageFilter,
   onImageFilterChange,
+  knowledgeFilter = 'all',
+  onKnowledgeFilterChange,
+  baselinkerFilter = 'all',
+  onBaselinkerFilterChange,
+  waproMagFilter = 'all',
+  onWaproMagFilterChange,
   filtered,
   categoryList,
   categoryCounts,
@@ -1335,8 +2158,23 @@ function CatalogView({
   orderQtys = {},
   hideImages = false,
   showPrices = false,
+  showCatalogStats = false,
+  catalogProducts = [],
+  catalogLabel = 'Katalog',
+  useHubFilters = false,
+  canAddProduct = false,
+  onAddProduct,
+  catalogFilter,
+  onCatalogFilterChange,
+  catalogKindCounts,
+  showCatalogKindBadge = false,
+  shopLoading = false,
+  shopCategoryGroups,
+  collectionUserKey,
+  onCollectionsChange,
 }: {
-  search: string;
+  filterSearch: string;
+  isSearchPending?: boolean;
   category: string;
   onCategoryChange: (v: string) => void;
   sort: CatalogSort;
@@ -1345,6 +2183,12 @@ function CatalogView({
   onStockFilterChange: (v: StockFilter) => void;
   imageFilter: ImageFilter;
   onImageFilterChange: (v: ImageFilter) => void;
+  knowledgeFilter?: KnowledgeFilter;
+  onKnowledgeFilterChange?: (v: KnowledgeFilter) => void;
+  baselinkerFilter?: BaselinkerFilter;
+  onBaselinkerFilterChange?: (v: BaselinkerFilter) => void;
+  waproMagFilter?: WaproMagFilter;
+  onWaproMagFilterChange?: (v: WaproMagFilter) => void;
   filtered: Product[];
   categoryList: string[];
   categoryCounts: Record<string, number>;
@@ -1361,20 +2205,41 @@ function CatalogView({
   orderQtys?: Record<string, number>;
   hideImages?: boolean;
   showPrices?: boolean;
+  showCatalogStats?: boolean;
+  catalogProducts?: Product[];
+  catalogLabel?: string;
+  useHubFilters?: boolean;
+  canAddProduct?: boolean;
+  onAddProduct?: () => void;
+  catalogFilter?: CatalogListFilter;
+  onCatalogFilterChange?: (v: CatalogListFilter) => void;
+  catalogKindCounts?: { all: number; accessories: number; shop: number };
+  showCatalogKindBadge?: boolean;
+  shopLoading?: boolean;
+  shopCategoryGroups?: ShopCategoryGroup[];
+  collectionUserKey?: string;
+  onCollectionsChange?: () => void;
 }) {
-  const searching = search.trim().length >= 2;
+  const searching = filterSearch.trim().length >= 2;
   const [filtersOpen, setFiltersOpen] = useState(false);
   const favoriteSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
 
   const activeFilterCount =
+    (catalogFilter && catalogFilter !== 'all' ? 1 : 0) +
     (category !== 'Wszystkie' ? 1 : 0) +
     (stockFilter !== 'all' ? 1 : 0) +
-    (imageFilter !== 'all' ? 1 : 0);
+    (imageFilter !== 'all' ? 1 : 0) +
+    (knowledgeFilter !== 'all' ? 1 : 0) +
+    (baselinkerFilter !== 'all' ? 1 : 0) +
+    (waproMagFilter !== 'all' ? 1 : 0);
 
   function resetFilters() {
     onCategoryChange('Wszystkie');
     onStockFilterChange('all');
     onImageFilterChange('all');
+    onKnowledgeFilterChange?.('all');
+    onBaselinkerFilterChange?.('all');
+    onWaproMagFilterChange?.('all');
   }
 
   if (emptyFavorites) {
@@ -1389,7 +2254,78 @@ function CatalogView({
     );
   }
 
-  const categoryChips = (
+  const hubFilterBar =
+    useHubFilters && onGridDensityChange ? (
+      <CatalogFilterBar
+        categories={categoryList}
+        categoryCounts={categoryCounts}
+        category={category}
+        onCategoryChange={onCategoryChange}
+        stockFilter={stockFilter}
+        onStockFilterChange={onStockFilterChange}
+        imageFilter={imageFilter}
+        onImageFilterChange={onImageFilterChange}
+        knowledgeFilter={knowledgeFilter}
+        onKnowledgeFilterChange={onKnowledgeFilterChange}
+        baselinkerFilter={baselinkerFilter}
+        onBaselinkerFilterChange={onBaselinkerFilterChange}
+        waproMagFilter={waproMagFilter}
+        onWaproMagFilterChange={onWaproMagFilterChange}
+        shopCategoryGroups={shopCategoryGroups}
+        sort={sort}
+        onSortChange={onSortChange}
+        sortDisabled={searching}
+        density={gridDensity}
+        onDensityChange={onGridDensityChange}
+        filteredCount={filtered.length}
+        searchHint={filterSearch ? ` dla „${filterSearch}"` : undefined}
+        searching={searching || isSearchPending}
+        canAddProduct={canAddProduct}
+        onAddProduct={onAddProduct}
+        onResetFilters={resetFilters}
+        mobileFiltersOpen={filtersOpen}
+        onMobileFiltersOpenChange={setFiltersOpen}
+        activeFilterCount={activeFilterCount}
+        catalogFilter={catalogFilter}
+        onCatalogFilterChange={onCatalogFilterChange}
+        catalogKindCounts={catalogKindCounts}
+      />
+    ) : null;
+
+  const legacyCatalogKindChips =
+    !useHubFilters && onCatalogFilterChange && catalogFilter && catalogKindCounts ? (
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+        {(
+          [
+            { id: 'all' as const, label: 'Wszystkie', count: catalogKindCounts.all },
+            {
+              id: 'accessories' as const,
+              label: CATALOG_LABELS.accessories,
+              count: catalogKindCounts.accessories,
+            },
+            { id: 'shop' as const, label: CATALOG_LABELS.shop, count: catalogKindCounts.shop },
+          ] as const
+        ).map((opt) => (
+          <button
+            key={opt.id}
+            type="button"
+            onClick={() => onCatalogFilterChange(opt.id)}
+            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition ${
+              catalogFilter === opt.id
+                ? 'bg-brand-500/20 text-brand-300 ring-1 ring-brand-500/40'
+                : 'bg-slate-800 text-slate-400 hover:text-slate-100'
+            }`}
+          >
+            {opt.label}
+            {opt.count > 0 && (
+              <span className="ml-1 opacity-60">{opt.count}</span>
+            )}
+          </button>
+        ))}
+      </div>
+    ) : null;
+
+  const legacyCategoryChips = (
     <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
       {categoryList
         .filter((c) => c === 'Wszystkie' || (categoryCounts[c] ?? 0) > 0)
@@ -1413,117 +2349,11 @@ function CatalogView({
     </div>
   );
 
-  const stockImageFilters = (
-    <div className="flex flex-wrap gap-1.5">
-      {(
-        [
-          { id: 'all' as const, label: 'Wszystkie' },
-          { id: 'in-stock' as const, label: 'Na stanie' },
-          { id: 'low' as const, label: `Niski (≤${LOW_STOCK_MAX})` },
-          { id: 'out' as const, label: 'Brak' },
-        ] as const
-      ).map((opt) => (
-        <button
-          key={opt.id}
-          type="button"
-          onClick={() => onStockFilterChange(opt.id)}
-          className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
-            stockFilter === opt.id
-              ? 'bg-brand-500 text-white'
-              : 'bg-slate-800 text-slate-400 hover:text-slate-100'
-          }`}
-        >
-          {opt.label}
-        </button>
-      ))}
-      <span className="mx-0.5 hidden h-6 w-px bg-slate-700 sm:inline-block" />
-      {(
-        [
-          { id: 'all' as const, label: 'Wszystkie' },
-          { id: 'with' as const, label: 'Ze zdjęciem' },
-          { id: 'without' as const, label: 'Bez zdjęcia' },
-        ] as const
-      ).map((opt) => (
-        <button
-          key={`img-${opt.id}`}
-          type="button"
-          onClick={() => onImageFilterChange(opt.id)}
-          className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
-            imageFilter === opt.id
-              ? 'bg-brand-500 text-white'
-              : 'bg-slate-800 text-slate-400 hover:text-slate-100'
-          }`}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
-  );
-
-  const sortSelect = (
-    <label className="flex min-w-0 shrink-0 items-center gap-2 text-xs text-slate-400">
-      <span className="shrink-0">Sortuj</span>
-      <select
-        value={sort}
-        onChange={(e) => onSortChange(e.target.value as CatalogSort)}
-        disabled={searching}
-        title={
-          searching
-            ? 'Przy wyszukiwaniu kolejność = trafność'
-            : 'Kolejność listy'
-        }
-        className="max-w-[11rem] rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs text-slate-200 focus:border-brand-500 focus:outline-none disabled:opacity-50 sm:max-w-none"
-      >
-        {CATALOG_SORT_OPTIONS.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-
-  const densityToggle = onGridDensityChange ? (
-    <div
-      className="flex shrink-0 items-center rounded-lg border border-slate-700 p-0.5"
-      title="Rozmiar kafelków"
-    >
-      {(
-        [
-          { id: 'sm' as const, icon: LayoutGrid, label: 'Małe' },
-          { id: 'md' as const, icon: Rows2, label: 'Średnie' },
-          { id: 'lg' as const, icon: Square, label: 'Duże' },
-        ] as const
-      ).map((opt) => (
-        <button
-          key={opt.id}
-          type="button"
-          onClick={() => onGridDensityChange(opt.id)}
-          className={`rounded-md p-1.5 transition ${
-            gridDensity === opt.id
-              ? 'bg-brand-600 text-white'
-              : 'text-slate-400 hover:text-slate-100'
-          }`}
-          title={opt.label}
-          aria-label={`Widok: ${opt.label}`}
-        >
-          <opt.icon className="h-4 w-4" />
-        </button>
-      ))}
-    </div>
-  ) : null;
-
-  return (
-    <div className="space-y-3 sm:space-y-4">
-      {editMode && (
-        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-100">
-          Tryb edycji: zmieniaj stan przyciskami <strong>±1</strong> na kartach (zapis od razu).
-        </div>
-      )}
-
-      {/* Mobile: kategorie + jeden rząd Filtry / gęstość */}
+  const legacyFilters = !useHubFilters && (
+    <>
       <div className="space-y-2 lg:hidden">
-        {categoryChips}
+        {legacyCatalogKindChips}
+        {legacyCategoryChips}
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -1542,32 +2372,76 @@ function CatalogView({
               </span>
             )}
           </button>
-          {densityToggle}
+          {onGridDensityChange && (
+            <div className="flex shrink-0 items-center rounded-lg border border-slate-700 p-0.5">
+              {(
+                [
+                  { id: 'sm' as const, icon: LayoutGrid, label: 'Małe' },
+                  { id: 'md' as const, icon: Rows2, label: 'Średnie' },
+                  { id: 'lg' as const, icon: Square, label: 'Duże' },
+                ] as const
+              ).map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => onGridDensityChange(opt.id)}
+                  className={`rounded-md p-1.5 transition ${
+                    gridDensity === opt.id
+                      ? 'bg-brand-600 text-white'
+                      : 'text-slate-400 hover:text-slate-100'
+                  }`}
+                  title={opt.label}
+                  aria-label={`Widok: ${opt.label}`}
+                >
+                  <opt.icon className="h-4 w-4" />
+                </button>
+              ))}
+            </div>
+          )}
           <p className="ml-auto truncate text-xs text-slate-500">
             {filtered.length} prod.
             {searching && ' · trafność'}
           </p>
         </div>
       </div>
-
-      {/* Desktop: pełne filtry */}
       <div className="hidden space-y-4 lg:block">
-        {categoryChips}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          {stockImageFilters}
-          <div className="flex flex-wrap items-center gap-2">
-            {sortSelect}
-            {densityToggle}
-          </div>
-        </div>
+        {legacyCatalogKindChips}
+        {legacyCategoryChips}
         <p className="text-sm text-slate-500">
           {filtered.length} {filtered.length === 1 ? 'produkt' : 'produktów'}
-          {search && ` dla „${search}"`}
+          {filterSearch && ` dla „${filterSearch}"`}
+          {isSearchPending && ' …'}
           {searching && ' · wg trafności'}
         </p>
       </div>
+    </>
+  );
 
-      {filtersOpen && (
+  return (
+    <div className="space-y-3 sm:space-y-4">
+      {showCatalogStats && catalogProducts.length > 0 && (
+        <CatalogStatsBar
+          filtered={filtered}
+          catalogProducts={catalogProducts}
+          catalogLabel={catalogLabel}
+        />
+      )}
+      {shopLoading && catalogFilter === 'all' && (
+        <p className="flex items-center gap-2 text-xs text-slate-500">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-brand-400" />
+          Dociąganie produktów sklepu…
+        </p>
+      )}
+      {editMode && (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-100">
+          Tryb edycji: zmieniaj stan przyciskami <strong>±1</strong> na kartach (zapis od razu).
+        </div>
+      )}
+
+      {hubFilterBar}
+      {legacyFilters}
+
+      {!useHubFilters && filtersOpen && (
         <div className="fixed inset-0 z-[55] lg:hidden" role="dialog" aria-label="Filtry">
           <button
             type="button"
@@ -1588,83 +2462,14 @@ function CatalogView({
               </button>
             </div>
             <div className="space-y-4 px-4 py-4">
-              <div>
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                  Stan magazynowy
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {(
-                    [
-                      { id: 'all' as const, label: 'Wszystkie' },
-                      { id: 'in-stock' as const, label: 'Na stanie' },
-                      { id: 'low' as const, label: `Niski (≤${LOW_STOCK_MAX})` },
-                      { id: 'out' as const, label: 'Brak' },
-                    ] as const
-                  ).map((opt) => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => onStockFilterChange(opt.id)}
-                      className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
-                        stockFilter === opt.id
-                          ? 'bg-brand-500 text-white'
-                          : 'bg-slate-800 text-slate-400'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                  Zdjęcia
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {(
-                    [
-                      { id: 'all' as const, label: 'Wszystkie' },
-                      { id: 'with' as const, label: 'Ze zdjęciem' },
-                      { id: 'without' as const, label: 'Bez zdjęcia' },
-                    ] as const
-                  ).map((opt) => (
-                    <button
-                      key={`img-${opt.id}`}
-                      type="button"
-                      onClick={() => onImageFilterChange(opt.id)}
-                      className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
-                        imageFilter === opt.id
-                          ? 'bg-brand-500 text-white'
-                          : 'bg-slate-800 text-slate-400'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                  Sortowanie
-                </p>
-                {sortSelect}
-              </div>
-              <div className="flex gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className="flex-1 rounded-xl border border-slate-700 py-2.5 text-sm text-slate-300"
-                >
-                  Wyczyść
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFiltersOpen(false)}
-                  className="flex-1 rounded-xl bg-brand-600 py-2.5 text-sm font-medium text-white"
-                >
-                  Gotowe
-                </button>
-              </div>
+              <p className="text-xs text-slate-500">Użyj chipów kategorii powyżej listy.</p>
+              <button
+                type="button"
+                onClick={() => setFiltersOpen(false)}
+                className="w-full rounded-xl bg-brand-600 py-2.5 text-sm font-medium text-white"
+              >
+                Zamknij
+              </button>
             </div>
           </div>
         </div>
@@ -1677,16 +2482,19 @@ function CatalogView({
           <p className="mt-1 text-sm">Spróbuj innego SKU, nazwy albo filtrów</p>
         </div>
       ) : (
+        <div
+          className={isSearchPending ? 'catalog-grid-pending transition-opacity duration-150' : undefined}
+        >
         <ProductGrid
           products={filtered}
           className={GRID_CLASS[gridDensity]}
-          resetKey={`${gridDensity}|${category}|${stockFilter}|${imageFilter}|${sort}|${search}|${filtered.length}`}
+          resetKey={`${gridDensity}|${category}|${stockFilter}|${imageFilter}|${sort}`}
           renderItem={(product) => (
-            <ProductCard
+            <CatalogGridCard
               product={product}
-              onClick={() => onProductClick(product)}
               editMode={editMode}
               isFavorite={favoriteSet.has(product.id)}
+              onProductClick={onProductClick}
               onToggleFavorite={onToggleFavorite}
               onStockDelta={onStockDelta}
               stockBusy={stockBusyId === product.id}
@@ -1695,9 +2503,13 @@ function CatalogView({
               onOrderDelta={onOrderDelta}
               hideImages={hideImages}
               showPrices={showPrices}
+              showCatalogKind={showCatalogKindBadge}
+              collectionUserKey={collectionUserKey}
+              onCollectionsChange={onCollectionsChange}
             />
           )}
         />
+        </div>
       )}
     </div>
   );
@@ -1727,8 +2539,8 @@ function LabelsView({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-semibold text-slate-100">Etykiety półkowe</h2>
-          <p className="text-sm text-slate-500">
-            Kolejka do druku kodów kreskowych (EAN / SKU)
+          <p className="mt-1 text-sm text-slate-500">
+            Kolejka do druku kodów kreskowych (EAN / SKU) i adresu regału
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -1774,6 +2586,11 @@ function LabelsView({
                   {item.sku}
                   {item.ean && item.ean !== item.sku ? ` · ${item.ean}` : ''}
                 </p>
+                {item.locationCode ? (
+                  <p className="font-mono text-xs font-semibold text-emerald-400">{item.locationCode}</p>
+                ) : (
+                  <p className="text-[10px] text-slate-600">Brak lokalizacji — ustaw w Magazyn / produkcie</p>
+                )}
               </div>
               <button
                 type="button"

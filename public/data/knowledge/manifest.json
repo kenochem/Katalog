@@ -1,0 +1,103 @@
+{
+  "updatedAt": "2026-08-07T09:58:18.858Z",
+  "source": "kenochem-katalog",
+  "totalProducts": 4002,
+  "batchSize": 500,
+  "batches": [
+    {
+      "file": "batch-01.jsonl",
+      "count": 500,
+      "skuFrom": "1000015",
+      "skuTo": "CONC0017"
+    },
+    {
+      "file": "batch-02.jsonl",
+      "count": 500,
+      "skuFrom": "CONC0020",
+      "skuTo": "FRE000010"
+    },
+    {
+      "file": "batch-03.jsonl",
+      "count": 500,
+      "skuFrom": "FRE000011",
+      "skuTo": "HYD000463"
+    },
+    {
+      "file": "batch-04.jsonl",
+      "count": 500,
+      "skuFrom": "HYD000464",
+      "skuTo": "HYD000918"
+    },
+    {
+      "file": "batch-05.jsonl",
+      "count": 500,
+      "skuFrom": "HYD000919",
+      "skuTo": "INNE0362"
+    },
+    {
+      "file": "batch-06.jsonl",
+      "count": 500,
+      "skuFrom": "INNE0365",
+      "skuTo": "KAT00167"
+    },
+    {
+      "file": "batch-07.jsonl",
+      "count": 500,
+      "skuFrom": "KAT00177",
+      "skuTo": "NOR000002"
+    },
+    {
+      "file": "batch-08.jsonl",
+      "count": 500,
+      "skuFrom": "NOR000004",
+      "skuTo": "YOU000071"
+    },
+    {
+      "file": "batch-09.jsonl",
+      "count": 2,
+      "skuFrom": "YUO000012",
+      "skuTo": "YUO000016"
+    }
+  ],
+  "usage": "Każda linia w batch-*.jsonl to JSON produktu. Pole knowledgeText — gotowy chunk do RAG. Crawl: /data/knowledge/manifest.json",
+  "contentPhases": [
+    {
+      "phase": 1,
+      "name": "Tożsamość",
+      "fields": [
+        "sku",
+        "ean",
+        "name",
+        "catalog",
+        "category"
+      ]
+    },
+    {
+      "phase": 2,
+      "name": "Opisy",
+      "fields": [
+        "shortDescription",
+        "descriptionPlain",
+        "parameters"
+      ]
+    },
+    {
+      "phase": 3,
+      "name": "Logistyka",
+      "fields": [
+        "stock",
+        "warehouseLocation",
+        "weightKg",
+        "dimensions"
+      ]
+    },
+    {
+      "phase": 4,
+      "name": "Media",
+      "fields": [
+        "imageUrl",
+        "hasImage"
+      ]
+    }
+  ]
+}

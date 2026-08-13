@@ -1,4 +1,7 @@
-import Fuse from 'fuse.js';
+import { assessProductKnowledge } from './productKnowledge';
+import { hasBaselinkerLink } from './baselinkerLink';
+import { isWaproSkeletonProduct } from './productMeta';
+import { getProductSearchIndex, searchIndexedProducts } from './productSearchIndex';
 import type { Product } from '../types';
 
 export type CatalogSort =
@@ -11,6 +14,9 @@ export type CatalogSort =
 
 export type StockFilter = 'all' | 'in-stock' | 'low' | 'out';
 export type ImageFilter = 'all' | 'with' | 'without';
+export type KnowledgeFilter = 'all' | 'weak' | 'good';
+export type WaproMagFilter = 'all' | 'needs-media';
+export type BaselinkerFilter = 'all' | 'linked' | 'not-linked';
 
 /** Próg „niski stan” (włącznie), powyżej 0. */
 export const LOW_STOCK_MAX = 5;
@@ -23,19 +29,6 @@ export const CATALOG_SORT_OPTIONS: { value: CatalogSort; label: string }[] = [
   { value: 'stock-desc', label: 'Stan: od największego' },
   { value: 'stock-asc', label: 'Stan: od najmniejszego' },
 ];
-
-function normalizeEan(value: string): string {
-  return value.replace(/\D/g, '');
-}
-
-function productEans(product: Product): string[] {
-  const eans: string[] = [];
-  if (product.ean) eans.push(normalizeEan(product.ean));
-  for (const v of product.variants ?? []) {
-    if (v.ean) eans.push(normalizeEan(v.ean));
-  }
-  return eans.filter(Boolean);
-}
 
 function comparePl(a: string, b: string): number {
   return a.localeCompare(b, 'pl', { sensitivity: 'base', numeric: true });
@@ -77,6 +70,9 @@ export function applyCatalogFilters(
     sort: CatalogSort;
     stockFilter?: StockFilter;
     imageFilter?: ImageFilter;
+    knowledgeFilter?: KnowledgeFilter;
+    baselinkerFilter?: BaselinkerFilter;
+    waproMagFilter?: WaproMagFilter;
   },
 ): Product[] {
   let result = filterProducts(products, opts.search, opts.category);
@@ -98,6 +94,22 @@ export function applyCatalogFilters(
     result = result.filter((p) => !(p.customImageUrl || p.imageUrl));
   }
 
+  if (opts.knowledgeFilter === 'weak') {
+    result = result.filter((p) => productKnowledgeScore(p) < 55);
+  } else if (opts.knowledgeFilter === 'good') {
+    result = result.filter((p) => productKnowledgeScore(p) >= 65);
+  }
+
+  if (opts.baselinkerFilter === 'linked') {
+    result = result.filter((p) => hasBaselinkerLink(p));
+  } else if (opts.baselinkerFilter === 'not-linked') {
+    result = result.filter((p) => !hasBaselinkerLink(p));
+  }
+
+  if (opts.waproMagFilter === 'needs-media') {
+    result = result.filter((p) => isWaproSkeletonProduct(p));
+  }
+
   // Przy aktywnym wyszukiwaniu zachowaj ranking trafień
   if (opts.search.trim().length >= 2) {
     return result;
@@ -105,67 +117,16 @@ export function applyCatalogFilters(
   return sortProducts(result, opts.sort);
 }
 
-type FuseProduct = Product & {
-  variantSkus: string;
-  variantNames: string;
-  variantEans: string;
-  eanNormalized: string;
-  tagsText: string;
-};
+export { createProductSearch, type FuseProduct } from './productSearchIndex';
 
-export function createProductSearch(products: Product[]) {
-  const expanded: FuseProduct[] = products.map((p) => ({
-    ...p,
-    variantSkus: p.variants?.map((v) => v.sku).join(' ') || '',
-    variantNames: p.variants?.map((v) => v.name).join(' ') || '',
-    variantEans: p.variants?.map((v) => v.ean || '').join(' ') || '',
-    eanNormalized: normalizeEan(p.ean || ''),
-    tagsText: (p.tags || []).join(' '),
-  }));
+const knowledgeScoreCache = new WeakMap<Product, number>();
 
-  return new Fuse(expanded, {
-    keys: [
-      { name: 'sku', weight: 0.3 },
-      { name: 'ean', weight: 0.2 },
-      { name: 'eanNormalized', weight: 0.2 },
-      { name: 'variantEans', weight: 0.15 },
-      { name: 'variantSkus', weight: 0.15 },
-      { name: 'displayName', weight: 0.1 },
-      { name: 'variantNames', weight: 0.05 },
-      { name: 'name', weight: 0.03 },
-      { name: 'manufacturer', weight: 0.01 },
-      { name: 'tagsText', weight: 0.02 },
-      { name: 'category', weight: 0.01 },
-    ],
-    threshold: 0.35,
-    ignoreLocation: true,
-    minMatchCharLength: 2,
-  });
-}
-
-/** Cache Fuse — budowa indeksu przy każdym znaku mulił UI. */
-let fuseCache: {
-  products: Product[];
-  category: string;
-  list: Product[];
-  fuse: Fuse<FuseProduct>;
-} | null = null;
-
-function getCachedFuse(products: Product[], category: string) {
-  if (
-    fuseCache &&
-    fuseCache.products === products &&
-    fuseCache.category === category
-  ) {
-    return fuseCache;
-  }
-  let list = products;
-  if (category && category !== 'Wszystkie') {
-    list = products.filter((p) => p.category === category);
-  }
-  const fuse = createProductSearch(list);
-  fuseCache = { products, category, list, fuse };
-  return fuseCache;
+function productKnowledgeScore(product: Product): number {
+  const hit = knowledgeScoreCache.get(product);
+  if (hit !== undefined) return hit;
+  const score = assessProductKnowledge(product).score;
+  knowledgeScoreCache.set(product, score);
+  return score;
 }
 
 export function filterProducts(
@@ -174,46 +135,7 @@ export function filterProducts(
   category: string,
 ): Product[] {
   const q = search.trim();
-  if (q.length < 2) {
-    if (category && category !== 'Wszystkie') {
-      return products.filter((p) => p.category === category);
-    }
-    return products;
-  }
-
-  const { list, fuse } = getCachedFuse(products, category);
-  const lower = q.toLowerCase();
-  const eanQuery = normalizeEan(q);
-
-  if (eanQuery.length >= 8) {
-    const eanMatches = list.filter((p) =>
-      productEans(p).some(
-        (ean) => ean === eanQuery || ean.endsWith(eanQuery) || eanQuery.endsWith(ean),
-      ),
-    );
-    if (eanMatches.length > 0) return eanMatches;
-  }
-
-  const exactSku = list.filter(
-    (p) =>
-      p.sku.toLowerCase() === lower ||
-      p.variants?.some((v) => v.sku.toLowerCase() === lower),
-  );
-  if (exactSku.length > 0) return exactSku;
-
-  const prefixSku = list.filter(
-    (p) =>
-      p.sku.toLowerCase().startsWith(lower) ||
-      p.variants?.some((v) => v.sku.toLowerCase().startsWith(lower)),
-  );
-  if (prefixSku.length > 0 && prefixSku.length <= 20) return prefixSku;
-
-  const containsSku = list.filter(
-    (p) =>
-      p.sku.toLowerCase().includes(lower) ||
-      p.variants?.some((v) => v.sku.toLowerCase().includes(lower)),
-  );
-  if (containsSku.length > 0 && containsSku.length <= 30) return containsSku;
-
-  return fuse.search(q, { limit: 60 }).map((r) => r.item);
+  const index = getProductSearchIndex(products, category);
+  if (q.length < 2) return index.list;
+  return searchIndexedProducts(index, q);
 }

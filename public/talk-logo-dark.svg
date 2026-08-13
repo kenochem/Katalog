@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 32" fill="none" role="img" aria-label="Talk">
+  <rect width="28" height="28" x="2" y="2" rx="8" fill="#33b33b"/>
+  <path d="M6.4 10.1c0-2.2 1.8-4.1 4.1-4.1h10.9c2.3 0 4.1 1.9 4.1 4.1v7.1c0 2.3-1.8 4.1-4.1 4.1h-4.7L11 25.5v-4.2h-.5c-2.3 0-4.1-1.8-4.1-4.1v-7.1Z" fill="#fff"/>
+  <path d="M10.9 14.1 21.5 9.8c.8-.3 1.5.5 1.1 1.2l-4.3 10.4c-.3.8-1.5.7-1.7-.2l-1-4-4.4-1.4c-.8-.2-1-1.4-.3-1.7Z" fill="#33b33b"/>
+  <path d="M15.6 17.2 21.5 9.8 16.6 21.2" stroke="#fff" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="38" y="21" font-family="Segoe UI, system-ui, sans-serif" font-size="17" font-weight="700" fill="#7dcf82">Talk</text>
+</svg>

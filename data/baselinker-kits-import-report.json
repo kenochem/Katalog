@@ -1,0 +1,14 @@
+{
+  "generatedAt": "2026-08-04T11:05:55.433Z",
+  "sourceCsv": "d:\\Users\\Biuro\\Downloads\\Zestawy__2026-08-04_12_59.csv",
+  "namesFromXml": "d:\\Users\\Biuro\\Downloads\\Base__Produkty__domylny_XML_2026-08-04_11_54.xml",
+  "format": "baselinker-zestawy-csv",
+  "zestawCount": 113,
+  "dedupeSkipped": 11,
+  "mappedOk": 102,
+  "mappedPartial": 0,
+  "mappedFailed": 0,
+  "kitsReady": 102,
+  "partialDetails": [],
+  "failedDetails": []
+}

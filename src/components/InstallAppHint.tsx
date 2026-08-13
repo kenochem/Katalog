@@ -5,8 +5,26 @@ import {
   getDeferredInstall,
   type DeferredInstallPrompt,
 } from '../lib/pwaInstall';
+import { APP_PRODUCT, branding } from '../app/moduleRegistry';
 
-const DISMISS_KEY = 'katalog-pwa-hint-dismissed';
+const DISMISS_KEY =
+  APP_PRODUCT === 'talk'
+    ? 'katalog-pwa-hint-dismissed-talk'
+    : `katalog-pwa-hint-dismissed-${APP_PRODUCT}`;
+
+const PWA_ICON_BY_PRODUCT: Record<string, string> = {
+  suite: '/icons/suite-icon-192.png',
+  sell: '/icons/sell-icon-192.png',
+  stock: '/icons/stock-icon-192.png',
+  ops: '/icons/ops-icon-192.png',
+  talk: '/icons/talk-icon-192.png',
+  calendar: '/icons/calendar-icon-192.png',
+};
+
+const PWA_ICON = PWA_ICON_BY_PRODUCT[APP_PRODUCT] ?? '/icons/icon-192.png';
+
+const APP_SHORT =
+  branding.headerTitle.split('—')[0]?.trim() || branding.headerTitle || 'Kenochem';
 
 function isStandalone(): boolean {
   if (typeof window === 'undefined') return false;
@@ -135,7 +153,7 @@ export function InstallAppHint() {
     >
       <div className="flex items-start gap-3">
         <img
-          src="/icons/icon-192.png"
+          src={PWA_ICON}
           alt=""
           className="h-12 w-12 shrink-0 rounded-xl shadow-md"
           width={48}
@@ -144,7 +162,7 @@ export function InstallAppHint() {
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <p className="text-base font-bold text-[#f8fafc]">
-              {isDesktop() ? 'Katalog na komputer' : 'Katalog na telefon'}
+              {isDesktop() ? `${APP_SHORT} na komputer` : `${APP_SHORT} na telefon`}
             </p>
             <button
               type="button"
@@ -172,7 +190,7 @@ export function InstallAppHint() {
               <>
                 Chrome / Edge: ikona <strong className="text-[#f8fafc]">instalacji</strong> w
                 pasku adresu (albo menu →{' '}
-                <strong className="text-[#f8fafc]">Zainstaluj Katalog</strong>
+                <strong className="text-[#f8fafc]">Zainstaluj {APP_SHORT}</strong>
                 ). Powstanie ikona na pulpicie / w menu Start.
               </>
             ) : canPrompt ? (

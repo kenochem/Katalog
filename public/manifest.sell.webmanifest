@@ -1,0 +1,19 @@
+{
+  "name": "Kenochem Handel",
+  "short_name": "Handel",
+  "description": "CRM, oferty, mapa tras i katalog produktów",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "browser"],
+  "orientation": "any",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "lang": "pl",
+  "categories": ["business", "productivity"],
+  "icons": [
+    { "src": "/icons/sell-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/sell-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/sell-icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

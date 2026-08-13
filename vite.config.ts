@@ -2,7 +2,19 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const outDirs: Record<string, string> = {
+    catalog: 'dist-catalog',
+    suite: 'dist-suite',
+    sell: 'dist-sell',
+    stock: 'dist-stock',
+    ops: 'dist-ops',
+    talk: 'dist-talk',
+    logistics: 'dist-logistics',
+    calendar: 'dist-calendar',
+  };
+
+  return {
   plugins: [react(), tailwindcss()],
   optimizeDeps: {
     exclude: ['@xenova/transformers', 'tesseract.js'],
@@ -11,6 +23,7 @@ export default defineConfig({
     format: 'es',
   },
   build: {
+    outDir: outDirs[mode] ?? 'dist',
     target: 'es2020',
     cssCodeSplit: true,
     rollupOptions: {
@@ -23,8 +36,12 @@ export default defineConfig({
           if (id.includes('fuse.js')) return 'fuse';
           if (id.includes('lucide-react')) return 'icons';
           if (id.includes('react-dom') || id.includes('/react/')) return 'react';
+          if (id.includes('leaflet')) return 'leaflet';
+          if (id.includes('recharts')) return 'recharts';
+          if (id.includes('@xenova/transformers')) return 'transformers';
         },
       },
     },
   },
+};
 });

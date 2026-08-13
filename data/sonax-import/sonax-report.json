@@ -1,0 +1,288 @@
+{
+  "generatedAt": "2026-08-12T14:43:17",
+  "acquisitionCutoff": "2026-03-01",
+  "summary": {
+    "products": 5666,
+    "productsWithSonaxInName": 30,
+    "contractors": 13773,
+    "contractorsWithNip": 7120,
+    "contractorsMarkedCustomer": 109,
+    "invoices": 4004,
+    "invoicesRawIncludingPostAcquisition": 4089,
+    "uniqueInvoiceClients": 923,
+    "invoiceDateMin": "2024-01-02",
+    "invoiceDateMax": "2026-02-27",
+    "invoiceTotalGrossPln": 3046434.78,
+    "subiektHistoryThrough": "2026-02-28",
+    "beforeAcquisition": {
+      "invoices": 4004,
+      "totalGrossPln": 3046434.78
+    },
+    "excludedFromSubiektAnalysis": {
+      "invoices": 85,
+      "totalGrossPln": 156186.23,
+      "note": "FV w Subiekcie od 2026-03 — pomijane; liczymy tylko WAPRO Kenochem"
+    }
+  },
+  "monthlyTrend": [
+    {
+      "month": "2024-01",
+      "grossPln": 106350.59
+    },
+    {
+      "month": "2024-02",
+      "grossPln": 86608.46
+    },
+    {
+      "month": "2024-03",
+      "grossPln": 107002.18
+    },
+    {
+      "month": "2024-04",
+      "grossPln": 126588.89
+    },
+    {
+      "month": "2024-05",
+      "grossPln": 113966.79
+    },
+    {
+      "month": "2024-06",
+      "grossPln": 114105.54
+    },
+    {
+      "month": "2024-07",
+      "grossPln": 121282.2
+    },
+    {
+      "month": "2024-08",
+      "grossPln": 105809.49
+    },
+    {
+      "month": "2024-09",
+      "grossPln": 151558.5
+    },
+    {
+      "month": "2024-10",
+      "grossPln": 120605.23
+    },
+    {
+      "month": "2024-11",
+      "grossPln": 111021.6
+    },
+    {
+      "month": "2024-12",
+      "grossPln": 118934.08
+    },
+    {
+      "month": "2025-01",
+      "grossPln": 107304.91
+    },
+    {
+      "month": "2025-02",
+      "grossPln": 92664.43
+    },
+    {
+      "month": "2025-03",
+      "grossPln": 138155.62
+    },
+    {
+      "month": "2025-04",
+      "grossPln": 104862.39
+    },
+    {
+      "month": "2025-05",
+      "grossPln": 95687.06
+    },
+    {
+      "month": "2025-06",
+      "grossPln": 170780.42
+    },
+    {
+      "month": "2025-07",
+      "grossPln": 122498.6
+    },
+    {
+      "month": "2025-08",
+      "grossPln": 111597.56
+    },
+    {
+      "month": "2025-09",
+      "grossPln": 114740.02
+    },
+    {
+      "month": "2025-10",
+      "grossPln": 188632.65
+    },
+    {
+      "month": "2025-11",
+      "grossPln": 125581.22
+    },
+    {
+      "month": "2025-12",
+      "grossPln": 109075.94
+    },
+    {
+      "month": "2026-01",
+      "grossPln": 95881.07
+    },
+    {
+      "month": "2026-02",
+      "grossPln": 85139.34
+    }
+  ],
+  "topClientsByRevenue": [
+    {
+      "clientName": "ENERGOUTIL  SP. Z O.O.",
+      "grossPln": 209038.31,
+      "invoices": 64
+    },
+    {
+      "clientName": "\"AUTO PARK\" Spółka z ograniczoną odpowiedzialności",
+      "grossPln": 188386.81,
+      "invoices": 112
+    },
+    {
+      "clientName": "ARDOR Andrzej Romaniuk",
+      "grossPln": 176347.1,
+      "invoices": 28
+    },
+    {
+      "clientName": "GUSCHA SPÓŁKA Z OGRANICZONĄ ODPOWIEDZIALNOŚCIĄ",
+      "grossPln": 174363.41,
+      "invoices": 29
+    },
+    {
+      "clientName": "ZAKŁADY MIĘSNE \"ŁUNIEWSCY\"",
+      "grossPln": 150710.7,
+      "invoices": 42
+    },
+    {
+      "clientName": "P.H. \"AGROMA\" SPÓŁKA AKCYJNA W POZNANIU",
+      "grossPln": 135875.14,
+      "invoices": 4
+    },
+    {
+      "clientName": "FREIGHTLINER PL Sp. z o.o.",
+      "grossPln": 114136.07,
+      "invoices": 26
+    },
+    {
+      "clientName": "MULTI AUTO Sp.z o.o.",
+      "grossPln": 110659.35,
+      "invoices": 219
+    },
+    {
+      "clientName": "MULTI SERVICE ENTERPISE KAROL CISZEWSKI",
+      "grossPln": 78577.72,
+      "invoices": 119
+    },
+    {
+      "clientName": "RAVEN LUCAS GRIZZ",
+      "grossPln": 75315.44,
+      "invoices": 6
+    },
+    {
+      "clientName": "ZPM \" JBB\" IMPORT - EKSPORT JÓZEF BAŁDYGA",
+      "grossPln": 73111.76,
+      "invoices": 11
+    },
+    {
+      "clientName": "DS LASH SPÓŁKA Z OGRANICZONĄ ODPOWIEDZIALNOŚCIĄ",
+      "grossPln": 54167.72,
+      "invoices": 44
+    },
+    {
+      "clientName": "Partner in Pet Food Poland S.A.",
+      "grossPln": 43008.05,
+      "invoices": 41
+    },
+    {
+      "clientName": "LORENZ  P.S.A.",
+      "grossPln": 39178.98,
+      "invoices": 18
+    },
+    {
+      "clientName": "TOP AUTO Andrzej Arefiew",
+      "grossPln": 39012.74,
+      "invoices": 44
+    },
+    {
+      "clientName": "AR-TIR Jolanta Kęćko",
+      "grossPln": 35271.21,
+      "invoices": 24
+    },
+    {
+      "clientName": "BHU \"HOMKLAR\" S.C.",
+      "grossPln": 32934.36,
+      "invoices": 36
+    },
+    {
+      "clientName": "TEB EDUKACJA Sp z o.o.",
+      "grossPln": 30262.78,
+      "invoices": 10
+    },
+    {
+      "clientName": "Firma Handlowo-Usługowa RABBIT - Sebastian Królik",
+      "grossPln": 29538.34,
+      "invoices": 17
+    },
+    {
+      "clientName": "FROZENTIS Katarzyna Blicharska",
+      "grossPln": 28170.49,
+      "invoices": 24
+    },
+    {
+      "clientName": "DOBRA WSPÓLNOTA S.C.",
+      "grossPln": 28057.93,
+      "invoices": 53
+    },
+    {
+      "clientName": "TENZI Sp. z o.o.",
+      "grossPln": 27818.99,
+      "invoices": 7
+    },
+    {
+      "clientName": "AUTOPURE WIESŁAW TOMASZEWSKI",
+      "grossPln": 26524.58,
+      "invoices": 42
+    },
+    {
+      "clientName": "MYJNIA SAMOCHODOWA",
+      "grossPln": 23843.58,
+      "invoices": 34
+    },
+    {
+      "clientName": "PGE GÓRNICTWO I ENERGETYKA KONWENCJONALNA S.A.",
+      "grossPln": 23802.06,
+      "invoices": 3
+    },
+    {
+      "clientName": "Wspólnota właścicieli lokali użytkowych",
+      "grossPln": 22876.88,
+      "invoices": 25
+    },
+    {
+      "clientName": "GALON OLEJE Sp. z o.o",
+      "grossPln": 20180.08,
+      "invoices": 33
+    },
+    {
+      "clientName": "CARGO Katarzyna Zalewska-Krysiewicz",
+      "grossPln": 20083.6,
+      "invoices": 46
+    },
+    {
+      "clientName": "FIRMA HANDLOWO-USŁUGOWA \"POL-KRUSZ\" ZBIGNIEW WOJNO",
+      "grossPln": 19781.68,
+      "invoices": 13
+    },
+    {
+      "clientName": "ODYSSEY SPÓŁKA Z OGRANICZONĄ ODPOWIEDZIALNOŚCIĄ",
+      "grossPln": 19375.65,
+      "invoices": 29
+    }
+  ],
+  "missingData": [
+    "Eksport WAPRO od 2026-03 (wapro-faktury.tsv) — npm run reconcile:sonax po sync na serwerze Mag"
+  ]
+}

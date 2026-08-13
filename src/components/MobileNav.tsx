@@ -11,7 +11,6 @@ import {
   Plus,
   Pencil,
   Sparkles,
-  Users,
   Download,
   Sun,
   Moon,
@@ -19,12 +18,16 @@ import {
   RefreshCw,
   Loader2,
   ShoppingCart,
-  AlertTriangle,
   Shield,
+  FolderOpen,
+  Boxes,
 } from 'lucide-react';
-import type { View, CatalogType } from '../types';
+import type { View } from '../types';
 import type { AppRole } from '../lib/roles';
 import { roleCan } from '../lib/roles';
+import { canAccessAdminPanel } from '../lib/adminAccess';
+import { canUseCrmModule } from '../app/productAccess';
+import { isStockProduct } from '../app/productLayout';
 import { DatabaseSyncIcon } from './DatabaseSyncIcon';
 
 interface MobileBottomNavProps {
@@ -35,6 +38,8 @@ interface MobileBottomNavProps {
   labelCount: number;
   orderCount?: number;
   role: AppRole;
+  showCatalog?: boolean;
+  showCatalogTools?: boolean;
 }
 
 export function MobileBottomNav({
@@ -45,28 +50,25 @@ export function MobileBottomNav({
   labelCount,
   orderCount = 0,
   role,
+  showCatalog = true,
+  showCatalogTools = true,
 }: MobileBottomNavProps) {
-  const moreActive = [
-    'kits',
-    'progress',
-    'missing-images',
-    'admin',
-    'ean-hygiene',
-    'role-matrix',
-  ].includes(view);
+  const moreActive = ['kits', 'progress', 'missing-images', 'admin', ...(isStockProduct() ? ['warehouse' as const] : [])].includes(view);
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-800 bg-slate-950/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
       aria-label="Nawigacja"
     >
       <div className="mx-auto flex max-w-lg items-stretch justify-around px-1 pt-1">
-        <BottomItem
-          active={view === 'catalog'}
-          onClick={() => onView('catalog')}
-          icon={<Search className="h-5 w-5" />}
-          label="Katalog"
-        />
-        {roleCan(role, 'useCrm') && (
+        {showCatalog && (
+          <BottomItem
+            active={view === 'catalog'}
+            onClick={() => onView('catalog')}
+            icon={<Search className="h-5 w-5" />}
+            label="Katalog"
+          />
+        )}
+        {canUseCrmModule(role) && (
           <BottomItem
             active={view === 'crm'}
             onClick={() => onView('crm')}
@@ -76,7 +78,7 @@ export function MobileBottomNav({
             hint={orderCount > 0 && view !== 'crm'}
           />
         )}
-        {roleCan(role, 'manageFavorites') && (
+        {showCatalogTools && roleCan(role, 'manageFavorites') && (
           <BottomItem
             active={view === 'favorites'}
             onClick={() => onView('favorites')}
@@ -146,7 +148,7 @@ interface MobileMoreSheetProps {
   role: AppRole;
   displayLabel: string;
   roleLabel: string;
-  activeCatalog: CatalogType;
+  lensAvailable?: boolean;
   view: View;
   editMode: boolean;
   loading: boolean;
@@ -154,12 +156,13 @@ interface MobileMoreSheetProps {
   canRequestStockSync: boolean;
   missingCount: number;
   kitsCount: number;
+  collectionsCount?: number;
+  showCollections?: boolean;
   onView: (v: View) => void;
   onToggleEdit: () => void;
   onAddProduct: () => void;
   onLens: () => void;
-  onAdminUsers: () => void;
-  onRoleMatrix: () => void;
+  onOpenAdmin: () => void;
   onInstallApp: () => void;
   onToggleTheme: () => void;
   isDark: boolean;
@@ -167,6 +170,7 @@ interface MobileMoreSheetProps {
   onSyncStock: () => void;
   onSignOut: () => void;
   modeGuest: boolean;
+  showCatalogTools?: boolean;
 }
 
 export function MobileMoreSheet({
@@ -175,7 +179,7 @@ export function MobileMoreSheet({
   role,
   displayLabel,
   roleLabel,
-  activeCatalog,
+  lensAvailable = false,
   view,
   editMode,
   loading,
@@ -183,12 +187,13 @@ export function MobileMoreSheet({
   canRequestStockSync,
   missingCount,
   kitsCount,
+  collectionsCount = 0,
+  showCollections = false,
   onView,
   onToggleEdit,
   onAddProduct,
   onLens,
-  onAdminUsers,
-  onRoleMatrix,
+  onOpenAdmin,
   onInstallApp,
   onToggleTheme,
   isDark,
@@ -196,6 +201,7 @@ export function MobileMoreSheet({
   onSyncStock,
   onSignOut,
   modeGuest,
+  showCatalogTools = true,
 }: MobileMoreSheetProps) {
   useEffect(() => {
     if (!open) return;
@@ -243,7 +249,23 @@ export function MobileMoreSheet({
               Widoki
             </p>
             <div className="grid grid-cols-2 gap-2">
-              {roleCan(role, 'manageKits') && (
+              {showCatalogTools && showCollections && (
+                <SheetAction
+                  active={view === 'collections'}
+                  icon={<FolderOpen className="h-4 w-4" />}
+                  label={`Foldery (${collectionsCount})`}
+                  onClick={() => go('collections')}
+                />
+              )}
+              {showCatalogTools && roleCan(role, 'manageFavorites') && (
+                <SheetAction
+                  active={view === 'favorites'}
+                  icon={<Star className="h-4 w-4" />}
+                  label="Ulubione"
+                  onClick={() => go('favorites')}
+                />
+              )}
+              {showCatalogTools && roleCan(role, 'manageKits') && (
                 <SheetAction
                   active={view === 'kits'}
                   icon={<Layers className="h-4 w-4" />}
@@ -251,7 +273,7 @@ export function MobileMoreSheet({
                   onClick={() => go('kits')}
                 />
               )}
-              {roleCan(role, 'viewProgress') && (
+              {showCatalogTools && roleCan(role, 'viewProgress') && (
                 <SheetAction
                   active={view === 'progress'}
                   icon={<BarChart3 className="h-4 w-4" />}
@@ -259,7 +281,7 @@ export function MobileMoreSheet({
                   onClick={() => go('progress')}
                 />
               )}
-              {roleCan(role, 'viewProgress') && (
+              {showCatalogTools && roleCan(role, 'viewProgress') && (
                 <SheetAction
                   active={view === 'missing-images'}
                   icon={<ImageOff className="h-4 w-4" />}
@@ -267,7 +289,7 @@ export function MobileMoreSheet({
                   onClick={() => go('missing-images')}
                 />
               )}
-              {roleCan(role, 'printLabels') && (
+              {showCatalogTools && roleCan(role, 'printLabels') && (
                 <SheetAction
                   active={view === 'labels'}
                   icon={<Printer className="h-4 w-4" />}
@@ -275,15 +297,28 @@ export function MobileMoreSheet({
                   onClick={() => go('labels')}
                 />
               )}
-              {(roleCan(role, 'editProduct') || roleCan(role, 'manageUsers')) && (
+              {showCatalogTools &&
+                isStockProduct() &&
+                (roleCan(role, 'printLabels') || roleCan(role, 'editStock')) && (
                 <SheetAction
-                  active={view === 'ean-hygiene'}
-                  icon={<AlertTriangle className="h-4 w-4" />}
-                  label="Higiena EAN"
-                  onClick={() => go('ean-hygiene')}
+                  active={view === 'warehouse'}
+                  icon={<Boxes className="h-4 w-4" />}
+                  label="Magazyn"
+                  onClick={() => go('warehouse')}
                 />
               )}
-              {roleCan(role, 'useCrm') && (
+              {canAccessAdminPanel(role) && (
+                <SheetAction
+                  active={view === 'admin'}
+                  icon={<Shield className="h-4 w-4" />}
+                  label="Panel admin"
+                  onClick={() => {
+                    onOpenAdmin();
+                    onClose();
+                  }}
+                />
+              )}
+              {canUseCrmModule(role) && (
                 <SheetAction
                   active={view === 'crm'}
                   icon={<ShoppingCart className="h-4 w-4" />}
@@ -299,7 +334,7 @@ export function MobileMoreSheet({
               Akcje
             </p>
             <div className="grid grid-cols-2 gap-2">
-              {roleCan(role, 'addProduct') && (
+              {showCatalogTools && roleCan(role, 'addProduct') && (
                 <SheetAction
                   icon={<Plus className="h-4 w-4" />}
                   label="Dodaj produkt"
@@ -309,7 +344,7 @@ export function MobileMoreSheet({
                   }}
                 />
               )}
-              {roleCan(role, 'editStock') && (
+              {showCatalogTools && roleCan(role, 'editStock') && (
                 <SheetAction
                   active={editMode}
                   icon={<Pencil className="h-4 w-4" />}
@@ -320,32 +355,22 @@ export function MobileMoreSheet({
                   }}
                 />
               )}
-              {activeCatalog === 'shop' && roleCan(role, 'useLens') && (
+              {showCatalogTools && lensAvailable && (
                 <SheetAction
                   icon={<Sparkles className="h-4 w-4" />}
-                  label="Lens"
+                  label="Lens (demo)"
                   onClick={() => {
                     onLens();
                     onClose();
                   }}
                 />
               )}
-              {roleCan(role, 'manageUsers') && (
-                <SheetAction
-                  icon={<Users className="h-4 w-4" />}
-                  label="Konta"
-                  onClick={() => {
-                    onAdminUsers();
-                    onClose();
-                  }}
-                />
-              )}
-              {roleCan(role, 'viewRoleMatrix') && (
+              {canAccessAdminPanel(role) && (
                 <SheetAction
                   icon={<Shield className="h-4 w-4" />}
-                  label="Uprawnienia"
+                  label="Administracja"
                   onClick={() => {
-                    onRoleMatrix();
+                    onOpenAdmin();
                     onClose();
                   }}
                 />

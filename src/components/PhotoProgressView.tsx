@@ -38,9 +38,11 @@ function computePhotoStats(products: Product[]): CategoryPhotoStats[] {
 interface PhotoProgressViewProps {
   products: Product[];
   onOpenMissing: (category?: string) => void;
+  /** Bez nagłówka strony — w zakładce Postępy. */
+  embedded?: boolean;
 }
 
-export function PhotoProgressView({ products, onOpenMissing }: PhotoProgressViewProps) {
+export function PhotoProgressView({ products, onOpenMissing, embedded }: PhotoProgressViewProps) {
   const stats = useMemo(() => computePhotoStats(products), [products]);
 
   const total = products.length;
@@ -55,12 +57,14 @@ export function PhotoProgressView({ products, onOpenMissing }: PhotoProgressView
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold text-slate-100">Postęp i stany</h2>
-        <p className="text-sm text-slate-400">
-          Podsumowanie zdjęć oraz orientacyjne stany z ostatniego eksportu Wapro
-        </p>
-      </div>
+      {!embedded && (
+        <div>
+          <h2 className="text-lg font-semibold text-slate-100">Postęp i stany</h2>
+          <p className="text-sm text-slate-400">
+            Podsumowanie zdjęć oraz orientacyjne stany z ostatniego eksportu Wapro
+          </p>
+        </div>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-3">
         <SummaryCard
@@ -85,8 +89,8 @@ export function PhotoProgressView({ products, onOpenMissing }: PhotoProgressView
         />
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80">
-        <div className="border-b border-slate-800 px-4 py-3">
+      <div className="surface-panel overflow-hidden">
+        <div className="border-b border-slate-700/70 px-4 py-3 dark:border-slate-800">
           <h3 className="font-medium text-slate-100">Zdjęcia per kategoria</h3>
           <p className="text-xs text-slate-500">Kliknij kategorię, aby przejść do brakujących zdjęć</p>
         </div>
@@ -162,8 +166,8 @@ function SummaryCard({
     <Tag
       type={clickable ? 'button' : undefined}
       onClick={onClick}
-      className={`rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-left ${
-        clickable ? 'transition hover:border-brand-500/40 hover:bg-slate-800/80' : ''
+      className={`surface-panel p-4 text-left ${
+        clickable ? 'transition hover:border-brand-500/40 hover:bg-slate-800/20' : ''
       }`}
     >
       <div className="mb-2">{icon}</div>

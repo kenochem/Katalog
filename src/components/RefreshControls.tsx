@@ -1,7 +1,5 @@
 import { Loader2, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
-import type { CatalogType } from '../types';
-import { CATALOG_LABELS } from '../types';
 import {
   getLatestStockSync,
   requestWaproStockSync,
@@ -9,14 +7,15 @@ import {
   type StockSyncScope,
 } from '../lib/stockSync';
 import { showToast } from '../lib/toast';
+import { parseWaproSyncMessage } from '../lib/waproSkuMatch';
 import { DatabaseSyncIcon } from './DatabaseSyncIcon';
 
 interface RefreshControlsProps {
   loading: boolean;
   onRefresh: () => void;
   canRequestStockSync: boolean;
-  /** Sync WAPRO tylko dla aktywnej zakładki (domyślnie). */
-  catalog?: CatalogType;
+  /** Zakres sync WAPRO (domyślnie oba katalogi). */
+  catalog?: StockSyncScope;
   className?: string;
 }
 
@@ -29,7 +28,7 @@ export function RefreshControls({
   loading,
   onRefresh,
   canRequestStockSync,
-  catalog = 'accessories',
+  catalog = 'all',
   className = '',
 }: RefreshControlsProps) {
   const [syncBusy, setSyncBusy] = useState(false);
@@ -61,11 +60,27 @@ export function RefreshControls({
         }
         if (last.id === res.id || !res.id) {
           if (last.status === 'done') {
+            const parsed = parseWaproSyncMessage(last.message);
             showToast(
-              last.message || `Sync ${scopeLabel} zakończony. Odświeżam.`,
+              parsed.summary || `Sync ${scopeLabel} zakończony. Odświeżam.`,
               'ok',
-              7000,
+              9000,
             );
+            if (parsed.warningHint) {
+              showToast(parsed.warningHint, 'warn', 10000);
+            } else if (parsed.stats.newSkuFromMag && parsed.stats.newSkuFromMag > 0) {
+              showToast(
+                `Dopisano ${parsed.stats.newSkuFromMag} nowych indeksów z Mag WAPRO (szkielet — uzupełnij zdjęcia)`,
+                'info',
+                9000,
+              );
+            } else if (parsed.stats.bootstrapped && parsed.stats.bootstrapped > 0) {
+              showToast(
+                `Uzupełniono stany/ceny dla ${parsed.stats.bootstrapped} nowych pozycji z Mag`,
+                'info',
+                7000,
+              );
+            }
             onRefresh();
             return;
           }
@@ -109,8 +124,8 @@ export function RefreshControls({
           onClick={() => void onSyncStock()}
           disabled={busy}
           className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-brand-300 disabled:opacity-50"
-          title={`Sync WAPRO — stany i ceny dla: ${CATALOG_LABELS[catalog]} (jak w Mag, w górę i w dół)`}
-          aria-label={`Synchronizuj stany WAPRO (${CATALOG_LABELS[catalog]})`}
+          title={`Sync WAPRO — stany i ceny: ${scopeLabel} (jak w Mag, w górę i w dół)`}
+          aria-label={`Synchronizuj stany WAPRO (${scopeLabel})`}
         >
           {syncBusy ? (
             <Loader2 className="h-5 w-5 animate-spin text-brand-400" />

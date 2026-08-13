@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Download, Eye, Loader2, LogIn } from 'lucide-react';
+import { branding } from '../app/moduleRegistry';
 import { useAuth } from '../lib/auth';
 import { isSupabaseConfigured } from '../lib/supabase';
 import {
@@ -65,7 +66,7 @@ export function LoginGate() {
         clearDeferredInstall();
         setCanInstall(false);
         if (choice.outcome === 'accepted') {
-          setInstallHint('Zainstalowano — otwórz Katalog z ikony.');
+          setInstallHint(`Zainstalowano — otwórz ${branding.headerTitle} z ikony.`);
         }
       } catch {
         setInstallHint('Nie udało się — użyj menu przeglądarki → Zainstaluj.');
@@ -78,7 +79,7 @@ export function LoginGate() {
       setInstallHint('iPhone: Udostępnij → Do ekranu początkowego');
     } else {
       setInstallHint(
-        'Chrome / Edge: ikona instalacji w pasku adresu albo menu → Zainstaluj Katalog',
+        `Chrome / Edge: ikona instalacji w pasku adresu albo menu → Zainstaluj ${branding.headerTitle}`,
       );
     }
   }
@@ -93,8 +94,9 @@ export function LoginGate() {
             Kenochem
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-50">
-            Katalog
+            {branding.headerTitle}
           </h1>
+          <p className="mx-auto mt-1 max-w-sm text-xs text-slate-500">{branding.description}</p>
           <p className="mt-2 text-sm text-slate-400">
             Zaloguj się do pracy albo przeglądaj jako gość (tylko podgląd).
           </p>

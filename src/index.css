@@ -89,12 +89,102 @@ input[type="search"]::-webkit-search-cancel-button {
 }
 
 .input-field {
-  @apply w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30;
+  @apply w-full rounded-xl border px-3 py-2.5 text-sm placeholder:text-slate-500 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30;
+  border-color: #d0d5dd;
+  background: #ffffff;
+  color: #0f172a;
+}
+.dark .input-field {
+  @apply border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-500;
 }
 
 /* Ikona w środku inputa — nadpisuje px-3 z .input-field */
 .input-field.with-icon {
   padding-left: 2.5rem;
+}
+
+/* Panel na jasnym i ciemnym motywie — unikaj gołych text-*-200 na badge bez dark: */
+.surface-panel {
+  @apply rounded-2xl border dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-100;
+  border-color: #e2e8f0;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+/*
+  Magazyn ma byc naturalny w jasnym motywie. Globalna paleta projektu odwraca
+  skale slate, wiec tutaj normalizujemy ja lokalnie: biale powierzchnie,
+  ciemny tekst, jasne linie. Dark mode zostaje oparty o standardowe klasy dark:*.
+*/
+html:not(.dark) .stock-app {
+  color: #0f172a;
+  background: #f5f7fb;
+}
+
+html:not(.dark) .stock-app .text-slate-50,
+html:not(.dark) .stock-app .text-slate-100,
+html:not(.dark) .stock-app .text-slate-200,
+html:not(.dark) .stock-app .text-slate-300,
+html:not(.dark) .stock-app .text-slate-900,
+html:not(.dark) .stock-app .text-slate-950 {
+  color: #0f172a !important;
+}
+
+html:not(.dark) .stock-app .text-slate-400,
+html:not(.dark) .stock-app .text-slate-500,
+html:not(.dark) .stock-app .text-slate-600,
+html:not(.dark) .stock-app .text-slate-700,
+html:not(.dark) .stock-app .text-slate-800 {
+  color: #475569 !important;
+}
+
+html:not(.dark) .stock-app .border-slate-200,
+html:not(.dark) .stock-app .border-slate-300,
+html:not(.dark) .stock-app .border-slate-700,
+html:not(.dark) .stock-app .border-slate-800,
+html:not(.dark) .stock-app .border-slate-800\/80,
+html:not(.dark) .stock-app .border-slate-700\/80,
+html:not(.dark) .stock-app .border-slate-700\/70 {
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) .stock-app .bg-slate-900,
+html:not(.dark) .stock-app .bg-slate-900\/30,
+html:not(.dark) .stock-app .bg-slate-900\/40,
+html:not(.dark) .stock-app .bg-slate-900\/50,
+html:not(.dark) .stock-app .bg-slate-900\/60,
+html:not(.dark) .stock-app .bg-slate-900\/70,
+html:not(.dark) .stock-app .bg-slate-900\/80,
+html:not(.dark) .stock-app .bg-slate-900\/95 {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) .stock-app .bg-slate-950,
+html:not(.dark) .stock-app .bg-slate-950\/30,
+html:not(.dark) .stock-app .bg-slate-950\/40,
+html:not(.dark) .stock-app .bg-slate-950\/50,
+html:not(.dark) .stock-app .bg-slate-950\/60,
+html:not(.dark) .stock-app .bg-slate-950\/80,
+html:not(.dark) .stock-app .bg-slate-950\/95,
+html:not(.dark) .stock-app .bg-slate-50 {
+  background-color: #f8fafc !important;
+}
+
+html:not(.dark) .stock-app .bg-slate-800,
+html:not(.dark) .stock-app .bg-slate-800\/40,
+html:not(.dark) .stock-app .bg-slate-800\/60,
+html:not(.dark) .stock-app .bg-slate-800\/80,
+html:not(.dark) .stock-app .bg-slate-100 {
+  background-color: #f1f5f9 !important;
+}
+
+html:not(.dark) .stock-app .hover\:bg-slate-50:hover,
+html:not(.dark) .stock-app .hover\:bg-slate-100:hover,
+html:not(.dark) .stock-app .hover\:bg-slate-800:hover,
+html:not(.dark) .stock-app .hover\:bg-slate-800\/80:hover,
+html:not(.dark) .stock-app .hover\:bg-slate-900:hover,
+html:not(.dark) .stock-app .hover\:bg-slate-950\/30:hover {
+  background-color: #f1f5f9 !important;
 }
 
 @keyframes fade-in {
@@ -119,6 +209,408 @@ input[type="search"]::-webkit-search-cancel-button {
     height: 2rem;
     max-width: 9rem;
   }
+}
+
+.talk-app-logo {
+  height: 1.65rem;
+  width: auto;
+  max-width: 5.5rem;
+  object-fit: contain;
+}
+
+/* Talk — inbox / wątek (WhatsApp + Messenger) */
+.talk-messenger-inbox {
+  background: #f0f2f5;
+}
+.dark .talk-messenger-inbox {
+  background: #0b141a;
+}
+
+.talk-messenger-inbox {
+  color: #0f172a;
+}
+.talk-messenger-inbox input {
+  color: #0f172a;
+}
+.dark .talk-messenger-inbox,
+.talk-chat-theme-dark .talk-messenger-inbox,
+.talk-chat-theme-discord .talk-messenger-inbox {
+  color: #e9edef;
+}
+.dark .talk-messenger-inbox input,
+.talk-chat-theme-dark .talk-messenger-inbox input,
+.talk-chat-theme-discord .talk-messenger-inbox input {
+  color: #e9edef;
+}
+.talk-chat-theme-light .talk-messenger-inbox,
+.talk-chat-theme-whatsapp .talk-messenger-inbox {
+  color: #0f172a;
+}
+.talk-chat-theme-light .talk-messenger-inbox input,
+.talk-chat-theme-whatsapp .talk-messenger-inbox input {
+  color: #0f172a;
+}
+
+.talk-inbox-search {
+  background: #ffffff;
+}
+.talk-inbox-search-input {
+  background: #f0f2f5;
+  color: #0f172a;
+}
+.talk-inbox-row {
+  color: #0f172a;
+}
+.talk-inbox-row:hover,
+.talk-inbox-row:active,
+.talk-inbox-row--active {
+  background: rgb(15 23 42 / 0.07);
+}
+.talk-inbox-title {
+  color: #0f172a;
+}
+.talk-inbox-preview,
+.talk-inbox-meta {
+  color: #475569;
+}
+.dark .talk-inbox-search,
+.talk-chat-theme-dark .talk-inbox-search,
+.talk-chat-theme-discord .talk-inbox-search {
+  background: #111b21;
+}
+.dark .talk-inbox-search-input,
+.talk-chat-theme-dark .talk-inbox-search-input,
+.talk-chat-theme-discord .talk-inbox-search-input {
+  background: #202c33;
+  color: #e9edef;
+}
+.dark .talk-inbox-row,
+.talk-chat-theme-dark .talk-inbox-row,
+.talk-chat-theme-discord .talk-inbox-row {
+  color: #e9edef;
+}
+.dark .talk-inbox-row:hover,
+.dark .talk-inbox-row:active,
+.dark .talk-inbox-row--active,
+.talk-chat-theme-dark .talk-inbox-row:hover,
+.talk-chat-theme-dark .talk-inbox-row:active,
+.talk-chat-theme-dark .talk-inbox-row--active,
+.talk-chat-theme-discord .talk-inbox-row:hover,
+.talk-chat-theme-discord .talk-inbox-row:active,
+.talk-chat-theme-discord .talk-inbox-row--active {
+  background: rgb(255 255 255 / 0.09);
+}
+.dark .talk-inbox-title,
+.talk-chat-theme-dark .talk-inbox-title,
+.talk-chat-theme-discord .talk-inbox-title {
+  color: #f8fafc;
+}
+.dark .talk-inbox-preview,
+.dark .talk-inbox-meta,
+.talk-chat-theme-dark .talk-inbox-preview,
+.talk-chat-theme-dark .talk-inbox-meta,
+.talk-chat-theme-discord .talk-inbox-preview,
+.talk-chat-theme-discord .talk-inbox-meta {
+  color: #aebac1;
+}
+.talk-chat-theme-light .talk-inbox-search,
+.talk-chat-theme-whatsapp .talk-inbox-search {
+  background: #ffffff;
+}
+.talk-chat-theme-light .talk-inbox-search-input,
+.talk-chat-theme-whatsapp .talk-inbox-search-input {
+  background: #f0f2f5;
+  color: #0f172a;
+}
+.talk-chat-theme-light .talk-inbox-title,
+.talk-chat-theme-whatsapp .talk-inbox-title {
+  color: #0f172a;
+}
+.talk-chat-theme-light .talk-inbox-preview,
+.talk-chat-theme-light .talk-inbox-meta,
+.talk-chat-theme-whatsapp .talk-inbox-preview,
+.talk-chat-theme-whatsapp .talk-inbox-meta {
+  color: #475569;
+}
+
+.talk-messenger-inbox {
+  --talk-inbox-bg: #f0f2f5;
+  --talk-inbox-search-bg: #ffffff;
+  --talk-inbox-input-bg: #ffffff;
+  --talk-inbox-row-text: #0f172a;
+  --talk-inbox-title: #0f172a;
+  --talk-inbox-preview: #475569;
+  --talk-inbox-active: rgb(15 23 42 / 0.08);
+  background: var(--talk-inbox-bg) !important;
+  color: var(--talk-inbox-row-text) !important;
+}
+.dark .talk-messenger-inbox {
+  --talk-inbox-bg: #0b141a;
+  --talk-inbox-search-bg: #111b21;
+  --talk-inbox-input-bg: #202c33;
+  --talk-inbox-row-text: #e9edef;
+  --talk-inbox-title: #f8fafc;
+  --talk-inbox-preview: #aebac1;
+  --talk-inbox-active: rgb(255 255 255 / 0.09);
+}
+.talk-chat-theme-light .talk-messenger-inbox,
+.talk-chat-theme-whatsapp .talk-messenger-inbox {
+  --talk-inbox-bg: #f0f2f5;
+  --talk-inbox-search-bg: #ffffff;
+  --talk-inbox-input-bg: #ffffff;
+  --talk-inbox-row-text: #0f172a;
+  --talk-inbox-title: #0f172a;
+  --talk-inbox-preview: #475569;
+  --talk-inbox-active: rgb(15 23 42 / 0.08);
+}
+.talk-chat-theme-dark .talk-messenger-inbox,
+.talk-chat-theme-discord .talk-messenger-inbox {
+  --talk-inbox-bg: #202c33;
+  --talk-inbox-search-bg: #111b21;
+  --talk-inbox-input-bg: #202c33;
+  --talk-inbox-row-text: #e9edef;
+  --talk-inbox-title: #f8fafc;
+  --talk-inbox-preview: #aebac1;
+  --talk-inbox-active: rgb(255 255 255 / 0.09);
+}
+.talk-inbox-search {
+  background: var(--talk-inbox-search-bg) !important;
+}
+.talk-inbox-search-input {
+  background: var(--talk-inbox-input-bg) !important;
+  color: var(--talk-inbox-row-text) !important;
+}
+.talk-inbox-row {
+  color: var(--talk-inbox-row-text) !important;
+}
+.talk-inbox-row:hover,
+.talk-inbox-row:active,
+.talk-inbox-row--active {
+  background: var(--talk-inbox-active) !important;
+}
+.talk-inbox-row--pinned {
+  box-shadow: inset 3px 0 0 rgb(51 179 59 / 0.75);
+}
+.talk-inbox-title {
+  color: var(--talk-inbox-title) !important;
+}
+.talk-inbox-preview,
+.talk-inbox-meta {
+  color: var(--talk-inbox-preview) !important;
+}
+
+.talk-settings-panel .text-slate-400,
+.talk-settings-panel .text-slate-500,
+.talk-settings-panel .text-slate-600 {
+  color: #475569 !important;
+}
+.talk-settings-panel .text-slate-700,
+.talk-settings-panel .text-slate-800,
+.talk-settings-panel .text-slate-900 {
+  color: #0f172a !important;
+}
+.dark .talk-settings-panel .text-slate-300,
+.dark .talk-settings-panel .text-slate-400,
+.dark .talk-settings-panel .text-slate-500,
+.dark .talk-settings-panel .text-slate-600 {
+  color: #cbd5e1 !important;
+}
+.dark .talk-settings-panel .text-slate-700,
+.dark .talk-settings-panel .text-slate-800,
+.dark .talk-settings-panel .text-slate-900,
+.dark .talk-settings-panel .text-slate-100 {
+  color: #f8fafc !important;
+}
+
+.talk-messenger-thread {
+  background-color: #e9ecef;
+  min-height: 0;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.dark .talk-messenger-thread {
+  background-color: #0b141a;
+}
+
+.talk-bubble-mine-stack-top {
+  border-top-right-radius: 0.35rem;
+}
+.talk-bubble-mine-stack-bottom {
+  border-bottom-right-radius: 0.35rem;
+}
+.talk-bubble-theirs-stack-top {
+  border-top-left-radius: 0.35rem;
+}
+.talk-bubble-theirs-stack-bottom {
+  border-bottom-left-radius: 0.35rem;
+}
+
+.talk-bubble-mine {
+  background: #d9fdd3;
+  color: #0f172a;
+  border-radius: 1rem 1rem 0.25rem 1rem;
+  box-shadow: 0 1px 0.5px rgb(0 0 0 / 0.08);
+}
+.dark .talk-bubble-mine {
+  background: #005c4b;
+  color: #e9edef;
+}
+
+.talk-bubble-theirs {
+  background: #ffffff;
+  color: #0f172a;
+  border-radius: 1rem 1rem 1rem 0.25rem;
+  box-shadow: 0 1px 0.5px rgb(0 0 0 / 0.08);
+}
+.dark .talk-bubble-theirs {
+  background: #1f2c34;
+  color: #e9edef;
+}
+
+.talk-messenger-composer {
+  background: #f0f2f5;
+}
+.dark .talk-messenger-composer {
+  background: #1f2c34;
+}
+
+.chat-msg-actions {
+  opacity: 1;
+  transition: opacity 150ms ease;
+}
+
+.chat-swipe-reply-body {
+  touch-action: pan-y;
+  cursor: grab;
+  will-change: transform;
+}
+
+.chat-swipe-reply-body.is-dragging {
+  touch-action: none;
+  cursor: grabbing;
+  transition: none;
+}
+
+.chat-swipe-reply-body:not(.is-dragging) {
+  transition: transform 0.2s ease-out;
+}
+
+.chat-swipe-reply-hint {
+  position: absolute;
+  top: 50%;
+  z-index: 0;
+  display: flex;
+  height: 1.75rem;
+  width: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: rgb(51 179 59 / 0.18);
+  color: #237a29;
+  transform: translateY(-50%) scale(0.85);
+  pointer-events: none;
+}
+
+.chat-swipe-reply-hint--left {
+  left: -0.25rem;
+}
+
+.chat-swipe-reply-hint--right {
+  right: -0.25rem;
+}
+
+.chat-swipe-reply-hint.is-visible {
+  transform: translateY(-50%) scale(1);
+}
+
+.chat-msg-menu {
+  animation: chat-menu-in 120ms ease-out;
+}
+
+@keyframes chat-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (min-width: 768px) {
+  .group\/msg:not(:hover) .chat-msg-actions:not(:has([data-open='true'])) {
+    opacity: 0;
+  }
+  .group\/msg:hover .chat-msg-actions,
+  .group\/msg:focus-within .chat-msg-actions {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 767px) {
+  .chat-msg-actions {
+    display: none !important;
+  }
+}
+
+.chat-reaction-chips-wrap {
+  position: relative;
+  z-index: 1;
+  margin-top: -0.35rem;
+  max-width: 100%;
+}
+
+.chat-reaction-chips-wrap--in {
+  display: flex;
+  justify-content: flex-start;
+  padding-left: 0.35rem;
+}
+
+.chat-reaction-chips-wrap--out {
+  display: flex;
+  justify-content: flex-end;
+  padding-right: 0.35rem;
+}
+
+.chat-reaction-chip {
+  border-color: rgb(148 163 184 / 0.35);
+  background: #fff;
+}
+
+.chat-reaction-chip-active {
+  border-color: rgb(51 179 59 / 0.55);
+  background: rgb(51 179 59 / 0.12);
+}
+
+.chat-reaction-add {
+  color: #64748b;
+  background: rgb(255 255 255 / 0.85);
+  border: 1px solid rgb(148 163 184 / 0.25);
+}
+
+.chat-reaction-add:hover {
+  background: #fff;
+  color: #334155;
+}
+
+.dark .chat-reaction-chip {
+  background: #1f2c34;
+  border-color: rgb(148 163 184 / 0.2);
+}
+
+.dark .chat-reaction-chip-active {
+  background: rgb(51 179 59 / 0.2);
+}
+
+.dark .chat-reaction-add {
+  background: #233138;
+  border-color: rgb(148 163 184 / 0.15);
+  color: #8696a0;
+}
+
+.dark .chat-reaction-add:hover {
+  color: #e9edef;
 }
 
 /* Długie listy produktów: przeglądarka pomija layout poza viewportem */
@@ -156,6 +648,457 @@ input[type="search"]::-webkit-search-cancel-button {
   display: none;
 }
 
+.catalog-filter-dropdown {
+  box-shadow:
+    0 16px 40px rgb(0 0 0 / 0.45),
+    0 0 0 1px rgb(255 255 255 / 0.04);
+}
+
+/* Katalog — wyszukiwarka przyklejona pod nagłówkiem podczas przewijania listy */
+.catalog-sticky-search {
+  position: relative;
+}
+.catalog-sticky-search--pinned {
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  box-shadow: 0 4px 12px rgb(15 23 42 / 0.08);
+}
+html:not(.dark) .catalog-sticky-search,
+html:not(.dark) .catalog-sticky-search--pinned {
+  background: rgb(255 255 255 / 0.96) !important;
+  border-color: rgb(226 232 240) !important;
+}
+
+.catalog-grid-pending {
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.catalog-product-tab {
+  color: rgb(51 65 85);
+  background: transparent;
+}
+.dark .catalog-product-tab {
+  color: rgb(148 163 184);
+}
+.catalog-product-tab:hover {
+  color: rgb(15 23 42);
+  background: rgb(226 232 242);
+}
+.dark .catalog-product-tab:hover {
+  color: rgb(226 232 240);
+  background: rgb(30 41 59 / 0.8);
+}
+.catalog-product-tab--active {
+  color: rgb(3 105 161);
+  background: rgb(186 230 253);
+  box-shadow: inset 0 0 0 1px rgb(14 165 233 / 0.55);
+  font-weight: 600;
+}
+.dark .catalog-product-tab--active {
+  color: rgb(224 242 254);
+  background: rgb(14 165 233 / 0.18);
+  box-shadow: inset 0 0 0 1px rgb(14 165 233 / 0.35);
+}
+
+.crm-pipeline-column--target {
+  border-color: rgb(51 65 85 / 0.9);
+}
+
+.crm-pipeline-column--over .crm-pipeline-empty {
+  border-color: rgb(14 165 233 / 0.45);
+  background: rgb(14 165 233 / 0.06);
+  color: rgb(125 211 252);
+}
+
+.crm-pipeline-card-ghost {
+  rotate: -1deg;
+  scale: 1.02;
+}
+
+.crm-pipeline-board {
+  -webkit-overflow-scrolling: touch;
+}
+
+.catalog-product-modal {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Karta produktu — panel cen (jasny / ciemny motyw) */
+.catalog-product-price-panel {
+  border: 1px solid color-mix(in srgb, var(--color-brand-700) 24%, var(--color-slate-700));
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--color-brand-50) 92%, white) 0%,
+    color-mix(in srgb, var(--color-slate-950) 96%, white) 100%
+  );
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.65) inset;
+}
+.dark .catalog-product-price-panel {
+  border-color: color-mix(in srgb, var(--color-brand-500) 32%, var(--color-slate-700));
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--color-brand-50) 70%, var(--color-slate-900)) 0%,
+    color-mix(in srgb, var(--color-slate-900) 88%, black) 100%
+  );
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.04) inset;
+}
+.catalog-product-price-panel__kicker {
+  color: var(--color-brand-700);
+  letter-spacing: 0.06em;
+}
+.dark .catalog-product-price-panel__kicker {
+  color: var(--color-brand-300);
+}
+.catalog-product-price-panel__hero-label {
+  color: var(--color-brand-800);
+}
+.dark .catalog-product-price-panel__hero-label {
+  color: var(--color-slate-400);
+}
+.catalog-product-price-panel__hero-value {
+  color: var(--color-brand-900);
+}
+.dark .catalog-product-price-panel__hero-value {
+  color: var(--color-brand-200);
+}
+.catalog-product-price-panel__hero-unit {
+  color: var(--color-brand-800);
+}
+.dark .catalog-product-price-panel__hero-unit {
+  color: var(--color-brand-400);
+}
+.catalog-product-price-panel__netto-line {
+  color: var(--color-brand-800);
+}
+.dark .catalog-product-price-panel__netto-line {
+  color: var(--color-brand-300);
+}
+.catalog-product-price-panel__netto-value {
+  color: var(--color-brand-900);
+  font-weight: 600;
+}
+.dark .catalog-product-price-panel__netto-value {
+  color: var(--color-brand-100);
+}
+.catalog-product-price-panel__metric-label {
+  color: var(--color-brand-700);
+  letter-spacing: 0.04em;
+}
+.dark .catalog-product-price-panel__metric-label {
+  color: var(--color-slate-400);
+}
+.catalog-product-price-panel__metric-value {
+  color: var(--color-brand-900);
+  font-weight: 600;
+}
+.dark .catalog-product-price-panel__metric-value {
+  color: var(--color-slate-100);
+  font-weight: 600;
+}
+.catalog-product-price-panel__metric-value--accent {
+  color: var(--color-brand-800);
+}
+.dark .catalog-product-price-panel__metric-value--accent {
+  color: var(--color-brand-200);
+}
+.catalog-product-price-panel__metric-hint {
+  color: var(--color-brand-700);
+  opacity: 0.85;
+}
+.dark .catalog-product-price-panel__metric-hint {
+  color: var(--color-slate-500);
+  opacity: 1;
+}
+.catalog-product-price-chip {
+  border: 1px solid color-mix(in srgb, var(--color-brand-700) 28%, var(--color-slate-600));
+  background: color-mix(in srgb, var(--color-brand-50) 88%, white);
+  color: var(--color-brand-800);
+}
+.dark .catalog-product-price-chip {
+  border-color: color-mix(in srgb, var(--color-brand-500) 38%, transparent);
+  background: color-mix(in srgb, var(--color-brand-500) 14%, var(--color-slate-900));
+  color: var(--color-brand-200);
+}
+.catalog-product-price-chip__unit {
+  color: var(--color-brand-700);
+  font-weight: 600;
+}
+.dark .catalog-product-price-chip__unit {
+  color: var(--color-brand-400);
+}
+
+/* Zakładka Sprzedaż — jasny motyw z czytelnym tekstem (poza odwróconą skalą slate) */
+.catalog-product-sales-panel {
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  background: #ffffff;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 0.06);
+}
+.dark .catalog-product-sales-panel {
+  border-color: var(--color-slate-800);
+  background: color-mix(in srgb, var(--color-slate-900) 55%, transparent);
+  box-shadow: none;
+}
+.catalog-product-sales-panel__intro-title {
+  color: #0f172a;
+  font-weight: 600;
+}
+.dark .catalog-product-sales-panel__intro-title {
+  color: var(--color-slate-100);
+}
+.catalog-product-sales-panel__intro-text {
+  color: #475569;
+}
+.dark .catalog-product-sales-panel__intro-text {
+  color: var(--color-slate-400);
+}
+.catalog-product-sales-panel__sku {
+  color: #64748b;
+}
+.dark .catalog-product-sales-panel__sku {
+  color: var(--color-slate-500);
+}
+.catalog-product-sales-panel__sku-value {
+  color: #0f172a;
+  font-weight: 600;
+}
+.dark .catalog-product-sales-panel__sku-value {
+  color: var(--color-slate-200);
+}
+.catalog-product-sales-panel__table-head {
+  border-bottom: 1px solid #e2e8f0;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+}
+.dark .catalog-product-sales-panel__table-head {
+  border-bottom-color: var(--color-slate-800);
+  background: color-mix(in srgb, var(--color-slate-900) 85%, black);
+}
+.catalog-product-sales-panel__table-head-label {
+  color: #475569;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.dark .catalog-product-sales-panel__table-head-label {
+  color: var(--color-slate-400);
+}
+.catalog-product-sales-panel__table-head-meta {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+.dark .catalog-product-sales-panel__table-head-meta {
+  color: var(--color-slate-500);
+}
+.catalog-product-sales-panel__th {
+  color: #475569;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.dark .catalog-product-sales-panel__th {
+  color: var(--color-slate-500);
+}
+.catalog-product-sales-panel__row {
+  border-bottom: 1px solid #f1f5f9;
+}
+.catalog-product-sales-panel__row:last-child {
+  border-bottom: none;
+}
+.dark .catalog-product-sales-panel__row {
+  border-bottom-color: color-mix(in srgb, var(--color-slate-800) 80%, transparent);
+}
+.catalog-product-sales-panel__period {
+  color: #0f172a;
+  font-weight: 500;
+}
+.dark .catalog-product-sales-panel__period {
+  color: var(--color-slate-200);
+}
+.catalog-product-sales-panel__qty {
+  color: #0f172a;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.dark .catalog-product-sales-panel__qty {
+  color: var(--color-slate-100);
+}
+.catalog-product-sales-panel__net {
+  color: #047857;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.dark .catalog-product-sales-panel__net {
+  color: var(--color-emerald-300);
+}
+.catalog-product-sales-panel__footer {
+  border-top: 1px solid #e2e8f0;
+  color: #64748b;
+  font-size: 0.75rem;
+}
+.dark .catalog-product-sales-panel__footer {
+  border-top-color: var(--color-slate-800);
+  color: var(--color-slate-500);
+}
+.catalog-product-sales-panel__footer-date {
+  color: #0f172a;
+  font-weight: 600;
+}
+.dark .catalog-product-sales-panel__footer-date {
+  color: var(--color-slate-300);
+}
+.catalog-product-sales-panel__empty {
+  border: 1px dashed #cbd5e1;
+  border-radius: 1rem;
+  background: #f8fafc;
+  color: #475569;
+}
+.dark .catalog-product-sales-panel__empty {
+  border-color: var(--color-slate-700);
+  background: color-mix(in srgb, var(--color-slate-950) 40%, transparent);
+  color: var(--color-slate-400);
+}
+
+/* Toasty — czytelne na jasnym motywie (globalna skala slate jest odwrócona) */
+html:not(.dark) .toast-host-item {
+  color: #0f172a !important;
+}
+html:not(.dark) .toast-host-item--ok {
+  border-color: #6ee7b7 !important;
+  background: #ecfdf5 !important;
+}
+html:not(.dark) .toast-host-item--info {
+  border-color: #cbd5e1 !important;
+  background: #ffffff !important;
+}
+html:not(.dark) .toast-host-item--warn {
+  border-color: #fcd34d !important;
+  background: #fffbeb !important;
+  color: #78350f !important;
+}
+html:not(.dark) .toast-host-item--error {
+  border-color: #fca5a5 !important;
+  background: #fef2f2 !important;
+  color: #7f1d1d !important;
+}
+
+.hub-header-btn {
+  box-sizing: border-box;
+  height: 2.25rem;
+  min-height: 2.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgb(208 213 221);
+  background-color: rgb(255 255 255);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1;
+  color: rgb(30 41 59);
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+/* display przez klasę inline-flex w JSX — nie nadpisuj Tailwind hidden/sm:hidden */
+.hub-header-btn.inline-flex {
+  display: inline-flex;
+}
+.dark .hub-header-btn {
+  border-color: rgb(51 65 85);
+  background-color: transparent;
+  color: rgb(226 232 240);
+}
+.hub-header-btn--ghost {
+  color: rgb(100 116 139);
+}
+.dark .hub-header-btn--ghost {
+  color: rgb(148 163 184);
+}
+.hub-header-btn--ghost:hover {
+  border-color: rgb(192 198 209);
+  background-color: rgb(232 236 242);
+  color: rgb(15 23 42);
+}
+.dark .hub-header-btn--ghost:hover {
+  border-color: rgb(71 85 105);
+  background-color: rgb(30 41 59);
+  color: rgb(241 245 249);
+}
+.hub-header-btn--icon {
+  width: 2.25rem;
+  min-width: 2.25rem;
+  padding: 0;
+}
+.hub-header-btn--icon svg {
+  display: block;
+  flex-shrink: 0;
+}
+.hub-header-btn--text {
+  padding-inline: 0.75rem;
+}
+.hub-header-btn--profile {
+  max-width: 11rem;
+  padding-inline: 0.375rem 0.625rem;
+  color: rgb(30 41 59);
+}
+.dark .hub-header-btn--profile {
+  color: rgb(226 232 240);
+}
+.hub-header-btn--profile:hover {
+  border-color: rgb(42 154 50 / 0.45);
+  background-color: rgb(232 236 242);
+}
+.dark .hub-header-btn--profile:hover {
+  border-color: rgb(59 130 246 / 0.4);
+  background-color: rgb(30 41 59);
+}
+.hub-header-btn--admin {
+  border-color: rgb(196 181 253);
+  background-color: rgb(245 243 255);
+  color: rgb(91 33 182);
+}
+.hub-header-btn--admin:hover {
+  border-color: rgb(167 139 250);
+  background-color: rgb(237 233 254);
+  color: rgb(76 29 149);
+}
+.dark .hub-header-btn--admin {
+  border-color: rgb(139 92 246 / 0.45);
+  background-color: rgb(76 29 149 / 0.2);
+  color: rgb(216 180 254);
+}
+.dark .hub-header-btn--admin:hover {
+  border-color: rgb(167 139 250 / 0.55);
+  background-color: rgb(76 29 149 / 0.35);
+  color: rgb(233 213 255);
+}
+.hub-header-btn--admin-active {
+  border-color: rgb(124 58 237);
+  background-color: rgb(124 58 237);
+  color: rgb(255 255 255);
+}
+.dark .hub-header-btn--admin-active {
+  border-color: rgb(139 92 246 / 0.65);
+  background-color: rgb(109 40 217);
+  color: rgb(255 255 255);
+}
+.hub-header-actions {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+}
+
 /* Desktop / PWA: pełna szerokość okna, bez „kolumny telefonu” */
 html,
 body,
@@ -167,6 +1110,7 @@ body,
 .app-shell {
   width: 100%;
   max-width: none;
+  overflow-x: clip;
 }
 
 @media (min-width: 1024px) {
@@ -178,6 +1122,939 @@ body,
   .app-shell {
     padding-inline: 0;
   }
+}
+
+.hub-badge-rose {
+  border: 1px solid #fecdd3;
+  background-color: #fff1f2;
+  color: #9f1239;
+}
+.dark .hub-badge-rose {
+  border-color: rgba(244, 63, 94, 0.35);
+  background-color: rgba(76, 5, 25, 0.45);
+  color: #fecdd3;
+}
+.hub-badge-sky {
+  border: 1px solid #bae6fd;
+  background-color: #f0f9ff;
+  color: #075985;
+}
+.dark .hub-badge-sky {
+  border-color: rgba(14, 165, 233, 0.35);
+  background-color: rgba(12, 74, 110, 0.45);
+  color: #bae6fd;
+}
+.hub-badge-emerald {
+  border: 1px solid #a7f3d0;
+  background-color: #ecfdf5;
+  color: #065f46;
+}
+.dark .hub-badge-emerald {
+  border-color: rgba(16, 185, 129, 0.35);
+  background-color: rgba(6, 78, 59, 0.45);
+  color: #a7f3d0;
+}
+.hub-badge-amber {
+  border: 1px solid #fde68a;
+  background-color: #fffbeb;
+  color: #92400e;
+}
+.dark .hub-badge-amber {
+  border-color: rgba(245, 158, 11, 0.35);
+  background-color: rgba(69, 26, 3, 0.45);
+  color: #fde68a;
+}
+.hub-badge-violet {
+  border: 1px solid #ddd6fe;
+  background-color: #f5f3ff;
+  color: #5b21b6;
+}
+.dark .hub-badge-violet {
+  border-color: rgba(139, 92, 246, 0.35);
+  background-color: rgba(46, 16, 101, 0.45);
+  color: #ddd6fe;
+}
+.hub-badge-neutral {
+  border: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  color: #475569;
+}
+.dark .hub-badge-neutral {
+  border-color: #334155;
+  background-color: #1e293b;
+  color: #94a3b8;
+}
+
+/* Talk — tapety rozmowy (port hub-platform) */
+.talk-wallpaper,
+.talk-wallpaper-default {
+  background-color: #e5ddd5;
+  background-image: url('/chat-wallpapers/doodles-light.svg');
+  background-size: 420px;
+  background-repeat: repeat;
+}
+.talk-wallpaper-messenger {
+  background-color: #efeae2;
+  background-image: url('/chat-wallpapers/doodles-light.svg');
+  background-size: 400px;
+  background-repeat: repeat;
+}
+.talk-wallpaper-midnight {
+  background: linear-gradient(165deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+}
+.talk-wallpaper-ocean {
+  background: linear-gradient(180deg, #0c4a6e 0%, #164e63 40%, #134e4a 100%);
+}
+.talk-wallpaper-aurora {
+  background: linear-gradient(135deg, #312e81 0%, #581c87 35%, #0e7490 100%);
+}
+.talk-wallpaper-slate {
+  background-color: #1e293b;
+  background-image: url('/chat-wallpapers/doodles-dark.svg');
+  background-size: 420px;
+  background-repeat: repeat;
+}
+.talk-wallpaper-lavender {
+  background: linear-gradient(180deg, #ede9fe 0%, #ddd6fe 50%, #c4b5fd 100%);
+}
+.talk-wallpaper-sunset {
+  background: linear-gradient(180deg, #ffedd5 0%, #fed7aa 40%, #fdba74 100%);
+}
+.talk-wallpaper-graphite {
+  background-color: #27272a;
+  background-image: url('/chat-wallpapers/doodles-dark.svg');
+  background-size: 400px;
+  background-repeat: repeat;
+}
+.talk-wallpaper-clean {
+  background: #f8fafc;
+}
+.talk-wallpaper-paper {
+  background-color: #f7f1e7;
+  background-image:
+    linear-gradient(rgb(15 23 42 / 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(15 23 42 / 0.035) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+.dark .talk-wallpaper-default,
+.dark .talk-wallpaper-messenger {
+  background-color: #0b141a;
+  background-image: url('/chat-wallpapers/doodles-dark.svg');
+}
+
+.talk-chat-shell.talk-chat-theme-light .talk-messenger-thread,
+.talk-chat-shell.talk-chat-theme-whatsapp .talk-messenger-thread {
+  --talk-bubble-mine-bg: #d9fdd3;
+  --talk-bubble-theirs-bg: #ffffff;
+}
+.talk-chat-shell.talk-chat-theme-dark .talk-messenger-thread,
+.talk-chat-shell.talk-chat-theme-discord .talk-messenger-thread {
+  --talk-bubble-mine-bg: #005c4b;
+  --talk-bubble-theirs-bg: #202c33;
+}
+.talk-chat-shell.talk-chat-theme-soft .talk-messenger-thread {
+  --talk-bubble-mine-bg: #cce8e4;
+  --talk-bubble-theirs-bg: #f1f5f9;
+}
+.talk-chat-theme-dark .talk-messenger-inbox,
+.talk-chat-theme-discord .talk-messenger-inbox {
+  background: #202c33 !important;
+}
+.talk-chat-theme-light .talk-messenger-inbox,
+.talk-chat-theme-whatsapp .talk-messenger-inbox {
+  background: #f0f2f5 !important;
+}
+
+.talk-chat-accent-teal .talk-bubble-mine {
+  background: #14b8a6 !important;
+  color: #fff !important;
+}
+.talk-chat-accent-violet .talk-bubble-mine {
+  background: #7c3aed !important;
+  color: #fff !important;
+}
+.talk-chat-accent-rose .talk-bubble-mine {
+  background: #e11d48 !important;
+  color: #fff !important;
+}
+.talk-chat-accent-emerald .talk-bubble-mine {
+  background: #059669 !important;
+  color: #fff !important;
+}
+.talk-chat-accent-blue .talk-bubble-mine {
+  background: #0084ff !important;
+  color: #fff !important;
+}
+.talk-chat-accent-amber .talk-bubble-mine {
+  background: #f59e0b !important;
+  color: #1f2937 !important;
+}
+
+.talk-chat-bubbles-square .talk-bubble-mine,
+.talk-chat-bubbles-square .talk-bubble-theirs {
+  border-radius: 0.5rem !important;
+}
+
+.talk-chat-spacing-compact .talk-messenger-thread {
+  gap: 0.125rem;
+}
+.talk-chat-spacing-comfortable .talk-messenger-thread {
+  gap: 0.75rem;
+}
+
+/* Talk — tapety rozmowy (z hub-platform) */
+.talk-wallpaper,
+.talk-wallpaper-default {
+  background-color: #e5ddd5;
+  background-image: url('/chat-wallpapers/doodles-light.svg');
+  background-size: 420px;
+  background-repeat: repeat;
+}
+.talk-wallpaper-messenger {
+  background-color: #efeae2;
+  background-image: url('/chat-wallpapers/doodles-light.svg');
+  background-size: 380px;
+  background-repeat: repeat;
+}
+.talk-wallpaper-midnight {
+  background: linear-gradient(160deg, #0f172a 0%, #1e293b 45%, #0c4a6e 100%);
+}
+.talk-wallpaper-ocean {
+  background: linear-gradient(165deg, #ecfeff 0%, #bae6fd 40%, #0284c7 100%);
+}
+.talk-wallpaper-aurora {
+  background: linear-gradient(145deg, #fdf4ff 0%, #c4b5fd 35%, #06b6d4 100%);
+}
+.talk-wallpaper-slate {
+  background-color: #1e293b;
+  background-image: url('/chat-wallpapers/doodles-dark.svg');
+  background-size: 420px;
+  background-repeat: repeat;
+}
+.talk-wallpaper-lavender {
+  background: linear-gradient(180deg, #f5f3ff 0%, #ddd6fe 50%, #c4b5fd 100%);
+}
+.talk-wallpaper-sunset {
+  background: linear-gradient(165deg, #fff7ed 0%, #fdba74 45%, #f97316 100%);
+}
+.talk-wallpaper-graphite {
+  background-color: #27272a;
+  background-image: url('/chat-wallpapers/doodles-dark.svg');
+  background-size: 400px;
+  background-repeat: repeat;
+}
+.talk-wallpaper-clean {
+  background: #f8fafc;
+}
+.talk-wallpaper-paper {
+  background-color: #f7f1e7;
+  background-image:
+    linear-gradient(rgb(15 23 42 / 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(15 23 42 / 0.035) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+.dark .talk-wallpaper-default,
+.dark .talk-wallpaper-messenger {
+  background-color: #0b141a;
+  background-image: url('/chat-wallpapers/doodles-dark.svg');
+}
+
+.talk-chat-shell.talk-chat-theme-whatsapp .talk-bubble-mine {
+  background: #d9fdd3;
+}
+.dark .talk-chat-shell.talk-chat-theme-whatsapp .talk-bubble-mine {
+  background: #005c4b;
+  color: #e9edef;
+}
+.talk-chat-shell.talk-chat-theme-discord .talk-messenger-thread {
+  background-color: #313338;
+}
+.talk-chat-shell.talk-chat-theme-discord .talk-bubble-theirs {
+  background: #2b2d31;
+  color: #dbdee1;
+}
+.talk-chat-shell.talk-chat-bubbles-square .talk-bubble-mine,
+.talk-chat-shell.talk-chat-bubbles-square .talk-bubble-theirs {
+  border-radius: 0.5rem;
+}
+.talk-chat-shell.talk-chat-accent-teal .talk-bubble-mine {
+  background: #14b8a6;
+  color: #fff;
+}
+.talk-chat-shell.talk-chat-accent-violet .talk-bubble-mine {
+  background: #7c3aed;
+  color: #fff;
+}
+.talk-chat-shell.talk-chat-accent-rose .talk-bubble-mine {
+  background: #e11d48;
+  color: #fff;
+}
+.talk-chat-shell.talk-chat-accent-emerald .talk-bubble-mine {
+  background: #059669;
+  color: #fff;
+}
+.talk-chat-shell.talk-chat-accent-blue .talk-bubble-mine {
+  background: #0084ff;
+  color: #fff;
+}
+.talk-chat-shell.talk-chat-accent-amber .talk-bubble-mine {
+  background: #f59e0b;
+  color: #1f2937;
+}
+
+/* Talk: nagłówek rozmowy i wpisywanie muszą iść za motywem czatu, nie za globalnym dark mode. */
+.talk-chat-shell {
+  --talk-header-bg: #f0f2f5;
+  --talk-header-title: #0f172a;
+  --talk-header-subtitle: #475569;
+  --talk-composer-bg: #f0f2f5;
+  --talk-composer-field-bg: #ffffff;
+  --talk-composer-text: #0f172a;
+  --talk-composer-placeholder: #64748b;
+}
+.dark .talk-chat-shell {
+  --talk-header-bg: #202c33;
+  --talk-header-title: #f8fafc;
+  --talk-header-subtitle: #aebac1;
+  --talk-composer-bg: #1f2c34;
+  --talk-composer-field-bg: #2a3942;
+  --talk-composer-text: #f8fafc;
+  --talk-composer-placeholder: #aebac1;
+}
+.talk-chat-shell.talk-chat-theme-light,
+.talk-chat-shell.talk-chat-theme-whatsapp,
+.talk-chat-shell.talk-chat-theme-soft {
+  --talk-header-bg: #f0f2f5;
+  --talk-header-title: #0f172a;
+  --talk-header-subtitle: #475569;
+  --talk-composer-bg: #f0f2f5;
+  --talk-composer-field-bg: #ffffff;
+  --talk-composer-text: #0f172a;
+  --talk-composer-placeholder: #64748b;
+}
+.talk-chat-shell.talk-chat-theme-dark,
+.talk-chat-shell.talk-chat-theme-discord {
+  --talk-header-bg: #202c33;
+  --talk-header-title: #f8fafc;
+  --talk-header-subtitle: #aebac1;
+  --talk-composer-bg: #1f2c34;
+  --talk-composer-field-bg: #2a3942;
+  --talk-composer-text: #f8fafc;
+  --talk-composer-placeholder: #aebac1;
+}
+.talk-thread-header {
+  background: var(--talk-header-bg) !important;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+.talk-thread-title {
+  color: var(--talk-header-title) !important;
+}
+.talk-thread-subtitle {
+  color: var(--talk-header-subtitle) !important;
+}
+.talk-messenger-composer {
+  background: var(--talk-composer-bg) !important;
+}
+.talk-app-shell {
+  height: var(--talk-visual-height, 100dvh) !important;
+  min-height: var(--talk-visual-height, 100dvh) !important;
+}
+.talk-keyboard-open .talk-messenger-composer {
+  padding-bottom: 0.5rem !important;
+}
+.talk-keyboard-open .chat-mobile-action-sheet > div:last-child {
+  bottom: 0.5rem !important;
+}
+.talk-composer-field {
+  background: var(--talk-composer-field-bg) !important;
+}
+.talk-composer-input {
+  color: var(--talk-composer-text) !important;
+  caret-color: var(--talk-composer-text) !important;
+}
+.talk-composer-input::placeholder {
+  color: var(--talk-composer-placeholder) !important;
+}
+
+.talk-thread-shell {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+.talk-message-pressable {
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+/* Plan magazynu — edytor spatial (Baselinker-style) */
+.wh-layout-editor {
+  --wh-viewport-bg: rgb(248 250 252 / 0.95);
+  --wh-viewport-border: rgb(226 232 240);
+  --wh-canvas-bg: #e2e8f0;
+  --wh-grid-line: rgb(15 23 42 / 0.09);
+  --wh-cell-label: #0f172a;
+  --wh-cell-code: #475569;
+  --wh-select-ring: rgb(16 185 129 / 0.55);
+  --wh-select-shadow: rgb(15 23 42 / 0.12);
+  --wh-stairs-stripe: rgb(15 23 42 / 0.07);
+}
+
+.wh-layout-editor.wh-layout-theme-dark,
+.dark .wh-layout-editor.wh-layout-theme-auto {
+  --wh-viewport-bg: rgb(2 6 23 / 0.85);
+  --wh-viewport-border: rgb(30 41 59);
+  --wh-canvas-bg: #0f172a;
+  --wh-grid-line: rgb(148 163 184 / 0.1);
+  --wh-cell-label: #e2e8f0;
+  --wh-cell-code: #94a3b8;
+  --wh-select-ring: rgb(16 185 129 / 0.65);
+  --wh-select-shadow: rgb(0 0 0 / 0.35);
+  --wh-stairs-stripe: rgb(148 163 184 / 0.12);
+}
+
+.wh-layout-editor.wh-layout-theme-light {
+  --wh-viewport-bg: rgb(248 250 252 / 0.95);
+  --wh-viewport-border: rgb(226 232 240);
+  --wh-canvas-bg: #e2e8f0;
+  --wh-grid-line: rgb(15 23 42 / 0.09);
+  --wh-cell-label: #0f172a;
+  --wh-cell-code: #475569;
+  --wh-select-ring: rgb(5 150 105 / 0.55);
+  --wh-select-shadow: rgb(15 23 42 / 0.12);
+  --wh-stairs-stripe: rgb(15 23 42 / 0.07);
+}
+
+.wh-layout-viewport {
+  max-height: min(72dvh, 720px);
+  background: var(--wh-viewport-bg);
+  border-color: var(--wh-viewport-border);
+}
+
+.wh-layout-scale-wrap {
+  color: var(--wh-ruler-text, rgb(100 116 139));
+}
+
+.wh-layout-ruler {
+  font-size: 0.5625rem;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+
+.wh-layout-ruler-tick {
+  position: absolute;
+  pointer-events: none;
+  white-space: nowrap;
+  color: var(--wh-ruler-text, rgb(100 116 139));
+}
+
+.wh-layout-ruler-tick--x {
+  transform: translateX(-50%);
+  top: 2px;
+  padding-top: 10px;
+  border-left: 1px solid var(--wh-ruler-line, rgb(51 65 85 / 0.6));
+  min-height: 8px;
+}
+
+.wh-layout-ruler-tick--y {
+  transform: translateY(-50%);
+  right: 4px;
+  padding-right: 6px;
+  text-align: right;
+  border-top: 1px solid var(--wh-ruler-line, rgb(51 65 85 / 0.6));
+  width: 100%;
+}
+
+.wh-layout-editor.wh-layout-theme-light .wh-layout-ruler-tick {
+  color: rgb(71 85 105);
+}
+
+.wh-layout-canvas {
+  background-color: var(--wh-canvas-bg);
+  border-radius: 0.75rem;
+  user-select: none;
+}
+
+.wh-layout-canvas--grid {
+  background-image:
+    linear-gradient(var(--wh-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--wh-grid-line) 1px, transparent 1px);
+}
+
+.wh-layout-cell {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.125rem;
+  border: 2px solid;
+  border-radius: 0.5rem;
+  padding: 0.25rem;
+  cursor: grab;
+  overflow: hidden;
+  transition: box-shadow 120ms ease;
+  touch-action: none;
+}
+
+.wh-layout-cell:active {
+  cursor: grabbing;
+}
+
+.wh-layout-cell--selected {
+  box-shadow:
+    0 0 0 2px var(--wh-select-ring),
+    0 4px 20px var(--wh-select-shadow);
+  z-index: 10;
+}
+
+.wh-layout-cell-emoji {
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+.wh-layout-cell-label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--wh-cell-label);
+  text-align: center;
+}
+
+.wh-layout-cell--stairs {
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent,
+    transparent 4px,
+    var(--wh-stairs-stripe) 4px,
+    var(--wh-stairs-stripe) 8px
+  );
+}
+
+.wh-layout-cell--has-sections {
+  position: relative;
+}
+
+.wh-layout-cell--has-sections .wh-layout-cell-emoji,
+.wh-layout-cell--has-sections .wh-layout-cell-label {
+  display: none;
+}
+
+.wh-layout-cell-code {
+  position: absolute;
+  bottom: 2px;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  text-align: center;
+  background: linear-gradient(transparent, rgb(0 0 0 / 0.45));
+  padding: 2px 4px 1px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.5625rem;
+  color: var(--wh-cell-code);
+}
+
+.wh-layout-editor.wh-layout-theme-light .wh-layout-cell-code {
+  background: linear-gradient(transparent, rgb(255 255 255 / 0.75));
+}
+
+.wh-rack-preview-shelf:nth-child(even) {
+  background: rgb(255 255 255 / 0.03);
+}
+
+.wh-layout-editor.wh-layout-theme-light .wh-rack-configurator {
+  background: linear-gradient(to bottom, rgb(248 250 252 / 0.95), rgb(241 245 249 / 0.98));
+}
+
+.wh-layout-editor.wh-layout-theme-light .wh-rack-section-row {
+  background: rgb(255 255 255 / 0.85);
+}
+
+
+.wh-layout-resize {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  background: rgba(16, 185, 129, 0.85);
+  cursor: se-resize;
+  border: none;
+  padding: 0;
+}
+
+.wh-layout-cell--wall {
+  border-radius: 0.25rem;
+  opacity: 0.85;
+}
+
+.wh-layout-cell--aisle {
+  opacity: 0.55;
+  border-style: dashed;
+}
+
+.wh-layout-cell--zone {
+  border-style: dotted;
+  opacity: 0.7;
+}
+
+.wh-layout-cell--rack-pallet {
+  border-width: 3px;
+}
+
+.wh-layout-cell--rack-shelf {
+  border-style: solid;
+}
+
+.wh-layout-cell--social,
+.wh-layout-cell--bathroom,
+.wh-layout-cell--locker {
+  opacity: 0.92;
+}
+
+.wh-layout-cell--door {
+  border-style: double;
+}
+
+.wh-layout-cell--stairs {
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent,
+    transparent 4px,
+    var(--wh-stairs-stripe) 4px,
+    var(--wh-stairs-stripe) 8px
+  );
+}
+
+.wh-layout-mini-preview .wh-layout-canvas {
+  box-shadow: inset 0 0 0 1px rgb(51 65 85 / 0.5);
+}
+
+.wh-layout-cell--mini {
+  cursor: default;
+  padding: 0.125rem;
+}
+
+.wh-layout-cell--mini .wh-layout-cell-emoji {
+  font-size: 0.625rem;
+}
+
+.wh-layout-cell--mini .wh-layout-cell-label {
+  font-size: 0.5rem;
+}
+
+.wh-layout-cell--assign-target {
+  z-index: 12;
+  box-shadow:
+    0 0 0 2px rgb(52 211 153 / 0.95),
+    0 0 16px rgb(52 211 153 / 0.45);
+  animation: wh-assign-pulse 1.6s ease-in-out infinite;
+}
+
+.wh-layout-cell--assign-dim {
+  opacity: 0.28;
+  filter: saturate(0.35);
+}
+
+@keyframes wh-assign-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px rgb(52 211 153 / 0.95),
+      0 0 12px rgb(52 211 153 / 0.35);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px rgb(52 211 153 / 1),
+      0 0 20px rgb(52 211 153 / 0.55);
+  }
+}
+
+/* Operacje — analiza sprzedaży (jasny motyw: normalizacja odwróconego slate) */
+html:not(.dark) .ops-sales-analytics {
+  color: #0f172a;
+}
+
+html:not(.dark) .ops-sales-analytics .text-slate-50,
+html:not(.dark) .ops-sales-analytics .text-slate-100,
+html:not(.dark) .ops-sales-analytics .text-slate-200,
+html:not(.dark) .ops-sales-analytics .text-slate-300,
+html:not(.dark) .ops-sales-analytics .text-slate-900,
+html:not(.dark) .ops-sales-analytics .text-slate-950 {
+  color: #0f172a !important;
+}
+
+html:not(.dark) .ops-sales-analytics .text-slate-400,
+html:not(.dark) .ops-sales-analytics .text-slate-500,
+html:not(.dark) .ops-sales-analytics .text-slate-600,
+html:not(.dark) .ops-sales-analytics .text-slate-700,
+html:not(.dark) .ops-sales-analytics .text-slate-800 {
+  color: #475569 !important;
+}
+
+html:not(.dark) .ops-sales-analytics .border-slate-200,
+html:not(.dark) .ops-sales-analytics .border-slate-300,
+html:not(.dark) .ops-sales-analytics .border-slate-700,
+html:not(.dark) .ops-sales-analytics .border-slate-800,
+html:not(.dark) .ops-sales-analytics .border-slate-800\/80,
+html:not(.dark) .ops-sales-analytics .border-slate-700\/80,
+html:not(.dark) .ops-sales-analytics .border-slate-700\/70 {
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) .ops-sales-analytics .bg-slate-900,
+html:not(.dark) .ops-sales-analytics .bg-slate-900\/30,
+html:not(.dark) .ops-sales-analytics .bg-slate-900\/40,
+html:not(.dark) .ops-sales-analytics .bg-slate-900\/50,
+html:not(.dark) .ops-sales-analytics .bg-slate-900\/60,
+html:not(.dark) .ops-sales-analytics .bg-slate-900\/70,
+html:not(.dark) .ops-sales-analytics .bg-slate-900\/80,
+html:not(.dark) .ops-sales-analytics .bg-slate-900\/95 {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) .ops-sales-analytics .bg-slate-950,
+html:not(.dark) .ops-sales-analytics .bg-slate-950\/30,
+html:not(.dark) .ops-sales-analytics .bg-slate-950\/40,
+html:not(.dark) .ops-sales-analytics .bg-slate-950\/50,
+html:not(.dark) .ops-sales-analytics .bg-slate-950\/60,
+html:not(.dark) .ops-sales-analytics .bg-slate-950\/80,
+html:not(.dark) .ops-sales-analytics .bg-slate-950\/90,
+html:not(.dark) .ops-sales-analytics .bg-slate-950\/95,
+html:not(.dark) .ops-sales-analytics .bg-slate-50 {
+  background-color: #f8fafc !important;
+}
+
+html:not(.dark) .ops-sales-analytics .bg-slate-800,
+html:not(.dark) .ops-sales-analytics .bg-slate-800\/40,
+html:not(.dark) .ops-sales-analytics .bg-slate-800\/60,
+html:not(.dark) .ops-sales-analytics .bg-slate-800\/80,
+html:not(.dark) .ops-sales-analytics .bg-slate-100 {
+  background-color: #f1f5f9 !important;
+}
+
+html:not(.dark) .ops-sales-analytics .hover\:bg-slate-50:hover,
+html:not(.dark) .ops-sales-analytics .hover\:bg-slate-100:hover,
+html:not(.dark) .ops-sales-analytics .hover\:bg-slate-800:hover,
+html:not(.dark) .ops-sales-analytics .hover\:bg-slate-800\/80:hover,
+html:not(.dark) .ops-sales-analytics .hover\:bg-slate-900:hover,
+html:not(.dark) .ops-sales-analytics .hover\:bg-slate-950\/30:hover {
+  background-color: #f1f5f9 !important;
+}
+
+html:not(.dark) .ops-sales-analytics .ops-sales-view-bar {
+  border-color: #86efac !important;
+  background: #f3fbf3 !important;
+  color: #1f6124 !important;
+}
+
+html:not(.dark) .ops-sales-analytics .ops-sales-view-bar .font-semibold {
+  color: #1b5020 !important;
+}
+
+/* Operacje — analiza sprzedaży produktów */
+.ops-sales-analytics .money-cell,
+.ops-sales-analytics .ops-sales-table th,
+.ops-sales-analytics .ops-sales-table td.tabular-nums {
+  white-space: nowrap;
+}
+.ops-sales-analytics .money-cell {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+html:not(.dark) .ops-sales-analytics .ops-sales-table thead {
+  background: #f8fafc;
+  color: #475569;
+}
+html:not(.dark) .ops-sales-analytics .ops-sales-table tbody tr {
+  border-color: #e2e8f0;
+}
+html:not(.dark) .ops-sales-analytics .ops-sales-table tbody tr:hover {
+  background: #f1f5f9;
+}
+html:not(.dark) .ops-sales-analytics .ops-sales-table td {
+  color: #0f172a;
+}
+html:not(.dark) .ops-sales-analytics .ops-sales-table .text-slate-100,
+html:not(.dark) .ops-sales-analytics .ops-sales-table .text-slate-50 {
+  color: #0f172a !important;
+}
+html:not(.dark) .ops-sales-analytics .ops-sales-table .text-slate-400,
+html:not(.dark) .ops-sales-analytics .ops-sales-table .text-slate-300 {
+  color: #475569 !important;
+}
+
+/* Tooltip wykresu — zawsze jasne tło i ciemny tekst (czytelne na jasnym motywie) */
+.ops-sales-chart-tooltip {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+}
+.ops-sales-chart-tooltip p:first-child {
+  color: #0f172a !important;
+}
+.ops-sales-chart-tooltip p:nth-child(2) {
+  color: #64748b !important;
+}
+.dark .ops-sales-chart-tooltip {
+  background: #0f172a !important;
+  border-color: #475569 !important;
+}
+.dark .ops-sales-chart-tooltip p:first-child {
+  color: #f8fafc !important;
+}
+.dark .ops-sales-chart-tooltip p:nth-child(2) {
+  color: #94a3b8 !important;
+}
+
+.ops-sales-chart .recharts-cartesian-axis-tick-value {
+  fill: #334155 !important;
+  font-weight: 600;
+}
+.dark .ops-sales-chart .recharts-cartesian-axis-tick-value {
+  fill: #cbd5e1 !important;
+}
+.ops-sales-chart .recharts-legend-item-text {
+  color: #334155 !important;
+}
+.dark .ops-sales-chart .recharts-legend-item-text {
+  color: #cbd5e1 !important;
+}
+
+/* Jasny motyw — alerty, badge ABC/XYZ, pastele (nie polegamy na odwróconym slate) */
+html:not(.dark) .ops-sales-analytics .ops-sales-alert-warn {
+  border-color: #fcd34d !important;
+  background: #fffbeb !important;
+  color: #78350f !important;
+}
+html:not(.dark) .ops-sales-analytics .ops-sales-badge {
+  font-weight: 700;
+}
+html:not(.dark) .ops-sales-analytics .ops-sales-badge--abc-a {
+  border-color: #34d399 !important;
+  background: #ecfdf5 !important;
+  color: #065f46 !important;
+}
+html:not(.dark) .ops-sales-analytics .ops-sales-badge--abc-b {
+  border-color: #fbbf24 !important;
+  background: #fffbeb !important;
+  color: #78350f !important;
+}
+html:not(.dark) .ops-sales-analytics .ops-sales-badge--abc-c {
+  border-color: #cbd5e1 !important;
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+}
+html:not(.dark) .ops-sales-analytics .ops-sales-badge--xyz-x {
+  border-color: #38bdf8 !important;
+  background: #f0f9ff !important;
+  color: #0c4a6e !important;
+}
+html:not(.dark) .ops-sales-analytics .ops-sales-badge--xyz-y {
+  border-color: #a78bfa !important;
+  background: #f5f3ff !important;
+  color: #4c1d95 !important;
+}
+html:not(.dark) .ops-sales-analytics .ops-sales-badge--xyz-z {
+  border-color: #fb923c !important;
+  background: #fff7ed !important;
+  color: #7c2d12 !important;
+}
+html:not(.dark) .ops-sales-analytics .ops-sales-badge--xyz-none {
+  border-color: #cbd5e1 !important;
+  background: #f8fafc !important;
+  color: #64748b !important;
+}
+
+/* Operacje — Sonax (jasny motyw: pastele emerald/amber/sky/red) */
+html:not(.dark) .ops-sales-analytics .text-emerald-100,
+html:not(.dark) .ops-sales-analytics .text-emerald-200,
+html:not(.dark) .ops-sales-analytics .text-emerald-300,
+html:not(.dark) .ops-sales-analytics .text-emerald-400 {
+  color: #065f46 !important;
+}
+
+html:not(.dark) .ops-sales-analytics .text-amber-100,
+html:not(.dark) .ops-sales-analytics .text-amber-200,
+html:not(.dark) .ops-sales-analytics .text-amber-200\/80,
+html:not(.dark) .ops-sales-analytics .text-amber-200\/90,
+html:not(.dark) .ops-sales-analytics .text-amber-300,
+html:not(.dark) .ops-sales-analytics .text-amber-400 {
+  color: #78350f !important;
+}
+
+html:not(.dark) .ops-sales-analytics .text-sky-300,
+html:not(.dark) .ops-sales-analytics .text-sky-400 {
+  color: #0c4a6e !important;
+}
+
+html:not(.dark) .ops-sales-analytics .text-red-200 {
+  color: #991b1b !important;
+}
+
+html:not(.dark) .ops-sales-analytics .bg-emerald-500\/5,
+html:not(.dark) .ops-sales-analytics .bg-emerald-500\/10,
+html:not(.dark) .ops-sales-analytics .bg-emerald-500\/15,
+html:not(.dark) .ops-sales-analytics .bg-emerald-500\/20 {
+  background-color: #ecfdf5 !important;
+}
+
+html:not(.dark) .ops-sales-analytics .bg-amber-500\/10,
+html:not(.dark) .ops-sales-analytics .bg-amber-500\/20 {
+  background-color: #fffbeb !important;
+}
+
+html:not(.dark) .ops-sales-analytics .bg-sky-500\/15 {
+  background-color: #f0f9ff !important;
+}
+
+html:not(.dark) .ops-sales-analytics .bg-red-500\/10 {
+  background-color: #fef2f2 !important;
+}
+
+html:not(.dark) .ops-sales-analytics .border-emerald-500\/30,
+html:not(.dark) .ops-sales-analytics .border-emerald-500\/40,
+html:not(.dark) .ops-sales-analytics .border-emerald-500\/50 {
+  border-color: #6ee7b7 !important;
+}
+
+html:not(.dark) .ops-sales-analytics .border-amber-500\/30,
+html:not(.dark) .ops-sales-analytics .border-amber-500\/40,
+html:not(.dark) .ops-sales-analytics .border-amber-500\/50 {
+  border-color: #fcd34d !important;
+}
+
+html:not(.dark) .ops-sales-analytics .border-sky-500\/50 {
+  border-color: #7dd3fc !important;
+}
+
+html:not(.dark) .ops-sales-analytics .border-red-500\/40 {
+  border-color: #fca5a5 !important;
+}
+
+html:not(.dark) .ops-sales-analytics .ops-sonax-header {
+  border-color: #6ee7b7 !important;
+  background: linear-gradient(135deg, #ecfdf5 0%, #ffffff 55%, #f8fafc 100%) !important;
+}
+
+html:not(.dark) .ops-sales-analytics .ops-sonax-method-row--highlight {
+  border-color: #6ee7b7 !important;
+  background: #ecfdf5 !important;
+}
+
+html:not(.dark) .ops-sales-analytics .ops-sonax-method-row--warn {
+  border-color: #fcd34d !important;
+  background: #fffbeb !important;
+}
+
+html:not(.dark) .ops-sales-analytics .ops-sonax-method-row--muted {
+  border-color: #e2e8f0 !important;
+  background: #f8fafc !important;
 }
 
 

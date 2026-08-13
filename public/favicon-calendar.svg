@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="calendarBg" x1="84" y1="72" x2="430" y2="438" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3bd64a"/>
+      <stop offset="1" stop-color="#128c2e"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#calendarBg)"/>
+  <rect x="106" y="128" width="300" height="280" rx="50" fill="#ffffff"/>
+  <path d="M106 214h300" stroke="#18a83c" stroke-width="28" stroke-linecap="round"/>
+  <path d="M172 100v72M340 100v72" stroke="#ffffff" stroke-width="28" stroke-linecap="round"/>
+  <path d="M166 268h34M239 268h34M312 268h34M166 326h34M239 326h34" stroke="#18a83c" stroke-width="22" stroke-linecap="round"/>
+</svg>

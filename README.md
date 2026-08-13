@@ -2,7 +2,15 @@
 
 Wewnętrzna aplikacja magazynowo-katalogowa Kenochem: przeglądanie towarów, stany, zdjęcia, zestawy oraz szybkie wyszukiwanie (w tym skan EAN / Lens).
 
-**Produkcja:** [kenochem-katalog.web.app](https://kenochem-katalog.web.app)  
+**Produkcja (produkty modułowe):**
+
+| Produkt | URL | Opis |
+|---------|-----|------|
+| **Katalog** | [kenochem-katalog.web.app](https://kenochem-katalog.web.app) | Tylko katalog (Akcesoria + Produkty) — bez CRM / Operacji / czatu |
+| **Suite** | [kenochem-f4a5b.web.app](https://kenochem-f4a5b.web.app) | Pełny hub (jak dotychczas): CRM, Operacje, czat |
+
+Szczegóły: [`docs/products/ROADMAP.md`](docs/products/ROADMAP.md).
+
 **Repozytorium:** [github.com/kenochem/Katalog](https://github.com/kenochem/Katalog)
 
 ## Co to jest
@@ -32,7 +40,11 @@ Stack: **React + Vite + TypeScript + Tailwind**, baza / Auth / storage w **Supab
 ```bash
 npm install
 cp .env.example .env   # uzupełnij klucze Supabase
-npm run dev            # http://localhost:5173
+npm run dev            # Suite (localhost)
+npm run dev:catalog    # tylko Katalog
+npm run build:catalog
+npm run build:suite
+npm run deploy         # oba produkty → Firebase
 ```
 
 ## Konfiguracja Supabase (jednorazowo)
@@ -114,7 +126,23 @@ Rozwój lejka (oferty, statusy, audyt) — mapa z CRM-Base: [`docs/crm-from-crm-
 
 Klienci i historia są **tylko Twoje** (RLS po `auth.uid()`).
 
-### Czat (ogólny + DM)
+### CRM — skrzynka e-mail (IMAP/SMTP)
+
+Obsługa klienta w CRM może pobierać **prawdziwą pocztę** i wysyłać odpowiedzi SMTP (hasło tylko na serwerze — Edge Function).
+
+1. W Supabase SQL Editor uruchom [`supabase/migration-crm-mailbox.sql`](supabase/migration-crm-mailbox.sql).
+2. Deploy funkcji:
+   ```bash
+   npx supabase functions deploy crm-mail
+   ```
+   (projekt musi być połączony: `npx supabase link` — secrets `SUPABASE_SERVICE_ROLE_KEY` są domyślnie w chmurze Supabase).
+3. Build + deploy frontu (`npm run deploy:products`).
+4. W **[kenochem-sell.web.app](https://kenochem-sell.web.app)** → **CRM** → **Obsługa klienta** → panel **Twoja skrzynka e-mail**.
+5. Wybierz szablon (Gmail / Microsoft / home.pl / własny), podaj **hasło aplikacji** (Gmail/365), **Zapisz** → **Pobierz pocztę**.
+6. Odpowiedź w wątku **E-mail (sync)** → **Wyślij** idzie przez SMTP.
+
+Gmail: [Hasła aplikacji](https://myaccount.google.com/apppasswords) + IMAP włączony w koncie Google.
+
 
 Kompaktowy panel (desktop: małe okienko prawy-dół; mobile: sheet od dołu) — tylko dla zalogowanych.
 

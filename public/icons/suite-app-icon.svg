@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="suiteBg" x1="84" y1="72" x2="430" y2="438" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3bd64a"/>
+      <stop offset="1" stop-color="#128c2e"/>
+    </linearGradient>
+    <filter id="suiteShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#064e1f" flood-opacity=".28"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#suiteBg)"/>
+  <g filter="url(#suiteShadow)">
+    <path d="M256 180v-50M256 382v-50M180 256h-50M382 256h-50" stroke="#ffffff" stroke-width="28" stroke-linecap="round"/>
+    <path d="M203 203 166 166M309 203l37-37M203 309l-37 37M309 309l37 37" stroke="#ffffff" stroke-width="24" stroke-linecap="round"/>
+    <circle cx="256" cy="256" r="76" fill="#ffffff"/>
+    <circle cx="256" cy="130" r="38" fill="#ffffff"/>
+    <circle cx="382" cy="256" r="38" fill="#ffffff"/>
+    <circle cx="256" cy="382" r="38" fill="#ffffff"/>
+    <circle cx="130" cy="256" r="38" fill="#ffffff"/>
+    <path d="M224 294v-78h28v27l40-27h38l-51 36 55 42h-40l-42-33v33h-28Z" fill="#18a83c"/>
+  </g>
+</svg>

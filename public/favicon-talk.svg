@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="talkBg" x1="84" y1="72" x2="430" y2="438" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3bd64a"/>
+      <stop offset="1" stop-color="#128c2e"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#talkBg)"/>
+  <path d="M102 148c0-43 35-78 78-78h152c43 0 78 35 78 78v112c0 43-35 78-78 78h-74l-94 74 18-75c-44-1-80-36-80-77V148Z" fill="#ffffff"/>
+  <path d="M165 212 343 140c14-6 28 8 22 22l-74 178c-6 15-27 13-31-3l-18-70-73-24c-15-5-18-25-4-31Z" fill="#18a83c"/>
+  <path d="M243 267 343 140 260 337" stroke="#ffffff" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

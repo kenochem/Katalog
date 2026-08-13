@@ -29,6 +29,14 @@ $dest = Join-Path $SyncDir 'sync-wapro-stock-server.ps1'
 Copy-Item -Force $src $dest
 Write-Host "Skopiowano -> $dest"
 
+$bundleDir = Join-Path $RepoRoot 'scripts\katalog-sync'
+if (Test-Path $bundleDir) {
+  Get-ChildItem $bundleDir -File | ForEach-Object {
+    Copy-Item -Force $_.FullName (Join-Path $SyncDir $_.Name)
+    Write-Host "Skopiowano -> $(Join-Path $SyncDir $_.Name)"
+  }
+}
+
 $envDest = Join-Path $SyncDir 'katalog-sync.env'
 if (-not (Test-Path $envDest)) {
   if (Test-Path $envExample) {
@@ -40,7 +48,11 @@ if (-not (Test-Path $envDest)) {
 }
 
 Write-Host ""
-Write-Host "Gotowe. Test:"
-Write-Host "  powershell -ExecutionPolicy Bypass -File `"$dest`""
-Write-Host "Harmonogram (zlecenia z apki):"
+Write-Host "Gotowe. Test diagnostyki sprzedazy (dwuklik lub z cmd):"
+Write-Host "  $SyncDir\diagnose-wapro-sales.bat SON000083"
+Write-Host "Albo PowerShell:"
+Write-Host "  powershell -ExecutionPolicy Bypass -File `"$dest`" -DiagnoseSalesSku SON000083"
+Write-Host "Harmonogram stany (z aplikacji):"
 Write-Host "  powershell -ExecutionPolicy Bypass -File `"$dest`" -OnlyIfPending"
+Write-Host "Harmonogram sprzedaz (noc, 1x dziennie):"
+Write-Host "  powershell -ExecutionPolicy Bypass -File `"$dest`" -SalesSyncOnly"

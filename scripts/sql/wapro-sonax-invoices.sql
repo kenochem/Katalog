@@ -1,0 +1,21 @@
+-- Faktury WAPRO od 2026-03-01 (Mag Kenochem) — wariant minimalny
+-- Uzyj gdy sync-wapro-sonax-export.ps1 trzeba debugowac recznie w SSMS
+
+SET NOCOUNT ON;
+DECLARE @from int = CAST(CAST(CAST('2026-03-01' AS date) AS datetime) AS int) + 36163;
+
+SELECT
+  CAST(dh.DATA_WYSTAWIENIA AS varchar(12)) AS data_int,
+  LTRIM(RTRIM(CAST(dh.NUMER AS varchar(80)))) AS numer,
+  LTRIM(RTRIM(k.NAZWA)) AS kontrahent,
+  REPLACE(REPLACE(REPLACE(ISNULL(k.NIP, ''), '-', ''), ' ', ''), '.', '') AS nip,
+  CAST(SUM(pd.ILOSC * ISNULL(pd.CENA_NETTO, 0)) AS DECIMAL(18, 2)) AS netto,
+  CAST(SUM(pd.ILOSC * ISNULL(pd.CENA_NETTO, 0)) AS DECIMAL(18, 2)) AS brutto_proxy
+FROM dbo.POZYCJA_DOKUMENTU_MAGAZYNOWEGO pd WITH (NOLOCK)
+INNER JOIN dbo.DOKUMENT_HANDLOWY dh WITH (NOLOCK)
+  ON dh.ID_DOKUMENTU_HANDLOWEGO = pd.ID_DOK_HANDLOWEGO
+LEFT JOIN dbo.KONTRAHENT k WITH (NOLOCK)
+  ON k.ID_KONTRAHENTA = dh.ID_KONTRAHENTA
+WHERE dh.DATA_WYSTAWIENIA >= @from
+GROUP BY dh.ID_DOKUMENTU_HANDLOWEGO, dh.DATA_WYSTAWIENIA, dh.NUMER, k.NAZWA, k.NIP
+ORDER BY dh.DATA_WYSTAWIENIA;

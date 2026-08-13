@@ -52,9 +52,13 @@ function buildPrintDocument(items: LabelQueueItem[]): string {
     .map((item) => {
       const code = (item.ean || item.sku || '').trim();
       const barcode = barcodeSvgMarkup(code);
+      const locLine = item.locationCode?.trim()
+        ? `<div class="loc">${escapeHtml(item.locationCode)}</div>`
+        : '';
       return `
       <div class="label">
         <div class="brand">KENOCHEM</div>
+        ${locLine}
         <div class="name">${escapeHtml(item.displayName)}</div>
         <div class="sku">SKU: ${escapeHtml(item.sku)}</div>
         <div class="barcode">${barcode}</div>
@@ -110,6 +114,13 @@ function buildPrintDocument(items: LabelQueueItem[]): string {
       line-height: 1.25;
       max-height: 2.5em;
       overflow: hidden;
+      margin-bottom: 1mm;
+    }
+    .loc {
+      font-size: 13px;
+      font-weight: 800;
+      font-family: Consolas, "Courier New", monospace;
+      letter-spacing: 0.06em;
       margin-bottom: 1mm;
     }
     .sku {

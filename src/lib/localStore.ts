@@ -22,6 +22,35 @@ export function saveLocalProduct(product: Product): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
 }
 
+export function removeLocalProduct(productId: string): void {
+  const next = getLocalProducts().filter((p) => p.id !== productId);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+}
+
+const HIDDEN_IDS_KEY = 'katalog-hidden-product-ids';
+
+export function getHiddenProductIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(HIDDEN_IDS_KEY);
+    const arr = raw ? (JSON.parse(raw) as string[]) : [];
+    return new Set(arr);
+  } catch {
+    return new Set();
+  }
+}
+
+export function hideProductId(productId: string): void {
+  const set = getHiddenProductIds();
+  set.add(productId);
+  localStorage.setItem(HIDDEN_IDS_KEY, JSON.stringify([...set]));
+}
+
+export function unhideProductId(productId: string): void {
+  const set = getHiddenProductIds();
+  set.delete(productId);
+  localStorage.setItem(HIDDEN_IDS_KEY, JSON.stringify([...set]));
+}
+
 export function mergeProducts(base: Product[], local: Product[]): Product[] {
   const map = new Map(base.map((p) => [p.id, p]));
   for (const p of local) {
