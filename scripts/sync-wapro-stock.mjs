@@ -65,16 +65,24 @@ function priceFieldNeedsUpdate(dbVal, incoming) {
   return Math.abs(old - incoming) > 0.00005;
 }
 
+function grossFallback(saleNet, saleGross) {
+  if (saleGross != null) return saleGross;
+  if (saleNet == null) return null;
+  return Math.round(Number(saleNet) * 1.23 * 100) / 100;
+}
+
 function mapIncomingRow(row) {
+  const saleNet = row.priceSaleNet;
+  const saleGross = grossFallback(saleNet, row.priceSaleGross);
   return {
     sku: row.sku,
     stock: row.stock,
     pricePurchaseNet: row.pricePurchaseNet,
-    priceSaleNet: row.priceSaleNet,
-    priceSaleGross: row.priceSaleGross,
+    priceSaleNet: saleNet,
+    priceSaleGross: saleGross,
     price_purchase_net: row.pricePurchaseNet,
-    price_sale_net: row.priceSaleNet,
-    price_sale_gross: row.priceSaleGross,
+    price_sale_net: saleNet,
+    price_sale_gross: saleGross,
   };
 }
 

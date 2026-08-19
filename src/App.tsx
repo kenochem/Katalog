@@ -805,8 +805,8 @@ export default function App() {
 
   useEffect(() => {
     if (opsStandalone || !isCatalogProduct()) return;
-    void fetch('/data/products.json', { cache: 'force-cache' }).catch(() => undefined);
-    void fetch('/data/shop-products.json', { cache: 'force-cache' }).catch(() => undefined);
+    void fetch('/data/products-lite.json', { cache: 'force-cache' }).catch(() => undefined);
+    void fetch('/data/shop-products-lite.json', { cache: 'force-cache' }).catch(() => undefined);
   }, [opsStandalone]);
 
   useEffect(() => {

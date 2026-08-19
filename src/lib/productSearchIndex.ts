@@ -63,7 +63,7 @@ function productEans(product: Product): string[] {
 
 export type ProductSearchIndex = {
   list: Product[];
-  fuse: Fuse<FuseProduct>;
+  fuse?: Fuse<FuseProduct>;
   searchBlob: Map<string, string>;
   skuExact: Map<string, Product>;
 };
@@ -108,7 +108,6 @@ export function getProductSearchIndex(
 
   const index: ProductSearchIndex = {
     list,
-    fuse: createProductSearch(list),
     searchBlob,
     skuExact,
   };
@@ -230,5 +229,6 @@ export function searchIndexedProducts(
     return containsSku.slice(0, limit);
   }
 
+  index.fuse ??= createProductSearch(index.list);
   return index.fuse.search(q, { limit }).map((r) => r.item);
 }

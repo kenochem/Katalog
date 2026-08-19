@@ -25,6 +25,27 @@ export function formatPricePln(value: number | undefined | null): string {
   );
 }
 
+export function inferGrossFromNet(
+  saleNet: number | undefined | null,
+  vatRate: number | undefined | null = 23,
+): number | null {
+  const net = Number(saleNet);
+  const vat = Number(vatRate ?? 23);
+  if (!Number.isFinite(net)) return null;
+  const rate = Number.isFinite(vat) && vat >= 0 ? vat : 23;
+  return Math.round(net * (1 + rate / 100) * 100) / 100;
+}
+
+export function customerGrossPrice(
+  saleGross: number | undefined | null,
+  saleNet: number | undefined | null,
+  vatRate: number | undefined | null = 23,
+): number | null {
+  const gross = Number(saleGross);
+  if (Number.isFinite(gross)) return gross;
+  return inferGrossFromNet(saleNet, vatRate);
+}
+
 export function formatMarginPercent(value: number | null): string {
   if (value == null || !Number.isFinite(value)) return '—';
   const sign = value > 0 ? '+' : '';

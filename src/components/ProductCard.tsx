@@ -12,7 +12,7 @@ import { memo, useRef, useState, type MouseEvent } from 'react';
 import type { Product } from '../types';
 import { CATALOG_LABELS } from '../types';
 import { getProductImage, updateProductImage } from '../lib/products';
-import { formatStock, formatPricePln, formatMarginPercent, marginPercent } from '../lib/format';
+import { customerGrossPrice, formatStock, formatPricePln, formatMarginPercent, marginPercent } from '../lib/format';
 import { resolveProductCatalogKind } from '../lib/catalogKind';
 import { isCatalogHiddenProduct } from '../lib/productMeta';
 import { showToast } from '../lib/toast';
@@ -76,6 +76,7 @@ export const ProductCard = memo(
     (product.priceSaleGross != null ||
       product.priceSaleNet != null ||
       product.pricePurchaseNet != null);
+  const customerPrice = customerGrossPrice(product.priceSaleGross, product.priceSaleNet, product.meta?.vatRate);
   const margin = marginPercent(product.pricePurchaseNet, product.priceSaleNet);
   const catalogKind = resolveProductCatalogKind(product);
   const catalogKindShort =
@@ -327,7 +328,7 @@ export const ProductCard = memo(
               compact ? 'text-[11px]' : cozy ? 'text-sm' : 'text-xs'
             }`}
           >
-            {formatPricePln(product.priceSaleGross ?? product.priceSaleNet)}
+            {formatPricePln(customerPrice)}
             {margin != null && !compact && (
               <span className="ml-1.5 font-medium text-slate-500">
                 {formatMarginPercent(margin)}

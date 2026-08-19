@@ -13,7 +13,14 @@ import {
   updateProduct, deleteProductImage, deleteProductExtraImage, fetchProductById,
   deleteProduct, isProductSkuTaken,
 } from '../lib/products';
-import { formatStock, formatPricePln, formatMarginPercent, marginPercent, stripHtml } from '../lib/format';
+import {
+  customerGrossPrice,
+  formatStock,
+  formatPricePln,
+  formatMarginPercent,
+  marginPercent,
+  stripHtml,
+} from '../lib/format';
 import { addToLabelQueue } from '../lib/labelQueue';
 import { showToast } from '../lib/toast';
 import { roleCan, type AppRole } from '../lib/roles';
@@ -526,6 +533,9 @@ export function ProductDetail({
   const hasPrimary = !!primaryImage;
 
   const showPrices = roleCan(role, 'viewPrices');
+  const customerPrice = customerGrossPrice(detail.priceSaleGross, detail.priceSaleNet, detail.meta?.vatRate);
+  const customerPriceEstimated =
+    detail.priceSaleGross == null && detail.priceSaleNet != null && customerPrice != null;
   const canDeleteProduct = roleCan(role, 'deleteProduct');
   const stockTone =
     detail.stock <= 0
@@ -692,9 +702,9 @@ export function ProductDetail({
                   {showPrices &&
                     (detail.priceSaleGross != null || detail.priceSaleNet != null) && (
                       <span className="catalog-product-price-chip rounded-lg px-2.5 py-1 text-xs font-bold tabular-nums">
-                        {formatPricePln(detail.priceSaleGross ?? detail.priceSaleNet)}
+                        {formatPricePln(customerPrice)}
                         <span className="catalog-product-price-chip__unit ml-1 text-[10px]">
-                          {detail.priceSaleGross != null ? 'brutto' : 'netto'}
+                          brutto{customerPriceEstimated ? '*' : ''}
                         </span>
                       </span>
                     )}
@@ -1514,7 +1524,12 @@ export function ProductDetail({
                         Sprzedaż brutto
                       </p>
                       <p className="mt-0.5 text-sm font-semibold tabular-nums text-brand-300">
-                        {formatPricePln(detail.priceSaleGross)}
+                        {formatPricePln(customerPrice)}
+                        {customerPriceEstimated ? (
+                          <span className="ml-1 text-[10px] font-medium text-brand-400/80">
+                            wylicz.
+                          </span>
+                        ) : null}
                       </p>
                     </div>
                     <div>

@@ -104,6 +104,12 @@ function ConvertTo-DoubleOrNull([string]$raw) {
   return $null
 }
 
+function ConvertTo-WaproGrossFallback($saleNet, $saleGross) {
+  if ($null -ne $saleGross) { return $saleGross }
+  if ($null -eq $saleNet) { return $null }
+  return [Math]::Round(([double]$saleNet) * 1.23, 2)
+}
+
 function Test-PriceEmpty($raw) {
   $n = ConvertTo-DoubleOrNull ([string]$raw)
   return ($null -eq $n) -or ($n -eq 0)
@@ -428,6 +434,7 @@ function Parse-WaproExportFile([string]$path, [ref]$rawTextOut) {
     if ($parts.Count -ge 3) { $buy = ConvertTo-DoubleOrNull $parts[2] }
     if ($parts.Count -ge 4) { $sale = ConvertTo-DoubleOrNull $parts[3] }
     if ($parts.Count -ge 5) { $gross = ConvertTo-DoubleOrNull $parts[4] }
+    $gross = ConvertTo-WaproGrossFallback $sale $gross
     $stockBySku[$sku] = @{
       stock              = [double]$stockVal
       price_purchase_net = $buy
@@ -582,6 +589,7 @@ function Parse-WaproPriceOnlyExportFile([string]$path) {
     $buy = ConvertTo-DoubleOrNull $parts[1]
     $sale = if ($parts.Count -ge 3) { ConvertTo-DoubleOrNull $parts[2] } else { $null }
     $gross = if ($parts.Count -ge 4) { ConvertTo-DoubleOrNull $parts[3] } else { $null }
+    $gross = ConvertTo-WaproGrossFallback $sale $gross
     if (($null -eq $buy) -and ($null -eq $sale) -and ($null -eq $gross)) { continue }
     $priceBySku[$sku] = @{
       price_purchase_net = $buy
@@ -647,6 +655,7 @@ function Merge-WaproPricesFromCsvFile([hashtable]$stockBySku, [string]$csvPath) 
     $buy = if ($parts.Count -ge 3) { ConvertTo-DoubleOrNull $parts[2] } else { $null }
     $sale = if ($parts.Count -ge 4) { ConvertTo-DoubleOrNull $parts[3] } else { $null }
     $gross = if ($parts.Count -ge 5) { ConvertTo-DoubleOrNull $parts[4] } else { $null }
+    $gross = ConvertTo-WaproGrossFallback $sale $gross
     if (($null -eq $buy) -and ($null -eq $sale) -and ($null -eq $gross)) { continue }
     $row = $stockBySku[$sku]
     if ($null -ne $buy) { $row.price_purchase_net = $buy }

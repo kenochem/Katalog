@@ -488,7 +488,9 @@ export async function addProductExtraImage(
   const url = await uploadProductImageFile(productId, file, `extra-${Date.now()}`);
   const existing = await getExistingProduct(productId);
   const extras = [...(existing?.extraImageUrls || []), url];
+  const shouldUseAsPrimary = !existing?.customImageUrl && !existing?.imageUrl;
   await updateProduct(productId, {
+    imageUrl: shouldUseAsPrimary ? url : existing?.imageUrl,
     extraImageUrls: extras,
     hasImage: true,
   });

@@ -4,7 +4,13 @@ import { AddToCollectionMenu } from '../AddToCollectionMenu';
 import { showToast } from '../../lib/toast';
 import { useMemo, useState } from 'react';
 import type { Product } from '../../types';
-import { formatStock, formatPricePln, formatMarginPercent, marginPercent } from '../../lib/format';
+import {
+  customerGrossPrice,
+  formatStock,
+  formatPricePln,
+  formatMarginPercent,
+  marginPercent,
+} from '../../lib/format';
 import { inferProductTypeLabel } from '../../lib/catalogKind';
 import { buildProductAiContext } from '../../lib/productAiContext';
 import { baselinkerLinkLabel, hasBaselinkerLink } from '../../lib/baselinkerLink';
@@ -260,10 +266,9 @@ function ProductDetailPricePanelBody({
   const gross = detail.priceSaleGross;
   const saleNet = detail.priceSaleNet;
   const purchase = detail.pricePurchaseNet;
-  const clientIsGross = gross != null;
-  const clientAmount = gross ?? saleNet;
-  const clientLabel = clientIsGross ? 'Sprzedaż brutto (cena dla klienta)' : 'Sprzedaż netto (cena dla klienta)';
-  const clientUnit = clientIsGross ? 'brutto' : 'netto';
+  const vatRate = detail.meta?.vatRate ?? 23;
+  const clientAmount = customerGrossPrice(gross, saleNet, vatRate);
+  const clientEstimated = gross == null && saleNet != null && clientAmount != null;
 
   return (
     <div className={`catalog-product-price-panel overflow-hidden rounded-2xl ${compact ? '' : 'p-1'}`}>
@@ -276,22 +281,27 @@ function ProductDetailPricePanelBody({
           Ceny · WAPRO
         </p>
         <p className="catalog-product-price-panel__hero-label mt-2 text-xs font-medium">
-          {clientLabel}
+          Sprzedaż brutto (cena dla klienta)
         </p>
         <p className="catalog-product-price-panel__hero-value mt-0.5 tabular-nums">
           <span className={compact ? 'text-2xl font-bold' : 'text-3xl font-bold'}>
             {formatPricePln(clientAmount)}
           </span>
           <span className="catalog-product-price-panel__hero-unit ml-2 text-sm font-semibold">
-            {clientUnit}
+            brutto
           </span>
         </p>
-        {clientIsGross && saleNet != null ? (
+        {saleNet != null ? (
           <p className="catalog-product-price-panel__netto-line mt-1.5 text-xs tabular-nums">
             Netto:{' '}
             <span className="catalog-product-price-panel__netto-value">
               {formatPricePln(saleNet)}
             </span>
+            {clientEstimated ? (
+              <span className="ml-1 text-[11px] font-medium opacity-75">
+                · brutto wyliczone z VAT {vatRate}%
+              </span>
+            ) : null}
           </p>
         ) : null}
       </div>
@@ -305,7 +315,7 @@ function ProductDetailPricePanelBody({
         <ProductPriceMetric
           label="Sprzedaż netto"
           value={formatPricePln(saleNet)}
-          hint={clientIsGross ? 'Bez VAT' : undefined}
+          hint="Bez VAT"
           accent
         />
         <ProductPriceMetric
@@ -319,7 +329,7 @@ function ProductDetailPricePanelBody({
 }
 
 function buildSalesOfferLine(detail: Product): string {
-  const price = detail.priceSaleGross ?? detail.priceSaleNet;
+  const price = customerGrossPrice(detail.priceSaleGross, detail.priceSaleNet, detail.meta?.vatRate);
   const bits = [detail.sku, detail.ean?.trim(), detail.displayName];
   if (price != null) bits.push(formatPricePln(price));
   return bits.filter(Boolean).join(' · ');
