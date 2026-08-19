@@ -7,6 +7,7 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import type { Product, ProductVariant } from '../types';
 import { ACCESSORY_CATEGORIES } from '../types';
+import { manufacturerOptions, normalizeManufacturer, effectiveManufacturer } from '../lib/waproManufacturers';
 import {
   getProductImage, getProductImages, updateProductImage, addProductExtraImage,
   updateProduct, deleteProductImage, deleteProductExtraImage, fetchProductById,
@@ -51,6 +52,7 @@ import { ProductKnowledgeStatus } from './product/ProductKnowledgeStatus';
 import { suggestShortDescription } from '../lib/productKnowledge';
 import { BaselinkerTag } from './BaselinkerTag';
 import { baselinkerLinkLabel, hasBaselinkerLink } from '../lib/baselinkerLink';
+import { getShopCategoryTree, walkShopLeaves } from '../lib/shopCategoryTree';
 
 interface ProductDetailProps {
   product: Product;
@@ -92,7 +94,10 @@ export function ProductDetail({
   const [displayName, setDisplayName] = useState(product.displayName);
   const [editSku, setEditSku] = useState(product.sku);
   const [category, setCategory] = useState(product.category);
-  const [description, setDescription] = useState(() => stripHtml(product.description));
+  const [manufacturer, setManufacturer] = useState(product.manufacturer || '');
+  const [description, setDescription] = useState('');
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailLoadError, setDetailLoadError] = useState(false);
   const [ean, setEan] = useState(product.ean || '');
   const [stock, setStock] = useState(product.stock ?? 0);
   const [locationCode, setLocationCode] = useState(() =>
@@ -116,6 +121,7 @@ export function ProductDetail({
   const [revertBusy, setRevertBusy] = useState(false);
   const [deleteProductBusy, setDeleteProductBusy] = useState(false);
   const [imageDragOver, setImageDragOver] = useState(false);
+  const [imagePreviewOpen, setImagePreviewOpen] = useState(false);
   const [hasImageRevert, setHasImageRevert] = useState(
     () => !!getPrimaryImageRevertUrl(product.id),
   );
@@ -138,11 +144,16 @@ export function ProductDetail({
   }, [detail, localPrimaryImage, localExtraImages]);
 
   useEffect(() => {
+    let active = true;
     setDetail(product);
+    setImagePreviewOpen(false);
     setDisplayName(product.displayName);
     setEditSku(product.sku);
     setCategory(product.category);
-    setDescription(stripHtml(product.description));
+    setManufacturer(product.manufacturer || '');
+    setDescription('');
+    setDetailLoading(true);
+    setDetailLoadError(false);
     setEan(product.ean || '');
     setStock(product.stock ?? 0);
     setLocationCode(
@@ -157,20 +168,33 @@ export function ProductDetail({
     const variantN = product.variants?.length ?? 0;
     setDetailTab(product.isGroup && variantN > 0 ? 'variants' : 'info');
 
-    fetchProductById(product.id).then((full) => {
-      if (full) {
-        setDetail({
-          ...full,
-          variants: full.variants?.length ? full.variants : product.variants,
-          isGroup: full.isGroup ?? product.isGroup ?? (full.variants?.length ?? 0) > 0,
-        });
-        setDescription(stripHtml(full.description));
-        setEan(full.ean || '');
-        setStock(full.stock ?? 0);
-        setEditMeta({ ...full.meta });
-        setParametersText(parametersToText(full.meta?.parameters));
-      }
-    });
+    fetchProductById(product.id)
+      .then((full) => {
+        if (!active) return;
+        if (full) {
+          setDetail({
+            ...full,
+            variants: full.variants?.length ? full.variants : product.variants,
+            isGroup: full.isGroup ?? product.isGroup ?? (full.variants?.length ?? 0) > 0,
+          });
+          setDescription(stripHtml(full.description));
+          setEan(full.ean || '');
+          setStock(full.stock ?? 0);
+          setEditMeta({ ...full.meta });
+          setParametersText(parametersToText(full.meta?.parameters));
+        }
+      })
+      .catch((err) => {
+        console.warn('fetchProductById', product.id, err);
+        if (active) setDetailLoadError(true);
+      })
+      .finally(() => {
+        if (active) setDetailLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, [product]);
 
   useEffect(() => {
@@ -372,6 +396,7 @@ export function ProductDetail({
       const updates: Partial<Product> = {
         displayName,
         category,
+        manufacturer: normalizeManufacturer(manufacturer.trim()),
         description,
         ean: normalizedEan,
       };
@@ -483,24 +508,19 @@ export function ProductDetail({
     }
   }
 
-  const editCategories =
-    detail.catalog === 'shop'
-      ? Array.from(
-          new Set([
-            detail.category,
-            'Chemia',
-            'Odświeżacze',
-            'Szczotki',
-            'Myjki',
-            'Opryskiwacze',
-            'Akcesoria sklepowe',
-            'Smary',
-            'Abel Auto',
-            'Dom i ogród',
-            'Inne',
-          ]),
-        )
-      : ACCESSORY_CATEGORIES.filter((c) => c !== 'Wszystkie');
+  const editCategories = useMemo(() => {
+    const shopLeaves = walkShopLeaves(getShopCategoryTree().roots).map((leaf) => leaf.label);
+    return Array.from(
+      new Set([
+        detail.category,
+        ...shopLeaves,
+        ...ACCESSORY_CATEGORIES.filter((c) => c !== 'Wszystkie'),
+      ].filter(Boolean)),
+    ).sort((a, b) => a.localeCompare(b, 'pl'));
+  }, [detail.category]);
+  const categoryListId = `product-category-options-${detail.id.replace(/[^a-z0-9_-]/gi, '-')}`;
+  const editManufacturers = manufacturerOptions([detail.manufacturer, manufacturer]);
+  const displayManufacturer = effectiveManufacturer(detail);
   const variantCount = detail.variants?.length ?? 0;
   const isGroup = detail.isGroup || variantCount > 0;
   const hasPrimary = !!primaryImage;
@@ -515,12 +535,6 @@ export function ProductDetail({
         : 'text-emerald-300 bg-emerald-500/10 border-emerald-500/30';
 
   const canUploadImages = roleCan(role, 'uploadImage');
-  const allowHubImageDrop = hubStyle && canUploadImages && detailTab === 'photos';
-
-  const resolvedLocation = formatLocationCode(
-    resolveProductLocation(detail.id, detail.warehouseLocation),
-  );
-
   const hubTabs = useMemo(() => {
     const tabs: {
       id: 'info' | 'desc' | 'variants' | 'photos' | 'ai' | 'sales';
@@ -543,6 +557,69 @@ export function ProductDetail({
     return tabs;
   }, [variantCount, canUploadImages, showPrices]);
 
+  const allowHubImageDrop = hubStyle && canUploadImages && detailTab === 'photos';
+
+  const resolvedLocation = formatLocationCode(
+    resolveProductLocation(detail.id, detail.warehouseLocation),
+  );
+
+  /** Na telefonie: zdjęcie i ceny tylko w zakładkach Dane / Zdjęcia — więcej miejsca na Sprzedaż itd. */
+  const showHubMediaColumn =
+    detailTab === 'info' || detailTab === 'photos';
+
+  function renderCatalogVisibilityEdit() {
+    const hidden = editMeta.catalogHidden === true;
+    return (
+      <div className="catalog-visibility-edit rounded-2xl border p-3">
+        <label className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            checked={hidden}
+            onChange={(e) => {
+              const nextHidden = e.target.checked;
+              setEditMeta((m: ProductMeta) => ({
+                ...m,
+                catalogHidden: nextHidden,
+                catalogHiddenAt: nextHidden
+                  ? m.catalogHiddenAt || new Date().toISOString()
+                  : undefined,
+                catalogHiddenReason: nextHidden ? m.catalogHiddenReason : undefined,
+              }));
+            }}
+            className="catalog-visibility-edit__check mt-1 h-4 w-4 rounded"
+          />
+          <span className="min-w-0">
+            <span className="catalog-visibility-edit__title block text-sm font-semibold">
+              Ukryj w katalogu
+            </span>
+            <span className="catalog-visibility-edit__desc mt-0.5 block text-xs leading-relaxed">
+              Produkt zostaje w bazie i nadal może dostawać stany/ceny z WAPRO, ale nie pokazuje się
+              domyślnie na liście produktów.
+            </span>
+          </span>
+        </label>
+        {hidden && (
+          <label className="mt-3 block">
+            <span className="catalog-visibility-edit__label mb-1 block text-xs font-medium">
+              Powód ukrycia
+            </span>
+            <input
+              value={editMeta.catalogHiddenReason ?? ''}
+              onChange={(e) =>
+                setEditMeta((m: ProductMeta) => ({
+                  ...m,
+                  catalogHiddenReason: e.target.value,
+                }))
+              }
+              placeholder="np. stara marka, produkt przestarzały, nie sprzedajemy"
+              className="input-field"
+            />
+          </label>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center sm:p-4"
@@ -551,7 +628,7 @@ export function ProductDetail({
       <div
         className={`animate-fade-in w-full border border-slate-700 bg-slate-900 ${
           hubStyle
-            ? 'catalog-product-modal flex max-h-[94dvh] flex-col overflow-hidden rounded-t-3xl sm:max-h-[92dvh] sm:rounded-2xl lg:max-w-6xl xl:max-w-7xl'
+            ? 'catalog-product-modal flex max-h-[min(96dvh,calc(100dvh-env(safe-area-inset-bottom)-0.25rem))] flex-col overflow-hidden rounded-t-3xl pb-[env(safe-area-inset-bottom)] sm:h-[94dvh] sm:max-h-[94dvh] sm:rounded-2xl sm:pb-0 lg:max-w-[90rem] xl:max-w-[96rem]'
             : 'max-h-[92dvh] max-w-lg overflow-y-auto rounded-t-3xl sm:rounded-3xl lg:max-w-2xl'
         }`}
         onClick={(e) => e.stopPropagation()}
@@ -577,7 +654,7 @@ export function ProductDetail({
                     className="input-field text-lg font-semibold"
                   />
                 ) : (
-                  <h2 className="text-lg font-semibold leading-snug text-slate-50 lg:text-xl">
+                  <h2 className="line-clamp-2 text-lg font-semibold leading-snug text-slate-50 lg:text-xl">
                     {displayName}
                   </h2>
                 )}
@@ -643,7 +720,7 @@ export function ProductDetail({
                 </button>
               </div>
             </div>
-            <div className="flex gap-1 overflow-x-auto px-4 pb-2">
+            <div className="catalog-product-tabs flex snap-x snap-mandatory gap-1 overflow-x-auto px-4 pb-2 scrollbar-none">
               {hubTabs.map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
@@ -695,20 +772,20 @@ export function ProductDetail({
         <div
           className={
             hubStyle
-              ? 'grid min-h-0 flex-1 gap-4 p-4 lg:grid-cols-[minmax(18rem,34rem)_minmax(0,1fr)] lg:gap-8 lg:overflow-y-auto lg:p-6'
+              ? 'grid min-h-0 flex-1 gap-4 p-4 lg:grid-cols-[minmax(18rem,32rem)_minmax(0,1fr)] lg:gap-8 lg:overflow-y-auto lg:p-6'
               : undefined
           }
         >
-        <div className={hubStyle ? 'flex flex-col gap-2 lg:sticky lg:top-0 lg:self-start' : undefined}>
+        <div className={hubStyle ? `${showHubMediaColumn ? 'flex' : 'hidden lg:flex'} flex-col gap-2 lg:sticky lg:top-0 lg:self-start` : undefined}>
         <div
-          className={`relative aspect-square bg-slate-800 ${
+          className={`relative bg-slate-800 ${
             hubStyle
-              ? `overflow-hidden rounded-2xl border bg-white dark:bg-slate-800 ${
+              ? `aspect-[4/3] max-h-[min(38dvh,13.5rem)] overflow-hidden rounded-2xl border bg-white sm:max-h-[min(46dvh,24rem)] lg:max-h-[min(48dvh,28rem)] dark:bg-slate-800 ${
                   imageDragOver
                     ? 'border-brand-500 ring-2 ring-brand-500/40'
                     : 'border-slate-700 dark:border-slate-800'
                 }`
-              : ''
+              : 'aspect-square'
           }`}
           onDragEnter={
             allowHubImageDrop
@@ -747,16 +824,26 @@ export function ProductDetail({
         >
           {roleCan(role, 'viewImages') && displayImage ? (
             <>
-              <img
-                src={displayImage}
-                alt={detail.displayName}
-                className="h-full w-full object-contain p-4"
-              />
+              <button
+                type="button"
+                onClick={() => setImagePreviewOpen(true)}
+                className="block h-full w-full cursor-zoom-in"
+                title="Powiększ zdjęcie"
+              >
+                <img
+                  src={displayImage}
+                  alt={detail.displayName}
+                  className="h-full w-full object-contain p-4"
+                />
+              </button>
               {roleCan(role, 'deleteImage') && (
                 <button
                   type="button"
                   disabled={deleting || uploading || uploadingExtra}
-                  onClick={handleDeleteImage}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void handleDeleteImage();
+                  }}
                   className="absolute right-3 top-3 flex items-center gap-1.5 rounded-lg bg-red-600/90 px-3 py-2 text-sm font-medium text-white shadow-lg backdrop-blur transition hover:bg-red-500 disabled:opacity-50"
                 >
                   {deleting ? (
@@ -767,7 +854,7 @@ export function ProductDetail({
                   {allImages.length > 1 ? 'Usuń to zdjęcie' : 'Usuń zdjęcie'}
                 </button>
               )}
-              {allImages.length > 1 && (
+              {allImages.length > 1 && !hubStyle && (
                 <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5 rounded-xl bg-black/75 p-1.5 backdrop-blur">
                   {allImages.map((url, idx) => (
                     <button
@@ -811,10 +898,29 @@ export function ProductDetail({
             </div>
           )}
         </div>
-        {hubStyle && showPrices && !editing && (
+        {hubStyle && allImages.length > 1 && roleCan(role, 'viewImages') && (
+          <div className="flex gap-1.5 overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/40 p-2 scrollbar-none">
+            {allImages.map((url, idx) => (
+              <button
+                key={url}
+                type="button"
+                onClick={() => setSelectedIdx(idx)}
+                className={`h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 transition ${
+                  idx === selectedIdx
+                    ? 'border-brand-500'
+                    : 'border-slate-700 opacity-70 hover:opacity-100'
+                }`}
+                title={`Zdjęcie ${idx + 1}`}
+              >
+                <img src={url} alt="" className="h-full w-full object-cover" />
+              </button>
+            ))}
+          </div>
+        )}
+        {hubStyle && showPrices && !editing && detailTab === 'info' && (
           <ProductDetailPriceGrid detail={detail} compact />
         )}
-        {hubStyle && !editing && (
+        {hubStyle && !editing && detailTab === 'info' && (
           <ProductDetailCatalogQuickActions
             detail={detail}
             isFavorite={isFavorite}
@@ -830,7 +936,7 @@ export function ProductDetail({
         )}
         </div>
 
-        <div className={hubStyle ? 'min-w-0 space-y-4' : 'space-y-4 p-4'}>
+        <div className={hubStyle ? 'min-w-0 space-y-4 pb-1 sm:pb-0' : 'space-y-4 p-4'}>
           {hubStyle && roleCan(role, 'editStock') && detailTab === 'info' && !editing && (
             <div className="flex items-center justify-center gap-4 rounded-2xl border border-slate-800 bg-slate-950/60 py-3">
               <button
@@ -900,11 +1006,28 @@ export function ProductDetail({
             <ProductDetailDescPanel
               description={description}
               shortDescription={detail.meta?.shortDescription}
+              loading={detailLoading}
+              loadError={detailLoadError}
             />
           )}
 
           {hubStyle && editing && detailTab === 'info' && (
             <div className="space-y-3">
+              <label className="block rounded-2xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-500/25 dark:bg-amber-500/5">
+                <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-amber-900 dark:text-amber-300">
+                  Notatka wewnętrzna
+                </span>
+                <textarea
+                  value={editMeta.internalNote ?? ''}
+                  onChange={(e) =>
+                    setEditMeta((m: ProductMeta) => ({ ...m, internalNote: e.target.value }))
+                  }
+                  rows={3}
+                  placeholder="Ważne uwagi dla handlowca, BOK albo magazynu..."
+                  className="input-field resize-y text-sm"
+                />
+              </label>
+              {renderCatalogVisibilityEdit()}
               <label className="block">
                 <span className="mb-1 text-xs text-slate-500">SKU (kod magazynowy)</span>
                 <input
@@ -927,16 +1050,32 @@ export function ProductDetail({
                 />
               </label>
               <label className="block">
-                <span className="mb-1 text-xs text-slate-500">Kategoria</span>
+                <span className="mb-1 text-xs text-slate-500">Producent / marka</span>
                 <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
+                  value={manufacturer}
+                  onChange={(e) => setManufacturer(e.target.value)}
                   className="input-field"
                 >
-                  {editCategories.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                  <option value="">— wybierz —</option>
+                  {editManufacturers.map((m) => (
+                    <option key={m} value={m}>{m}</option>
                   ))}
                 </select>
+              </label>
+              <label className="block">
+                <span className="mb-1 text-xs text-slate-500">Kategoria</span>
+                <input
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  list={categoryListId}
+                  placeholder="Wybierz lub wpisz kategorię"
+                  className="input-field"
+                />
+                <datalist id={categoryListId}>
+                  {editCategories.map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
               </label>
               <label className="block">
                 <span className="mb-1 text-xs text-slate-500">EAN / kod kreskowy</span>
@@ -981,16 +1120,11 @@ export function ProductDetail({
                 </div>
               </label>
               {roleCan(role, 'editStock') && (
-                <div className="block">
-                  <span className="mb-2 block text-xs text-slate-500">Lokalizacja magazynowa</span>
-                  <WarehouseLocationFields
-                    value={parseLocationCode(locationCode)}
-                    onChange={(loc) => setLocationCode(formatLocationCode(loc))}
-                    onApplyQuickCode={(c) => setLocationCode(formatLocationCode(parseLocationCode(c)))}
-                    layoutRevision={layoutRevision}
-                    compact
-                  />
-                </div>
+                <ProductWarehouseEditDetails
+                  locationCode={locationCode}
+                  onLocationCodeChange={setLocationCode}
+                  layoutRevision={layoutRevision}
+                />
               )}
               <div className="space-y-3 border-t border-slate-800 pt-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -1087,17 +1221,6 @@ export function ProductDetail({
                     className="input-field resize-y font-mono text-xs"
                   />
                 </label>
-                <label className="block">
-                  <span className="mb-1 text-xs text-slate-500">Notatka wewnętrzna</span>
-                  <textarea
-                    value={editMeta.internalNote ?? ''}
-                    onChange={(e) =>
-                      setEditMeta((m: ProductMeta) => ({ ...m, internalNote: e.target.value }))
-                    }
-                    rows={2}
-                    className="input-field resize-y text-sm"
-                  />
-                </label>
               </div>
               {canDeleteProduct && (
                 <div className="border-t border-slate-200 pt-4 dark:border-slate-800">
@@ -1175,6 +1298,21 @@ export function ProductDetail({
           <>
           {editing ? (
             <div className="space-y-3">
+              <label className="block rounded-2xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-500/25 dark:bg-amber-500/5">
+                <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-amber-900 dark:text-amber-300">
+                  Notatka wewnętrzna
+                </span>
+                <textarea
+                  value={editMeta.internalNote ?? ''}
+                  onChange={(e) =>
+                    setEditMeta((m: ProductMeta) => ({ ...m, internalNote: e.target.value }))
+                  }
+                  rows={3}
+                  placeholder="Ważne uwagi dla handlowca, BOK albo magazynu..."
+                  className="input-field resize-y text-sm"
+                />
+              </label>
+              {renderCatalogVisibilityEdit()}
               <label className="block">
                 <span className="mb-1 text-xs text-slate-500">SKU (kod magazynowy)</span>
                 <input
@@ -1197,16 +1335,32 @@ export function ProductDetail({
                 />
               </label>
               <label className="block">
-                <span className="mb-1 text-xs text-slate-500">Kategoria</span>
+                <span className="mb-1 text-xs text-slate-500">Producent / marka</span>
                 <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
+                  value={manufacturer}
+                  onChange={(e) => setManufacturer(e.target.value)}
                   className="input-field"
                 >
-                  {editCategories.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                  <option value="">— wybierz —</option>
+                  {editManufacturers.map((m) => (
+                    <option key={m} value={m}>{m}</option>
                   ))}
                 </select>
+              </label>
+              <label className="block">
+                <span className="mb-1 text-xs text-slate-500">Kategoria</span>
+                <input
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  list={categoryListId}
+                  placeholder="Wybierz lub wpisz kategorię"
+                  className="input-field"
+                />
+                <datalist id={categoryListId}>
+                  {editCategories.map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
               </label>
               <label className="block">
                 <span className="mb-1 text-xs text-slate-500">EAN / kod kreskowy</span>
@@ -1260,16 +1414,11 @@ export function ProductDetail({
                 </div>
               </label>
               {roleCan(role, 'editStock') && (
-                <div className="block">
-                  <span className="mb-2 block text-xs text-slate-500">Lokalizacja magazynowa</span>
-                  <WarehouseLocationFields
-                    value={parseLocationCode(locationCode)}
-                    onChange={(loc) => setLocationCode(formatLocationCode(loc))}
-                    onApplyQuickCode={(c) => setLocationCode(formatLocationCode(parseLocationCode(c)))}
-                    layoutRevision={layoutRevision}
-                    compact
-                  />
-                </div>
+                <ProductWarehouseEditDetails
+                  locationCode={locationCode}
+                  onLocationCodeChange={setLocationCode}
+                  layoutRevision={layoutRevision}
+                />
               )}
               {canDeleteProduct && (
                 <div className="border-t border-slate-200 pt-4 dark:border-slate-800">
@@ -1303,7 +1452,10 @@ export function ProductDetail({
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <Badge label={category} />
+                {displayManufacturer ? (
+                  <Badge label={`Producent: ${displayManufacturer}`} muted />
+                ) : null}
+                <Badge label={`Kategoria: ${category}`} />
                 {hasBaselinkerLink(detail) ? (
                   <span
                     className="inline-flex items-center gap-1.5 rounded-lg border border-sky-500/40 bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-900 dark:bg-sky-500/10 dark:text-sky-200"
@@ -1313,13 +1465,6 @@ export function ProductDetail({
                     BaseLinker
                   </span>
                 ) : null}
-                {detail.manufacturer &&
-                  detail.manufacturer.trim().toLowerCase() !== 'wapro' &&
-                  !displayName
-                    .toLowerCase()
-                    .includes(detail.manufacturer.trim().toLowerCase()) && (
-                    <Badge label={detail.manufacturer} muted />
-                  )}
                 {detail.ean && <Badge label={`EAN: ${detail.ean}`} muted />}
                 {!detail.ean && !editing && (
                   <Badge label="Brak EAN" muted />
@@ -1639,6 +1784,15 @@ export function ProductDetail({
           </div>
         )}
       </div>
+      {imagePreviewOpen && displayImage && (
+        <ProductImagePreviewModal
+          title={detail.displayName}
+          images={allImages}
+          selectedIdx={selectedIdx}
+          onSelect={setSelectedIdx}
+          onClose={() => setImagePreviewOpen(false)}
+        />
+      )}
       <RemoveBackgroundModal
         open={removeBgOpen}
         sourceUrl={displayImage}
@@ -1827,6 +1981,113 @@ function HubProductPhotosPanel({
   );
 }
 
+function ProductImagePreviewModal({
+  title,
+  images,
+  selectedIdx,
+  onSelect,
+  onClose,
+}: {
+  title: string;
+  images: string[];
+  selectedIdx: number;
+  onSelect: (idx: number) => void;
+  onClose: () => void;
+}) {
+  const current = images[selectedIdx] || images[0];
+  const hasMany = images.length > 1;
+
+  function move(delta: number) {
+    if (!images.length) return;
+    onSelect((selectedIdx + delta + images.length) % images.length);
+  }
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowLeft') move(-1);
+      if (e.key === 'ArrowRight') move(1);
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  });
+
+  if (!current) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex flex-col bg-slate-950/95 text-white backdrop-blur"
+      role="dialog"
+      aria-label="Podgląd zdjęcia produktu"
+      onClick={onClose}
+    >
+      <div className="flex shrink-0 items-center justify-between gap-3 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+        <p className="min-w-0 truncate text-sm font-semibold">{title}</p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+          aria-label="Zamknij podgląd"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+
+      <div
+        className="relative min-h-0 flex-1 px-2 pb-2 sm:px-5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <img
+          src={current}
+          alt={title}
+          className="h-full w-full object-contain"
+        />
+        {hasMany && (
+          <>
+            <button
+              type="button"
+              onClick={() => move(-1)}
+              className="absolute left-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-xl font-bold text-white hover:bg-black/65"
+              aria-label="Poprzednie zdjęcie"
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              onClick={() => move(1)}
+              className="absolute right-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-xl font-bold text-white hover:bg-black/65"
+              aria-label="Następne zdjęcie"
+            >
+              ›
+            </button>
+          </>
+        )}
+      </div>
+
+      {hasMany && (
+        <div className="flex shrink-0 gap-2 overflow-x-auto px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 scrollbar-none">
+          {images.map((url, idx) => (
+            <button
+              key={url}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect(idx);
+              }}
+              className={`h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 ${
+                idx === selectedIdx ? 'border-brand-400' : 'border-white/20 opacity-70'
+              }`}
+              aria-label={`Pokaż zdjęcie ${idx + 1}`}
+            >
+              <img src={url} alt="" className="h-full w-full object-cover" />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function HubImageDropZone({
   busy,
   hasPrimary,
@@ -1985,6 +2246,39 @@ function ProductEditActions({
       <Pencil className="h-5 w-5" />
       {!hubStyle && <span>Edytuj</span>}
     </button>
+  );
+}
+
+function ProductWarehouseEditDetails({
+  locationCode,
+  onLocationCodeChange,
+  layoutRevision,
+}: {
+  locationCode: string;
+  onLocationCodeChange: (value: string) => void;
+  layoutRevision: number;
+}) {
+  return (
+    <details className="group rounded-2xl border border-slate-700 bg-slate-950/30 dark:border-slate-800">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-slate-100 marker:hidden">
+        <span>Magazyn i lokalizacja</span>
+        <span className="flex items-center gap-2 text-xs font-medium text-slate-500">
+          <span className="max-w-[12rem] truncate font-mono">
+            {locationCode || 'Brak adresu'}
+          </span>
+          <span className="transition group-open:rotate-180">v</span>
+        </span>
+      </summary>
+      <div className="border-t border-slate-800 px-4 pb-4 pt-3">
+        <WarehouseLocationFields
+          value={parseLocationCode(locationCode)}
+          onChange={(loc) => onLocationCodeChange(formatLocationCode(loc))}
+          onApplyQuickCode={(c) => onLocationCodeChange(formatLocationCode(parseLocationCode(c)))}
+          layoutRevision={layoutRevision}
+          compact
+        />
+      </div>
+    </details>
   );
 }
 

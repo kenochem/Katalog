@@ -479,7 +479,9 @@ export function StockProductApp() {
     setLoading(true);
     try {
       if (force) invalidateProductsCache();
-      const next = await fetchProducts(undefined, { force });
+      const next = force
+        ? await fetchProducts(undefined, { force: true, source: 'supabase' })
+        : await fetchProducts(undefined, { source: 'json' });
       setProducts(next);
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Nie udalo sie pobrac danych magazynu', 'error');

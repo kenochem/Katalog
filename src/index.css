@@ -671,6 +671,61 @@ html:not(.dark) .catalog-sticky-search--pinned {
   border-color: rgb(226 232 240) !important;
 }
 
+/* Katalog landing — klasyczny jasny motyw: biale tlo, ciemny tekst. */
+html:not(.dark) .catalog-home-view {
+  color: #0f172a;
+}
+
+html:not(.dark) .catalog-home-view .text-slate-50,
+html:not(.dark) .catalog-home-view .text-slate-100,
+html:not(.dark) .catalog-home-view .text-slate-200,
+html:not(.dark) .catalog-home-view .text-slate-300,
+html:not(.dark) .catalog-home-view .text-slate-700,
+html:not(.dark) .catalog-home-view .text-slate-800,
+html:not(.dark) .catalog-home-view .text-slate-900,
+html:not(.dark) .catalog-home-view .text-slate-950 {
+  color: #0f172a !important;
+}
+
+html:not(.dark) .catalog-home-view .text-slate-400,
+html:not(.dark) .catalog-home-view .text-slate-500,
+html:not(.dark) .catalog-home-view .text-slate-600 {
+  color: #475569 !important;
+}
+
+html:not(.dark) .catalog-home-view .border-slate-200,
+html:not(.dark) .catalog-home-view .border-slate-300,
+html:not(.dark) .catalog-home-view .border-slate-700,
+html:not(.dark) .catalog-home-view .border-slate-800,
+html:not(.dark) .catalog-home-view .border-slate-800\/70,
+html:not(.dark) .catalog-home-view .border-slate-800\/80 {
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) .catalog-home-view .bg-slate-50 {
+  background-color: #f8fafc !important;
+}
+
+html:not(.dark) .catalog-home-view .bg-slate-100 {
+  background-color: #f1f5f9 !important;
+}
+
+html:not(.dark) .catalog-home-view .bg-slate-900,
+html:not(.dark) .catalog-home-view .bg-slate-900\/25,
+html:not(.dark) .catalog-home-view .bg-slate-900\/30,
+html:not(.dark) .catalog-home-view .bg-slate-900\/35,
+html:not(.dark) .catalog-home-view .bg-slate-900\/40,
+html:not(.dark) .catalog-home-view .bg-slate-900\/50,
+html:not(.dark) .catalog-home-view .bg-slate-900\/60 {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) .catalog-home-view .bg-slate-950,
+html:not(.dark) .catalog-home-view .bg-slate-950\/70,
+html:not(.dark) .catalog-home-view .bg-slate-950\/80 {
+  background-color: #f8fafc !important;
+}
+
 .catalog-grid-pending {
   opacity: 0.72;
   pointer-events: none;
@@ -725,6 +780,126 @@ html:not(.dark) .catalog-sticky-search--pinned {
 .catalog-product-modal {
   display: flex;
   flex-direction: column;
+}
+
+.catalog-product-tabs {
+  -webkit-overflow-scrolling: touch;
+}
+
+.catalog-product-tab {
+  scroll-snap-align: start;
+}
+
+.catalog-visibility-edit {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.catalog-visibility-edit__title {
+  color: #0f172a;
+}
+
+.catalog-visibility-edit__desc,
+.catalog-visibility-edit__label {
+  color: #475569;
+}
+
+.catalog-visibility-edit__check {
+  border-color: #64748b;
+  color: var(--color-brand-600);
+}
+
+.catalog-visibility-edit .input-field {
+  border-color: #94a3b8;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.catalog-visibility-edit .input-field::placeholder {
+  color: #64748b;
+}
+
+.dark .catalog-visibility-edit {
+  border-color: rgb(51 65 85);
+  background: rgb(15 23 42 / 0.6);
+  color: #f1f5f9;
+}
+
+.dark .catalog-visibility-edit__title {
+  color: #f1f5f9;
+}
+
+.dark .catalog-visibility-edit__desc,
+.dark .catalog-visibility-edit__label {
+  color: #cbd5e1;
+}
+
+.dark .catalog-visibility-edit .input-field {
+  border-color: #475569;
+  background: #1e293b;
+  color: #f8fafc;
+}
+
+.dark .catalog-visibility-edit .input-field::placeholder {
+  color: #94a3b8;
+}
+
+.catalog-source-accent {
+  position: relative;
+  border-left: 3px solid transparent;
+}
+.catalog-source-accent--wapro {
+  border-left-color: rgb(244 63 94 / 0.55);
+  background: linear-gradient(90deg, rgb(255 241 242 / 0.82), transparent 42%), white;
+}
+.catalog-source-accent--baselinker {
+  border-left-color: rgb(14 165 233 / 0.55);
+  background: linear-gradient(90deg, rgb(240 249 255 / 0.9), transparent 42%), white;
+}
+.dark .catalog-source-accent--wapro {
+  background: linear-gradient(90deg, rgb(244 63 94 / 0.12), rgb(2 6 23 / 0.22) 48%);
+}
+.dark .catalog-source-accent--baselinker {
+  background: linear-gradient(90deg, rgb(14 165 233 / 0.13), rgb(2 6 23 / 0.22) 48%);
+}
+.catalog-source-badge {
+  display: inline-flex;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  font-size: 0.58rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0;
+}
+.catalog-source-badge--wapro {
+  color: #9f1239;
+  background: #fff1f2;
+}
+.catalog-source-badge--baselinker {
+  color: #075985;
+  background: #f0f9ff;
+}
+.dark .catalog-source-badge--wapro {
+  color: #fecdd3;
+  background: rgb(244 63 94 / 0.14);
+}
+.dark .catalog-source-badge--baselinker {
+  color: #bae6fd;
+  background: rgb(14 165 233 / 0.14);
+}
+
+@media (max-width: 639px) {
+  .catalog-product-modal__head .inline-flex.items-center.gap-1\.5.rounded-lg.border {
+    max-width: 100%;
+  }
+  .catalog-product-sales-panel-wrap {
+    padding-bottom: 0.25rem;
+  }
 }
 
 /* Karta produktu — panel cen (jasny / ciemny motyw) */
@@ -2055,6 +2230,63 @@ html:not(.dark) .ops-sales-analytics .ops-sonax-method-row--warn {
 html:not(.dark) .ops-sales-analytics .ops-sonax-method-row--muted {
   border-color: #e2e8f0 !important;
   background: #f8fafc !important;
+}
+
+html:not(.dark) .ops-customers-panel {
+  color: #0f172a !important;
+}
+
+html:not(.dark) .ops-customers-panel header,
+html:not(.dark) .ops-customers-panel section {
+  background-color: #ffffff;
+}
+
+html:not(.dark) .ops-customers-panel h2,
+html:not(.dark) .ops-customers-panel h3,
+html:not(.dark) .ops-customers-panel td {
+  color: #0f172a !important;
+}
+
+html:not(.dark) .ops-customers-panel p,
+html:not(.dark) .ops-customers-panel input,
+html:not(.dark) .ops-customers-panel th {
+  color: #334155 !important;
+}
+
+html:not(.dark) .ops-customers-panel .text-slate-50,
+html:not(.dark) .ops-customers-panel .text-slate-100,
+html:not(.dark) .ops-customers-panel .text-slate-200,
+html:not(.dark) .ops-customers-panel .text-slate-800,
+html:not(.dark) .ops-customers-panel .text-slate-900,
+html:not(.dark) .ops-customers-panel .text-slate-950 {
+  color: #0f172a !important;
+}
+
+html:not(.dark) .ops-customers-panel .ops-sales-table thead {
+  background: #f8fafc !important;
+  color: #475569 !important;
+}
+
+html:not(.dark) .ops-customers-panel .ops-sales-table tbody,
+html:not(.dark) .ops-customers-panel .ops-sales-table tr {
+  background: #ffffff !important;
+}
+
+html:not(.dark) .ops-customers-panel .ops-sales-table tbody tr:hover {
+  background: #f1f5f9 !important;
+}
+
+html:not(.dark) .ops-customers-panel .ops-sales-table .text-slate-500,
+html:not(.dark) .ops-customers-panel .ops-sales-table .text-slate-600 {
+  color: #64748b !important;
+}
+
+html:not(.dark) .ops-customers-panel .bg-emerald-50 {
+  background-color: #ecfdf5 !important;
+}
+
+html:not(.dark) .ops-customers-panel .text-emerald-800 {
+  color: #047857 !important;
 }
 
 

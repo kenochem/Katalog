@@ -1,0 +1,170 @@
+<style>
+  #klodToolbar{
+    position:fixed; top:14px; right:14px; z-index:9999;
+    display:flex; align-items:center; gap:8px;
+    background:var(--paper-raised); border:1px solid var(--steel-line);
+    border-radius:10px; padding:6px 8px; box-shadow:0 2px 10px rgba(0,0,0,0.15);
+    font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:12px;
+  }
+  #klodToolbar button{
+    font-family:inherit; font-size:12px; cursor:pointer; border:1px solid var(--steel-line);
+    background:var(--paper); color:var(--ink); border-radius:6px; padding:5px 9px;
+    line-height:1;
+  }
+  #klodToolbar button:hover{background:var(--code-bg);}
+  #klodToolbar button.primary{background:var(--blueprint); color:var(--paper); border-color:var(--blueprint);}
+  #klodToolbar .klod-status{color:var(--ink-soft); max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  #klodArticle[contenteditable="true"]{
+    outline:2px dashed var(--blueprint); outline-offset:6px; border-radius:4px;
+  }
+  #klodToast{
+    position:fixed; bottom:18px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:var(--paper); font-family:"IBM Plex Mono", monospace;
+    font-size:12.5px; padding:9px 16px; border-radius:8px; z-index:9999;
+    opacity:0; transition:opacity .25s, transform .25s; pointer-events:none;
+  }
+  #klodToast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+</style>
+<div id="klodToolbar"></div>
+<div id="klodToast"></div>
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const SUPABASE_URL = 'https://fgkkvbniyjysgqcjuxpl.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZna2t2Ym5peWp5c2dxY2p1eHBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxNTE0MjgsImV4cCI6MjEwMDcyNzQyOH0.HiiaVnv_G5QR8WQ1YggA_iPRO5I7mJa0nd0C8K9KOHQ';
+const SLUG = '__SLUG__';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const article = document.getElementById('klodArticle');
+const toolbar = document.getElementById('klodToolbar');
+const toast = document.getElementById('klodToast');
+
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2400);
+}
+
+/* ---------- motyw: własny wybór na tej stronie > wybór w katalogu > system ---------- */
+const THEME_PAGE_KEY = 'katalog-theme-override:' + SLUG;
+const THEME_APP_KEY = 'katalog-theme';
+
+function currentTheme() {
+  try {
+    return localStorage.getItem(THEME_PAGE_KEY) || localStorage.getItem(THEME_APP_KEY) || null;
+  } catch { return null; }
+}
+function applyTheme(t) {
+  if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+  else document.documentElement.removeAttribute('data-theme');
+}
+applyTheme(currentTheme());
+
+const themeBtn = document.createElement('button');
+themeBtn.type = 'button';
+themeBtn.title = 'Przełącz jasny / ciemny motyw (tej strony)';
+function syncThemeBtnLabel() {
+  const t = document.documentElement.getAttribute('data-theme');
+  themeBtn.textContent = t === 'dark' ? '☀️ Jasny' : t === 'light' ? '🌙 Ciemny' : '🌓 Motyw';
+}
+syncThemeBtnLabel();
+themeBtn.addEventListener('click', () => {
+  const t = document.documentElement.getAttribute('data-theme');
+  const next = t === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+  try { localStorage.setItem(THEME_PAGE_KEY, next); } catch {}
+  syncThemeBtnLabel();
+});
+toolbar.appendChild(themeBtn);
+
+/* ---------- ładowanie zapisanej treści (jeśli jest w bazie) ---------- */
+let originalHtml = article.innerHTML;
+try {
+  const { data } = await supabase
+    .from('technical_library_articles')
+    .select('html, updated_at')
+    .eq('slug', SLUG)
+    .maybeSingle();
+  if (data && data.html) {
+    article.innerHTML = data.html;
+    originalHtml = data.html;
+  }
+} catch (e) {
+  console.warn('Biblioteka: nie udało się wczytać zapisanej wersji', e);
+}
+
+/* ---------- edycja (tylko zalogowani w katalogu) ---------- */
+const statusEl = document.createElement('span');
+statusEl.className = 'klod-status';
+toolbar.appendChild(statusEl);
+
+const { data: { session } } = await supabase.auth.getSession();
+
+if (!session) {
+  statusEl.textContent = 'Gość — zaloguj się w katalogu, aby edytować';
+} else {
+  let editing = false;
+  const editBtn = document.createElement('button');
+  editBtn.type = 'button';
+  editBtn.textContent = '✏️ Edytuj';
+  const saveBtn = document.createElement('button');
+  saveBtn.type = 'button';
+  saveBtn.textContent = '💾 Zapisz';
+  saveBtn.className = 'primary';
+  saveBtn.style.display = 'none';
+  const cancelBtn = document.createElement('button');
+  cancelBtn.type = 'button';
+  cancelBtn.textContent = 'Anuluj';
+  cancelBtn.style.display = 'none';
+
+  function enterEdit() {
+    editing = true;
+    article.setAttribute('contenteditable', 'true');
+    editBtn.style.display = 'none';
+    saveBtn.style.display = '';
+    cancelBtn.style.display = '';
+    statusEl.textContent = 'Tryb edycji — klikaj i pisz w tekście';
+  }
+  function exitEdit() {
+    editing = false;
+    article.removeAttribute('contenteditable');
+    editBtn.style.display = '';
+    saveBtn.style.display = 'none';
+    cancelBtn.style.display = 'none';
+  }
+
+  editBtn.addEventListener('click', enterEdit);
+  cancelBtn.addEventListener('click', () => {
+    article.innerHTML = originalHtml;
+    exitEdit();
+    statusEl.textContent = '';
+    showToast('Cofnięto zmiany');
+  });
+  saveBtn.addEventListener('click', async () => {
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Zapisuję…';
+    const html = article.innerHTML;
+    const { error } = await supabase.from('technical_library_articles').upsert({
+      slug: SLUG,
+      html,
+      updated_at: new Date().toISOString(),
+      updated_by: session.user.email || session.user.id,
+    });
+    saveBtn.disabled = false;
+    saveBtn.textContent = '💾 Zapisz';
+    if (error) {
+      console.error(error);
+      showToast('Błąd zapisu — spróbuj ponownie');
+      return;
+    }
+    originalHtml = html;
+    exitEdit();
+    statusEl.textContent = '';
+    showToast('Zapisano zmiany');
+  });
+
+  toolbar.appendChild(editBtn);
+  toolbar.appendChild(saveBtn);
+  toolbar.appendChild(cancelBtn);
+}
+</script>

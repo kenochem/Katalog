@@ -16,7 +16,11 @@ if (-not (Test-Path $LibDir)) {
 }
 
 $files = @(
+  @{ Src = 'scripts\sync-wapro-stock-server.ps1'; Dst = 'sync-wapro-stock-server.ps1' },
+  @{ Src = 'scripts\install-katalog-stock-schedule.ps1'; Dst = 'install-katalog-stock-schedule.ps1' },
   @{ Src = 'scripts\wapro-auto-import.mjs'; Dst = 'wapro-auto-import.mjs' },
+  @{ Src = 'scripts\import-wapro-customers.mjs'; Dst = 'import-wapro-customers.mjs' },
+  @{ Src = 'scripts\sync-wapro-customers.ps1'; Dst = 'sync-wapro-customers.ps1' },
   @{ Src = 'scripts\lib\waproMagImport.mjs'; Dst = 'lib\waproMagImport.mjs' },
   @{ Src = 'scripts\lib\waproSkuMatch.mjs'; Dst = 'lib\waproSkuMatch.mjs' }
 )
@@ -33,11 +37,15 @@ foreach ($f in $files) {
 
 Write-Host ''
 Write-Host 'Na serwerze WAPRO trzymaj:'
-Write-Host '  C:\katalog-sync\wapro-mag-catalog.json  (npm run export:wapro-mag na PC, potem skopiuj)'
 Write-Host '  C:\katalog-sync\katalog-sync.env       (SUPABASE_*, opcjonalnie WAPRO_AUTO_IMPORT=0)'
+Write-Host '  C:\katalog-sync\wapro-mag-catalog.json tworzy się automatycznie z SQL podczas sync'
 Write-Host ''
 Write-Host 'Sonax reconcile (eksport faktur od 2026-03):'
 Write-Host '  Skopiuj scripts\sync-wapro-sonax-export.ps1 -> C:\katalog-sync\'
 Write-Host '  Uruchom: run-wapro-sonax-export.bat, potem npm run reconcile:sonax'
 Write-Host ''
 Write-Host 'Po sync stanow serwer dopnie nowe SKU (jesli jest Node + JSON).'
+Write-Host ''
+Write-Host 'Kontrahenci WAPRO -> Operacje:'
+Write-Host '  Trzymaj plik C:\katalog-sync\wapro-kontrahenci.tsv lub wapro-customers.json'
+Write-Host '  Uruchom: powershell -ExecutionPolicy Bypass -File C:\katalog-sync\sync-wapro-customers.ps1'

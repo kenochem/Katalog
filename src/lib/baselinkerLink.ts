@@ -1,34 +1,48 @@
 /** Czy produkt jest powiązany z ofertą BaseLinker (katalog shop / eksport BL). */
 import type { Product } from '../types';
 import { normalizeProductMeta } from './productMeta';
+import { BASELINKER_SKU_TO_ID } from './baselinkerSkuIndex.generated';
 
-/** Pozycja z eksportu BaseLinker — katalog „Produkty” (shop), id shop-SKU. */
-export function isBaselinkerCatalogProduct(product: Product): boolean {
-  if ((product.catalog || 'accessories') === 'shop') return true;
-  return Boolean(product.id?.startsWith('shop-'));
+function normalizeBaselinkerSku(raw: string | undefined | null): string {
+  const compact = String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const match = compact.match(/^([A-Z]+)0*([0-9]+)$/);
+  if (match) return `${match[1]}${Number(match[2])}`;
+  return compact;
+}
+
+function baselinkerIdForProduct(product: Product): string {
+  const candidates = [
+    product.sku,
+    product.id?.startsWith('shop-') ? product.id.slice(5) : '',
+    product.meta?.legacySku,
+    product.meta?.previousSku,
+  ];
+
+  for (const raw of candidates) {
+    const direct = String(raw || '').trim().toUpperCase();
+    const normalized = normalizeBaselinkerSku(raw);
+    const id = BASELINKER_SKU_TO_ID[direct] || BASELINKER_SKU_TO_ID[normalized];
+    if (id) return id;
+  }
+
+  return '';
 }
 
 /**
  * Tag B — prosta reguła:
- * - cały katalog shop (eksport BaseLinker) = BaseLinker,
- * - pozycje WAPRO z meta.baselinkerProductId (ręczne powiązanie).
+ * - tylko SKU obecne w aktualnym eksporcie BaseLinker,
+ * - meta.baselinkerProductId jest opisem powiązania, ale nie wystarcza bez SKU z indeksu.
  */
 export function hasBaselinkerLink(product: Product): boolean {
-  if (isBaselinkerCatalogProduct(product)) return true;
-
-  const meta = normalizeProductMeta(product.meta);
-  const id = (meta?.baselinkerProductId ?? '').trim();
-  return Boolean(id);
+  return Boolean(baselinkerIdForProduct(product));
 }
 
 export function baselinkerLinkLabel(product: Product): string | null {
   if (!hasBaselinkerLink(product)) return null;
 
   const meta = normalizeProductMeta(product.meta);
-  const id = (meta?.baselinkerProductId ?? '').trim();
+  const id = (meta?.baselinkerProductId ?? '').trim() || baselinkerIdForProduct(product);
   if (id) return `Base #${id}`;
-
-  if (isBaselinkerCatalogProduct(product)) return 'Katalog BL';
 
   return 'Base';
 }

@@ -1,7 +1,9 @@
 import { assessProductKnowledge } from './productKnowledge';
 import { hasBaselinkerLink } from './baselinkerLink';
-import { isWaproSkeletonProduct } from './productMeta';
+import { isCatalogHiddenProduct, isWaproSkeletonProduct } from './productMeta';
 import { getProductSearchIndex, searchIndexedProducts } from './productSearchIndex';
+import { effectiveManufacturer } from './waproManufacturers';
+import { getProductDisplayCategory } from './catalogCategory';
 import type { Product } from '../types';
 
 export type CatalogSort =
@@ -17,6 +19,7 @@ export type ImageFilter = 'all' | 'with' | 'without';
 export type KnowledgeFilter = 'all' | 'weak' | 'good';
 export type WaproMagFilter = 'all' | 'needs-media';
 export type BaselinkerFilter = 'all' | 'linked' | 'not-linked';
+export type CatalogVisibilityFilter = 'active' | 'hidden' | 'all';
 
 /** Próg „niski stan” (włącznie), powyżej 0. */
 export const LOW_STOCK_MAX = 5;
@@ -41,7 +44,7 @@ export function sortProducts(products: Product[], sort: CatalogSort): Product[] 
       return list.sort((a, b) => comparePl(b.displayName, a.displayName));
     case 'category':
       return list.sort((a, b) => {
-        const c = comparePl(a.category || '', b.category || '');
+        const c = comparePl(getProductDisplayCategory(a), getProductDisplayCategory(b));
         return c !== 0 ? c : comparePl(a.displayName, b.displayName);
       });
     case 'sku':
@@ -67,15 +70,29 @@ export function applyCatalogFilters(
   opts: {
     search: string;
     category: string;
+    manufacturer?: string;
     sort: CatalogSort;
     stockFilter?: StockFilter;
     imageFilter?: ImageFilter;
     knowledgeFilter?: KnowledgeFilter;
     baselinkerFilter?: BaselinkerFilter;
     waproMagFilter?: WaproMagFilter;
+    visibilityFilter?: CatalogVisibilityFilter;
   },
 ): Product[] {
   let result = filterProducts(products, opts.search, opts.category);
+
+  const visibilityFilter = opts.visibilityFilter ?? 'active';
+  if (visibilityFilter === 'active') {
+    result = result.filter((p) => !isCatalogHiddenProduct(p));
+  } else if (visibilityFilter === 'hidden') {
+    result = result.filter((p) => isCatalogHiddenProduct(p));
+  }
+
+  const manufacturer = opts.manufacturer?.trim();
+  if (manufacturer && manufacturer !== 'Wszyscy') {
+    result = result.filter((p) => effectiveManufacturer(p) === manufacturer);
+  }
 
   if (opts.stockFilter === 'in-stock') {
     result = result.filter((p) => (p.stock ?? 0) > 0);

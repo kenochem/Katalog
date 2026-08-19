@@ -105,11 +105,11 @@ export function parseWaproSyncMessage(message: string | null | undefined): {
 
   let warningHint: string | undefined;
   if (stats.warnings && stats.warnings > 0) {
-    warningHint = `${stats.warnings} SKU bez dopasowania w WAPRO — sprawdź kod magazynowy lub sync.log`;
+    warningHint = `${stats.warnings} starych pozycji do sprawdzenia: SKU bez dopasowania w WAPRO. Sync nowych produktów działa dalej.`;
   } else if (/brak w WAPRO:\s*[1-9]/i.test(raw)) {
     const m = raw.match(/brak w WAPRO:\s*(\d+)/i);
     if (m && Number(m[1]) > 0) {
-      warningHint = `${m[1]} pozycji w katalogu bez odpowiednika w Mag (INDEKS_KATALOGOWY)`;
+      warningHint = `${m[1]} pozycji w katalogu nie ma odpowiednika w Mag. To lista porządkowa, nie błąd dodawania nowych produktów.`;
     }
   }
 

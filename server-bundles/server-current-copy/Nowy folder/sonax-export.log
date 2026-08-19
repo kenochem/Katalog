@@ -1,0 +1,93 @@
+﻿2026-08-12 14:45:57 Eksport Sonax/WAPRO od 2026-03-01
+2026-08-12 14:45:57 Proba eksportu: pozycje_mag_odbiory
+2026-08-12 14:45:57   blad: Msg 156, Level 15, State 1, Server DESKTOP-PANA1RQ, Line 2
+Incorrect syntax near the keyword 'AS'.
+Msg 137, Level 15, State 2, Server DESKTOP-PANA1RQ, Line 16
+Must declare the s
+2026-08-12 14:45:57 Proba eksportu: pozycje_mag_platnik
+2026-08-12 14:45:57   blad: Msg 156, Level 15, State 1, Server DESKTOP-PANA1RQ, Line 2
+Incorrect syntax near the keyword 'AS'.
+Msg 137, Level 15, State 2, Server DESKTOP-PANA1RQ, Line 16
+Must declare the s
+2026-08-12 14:45:57 Proba eksportu: pozycje_mag_bez_rodzaj
+2026-08-12 14:45:57   blad: Msg 156, Level 15, State 1, Server DESKTOP-PANA1RQ, Line 2
+Incorrect syntax near the keyword 'AS'.
+Msg 137, Level 15, State 2, Server DESKTOP-PANA1RQ, Line 16
+Must declare the s
+2026-08-12 14:45:57 Proba eksportu: pozycje_mag_data_sprzed
+2026-08-12 14:45:57   blad: Msg 156, Level 15, State 1, Server DESKTOP-PANA1RQ, Line 2
+Incorrect syntax near the keyword 'AS'.
+Msg 137, Level 15, State 2, Server DESKTOP-PANA1RQ, Line 16
+Must declare the s
+2026-08-12 14:45:57 Proba eksportu: naglowki_dh
+2026-08-12 14:45:57   blad: Msg 156, Level 15, State 1, Server DESKTOP-PANA1RQ, Line 2
+Incorrect syntax near the keyword 'AS'.
+Msg 137, Level 15, State 2, Server DESKTOP-PANA1RQ, Line 13
+Must declare the s
+2026-08-12 14:54:34 Eksport Sonax/WAPRO od 2026-03-01
+2026-08-12 14:54:34 Proba eksportu: pozycje_mag_odbiory
+2026-08-12 14:54:34   blad: Msg 207, Level 16, State 1, Server DESKTOP-PANA1RQ, Line 14
+Invalid column name 'ID_ODBIORCY'.
+Msg 207, Level 16, State 1, Server DESKTOP-PANA1RQ, Line 14
+Invalid column name 'I
+2026-08-12 14:54:34 Proba eksportu: pozycje_mag_platnik
+2026-08-12 14:54:34   blad: Msg 207, Level 16, State 1, Server DESKTOP-PANA1RQ, Line 17
+Invalid column name 'FLG_ANULOWANY'.
+Msg 207, Level 16, State 1, Server DESKTOP-PANA1RQ, Line 18
+Invalid column name 
+2026-08-12 14:54:34 Proba eksportu: pozycje_mag_bez_rodzaj
+2026-08-12 14:54:35   blad: Msg 207, Level 16, State 1, Server DESKTOP-PANA1RQ, Line 14
+Invalid column name 'ID_ODBIORCY'.
+Msg 207, Level 16, State 1, Server DESKTOP-PANA1RQ, Line 14
+Invalid column name 'I
+2026-08-12 14:54:35 Proba eksportu: pozycje_mag_data_sprzed
+2026-08-12 14:54:35   blad: Msg 207, Level 16, State 1, Server DESKTOP-PANA1RQ, Line 14
+Invalid column name 'ID_ODBIORCY'.
+Msg 207, Level 16, State 1, Server DESKTOP-PANA1RQ, Line 14
+Invalid column name 'I
+2026-08-12 14:54:35 Proba eksportu: naglowki_dh
+2026-08-12 14:54:35   blad: Msg 207, Level 16, State 1, Server DESKTOP-PANA1RQ, Line 12
+Invalid column name 'ID_ODBIORCY'.
+Msg 207, Level 16, State 1, Server DESKTOP-PANA1RQ, Line 12
+Invalid column name 'I
+2026-08-12 15:02:48 Eksport Sonax/WAPRO od 2026-03-01
+2026-08-12 15:02:48 Proba eksportu (1/72): pd_mag_id_kontrahent_nazwa_DATA_WYSTAWIENIA_rodzaj_r_bez_anul
+2026-08-12 15:02:49   blad: Msg 207, Level 16, State 1, Server DESKTOP-PANA1RQ, Line 17
+Invalid column name 'NUMER_DOKUMENTU'.
+Msg 207, Level 16, State 1, Server DESKTOP-PANA1RQ, Line 5
+2026-08-12 15:02:49 Proba eksportu (2/72): pd_mag_id_kontrahent_nazwa_DATA_WYSTAWIENIA_rodzaj_r_flg_anul
+2026-08-12 15:02:49   blad: Msg 207, Level 16, State 1, Server DESKTOP-PANA1RQ, Line 16
+Invalid column name 'FLG_ANULOWANY'.
+Msg 207, Level 16, State 1, Server DESKTOP-PANA1RQ, Line 18
+
+2026-08-12 15:02:49 Proba eksportu (3/72): pd_mag_id_kontrahent_nazwa_DATA_WYSTAWIENIA_bez_rodzaj_bez_anul
+2026-08-12 15:02:49   blad: Msg 207, Level 16, State 1, Server DESKTOP-PANA1RQ, Line 16
+Invalid column name 'NUMER_DOKUMENTU'.
+Msg 207, Level 16, State 1, Server DESKTOP-PANA1RQ, Line 5
+2026-08-12 15:02:49   blad: Msg 207, Level 16, State 1, Server DESKTOP-PANA1RQ, Line 15
+Invalid column name 'FLG_ANULOWANY'.
+Msg 207, Level 16, State 1, Server DESKTOP-PANA1RQ, Line 17
+
+2026-08-12 15:02:49   blad: Msg 207, Level 16, State 1, Server DESKTOP-PANA1RQ, Line 17
+Invalid column name 'NUMER_DOKUMENTU'.
+Msg 207, Level 16, State 1, Server DESKTOP-PANA1RQ, Line 5
+2026-08-12 15:02:49 Proba eksportu (12/72): pd_mag_id_kontrahent_nazwa_pelna_DATA_WYSTAWIENIA_bez_rodzaj_flg_anul
+2026-08-12 15:02:50 Proba eksportu (24/72): pd_mag_id_platnik_nazwa_DATA_SPRZEDAZY_bez_rodzaj_flg_anul
+2026-08-12 15:02:51 Proba eksportu (36/72): pd_mag_coalesce_kontr_plat_nazwa_DATA_WYSTAWIENIA_bez_rodzaj_flg_anul
+2026-08-12 15:02:52 Proba eksportu (48/72): pd_mag_coalesce_kontr_plat_nazwa_pelna_DATA_SPRZEDAZY_bez_rodzaj_flg_anul
+2026-08-12 15:02:53 Proba eksportu (60/72): naglowek_id_platnik_nazwa_DATA_SPRZEDAZY_flg_anul
+2026-08-12 15:02:53 Proba eksportu (72/72): naglowek_coalesce_kontr_plat_nazwa_pelna_DATA_SPRZEDAZY_flg_anul
+2026-08-12 15:04:49 Eksport Sonax/WAPRO od 2026-03-01
+2026-08-12 15:04:49 Proba (1/80): pd_pd_id_dok_hand_id_kontrahent_nazwa_numer_DATA_WYSTAWIENIA_cena_rodzaj_r
+2026-08-12 15:04:51 OK pd_pd_id_dok_hand_id_kontrahent_nazwa_numer_DATA_WYSTAWIENIA_cena_rodzaj_r: 111564 wierszy -> C:\katalog-sync\sonax-export\wapro-faktury.tsv
+2026-08-12 15:04:51 Proba (1/1): kontrahenci_nazwa
+2026-08-12 15:04:51 OK kontrahenci_nazwa: 20535 wierszy -> C:\katalog-sync\sonax-export\wapro-kontrahenci.tsv
+2026-08-12 15:04:51 Gotowe. Skopiuj sonax-export\ na PC do data\sonax-import\
+2026-08-12 15:47:52 Eksport Sonax/WAPRO od 2026-03-01
+2026-08-12 15:47:52 Proba (1/80): pd_pd_id_dok_hand_id_kontrahent_nazwa_numer_DATA_WYSTAWIENIA_cena_rodzaj_r
+2026-08-12 15:47:54 OK pd_pd_id_dok_hand_id_kontrahent_nazwa_numer_DATA_WYSTAWIENIA_cena_rodzaj_r: 111564 wierszy -> C:\katalog-sync\sonax-export\wapro-faktury.tsv
+2026-08-12 15:47:54 Proba (1/1): kontrahenci_nazwa
+2026-08-12 15:47:54 OK kontrahenci_nazwa: 20537 wierszy -> C:\katalog-sync\sonax-export\wapro-kontrahenci.tsv
+2026-08-12 15:47:54 Proba (1/32): before_pd_pd_id_dok_hand_id_kontrahent_nazwa_DATA_WYSTAWIENIA_cena_rodzaj_r
+2026-08-12 15:47:56 OK before_pd_pd_id_dok_hand_id_kontrahent_nazwa_DATA_WYSTAWIENIA_cena_rodzaj_r: 43130 wierszy -> C:\katalog-sync\sonax-export\wapro-kenochem-przed.tsv
+2026-08-12 15:47:56 Gotowe. Skopiuj sonax-export\ na PC do data\sonax-import\

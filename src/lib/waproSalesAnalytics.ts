@@ -39,7 +39,14 @@ export interface ProductSalesMetrics {
 }
 
 const ANALYTICS_SELECT =
-  'id,sku,name,display_name,category,manufacturer,ean,image_url,custom_image_url,has_image,stock,catalog,variants,is_group,price_purchase_net,price_sale_net,product_meta,wapro_sales_stats,wapro_sales_synced_at';
+  'id,sku,name,display_name,category,manufacturer,image_url,custom_image_url,stock,catalog,tags,price_purchase_net,price_sale_net,product_meta,wapro_sales_stats,wapro_sales_synced_at';
+
+const ANALYTICS_TTL_MS = 15 * 60_000;
+let analyticsMem: { at: number; key: string; data: Product[] } | null = null;
+
+export function invalidateSalesAnalyticsCache(): void {
+  analyticsMem = null;
+}
 
 /** SKU / nazwy pozycji usługowych — nie towar, nie wchodzą w ranking sprzedaży. */
 const EXCLUDED_SKUS = new Set(['KAT00159', 'KAT00178']);
@@ -162,8 +169,19 @@ export function dedupeProductsBySku(
 export async function fetchProductsForSalesAnalytics(
   catalog?: CatalogType,
   months: SalesPeriodMonths = 12,
+  opts?: { force?: boolean },
 ): Promise<Product[]> {
   if (!isSupabaseConfigured || !supabase) return [];
+
+  const cacheKey = `${catalog || 'all'}:${months}`;
+  if (
+    !opts?.force &&
+    analyticsMem &&
+    analyticsMem.key === cacheKey &&
+    Date.now() - analyticsMem.at < ANALYTICS_TTL_MS
+  ) {
+    return analyticsMem.data;
+  }
 
   const all: ProductRow[] = [];
   const pageSize = 1000;
@@ -186,7 +204,9 @@ export async function fetchProductsForSalesAnalytics(
     return product;
   });
 
-  return dedupeProductsBySku(mapped, months);
+  const result = dedupeProductsBySku(mapped, months);
+  analyticsMem = { at: Date.now(), key: cacheKey, data: result };
+  return result;
 }
 
 export function aggregateSalesSummary(

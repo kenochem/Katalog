@@ -22,3 +22,9 @@ data/*.tmp
 data/**/*.tmp
 data/sql-json.tmp
 data/shop-embeddings.progress.json.tmp
+index.*.html
+!index.base.html
+
+# sekrety
+*.env
+katalog-sync.env

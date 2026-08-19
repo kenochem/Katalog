@@ -17,12 +17,22 @@ import {
   type KnowledgeFilter,
   type BaselinkerFilter,
   type WaproMagFilter,
+  type CatalogVisibilityFilter,
 } from '../lib/search';
 import { CATALOG_LABELS, type CatalogListFilter } from '../types';
 
 export type GridDensity = 'sm' | 'md' | 'lg';
 
-type MenuId = 'category' | 'stock' | 'image' | 'knowledge' | 'baselinker' | 'waproMag' | null;
+type MenuId =
+  | 'category'
+  | 'manufacturer'
+  | 'stock'
+  | 'image'
+  | 'knowledge'
+  | 'baselinker'
+  | 'waproMag'
+  | 'visibility'
+  | null;
 
 const STOCK_OPTS = [
   { id: 'all' as const, label: 'Wszystkie' },
@@ -54,6 +64,12 @@ const WAPRO_MAG_OPTS = [
   { id: 'needs-media' as const, label: 'Mag WAPRO — bez zdjęcia' },
 ];
 
+const VISIBILITY_OPTS = [
+  { id: 'active' as const, label: 'Aktywne' },
+  { id: 'hidden' as const, label: 'Ukryte' },
+  { id: 'all' as const, label: 'Wszystkie' },
+];
+
 export type ShopCategoryGroup = { root: string; leaves: string[] };
 
 interface CatalogFilterBarProps {
@@ -61,6 +77,10 @@ interface CatalogFilterBarProps {
   categoryCounts: Record<string, number>;
   category: string;
   onCategoryChange: (cat: string) => void;
+  manufacturers?: string[];
+  manufacturerCounts?: Record<string, number>;
+  manufacturer?: string;
+  onManufacturerChange?: (m: string) => void;
   stockFilter: StockFilter;
   onStockFilterChange: (v: StockFilter) => void;
   imageFilter: ImageFilter;
@@ -71,6 +91,8 @@ interface CatalogFilterBarProps {
   onBaselinkerFilterChange?: (v: BaselinkerFilter) => void;
   waproMagFilter?: WaproMagFilter;
   onWaproMagFilterChange?: (v: WaproMagFilter) => void;
+  visibilityFilter?: CatalogVisibilityFilter;
+  onVisibilityFilterChange?: (v: CatalogVisibilityFilter) => void;
   /** Grupowane liście kategorii sklepu (jak na kenochem.pl). */
   shopCategoryGroups?: ShopCategoryGroup[];
   sort: CatalogSort;
@@ -134,9 +156,9 @@ function FilterTrigger({
       onClick={onClick}
       className={`catalog-filter-trigger inline-flex min-w-0 max-w-[min(100%,14rem)] items-center gap-1.5 rounded-xl border px-3 py-2 text-left text-xs font-medium transition sm:max-w-none ${
         open
-          ? 'border-brand-500/50 bg-brand-500/15 text-brand-100'
+          ? 'border-brand-500/50 bg-brand-50 text-brand-900 dark:bg-brand-500/15 dark:text-brand-100'
           : active
-            ? 'border-brand-500/35 bg-brand-500/10 text-brand-200'
+            ? 'border-brand-500/35 bg-brand-50 text-brand-900 dark:bg-brand-500/10 dark:text-brand-200'
             : 'border-slate-700 bg-slate-900/60 text-slate-300 hover:border-slate-600 hover:bg-slate-800/80'
       }`}
     >
@@ -245,6 +267,10 @@ export function CatalogFilterBar({
   categoryCounts,
   category,
   onCategoryChange,
+  manufacturers = [],
+  manufacturerCounts = {},
+  manufacturer = 'Wszyscy',
+  onManufacturerChange,
   stockFilter,
   onStockFilterChange,
   imageFilter,
@@ -255,6 +281,8 @@ export function CatalogFilterBar({
   onBaselinkerFilterChange,
   waproMagFilter = 'all',
   onWaproMagFilterChange,
+  visibilityFilter = 'active',
+  onVisibilityFilterChange,
   shopCategoryGroups,
   sort,
   onSortChange,
@@ -288,15 +316,63 @@ export function CatalogFilterBar({
     BASELINKER_OPTS.find((o) => o.id === baselinkerFilter)?.label ?? 'Wszystkie';
   const waproMagLabel =
     WAPRO_MAG_OPTS.find((o) => o.id === waproMagFilter)?.label ?? 'Wszystkie';
+  const visibilityLabel =
+    VISIBILITY_OPTS.find((o) => o.id === visibilityFilter)?.label ?? 'Aktywne';
   const categoryLabel = category === 'Wszystkie' ? 'Wszystkie kategorie' : category;
+  const manufacturerLabel =
+    manufacturer === 'Wszyscy' ? 'Wszyscy producenci' : manufacturer;
 
   const visibleCategories = categories.filter(
     (c) => c === 'Wszystkie' || (categoryCounts[c] ?? 0) > 0,
   );
+  const visibleManufacturers = manufacturers.filter(
+    (m) => m === 'Wszyscy' || (manufacturerCounts[m] ?? 0) > 0,
+  );
+  const showManufacturerFilter =
+    !!onManufacturerChange && visibleManufacturers.length > 1;
 
   function pickCategory(cat: string) {
     onCategoryChange(cat);
     setOpenMenu(null);
+  }
+
+  function pickManufacturer(m: string) {
+    onManufacturerChange?.(m);
+    setOpenMenu(null);
+  }
+
+  function manufacturerButton(name: string) {
+    const count = manufacturerCounts[name] ?? 0;
+    const selected = manufacturer === name;
+    return (
+      <button
+        key={name}
+        type="button"
+        onClick={() => pickManufacturer(name)}
+        className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-left text-sm transition ${
+          selected
+            ? 'border-brand-500/50 bg-brand-50 font-semibold text-brand-900 ring-1 ring-brand-500/25 dark:bg-brand-500/15 dark:text-brand-100'
+            : 'border-slate-700/80 bg-slate-800/40 text-slate-200 hover:border-slate-600 hover:bg-slate-800'
+        }`}
+      >
+        <span className="min-w-0 truncate">{name}</span>
+        {count > 0 && (
+          <span
+            className={`shrink-0 tabular-nums text-xs ${selected ? 'text-brand-800 dark:text-brand-300' : 'text-slate-500'}`}
+          >
+            {count}
+          </span>
+        )}
+      </button>
+    );
+  }
+
+  function manufacturerGrid(className: string) {
+    return (
+      <div className={`grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3 ${className}`}>
+        {visibleManufacturers.map((m) => manufacturerButton(m))}
+      </div>
+    );
   }
 
   function categoryButton(cat: string) {
@@ -309,14 +385,14 @@ export function CatalogFilterBar({
         onClick={() => pickCategory(cat)}
         className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-left text-sm transition ${
           selected
-            ? 'border-brand-500/50 bg-brand-500/15 font-medium text-brand-100'
+            ? 'border-brand-500/50 bg-brand-50 font-semibold text-brand-900 ring-1 ring-brand-500/25 dark:bg-brand-500/15 dark:text-brand-100'
             : 'border-slate-700/80 bg-slate-800/40 text-slate-200 hover:border-slate-600 hover:bg-slate-800'
         }`}
       >
         <span className="min-w-0 truncate">{cat}</span>
         {count > 0 && (
           <span
-            className={`shrink-0 tabular-nums text-xs ${selected ? 'text-brand-300' : 'text-slate-500'}`}
+            className={`shrink-0 tabular-nums text-xs ${selected ? 'text-brand-800 dark:text-brand-300' : 'text-slate-500'}`}
           >
             {count}
           </span>
@@ -395,7 +471,7 @@ export function CatalogFilterBar({
               }}
               className={`flex w-full items-center px-3 py-2 text-left text-sm transition ${
                 current === opt.id
-                  ? 'bg-brand-500/15 font-medium text-brand-100'
+                  ? 'bg-brand-50 font-semibold text-brand-900 dark:bg-brand-500/15 dark:text-brand-100'
                   : 'text-slate-200 hover:bg-slate-800'
               }`}
             >
@@ -418,6 +494,9 @@ export function CatalogFilterBar({
       {category !== 'Wszystkie' && (
         <ActiveChip label={category} onRemove={() => onCategoryChange('Wszystkie')} />
       )}
+      {showManufacturerFilter && manufacturer !== 'Wszyscy' && onManufacturerChange && (
+        <ActiveChip label={manufacturer} onRemove={() => onManufacturerChange('Wszyscy')} />
+      )}
       {stockFilter !== 'all' && (
         <ActiveChip label={stockLabel} onRemove={() => onStockFilterChange('all')} />
       )}
@@ -432,6 +511,12 @@ export function CatalogFilterBar({
       )}
       {waproMagFilter !== 'all' && onWaproMagFilterChange && (
         <ActiveChip label={waproMagLabel} onRemove={() => onWaproMagFilterChange('all')} />
+      )}
+      {visibilityFilter !== 'active' && onVisibilityFilterChange && (
+        <ActiveChip
+          label={`Status: ${visibilityLabel}`}
+          onRemove={() => onVisibilityFilterChange('active')}
+        />
       )}
       {activeFilterCount > 0 && (
         <button
@@ -467,7 +552,7 @@ export function CatalogFilterBar({
               onClick={() => onCatalogFilterChange(opt.id)}
               className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition ${
                 selected
-                  ? 'bg-brand-500/20 text-brand-200 ring-1 ring-brand-500/40'
+                  ? 'bg-brand-50 text-brand-900 ring-1 ring-brand-500/35 dark:bg-brand-500/20 dark:text-brand-200'
                   : 'bg-slate-800 text-slate-400 hover:text-slate-100'
               }`}
             >
@@ -493,7 +578,7 @@ export function CatalogFilterBar({
             onClick={() => onMobileFiltersOpenChange(true)}
             className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium ${
               activeFilterCount > 0
-                ? 'border-brand-500/50 bg-brand-500/15 text-brand-200'
+                ? 'border-brand-500/50 bg-brand-50 text-brand-900 dark:bg-brand-500/15 dark:text-brand-200'
                 : 'border-slate-700 text-slate-300'
             }`}
           >
@@ -536,6 +621,31 @@ export function CatalogFilterBar({
               </div>
             )}
           </div>
+
+          {showManufacturerFilter && (
+            <div className="relative">
+              <FilterTrigger
+                label="Producent"
+                value={manufacturerLabel}
+                active={manufacturer !== 'Wszyscy'}
+                open={openMenu === 'manufacturer'}
+                onClick={() =>
+                  setOpenMenu((m) => (m === 'manufacturer' ? null : 'manufacturer'))
+                }
+              />
+              {openMenu === 'manufacturer' && (
+                <div className="catalog-filter-dropdown absolute left-0 top-full z-30 mt-1 w-[min(36rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl shadow-black/30">
+                  <div className="border-b border-slate-800 px-4 py-3">
+                    <p className="text-sm font-semibold text-slate-100">Producenci / marki</p>
+                    <p className="text-xs text-slate-500">Jak kategorie w WAPRO Mag i Baselinkerze</p>
+                  </div>
+                  <div className="max-h-[min(20rem,50vh)] overflow-y-auto p-3">
+                    {manufacturerGrid('')}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="relative">
             <FilterTrigger
@@ -618,6 +728,23 @@ export function CatalogFilterBar({
             </div>
           )}
 
+          {onVisibilityFilterChange && (
+            <div className="relative">
+              <FilterTrigger
+                label="Status"
+                value={visibilityLabel}
+                active={visibilityFilter !== 'active'}
+                open={openMenu === 'visibility'}
+                onClick={() => setOpenMenu((m) => (m === 'visibility' ? null : 'visibility'))}
+              />
+              {openMenu === 'visibility' && (
+                <div className="catalog-filter-dropdown absolute left-0 top-full z-30 mt-1 w-48 overflow-hidden rounded-xl border border-slate-700 bg-slate-900 shadow-xl">
+                  {optionList(VISIBILITY_OPTS, visibilityFilter, onVisibilityFilterChange)}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <SortSelect sort={sort} onChange={onSortChange} disabled={sortDisabled} />
             <DensityToggle density={density} onChange={onDensityChange} />
@@ -668,6 +795,11 @@ export function CatalogFilterBar({
               <MobileFilterSection title="Kategoria">
                 {categoryGrid('grid gap-1.5 sm:grid-cols-2')}
               </MobileFilterSection>
+              {showManufacturerFilter && (
+                <MobileFilterSection title="Producent / marka">
+                  {manufacturerGrid('grid gap-1.5 sm:grid-cols-2')}
+                </MobileFilterSection>
+              )}
               <MobileFilterSection title="Stan magazynowy">
                 <div className="flex flex-wrap gap-1.5">
                   {STOCK_OPTS.map((opt) => (
@@ -750,6 +882,26 @@ export function CatalogFilterBar({
                         onClick={() => onWaproMagFilterChange(opt.id)}
                         className={`rounded-lg px-2.5 py-1.5 text-xs font-medium ${
                           waproMagFilter === opt.id
+                            ? 'bg-brand-500 text-white'
+                            : 'bg-slate-800 text-slate-400'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </MobileFilterSection>
+              )}
+              {onVisibilityFilterChange && (
+                <MobileFilterSection title="Status produktu">
+                  <div className="flex flex-wrap gap-1.5">
+                    {VISIBILITY_OPTS.map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => onVisibilityFilterChange(opt.id)}
+                        className={`rounded-lg px-2.5 py-1.5 text-xs font-medium ${
+                          visibilityFilter === opt.id
                             ? 'bg-brand-500 text-white'
                             : 'bg-slate-800 text-slate-400'
                         }`}

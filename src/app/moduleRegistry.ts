@@ -15,6 +15,9 @@ export type AppProduct =
 
 export type HubModuleId = 'catalog' | 'crm' | 'ops' | 'comms' | 'calendar';
 
+/** Talk wyłączony tymczasowo — zero pollingu, Realtime i Storage z Supabase. */
+export const TALK_SUSPENDED = true;
+
 const ENV_PRODUCT = import.meta.env.VITE_APP_PRODUCT;
 
 function parseAppProduct(): AppProduct {
@@ -37,10 +40,12 @@ export const APP_PRODUCT = parseAppProduct();
 const MODULES_BY_PRODUCT: Record<AppProduct, readonly HubModuleId[]> = {
   catalog: ['catalog'],
   stock: ['catalog'],
-  suite: ['catalog', 'crm', 'ops', 'comms', 'calendar'],
-  sell: ['catalog', 'crm', 'comms'],
+  suite: TALK_SUSPENDED
+    ? ['catalog', 'crm', 'ops', 'calendar']
+    : ['catalog', 'crm', 'ops', 'comms', 'calendar'],
+  sell: TALK_SUSPENDED ? ['catalog', 'crm'] : ['catalog', 'crm', 'comms'],
   ops: ['ops'],
-  talk: ['comms'],
+  talk: TALK_SUSPENDED ? [] : ['comms'],
   logistics: [],
   calendar: ['calendar'],
 };
@@ -52,9 +57,10 @@ export const BUILD_HAS_CRM =
   APP_PRODUCT === 'suite' || APP_PRODUCT === 'sell';
 export const BUILD_HAS_OPS = APP_PRODUCT === 'suite' || APP_PRODUCT === 'ops';
 export const BUILD_HAS_COMMS =
-  APP_PRODUCT === 'suite' ||
-  APP_PRODUCT === 'talk' ||
-  APP_PRODUCT === 'sell';
+  !TALK_SUSPENDED &&
+  (APP_PRODUCT === 'suite' ||
+    APP_PRODUCT === 'talk' ||
+    APP_PRODUCT === 'sell');
 export const BUILD_HAS_CATALOG =
   APP_PRODUCT === 'catalog' ||
   APP_PRODUCT === 'stock' ||

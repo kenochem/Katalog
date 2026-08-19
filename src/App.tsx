@@ -22,6 +22,8 @@ import {
   ScanBarcode,
   Boxes,
   Home,
+  AlertTriangle,
+  BookOpen,
 } from 'lucide-react';
 import type { Product, Kit, View, CatalogType, CatalogListFilter } from './types';
 import { CATALOG_LABELS, deriveCategories } from './types';
@@ -39,6 +41,7 @@ import {
   type KnowledgeFilter,
   type BaselinkerFilter,
   type WaproMagFilter,
+  type CatalogVisibilityFilter,
 } from './lib/search';
 import { useTheme } from './lib/theme';
 import { loadAndMergeFavorites, getLocalFavoriteIds, fetchCloudFavoriteIds, replaceLocalFavoriteIds, scheduleCloudFavoritesSync, flushCloudFavoritesSync } from './lib/favorites';
@@ -90,9 +93,15 @@ import { CatalogHomeView, type CatalogHomeQuickAction } from './components/Catal
 import { AppHeaderActions } from './components/AppHeaderActions';
 import { canAccessAdminPanel } from './lib/adminAccess';
 import { computeCatalogStats } from './lib/catalogExport';
-import { getShopCategoryGroups } from './lib/shopCategoryTree';
+import { getKenochemCategoryGroupsFor } from './lib/kenochemCategoryTree';
+import {
+  deriveManufacturers,
+  manufacturerCounts as buildManufacturerCounts,
+  effectiveManufacturer,
+} from './lib/waproManufacturers';
 import { CATALOG_LENS_ENABLED } from './lib/catalogFeatures';
 import { resolveProductCatalogKind } from './lib/catalogKind';
+import { isCatalogHiddenProduct } from './lib/productMeta';
 import {
   catalogFilterNeedsAccessories,
   catalogFilterNeedsShop,
@@ -110,6 +119,12 @@ import {
   HubSegmentOverlay,
 } from './suite/hubLoaders';
 import { HubCatalogSubNav } from './components/hub/HubCatalogSubNav';
+import { LibraryView } from './components/LibraryView';
+import {
+  CatalogDecisionView,
+  buildCatalogDecisionRows,
+} from './components/CatalogDecisionView';
+import { getProductDisplayCategory } from './lib/catalogCategory';
 
 const KitsView = lazy(() =>
   import('./components/KitsView').then((m) => ({ default: m.KitsView })),
@@ -236,12 +251,14 @@ export default function App() {
     setSearch(value);
   }, []);
   const [category, setCategory] = useState('Wszystkie');
+  const [manufacturer, setManufacturer] = useState('Wszyscy');
   const [sort, setSort] = useState<CatalogSort>(loadSavedSort);
   const [stockFilter, setStockFilter] = useState<StockFilter>('all');
   const [imageFilter, setImageFilter] = useState<ImageFilter>('all');
   const [knowledgeFilter, setKnowledgeFilter] = useState<KnowledgeFilter>('all');
   const [baselinkerFilter, setBaselinkerFilter] = useState<BaselinkerFilter>('all');
   const [waproMagFilter, setWaproMagFilter] = useState<WaproMagFilter>('all');
+  const [visibilityFilter, setVisibilityFilter] = useState<CatalogVisibilityFilter>('active');
   const [editMode, setEditMode] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<string[]>(() => getLocalFavoriteIds());
   const favoriteIdsRef = useRef(favoriteIds);
@@ -407,12 +424,19 @@ export default function App() {
         if (res.id && last.id !== res.id) continue;
         if (last.status === 'done') {
           const parsed = parseWaproSyncMessage(last.message);
-          showToast(parsed.summary || `Sync ${label} zakończony`, 'ok', 9000);
+          showToast(parsed.summary || `Sync ${label} zakończony — odświeżam katalog`, 'ok', 9000);
+          if (parsed.stats.newSkuFromMag && parsed.stats.newSkuFromMag > 0) {
+            showToast(
+              `Dopisano ${parsed.stats.newSkuFromMag} nowych produktów z WAPRO. Odświeżam listę.`,
+              'info',
+              9000,
+            );
+          }
           if (parsed.warningHint) {
-            showToast(parsed.warningHint, 'warn', 10000);
+            showToast(parsed.warningHint, 'info', 10000);
           }
           invalidateProductsCache();
-          void loadData();
+          await loadData();
           return;
         }
         if (last.status === 'error') {
@@ -437,6 +461,7 @@ export default function App() {
     if (!canAccessAdminPanel(role) && view === 'admin') setView(fallback);
     if (!roleCan(role, 'printLabels') && view === 'labels') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'progress') setView(fallback);
+    if (!roleCan(role, 'viewProgress') && view === 'catalog-decisions') setView(fallback);
     if (!roleCan(role, 'manageFavorites') && view === 'favorites') setView(fallback);
     if (!roleCan(role, 'manageKits') && view === 'kits') setView(fallback);
     if (!canViewOpsModule(role) && view === 'ops') setView(fallback);
@@ -648,15 +673,16 @@ export default function App() {
 
   const catalogCacheRef = useRef(catalogCache);
   catalogCacheRef.current = catalogCache;
+  const supabaseHydratedRef = useRef<Record<string, boolean>>({});
 
-  const loadCatalog = useCallback(async (catalog: CatalogType, force = false) => {
+  const loadCatalog = useCallback(async (catalog: CatalogType, fromSupabase = false) => {
     if (opsStandalone) return;
-    if (!force && (catalogCacheRef.current[catalog]?.length ?? 0) > 0) return;
+    if (!fromSupabase && (catalogCacheRef.current[catalog]?.length ?? 0) > 0) return;
     try {
-      const fast = await fetchProducts(catalog, { source: 'json' });
-      setCatalogCache((prev) => ({ ...prev, [catalog]: fast }));
-      const full = await fetchProducts(catalog, { force });
-      setCatalogCache((prev) => ({ ...prev, [catalog]: full }));
+      const data = fromSupabase
+        ? await fetchProducts(catalog, { force: true, source: 'supabase' })
+        : await fetchProducts(catalog, { source: 'json' });
+      setCatalogCache((prev) => ({ ...prev, [catalog]: data }));
     } catch (err) {
       console.warn('loadCatalog', catalog, err);
     }
@@ -671,11 +697,10 @@ export default function App() {
     setLoading(true);
     setError(null);
     try {
-      invalidateProductsCache('accessories');
-      invalidateProductsCache('shop');
+      invalidateProductsCache();
       const [acc, shop] = await Promise.all([
-        fetchProducts('accessories', { force: true }),
-        fetchProducts('shop', { force: true }),
+        fetchProducts('accessories', { force: true, source: 'supabase' }),
+        fetchProducts('shop', { force: true, source: 'supabase' }),
       ]);
       setCatalogCache({ accessories: acc, shop });
       void fetchKits()
@@ -700,16 +725,11 @@ export default function App() {
     let cancelled = false;
 
     async function loadCatalogFast(catalog: CatalogType) {
-      const fast = await fetchProducts(catalog, { source: 'json' });
-      if (cancelled) return fast;
-      setCatalogCache((prev) => ({ ...prev, [catalog]: fast }));
+      const data = await fetchProducts(catalog, { source: 'json' });
+      if (cancelled) return data;
+      setCatalogCache((prev) => ({ ...prev, [catalog]: data }));
       setLoading(false);
-      void fetchProducts(catalog)
-        .then((full) => {
-          if (!cancelled) setCatalogCache((prev) => ({ ...prev, [catalog]: full }));
-        })
-        .catch((err) => console.warn('catalog sync', catalog, err));
-      return fast;
+      return data;
     }
 
     (async () => {
@@ -737,14 +757,9 @@ export default function App() {
           if (!hasShop && needShop) {
             setShopLoading(true);
             try {
-              const shopFast = await fetchProducts('shop', { source: 'json' });
+              const shopData = await fetchProducts('shop', { source: 'json' });
               if (cancelled) return;
-              setCatalogCache((prev) => ({ ...prev, shop: shopFast }));
-              void fetchProducts('shop')
-                .then((shop) => {
-                  if (!cancelled) setCatalogCache((prev) => ({ ...prev, shop }));
-                })
-                .catch((err) => console.warn('catalog sync shop', err));
+              setCatalogCache((prev) => ({ ...prev, shop: shopData }));
             } finally {
               if (!cancelled) setShopLoading(false);
             }
@@ -757,15 +772,10 @@ export default function App() {
         } else if (filter === 'shop' && !hasShop) {
           setShopLoading(true);
           try {
-            const shopFast = await fetchProducts('shop', { source: 'json' });
+            const shopData = await fetchProducts('shop', { source: 'json' });
             if (cancelled) return;
-            setCatalogCache((prev) => ({ ...prev, shop: shopFast }));
+            setCatalogCache((prev) => ({ ...prev, shop: shopData }));
             setLoading(false);
-            void fetchProducts('shop')
-              .then((shop) => {
-                if (!cancelled) setCatalogCache((prev) => ({ ...prev, shop }));
-              })
-              .catch((err) => console.warn('catalog sync shop', err));
           } finally {
             if (!cancelled) setShopLoading(false);
           }
@@ -798,6 +808,58 @@ export default function App() {
     void fetch('/data/products.json', { cache: 'force-cache' }).catch(() => undefined);
     void fetch('/data/shop-products.json', { cache: 'force-cache' }).catch(() => undefined);
   }, [opsStandalone]);
+
+  useEffect(() => {
+    if (opsStandalone || mode !== 'signed_in') return;
+    if (loading || shopLoading) return;
+
+    const filter = catalogListFilter;
+    const needAcc = catalogFilterNeedsAccessories(filter);
+    const needShop = catalogFilterNeedsShop(filter);
+    const hasAcc = (catalogCache.accessories?.length ?? 0) > 0;
+    const hasShop = (catalogCache.shop?.length ?? 0) > 0;
+    if ((needAcc && !hasAcc) || (needShop && !hasShop)) return;
+
+    const key = filter;
+    if (supabaseHydratedRef.current[key]) return;
+    supabaseHydratedRef.current[key] = true;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const next: Partial<Record<CatalogType, Product[]>> = {};
+        if (needAcc) {
+          next.accessories = await fetchProducts('accessories', {
+            force: true,
+            source: 'supabase',
+          });
+        }
+        if (needShop) {
+          next.shop = await fetchProducts('shop', {
+            force: true,
+            source: 'supabase',
+          });
+        }
+        if (!cancelled) {
+          setCatalogCache((prev) => ({ ...prev, ...next }));
+        }
+      } catch (err) {
+        console.warn('supabase catalog hydrate', err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    catalogListFilter,
+    catalogCache.accessories?.length,
+    catalogCache.shop?.length,
+    loading,
+    mode,
+    opsStandalone,
+    shopLoading,
+  ]);
 
   /** Dociągnij brakujący katalog po zmianie filtra (np. Produkty / Wszystkie). */
   useEffect(() => {
@@ -889,16 +951,31 @@ export default function App() {
     setSelectedProduct(null);
   }, [syncCatalogPrefsToCloud]);
 
+  const productsForVisibleStatus = useMemo(() => {
+    if (visibilityFilter === 'hidden') return products.filter(isCatalogHiddenProduct);
+    if (visibilityFilter === 'all') return products;
+    return products.filter((p) => !isCatalogHiddenProduct(p));
+  }, [products, visibilityFilter]);
+
   const categoryList = useMemo(
-    () => deriveCategories(products, catalogListFilter),
-    [products, catalogListFilter],
+    () => deriveCategories(productsForVisibleStatus, catalogListFilter),
+    [productsForVisibleStatus, catalogListFilter],
+  );
+
+  const manufacturerList = useMemo(
+    () => deriveManufacturers(productsForVisibleStatus),
+    [productsForVisibleStatus],
+  );
+
+  const manufacturerCountMap = useMemo(
+    () => buildManufacturerCounts(productsForVisibleStatus),
+    [productsForVisibleStatus],
   );
 
   const shopCategoryGroups = useMemo(() => {
-    if (catalogListFilter !== 'shop' && catalogListFilter !== 'all') return undefined;
-    if (!products.some((p) => (p.catalog || 'accessories') === 'shop')) return undefined;
-    return getShopCategoryGroups();
-  }, [catalogListFilter, products]);
+    if (!categoryList.length) return undefined;
+    return getKenochemCategoryGroupsFor(categoryList);
+  }, [categoryList]);
 
   const debouncedSearch = useDebouncedCatalogSearch(search, 90);
   const favoriteSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
@@ -925,14 +1002,16 @@ export default function App() {
     return applyCatalogFilters(base, {
       search: debouncedSearch,
       category,
+      manufacturer,
       sort,
       stockFilter,
       imageFilter,
       knowledgeFilter,
       baselinkerFilter,
       waproMagFilter,
+      visibilityFilter,
     });
-  }, [products, allProducts, debouncedSearch, category, sort, stockFilter, imageFilter, knowledgeFilter, baselinkerFilter, waproMagFilter, view, favoriteSet]);
+  }, [products, allProducts, debouncedSearch, category, manufacturer, sort, stockFilter, imageFilter, knowledgeFilter, baselinkerFilter, waproMagFilter, visibilityFilter, view, favoriteSet]);
 
   const favoriteCount = useMemo(
     () => allProducts.reduce((n, p) => n + (favoriteSet.has(p.id) ? 1 : 0), 0),
@@ -1027,6 +1106,10 @@ export default function App() {
 
   const missingImages = useMemo(
     () => products.filter((p) => !getProductImage(p)),
+    [products],
+  );
+  const catalogDecisionRows = useMemo(
+    () => buildCatalogDecisionRows(products),
     [products],
   );
 
@@ -1150,6 +1233,13 @@ export default function App() {
     }
     if (roleCan(role, 'viewProgress')) {
       items.push({
+        id: 'catalog-decisions',
+        label: 'Decyzje',
+        icon: <AlertTriangle className="h-4 w-4" />,
+        count: catalogDecisionRows.length,
+        onClick: () => setView('catalog-decisions'),
+      });
+      items.push({
         id: 'missing-images',
         label: 'Bez zdjęć',
         icon: <ImageOff className="h-4 w-4" />,
@@ -1164,6 +1254,7 @@ export default function App() {
     catalogKits.length,
     collectionCount,
     collectionUserKey,
+    catalogDecisionRows.length,
     missingImages.length,
     openMissingImages,
   ]);
@@ -1226,12 +1317,13 @@ export default function App() {
   );
 
   const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = { Wszystkie: products.length };
-    for (const p of products) {
-      counts[p.category] = (counts[p.category] || 0) + 1;
+    const counts: Record<string, number> = { Wszystkie: productsForVisibleStatus.length };
+    for (const p of productsForVisibleStatus) {
+      const c = getProductDisplayCategory(p);
+      counts[c] = (counts[c] || 0) + 1;
     }
     return counts;
-  }, [products]);
+  }, [productsForVisibleStatus]);
 
   if (mode === 'loading') {
     return (
@@ -1268,8 +1360,8 @@ export default function App() {
       >
       <header className="border-b border-slate-800/80">
         {/* Mobile: logo + switch; Desktop (lg+): pełny pasek */}
-        <div className="flex flex-col gap-2 px-3 py-2 sm:px-4 lg:flex-row lg:items-center lg:gap-3 lg:py-3 xl:px-6">
-          <div className="flex min-w-0 items-center gap-2 sm:gap-3 lg:min-w-[12rem]">
+        <div className="grid gap-2 px-3 py-2 sm:px-4 lg:grid-cols-[minmax(19rem,auto)_minmax(18rem,34rem)_auto] lg:items-center lg:gap-3 lg:py-3 xl:grid-cols-[minmax(22rem,auto)_minmax(22rem,42rem)_auto] xl:px-6">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <a
               href="https://kenochem.com"
               target="_blank"
@@ -1297,9 +1389,50 @@ export default function App() {
                 showAdminShortcut={false}
               />
             </div>
+
+            <div className="hidden min-w-[15rem] shrink-0 lg:block xl:min-w-[18rem]">
+              {showsCatalogSwitcher() &&
+              modeSwitcherColumns(canViewOpsModule(role), canUseCrmModule(role)) >
+                0 ? (
+              <div
+                className="grid gap-1 rounded-xl bg-slate-900 p-1 ring-1 ring-slate-800"
+                style={{
+                  gridTemplateColumns: `repeat(${modeSwitcherColumns(
+                    canViewOpsModule(role),
+                    canUseCrmModule(role),
+                  )}, minmax(0, 1fr))`,
+                }}
+              >
+                {canViewOpsModule(role) && (
+                  <CatalogSwitch
+                    active={view === 'ops'}
+                    onClick={() => setView('ops')}
+                    icon={<Calculator className="h-4 w-4 shrink-0" />}
+                    label="Operacje"
+                  />
+                )}
+                {canUseCrmModule(role) && (
+                  <CatalogSwitch
+                    active={view === 'crm'}
+                    onClick={() => setView('crm')}
+                    icon={<ShoppingCart className="h-4 w-4 shrink-0" />}
+                    label="CRM"
+                  />
+                )}
+              </div>
+              ) : APP_PRODUCT === 'ops' ? (
+                <div className="rounded-xl bg-slate-900 px-3 py-2.5 text-center text-sm font-medium text-slate-200 ring-1 ring-slate-800">
+                  Finanse i analityka
+                </div>
+              ) : APP_PRODUCT === 'sell' ? (
+                <div className="rounded-xl bg-slate-900 px-3 py-2.5 text-center text-sm font-medium text-slate-200 ring-1 ring-slate-800">
+                  CRM i sprzedaz
+                </div>
+              ) : null}
+            </div>
           </div>
 
-          <div className="w-full shrink-0 lg:w-auto lg:min-w-[18rem] xl:min-w-[22rem]">
+          <div className="w-full shrink-0 lg:hidden">
             {showsCatalogSwitcher() &&
             modeSwitcherColumns(canViewOpsModule(role), canUseCrmModule(role)) >
               0 ? (
@@ -1340,13 +1473,16 @@ export default function App() {
             ) : null}
           </div>
 
+          {(view === 'catalog' || view === 'favorites') && isCatalogProduct() ? (
+            <div className="hidden min-w-0 justify-self-center lg:block lg:w-full lg:max-w-[34rem] xl:max-w-[42rem]">
+              {renderCatalogSearch(false)}
+            </div>
+          ) : (
+            <div className="hidden lg:block" />
+          )}
+
           {/* Desktop actions — ukryte na mobile (są w Więcej) */}
-          <div className="ml-auto hidden gap-1.5 lg:flex lg:flex-wrap lg:items-center lg:justify-end">
-            {(view === 'catalog' || view === 'favorites') && isCatalogProduct() && (
-              <div className="w-[min(100%,18rem)] shrink-0 xl:w-[min(100%,22rem)]">
-                {renderCatalogSearch(false)}
-              </div>
-            )}
+          <div className="ml-auto hidden gap-1.5 lg:flex lg:flex-nowrap lg:items-center lg:justify-end">
             {view !== 'ops' &&
               view !== 'crm' &&
               view !== 'admin' &&
@@ -1425,6 +1561,12 @@ export default function App() {
               label="Katalog"
               count={products.length}
             />
+            <NavTab
+              active={view === 'library'}
+              onClick={() => setView('library')}
+              icon={<BookOpen className="h-4 w-4" />}
+              label="Biblioteka"
+            />
             {roleCan(role, 'manageFavorites') && (
               <NavTab
                 active={view === 'favorites'}
@@ -1459,6 +1601,16 @@ export default function App() {
                 onClick={() => setView('progress')}
                 icon={<BarChart3 className="h-4 w-4" />}
                 label="Postęp"
+              />
+            )}
+            {roleCan(role, 'viewProgress') && (
+              <NavTab
+                active={view === 'catalog-decisions'}
+                onClick={() => setView('catalog-decisions')}
+                icon={<AlertTriangle className="h-4 w-4" />}
+                label="Decyzje"
+                count={catalogDecisionRows.length}
+                highlight={catalogDecisionRows.length > 0}
               />
             )}
             {roleCan(role, 'viewProgress') && (
@@ -1516,7 +1668,7 @@ export default function App() {
                   embeddedInHub ? 'lg:ml-auto lg:w-[min(100%,22rem)] lg:flex-none' : ''
                 }`}
               >
-                {renderCatalogSearch(!embeddedInHub)}
+                {renderCatalogSearch(true)}
               </div>
               {view === 'catalog' && (
                 <button
@@ -1540,6 +1692,7 @@ export default function App() {
               products: products.length,
               favorites: favoriteCount,
               kits: catalogKits.length,
+              decisions: catalogDecisionRows.length,
               missing: missingImages.length,
               labels: labelQueue.length,
             }}
@@ -1569,10 +1722,9 @@ export default function App() {
           </div>
         ) : view === 'home' && isCatalogProduct() ? (
           <CatalogHomeView
-            accessoriesCount={catalogKindCounts.accessories}
-            shopCount={catalogKindCounts.shop}
             allProducts={allProducts}
             missingImagesCount={missingImages.length}
+            decisionCount={catalogDecisionRows.length}
             canSyncStock={mode === 'signed_in' && roleCan(role, 'editStock')}
             quickActions={catalogHomeQuickActions}
             onOpenCatalog={(filter) => setCatalogFilter(filter)}
@@ -1589,6 +1741,10 @@ export default function App() {
             isSearchPending={isCatalogSearchPending(search, debouncedSearch)}
             category={category}
             onCategoryChange={setCategory}
+            manufacturer={manufacturer}
+            onManufacturerChange={setManufacturer}
+            manufacturerList={manufacturerList}
+            manufacturerCounts={manufacturerCountMap}
             sort={sort}
             onSortChange={handleSortChange}
             stockFilter={stockFilter}
@@ -1601,6 +1757,8 @@ export default function App() {
             onBaselinkerFilterChange={setBaselinkerFilter}
             waproMagFilter={waproMagFilter}
             onWaproMagFilterChange={setWaproMagFilter}
+            visibilityFilter={visibilityFilter}
+            onVisibilityFilterChange={setVisibilityFilter}
             filtered={filtered}
             categoryList={categoryList}
             categoryCounts={categoryCounts}
@@ -1645,6 +1803,13 @@ export default function App() {
               onCollectionsChange={() => setCollectionsRevision((r) => r + 1)}
             />
           </Suspense>
+        ) : view === 'catalog-decisions' && isCatalogProduct() ? (
+          <CatalogDecisionView
+            products={products}
+            onOpenProduct={setSelectedProduct}
+          />
+        ) : view === 'library' ? (
+          <LibraryView />
         ) : view === 'warehouse' && isStockProduct() ? (
           <Suspense fallback={<ViewFallback />}>
             <WarehouseHubPanel
@@ -1735,7 +1900,12 @@ export default function App() {
           <MissingImagesView
             products={missingImages}
             categoryList={categoryList}
+            manufacturerList={manufacturerList}
             initialCategory={missingCategory}
+            manufacturer={manufacturer}
+            onManufacturerChange={setManufacturer}
+            gridDensity={gridDensity}
+            onGridDensityChange={changeGridDensity}
             onProductClick={setSelectedProduct}
             onImageUpdated={handleImageUpdated}
             canUpload={roleCan(role, 'uploadImage')}
@@ -1848,6 +2018,7 @@ export default function App() {
         loading={loading}
         syncBusy={syncBusy}
         canRequestStockSync={mode === 'signed_in' && roleCan(role, 'editStock')}
+        decisionCount={catalogDecisionRows.length}
         missingCount={missingImages.length}
         kitsCount={catalogKits.length}
         collectionsCount={collectionCount}
@@ -2130,6 +2301,10 @@ function CatalogView({
   isSearchPending = false,
   category,
   onCategoryChange,
+  manufacturer = 'Wszyscy',
+  onManufacturerChange,
+  manufacturerList = [],
+  manufacturerCounts = {},
   sort,
   onSortChange,
   stockFilter,
@@ -2142,6 +2317,8 @@ function CatalogView({
   onBaselinkerFilterChange,
   waproMagFilter = 'all',
   onWaproMagFilterChange,
+  visibilityFilter = 'active',
+  onVisibilityFilterChange,
   filtered,
   categoryList,
   categoryCounts,
@@ -2177,6 +2354,10 @@ function CatalogView({
   isSearchPending?: boolean;
   category: string;
   onCategoryChange: (v: string) => void;
+  manufacturer?: string;
+  onManufacturerChange?: (v: string) => void;
+  manufacturerList?: string[];
+  manufacturerCounts?: Record<string, number>;
   sort: CatalogSort;
   onSortChange: (v: CatalogSort) => void;
   stockFilter: StockFilter;
@@ -2189,6 +2370,8 @@ function CatalogView({
   onBaselinkerFilterChange?: (v: BaselinkerFilter) => void;
   waproMagFilter?: WaproMagFilter;
   onWaproMagFilterChange?: (v: WaproMagFilter) => void;
+  visibilityFilter?: CatalogVisibilityFilter;
+  onVisibilityFilterChange?: (v: CatalogVisibilityFilter) => void;
   filtered: Product[];
   categoryList: string[];
   categoryCounts: Record<string, number>;
@@ -2227,19 +2410,23 @@ function CatalogView({
   const activeFilterCount =
     (catalogFilter && catalogFilter !== 'all' ? 1 : 0) +
     (category !== 'Wszystkie' ? 1 : 0) +
+    (manufacturer !== 'Wszyscy' ? 1 : 0) +
     (stockFilter !== 'all' ? 1 : 0) +
     (imageFilter !== 'all' ? 1 : 0) +
     (knowledgeFilter !== 'all' ? 1 : 0) +
     (baselinkerFilter !== 'all' ? 1 : 0) +
-    (waproMagFilter !== 'all' ? 1 : 0);
+    (waproMagFilter !== 'all' ? 1 : 0) +
+    (visibilityFilter !== 'active' ? 1 : 0);
 
   function resetFilters() {
     onCategoryChange('Wszystkie');
+    onManufacturerChange?.('Wszyscy');
     onStockFilterChange('all');
     onImageFilterChange('all');
     onKnowledgeFilterChange?.('all');
     onBaselinkerFilterChange?.('all');
     onWaproMagFilterChange?.('all');
+    onVisibilityFilterChange?.('active');
   }
 
   if (emptyFavorites) {
@@ -2261,6 +2448,10 @@ function CatalogView({
         categoryCounts={categoryCounts}
         category={category}
         onCategoryChange={onCategoryChange}
+        manufacturers={manufacturerList}
+        manufacturerCounts={manufacturerCounts}
+        manufacturer={manufacturer}
+        onManufacturerChange={onManufacturerChange}
         stockFilter={stockFilter}
         onStockFilterChange={onStockFilterChange}
         imageFilter={imageFilter}
@@ -2271,6 +2462,8 @@ function CatalogView({
         onBaselinkerFilterChange={onBaselinkerFilterChange}
         waproMagFilter={waproMagFilter}
         onWaproMagFilterChange={onWaproMagFilterChange}
+        visibilityFilter={visibilityFilter}
+        onVisibilityFilterChange={onVisibilityFilterChange}
         shopCategoryGroups={shopCategoryGroups}
         sort={sort}
         onSortChange={onSortChange}
@@ -2312,7 +2505,7 @@ function CatalogView({
             onClick={() => onCatalogFilterChange(opt.id)}
             className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition ${
               catalogFilter === opt.id
-                ? 'bg-brand-500/20 text-brand-300 ring-1 ring-brand-500/40'
+                ? 'bg-brand-50 text-brand-900 ring-1 ring-brand-500/35 dark:bg-brand-500/20 dark:text-brand-200'
                 : 'bg-slate-800 text-slate-400 hover:text-slate-100'
             }`}
           >
@@ -2322,6 +2515,32 @@ function CatalogView({
             )}
           </button>
         ))}
+      </div>
+    ) : null;
+
+  const legacyManufacturerChips =
+    onManufacturerChange && manufacturerList.length > 1 ? (
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+        {manufacturerList
+          .filter((m) => m === 'Wszyscy' || (manufacturerCounts[m] ?? 0) > 0)
+          .slice(0, 24)
+          .map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => onManufacturerChange(m)}
+              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                manufacturer === m
+                  ? 'bg-violet-50 text-violet-950 ring-1 ring-violet-500/35 dark:bg-violet-500/20 dark:text-violet-100'
+                  : 'bg-slate-800 text-slate-400 hover:text-slate-100'
+              }`}
+            >
+              {m}
+              {(manufacturerCounts[m] ?? 0) > 0 && (
+                <span className="ml-1 opacity-60">{manufacturerCounts[m]}</span>
+              )}
+            </button>
+          ))}
       </div>
     ) : null;
 
@@ -2336,7 +2555,7 @@ function CatalogView({
             onClick={() => onCategoryChange(cat)}
             className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition ${
               category === cat
-                ? 'bg-brand-500/20 text-brand-300 ring-1 ring-brand-500/40'
+                ? 'bg-brand-50 text-brand-900 ring-1 ring-brand-500/35 dark:bg-brand-500/20 dark:text-brand-200'
                 : 'bg-slate-800 text-slate-400 hover:text-slate-100'
             }`}
           >
@@ -2353,6 +2572,7 @@ function CatalogView({
     <>
       <div className="space-y-2 lg:hidden">
         {legacyCatalogKindChips}
+        {legacyManufacturerChips}
         {legacyCategoryChips}
         <div className="flex items-center gap-2">
           <button
@@ -2360,7 +2580,7 @@ function CatalogView({
             onClick={() => setFiltersOpen(true)}
             className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium ${
               activeFilterCount > 0
-                ? 'border-brand-500/50 bg-brand-500/15 text-brand-200'
+                ? 'border-brand-500/50 bg-brand-50 text-brand-900 dark:bg-brand-500/15 dark:text-brand-200'
                 : 'border-slate-700 text-slate-300'
             }`}
           >
@@ -2406,6 +2626,7 @@ function CatalogView({
       </div>
       <div className="hidden space-y-4 lg:block">
         {legacyCatalogKindChips}
+        {legacyManufacturerChips}
         {legacyCategoryChips}
         <p className="text-sm text-slate-500">
           {filtered.length} {filtered.length === 1 ? 'produkt' : 'produktów'}
@@ -2618,14 +2839,24 @@ function LabelsView({
 function MissingImagesView({
   products,
   categoryList,
+  manufacturerList = [],
   initialCategory = 'Wszystkie',
+  manufacturer = 'Wszyscy',
+  onManufacturerChange,
+  gridDensity = 'md',
+  onGridDensityChange,
   onProductClick,
   onImageUpdated,
   canUpload = false,
 }: {
   products: Product[];
   categoryList: string[];
+  manufacturerList?: string[];
   initialCategory?: string;
+  manufacturer?: string;
+  onManufacturerChange?: (m: string) => void;
+  gridDensity?: GridDensity;
+  onGridDensityChange?: (v: GridDensity) => void;
   onProductClick: (p: Product) => void;
   onImageUpdated: (id: string, url: string) => void;
   canUpload?: boolean;
@@ -2641,26 +2872,29 @@ function MissingImagesView({
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = { Wszystkie: products.length };
     for (const p of products) {
-      counts[p.category] = (counts[p.category] || 0) + 1;
+      const c = getProductDisplayCategory(p);
+      counts[c] = (counts[c] || 0) + 1;
     }
     return counts;
   }, [products]);
 
-  const filtered = useMemo(
-    () =>
-      filterProducts(products, search, category).sort((a, b) =>
-        a.displayName.localeCompare(b.displayName, 'pl'),
-      ),
-    [products, search, category],
-  );
+  const mfgCounts = useMemo(() => buildManufacturerCounts(products), [products]);
 
-  const topCategories = useMemo(
+  const filtered = useMemo(() => {
+    let list = filterProducts(products, search, category);
+    if (manufacturer && manufacturer !== 'Wszyscy') {
+      list = list.filter((p) => effectiveManufacturer(p) === manufacturer);
+    }
+    return list.sort((a, b) => a.displayName.localeCompare(b.displayName, 'pl'));
+  }, [products, search, category, manufacturer]);
+
+  const topManufacturers = useMemo(
     () =>
-      Object.entries(categoryCounts)
-        .filter(([cat, count]) => cat !== 'Wszystkie' && count > 0)
+      Object.entries(mfgCounts)
+        .filter(([m, count]) => m !== 'Wszyscy' && m !== 'Bez producenta' && count > 0)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5),
-    [categoryCounts],
+    [mfgCounts],
   );
 
   return (
@@ -2670,25 +2904,80 @@ function MissingImagesView({
           <strong>{products.length}</strong> produktów bez zdjęcia.
           Zrób zdjęcie telefonem lub wgraj plik — od razu trafi do katalogu.
         </p>
-        {topCategories.length > 0 && (
+        {topManufacturers.length > 0 && (
           <p className="mt-2 text-xs text-amber-900/80 dark:text-amber-200/80">
-            Najwięcej braków:{' '}
-            {topCategories.map(([cat, count], i) => (
-              <span key={cat}>
+            Najwięcej braków wg marki:{' '}
+            {topManufacturers.map(([m, count], i) => (
+              <span key={m}>
                 {i > 0 ? ' · ' : ''}
-                {cat} ({count})
+                {m} ({count})
               </span>
             ))}
           </p>
         )}
       </div>
 
-      <SearchBar
-        value={search}
-        onChange={setSearch}
-        placeholder="Szukaj brakujących zdjęć po SKU, nazwie lub EAN..."
-        onScanClick={() => setShowScanner(true)}
-      />
+      <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <SearchBar
+            value={search}
+            onChange={setSearch}
+            placeholder="Szukaj brakujących zdjęć po SKU, nazwie lub EAN..."
+            onScanClick={() => setShowScanner(true)}
+          />
+        </div>
+        {onGridDensityChange && (
+          <div className="flex shrink-0 items-center rounded-lg border border-slate-700 p-0.5">
+            {(
+              [
+                { id: 'sm' as const, icon: LayoutGrid, label: 'Małe' },
+                { id: 'md' as const, icon: Rows2, label: 'Średnie' },
+                { id: 'lg' as const, icon: Square, label: 'Duże' },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => onGridDensityChange(opt.id)}
+                className={`rounded-md p-1.5 transition ${
+                  gridDensity === opt.id
+                    ? 'bg-brand-600 text-white'
+                    : 'text-slate-400 hover:text-slate-100'
+                }`}
+                title={opt.label}
+                aria-label={`Widok: ${opt.label}`}
+              >
+                <opt.icon className="h-4 w-4" />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {onManufacturerChange && manufacturerList.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+          {manufacturerList
+            .filter((m) => m === 'Wszyscy' || (mfgCounts[m] ?? 0) > 0)
+            .slice(0, 28)
+            .map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => onManufacturerChange(m)}
+                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                  manufacturer === m
+                    ? 'bg-violet-50 text-violet-950 ring-1 ring-violet-500/35 dark:bg-violet-500/25 dark:text-violet-100'
+                    : 'bg-slate-800 text-slate-400 hover:text-slate-100'
+                }`}
+              >
+                {m}
+                {(mfgCounts[m] ?? 0) > 0 && (
+                  <span className="ml-1 opacity-60">{mfgCounts[m]}</span>
+                )}
+              </button>
+            ))}
+        </div>
+      )}
 
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
         {categoryList.filter(
@@ -2715,6 +3004,7 @@ function MissingImagesView({
       <p className="text-sm text-slate-500">
         {filtered.length} {filtered.length === 1 ? 'produkt' : 'produktów'}
         {search && ` dla „${search}"`}
+        {manufacturer !== 'Wszyscy' && ` · ${manufacturer}`}
       </p>
 
       {filtered.length === 0 ? (
@@ -2725,14 +3015,15 @@ function MissingImagesView({
       ) : (
         <ProductGrid
           products={filtered}
-          className="grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
-          resetKey={`missing|${category}|${search}|${filtered.length}`}
+          className={GRID_CLASS[gridDensity]}
+          resetKey={`missing|${gridDensity}|${category}|${manufacturer}|${search}|${filtered.length}`}
           renderItem={(product) => (
             <ProductCard
               product={product}
               onClick={() => onProductClick(product)}
               showUpload={canUpload}
               onImageUpdated={onImageUpdated}
+              density={gridDensity}
             />
           )}
         />
@@ -2744,6 +3035,7 @@ function MissingImagesView({
             onScan={(code) => {
               setSearch(code);
               setCategory('Wszystkie');
+              onManufacturerChange?.('Wszyscy');
               setShowScanner(false);
             }}
             onClose={() => setShowScanner(false)}

@@ -12,7 +12,7 @@ import { DatabaseSyncIcon } from './DatabaseSyncIcon';
 
 interface RefreshControlsProps {
   loading: boolean;
-  onRefresh: () => void;
+  onRefresh: () => void | Promise<void>;
   canRequestStockSync: boolean;
   /** Zakres sync WAPRO (domyślnie oba katalogi). */
   catalog?: StockSyncScope;
@@ -66,9 +66,7 @@ export function RefreshControls({
               'ok',
               9000,
             );
-            if (parsed.warningHint) {
-              showToast(parsed.warningHint, 'warn', 10000);
-            } else if (parsed.stats.newSkuFromMag && parsed.stats.newSkuFromMag > 0) {
+            if (parsed.stats.newSkuFromMag && parsed.stats.newSkuFromMag > 0) {
               showToast(
                 `Dopisano ${parsed.stats.newSkuFromMag} nowych indeksów z Mag WAPRO (szkielet — uzupełnij zdjęcia)`,
                 'info',
@@ -81,7 +79,10 @@ export function RefreshControls({
                 7000,
               );
             }
-            onRefresh();
+            if (parsed.warningHint) {
+              showToast(parsed.warningHint, 'info', 10000);
+            }
+            await onRefresh();
             return;
           }
           if (last.status === 'error') {

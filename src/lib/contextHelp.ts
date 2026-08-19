@@ -51,7 +51,7 @@ export const CONTEXT_HELP: Record<string, ContextHelpItem> = {
   catalogBaselinkerTag: {
     id: 'catalogBaselinkerTag',
     title: 'Znacznik B',
-    body: 'Niebieski B = produkt z eksportu BaseLinker (katalog shop) lub reczne powiazanie. Nie wymaga dopasowania SKU — caly katalog shop jest traktowany jako BL.',
+    body: 'Niebieski B = SKU znalezione w aktualnym eksporcie BaseLinker. Sam katalog shop albo stare reczne pole nie wystarcza, zeby nie oznaczac produktow blednie.',
     guideArticleId: 'catalog-dual',
   },
   catalogGrid: {

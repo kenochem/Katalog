@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 export default defineConfig(({ mode }) => {
   const outDirs: Record<string, string> = {
@@ -13,6 +15,11 @@ export default defineConfig(({ mode }) => {
     logistics: 'dist-logistics',
     calendar: 'dist-calendar',
   };
+
+  const productHtml = resolve(__dirname, `index.${mode}.html`);
+  const htmlInput = existsSync(productHtml)
+    ? productHtml
+    : resolve(__dirname, 'index.html');
 
   return {
   plugins: [react(), tailwindcss()],
@@ -27,6 +34,7 @@ export default defineConfig(({ mode }) => {
     target: 'es2020',
     cssCodeSplit: true,
     rollupOptions: {
+      input: htmlInput,
       output: {
         manualChunks(id) {
           if (!id.includes('node_modules')) return;

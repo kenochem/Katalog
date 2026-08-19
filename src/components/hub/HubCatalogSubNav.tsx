@@ -1,4 +1,4 @@
-import { BarChart3, Home, ImageOff, Layers, Printer, Search, Star } from 'lucide-react';
+import { AlertTriangle, BarChart3, BookOpen, Home, ImageOff, Layers, Printer, Search, Star } from 'lucide-react';
 import type { View } from '../../types';
 
 export function HubCatalogSubNav({
@@ -13,6 +13,7 @@ export function HubCatalogSubNav({
     products: number;
     favorites: number;
     kits: number;
+    decisions: number;
     missing: number;
     labels: number;
   };
@@ -26,6 +27,7 @@ export function HubCatalogSubNav({
   const tabs: { id: View; label: string; icon: typeof Search; count?: number }[] = [
     { id: 'home', label: 'Start', icon: Home },
     { id: 'catalog', label: 'Lista', icon: Search, count: counts.products },
+    { id: 'library', label: 'Biblioteka', icon: BookOpen },
   ];
   if (role.favorites) {
     tabs.push({ id: 'favorites', label: 'Ulubione', icon: Star, count: counts.favorites });
@@ -35,6 +37,7 @@ export function HubCatalogSubNav({
   }
   if (role.progress) {
     tabs.push({ id: 'progress', label: 'Postęp', icon: BarChart3 });
+    tabs.push({ id: 'catalog-decisions', label: 'Decyzje', icon: AlertTriangle, count: counts.decisions });
     tabs.push({ id: 'missing-images', label: 'Bez zdjęć', icon: ImageOff, count: counts.missing });
   }
   if (role.labels) {

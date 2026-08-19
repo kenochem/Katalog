@@ -17,6 +17,10 @@ export interface ProductMeta {
   previousSku?: string;
   /** Ścieżka kategorii ze sklepu WP (pełne drzewo). */
   shopCategoryPath?: string;
+  /** Import opisów z BaseLinkera bez konieczności wożenia pełnego HTML-a na liście. */
+  baselinkerDescriptionImportedAt?: string;
+  baselinkerDescriptionChars?: number;
+  baselinkerDescriptionFull?: boolean;
   parameters?: Record<string, string>;
   /** Ostatnia aktualizacja z zewnętrznego bota (API wiedzy). */
   knowledgeBotLast?: { source: string; at: string; fields: string[] };
@@ -26,6 +30,11 @@ export interface ProductMeta {
   waproImportedAt?: string;
   /** Nie sumuj w analizie sprzedaży Ops (np. rozpis składników / kwiatek na FV). */
   salesExcludeFromSum?: boolean;
+  /** Produkt celowo wycofany z widoku katalogu, ale zostaje w bazie i syncu. */
+  catalogHidden?: boolean;
+  /** Krótki powód ukrycia, np. stara marka, produkt przestarzały. */
+  catalogHiddenReason?: string;
+  catalogHiddenAt?: string;
 }
 
 export const PRODUCT_META_LABELS: Record<
@@ -34,10 +43,15 @@ export const PRODUCT_META_LABELS: Record<
     | 'knowledgeBotLast'
     | 'parameters'
     | 'shopCategoryPath'
+    | 'baselinkerDescriptionImportedAt'
+    | 'baselinkerDescriptionChars'
+    | 'baselinkerDescriptionFull'
     | 'waproImport'
     | 'waproSkeleton'
     | 'waproImportedAt'
     | 'salesExcludeFromSum'
+    | 'catalogHidden'
+    | 'catalogHiddenAt'
   >,
   string
 > & { parameters: string } = {
@@ -53,6 +67,7 @@ export const PRODUCT_META_LABELS: Record<
   legacySku: 'Poprzedni SKU (sync WAPRO)',
   waproSku: 'Indeks WAPRO (jeśli inny niż SKU)',
   previousSku: 'Poprzedni SKU (legacy)',
+  catalogHiddenReason: 'Powód ukrycia',
   parameters: 'Parametry',
 };
 
@@ -79,12 +94,20 @@ export function normalizeProductMeta(raw: unknown): ProductMeta | undefined {
   str('shortDescription');
   str('internalNote');
   str('shopCategoryPath');
+  str('baselinkerDescriptionImportedAt');
   str('waproImportedAt');
+  str('catalogHiddenReason');
+  str('catalogHiddenAt');
   num('weightKg');
   num('widthCm');
   num('heightCm');
   num('depthCm');
   num('vatRate');
+  {
+    const v = o.baselinkerDescriptionChars;
+    const n = typeof v === 'number' ? v : typeof v === 'string' ? parseFloat(v.replace(',', '.')) : NaN;
+    if (Number.isFinite(n)) meta.baselinkerDescriptionChars = n;
+  }
 
   if (o.parameters && typeof o.parameters === 'object' && !Array.isArray(o.parameters)) {
     const params: Record<string, string> = {};
@@ -98,9 +121,15 @@ export function normalizeProductMeta(raw: unknown): ProductMeta | undefined {
 
   if (typeof o.waproImport === 'boolean') meta.waproImport = o.waproImport;
   if (typeof o.waproSkeleton === 'boolean') meta.waproSkeleton = o.waproSkeleton;
+  if (typeof o.baselinkerDescriptionFull === 'boolean') meta.baselinkerDescriptionFull = o.baselinkerDescriptionFull;
   if (typeof o.salesExcludeFromSum === 'boolean') meta.salesExcludeFromSum = o.salesExcludeFromSum;
+  if (typeof o.catalogHidden === 'boolean') meta.catalogHidden = o.catalogHidden;
 
   return Object.keys(meta).length > 0 ? meta : undefined;
+}
+
+export function isCatalogHiddenProduct(product: { meta?: ProductMeta }): boolean {
+  return product.meta?.catalogHidden === true;
 }
 
 /** Pozycja z Mag WAPRO bez zdjęcia — do ręcznego uzupełnienia w katalogu. */

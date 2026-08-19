@@ -4,6 +4,7 @@ import { formatStock, formatPricePln, stripHtml } from './format';
 import { formatLocationCode } from './warehouseLocation';
 import { resolveProductLocation } from './locationStore';
 import { formatDimensions, type ProductMeta } from './productMeta';
+import { getProductDisplayCategory } from './catalogCategory';
 
 function lines(parts: (string | false | undefined | null)[]): string {
   return parts.filter(Boolean).join('\n');
@@ -39,7 +40,7 @@ export function buildProductAiContext(product: Product, meta?: ProductMeta): str
     product.ean ? `EAN: ${product.ean}` : null,
     meta?.baselinkerProductId ? `BaseLinker ID: ${meta.baselinkerProductId}` : null,
     `Katalog: ${CATALOG_LABELS[product.catalog || 'accessories']}`,
-    `Kategoria: ${product.category}`,
+    `Kategoria docelowa: ${getProductDisplayCategory(product)}`,
     product.manufacturer?.trim() ? `Producent: ${product.manufacturer}` : null,
     '',
     `Nazwa handlowa: ${product.displayName}`,

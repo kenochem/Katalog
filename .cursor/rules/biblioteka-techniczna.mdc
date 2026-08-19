@@ -1,0 +1,44 @@
+---
+description: Zasady pracy nad zeszytami "Biblioteki Technicznej" (poradniki HTML w /biblioteka) — kiedy dodajesz/edytujesz zeszyt lub LibraryView
+globs: public/biblioteka/**,src/components/LibraryView.tsx
+alwaysApply: false
+---
+
+# Biblioteka Techniczna
+
+Pełny kontekst: [`docs/products/BIBLIOTEKA-TECHNICZNA.md`](../../docs/products/BIBLIOTEKA-TECHNICZNA.md).
+Przeczytaj go zanim zaczniesz — tu tylko twarde reguły do pilnowania.
+
+⚠️ To NIE to samo co `docs/products/KNOWLEDGE-LIBRARY.md` (dane produktowe
+dla botów). Nie mieszaj tych dwóch systemów.
+
+## Twarde zasady
+
+1. `public/biblioteka/*.html` w tym repo to jedyne źródło prawdy. Nie polegaj
+   na kopiach z `D:\Katalog-Produktowy\` (mogą nie istnieć na tej maszynie).
+2. Każdy nowy zeszyt to pełny, samodzielny dokument HTML — własny `<style>`,
+   NIE Tailwind. Root content w `<div class="wrap" id="klodArticle">`.
+3. Każdy `<figure>` musi mieć `contenteditable="false"`.
+4. Panel edycji/motywu wklej z szablonu
+   [`docs/products/biblioteka-edit-toolbar.template.html`](../../docs/products/biblioteka-edit-toolbar.template.html),
+   podmieniając `__SLUG__` na nazwę pliku bez `.html`.
+5. `<head>` musi mieć wczesny skrypt czytający
+   `localStorage.getItem('katalog-theme')` i ustawiający `data-theme` na
+   `<html>` przed renderem (ten sam klucz co `src/lib/theme.ts`).
+6. Jeśli dodajesz kartę w `LibraryView.tsx`: root wrapper MUSI mieć klasę
+   `catalog-home-view` (patrz `light-theme-contrast.mdc`) — bez niej
+   `text-slate-*` renderuje się odwrotnie w jasnym motywie.
+7. Zanim obiecasz użytkownikowi że "edycja i zapis działają" — sprawdź, czy
+   migracja `supabase/migration-technical-library.sql` została uruchomiona
+   (tabela `technical_library_articles`). Jeśli nie masz pewności, zapytaj
+   albo sprawdź (np. fetch do REST endpointu). Domyślnie zakładaj, że NIE
+   została jeszcze uruchomiona, chyba że dokument główny mówi inaczej.
+8. Po zmianach w `public/biblioteka/**` pamiętaj: te ścieżki mają w
+   `firebase.json` regułę `Cache-Control: no-cache, no-store, must-revalidate`
+   — to celowe (Service Worker PWA lubił serwować stare wersje). Nie usuwaj
+   tej reguły.
+
+## Deploy
+
+`npm run deploy:catalog` (patrz `deploy-catalog-ui.mdc`) — nie pytaj o zgodę
+przy zmianach czysto w tym obszarze, zgodnie z ogólną zasadą repo.

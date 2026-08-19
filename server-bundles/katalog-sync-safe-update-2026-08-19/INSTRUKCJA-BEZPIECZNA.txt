@@ -1,0 +1,57 @@
+BEZPIECZNA PODMIANA KATALOG-SYNC - 2026-08-19
+
+Cel:
+- naprawic dodawanie nowych SKU z WAPRO do katalogu,
+- np. DET000119 jest juz w wapro-stock.csv, ale obecny skrypt pomija auto-import,
+- obecny log pokazuje: "WAPRO auto-import pominiety: brak wapro-mag-catalog.json".
+
+Co podmieniamy:
+- tylko plik C:\katalog-sync\sync-wapro-stock-server.ps1
+
+Czego NIE ruszamy:
+- nie nadpisuj C:\katalog-sync\katalog-sync.env,
+- nie usuwaj logow,
+- nie ruszaj sonax-export,
+- nie zmieniaj harmonogramu zadan, bo obecny sync juz sie uruchamia.
+
+KROK 1 - backup na serwerze:
+
+cd C:\katalog-sync
+copy .\sync-wapro-stock-server.ps1 .\sync-wapro-stock-server.ps1.bak-20260819
+
+KROK 2 - podmiana:
+
+Skopiuj plik sync-wapro-stock-server.ps1 z tej paczki do:
+C:\katalog-sync\sync-wapro-stock-server.ps1
+
+KROK 3 - szybki test konkretnego SKU:
+
+powershell -NoProfile -ExecutionPolicy Bypass -File C:\katalog-sync\sync-wapro-stock-server.ps1 -DiagnoseSku DET000119
+
+Oczekiwane:
+- DET000119 powinien byc widoczny w mapie WAPRO,
+- jezeli test przejdzie, odpal pelny sync.
+
+KROK 4 - pelny sync:
+
+powershell -NoProfile -ExecutionPolicy Bypass -File C:\katalog-sync\sync-wapro-stock-server.ps1
+
+Po pelnym syncu w C:\katalog-sync\sync.log powinny pojawic sie wpisy podobne do:
+- SQL katalog Mag: ... SKU z nazwa/kategoria WAPRO
+- WAPRO katalog Mag JSON: ... SKU -> C:\katalog-sync\wapro-mag-catalog.json
+- WAPRO auto-import: ...
+
+Nowe pliki diagnostyczne po syncu:
+- C:\katalog-sync\wapro-mag-catalog.json
+- C:\katalog-sync\sync-unmatched-products.csv
+- C:\katalog-sync\sync-unmatched-products.json
+
+Rollback, jesli cos pojdzie zle:
+
+cd C:\katalog-sync
+copy .\sync-wapro-stock-server.ps1.bak-20260819 .\sync-wapro-stock-server.ps1
+
+Uwagi:
+- DET000119 w kopii serwera jest w wapro-stock.csv i wapro-stock.raw.
+- Problem nie jest w tym, ze WAPRO go nie oddaje.
+- Problem jest w tym, ze stary skrypt nie tworzy wapro-mag-catalog.json, wiec auto-import nowych produktow nie ma z czego budowac pozycji.

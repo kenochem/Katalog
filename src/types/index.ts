@@ -3,6 +3,7 @@ export type CatalogType = 'accessories' | 'shop';
 import type { ProductMeta } from '../lib/productMeta';
 import type { WarehouseLocation } from '../lib/warehouseLocation';
 import { deriveShopCategoryOptions } from '../lib/shopCategoryTree';
+import { getProductDisplayCategory } from '../lib/catalogCategory';
 
 export type { WarehouseLocation };
 
@@ -105,13 +106,15 @@ export type View =
   | 'collections'
   | 'kits'
   | 'missing-images'
+  | 'catalog-decisions'
   | 'progress'
   | 'favorites'
   | 'labels'
   | 'warehouse'
   | 'admin'
   | 'crm'
-  | 'ops';
+  | 'ops'
+  | 'library';
 
 export const CATALOG_LABELS: Record<CatalogType, string> = {
   accessories: 'Akcesoria',
@@ -170,7 +173,7 @@ export function deriveCategories(
 ): string[] {
   const counts = new Map<string, number>();
   for (const p of products) {
-    const c = p.category?.trim();
+    const c = getProductDisplayCategory(p).trim();
     if (c) counts.set(c, (counts.get(c) || 0) + 1);
   }
 
@@ -179,7 +182,9 @@ export function deriveCategories(
   );
 
   if (catalogListFilter === 'shop') {
-    return deriveShopCategoryOptions(products);
+    return deriveShopCategoryOptions(
+      products.map((p) => ({ category: getProductDisplayCategory(p) })),
+    );
   }
 
   if (catalogListFilter === 'accessories') {
@@ -190,9 +195,11 @@ export function deriveCategories(
   const accProducts = products.filter((p) => (p.catalog || 'accessories') !== 'shop');
 
   if (shopProducts.length && accProducts.length) {
-    const shopCats = deriveShopCategoryOptions(shopProducts).filter((c) => c !== 'Wszystkie');
+    const shopCats = deriveShopCategoryOptions(
+      shopProducts.map((p) => ({ category: getProductDisplayCategory(p) })),
+    ).filter((c) => c !== 'Wszystkie');
     const accCats = orderAccessoryCategories(
-      [...new Set(accProducts.map((p) => p.category?.trim()).filter(Boolean) as string[])],
+      [...new Set(accProducts.map((p) => getProductDisplayCategory(p).trim()).filter(Boolean) as string[])],
     );
     const seen = new Set(shopCats);
     const mergedAcc = accCats.filter((c) => !seen.has(c));
@@ -200,7 +207,9 @@ export function deriveCategories(
   }
 
   if (shopProducts.length) {
-    return deriveShopCategoryOptions(shopProducts);
+    return deriveShopCategoryOptions(
+      shopProducts.map((p) => ({ category: getProductDisplayCategory(p) })),
+    );
   }
 
   return ['Wszystkie', ...orderAccessoryCategories(rest)];

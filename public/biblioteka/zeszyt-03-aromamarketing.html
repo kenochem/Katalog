@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<script>(function(){try{var t=localStorage.getItem("katalog-theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Atlas aromamarketingu — zimna dyfuzja, dobór mocy dyfuzora, dobór zapachu do branży, bezpieczeństwo. Biblioteka Techniczna Kenochem, Zeszyt 3.">
+<title>Atlas Aromamarketingu</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --paper:#E7E6DE; --paper-raised:#F1F0E9; --ink:#1E2220; --ink-soft:#4B4F49;
+    --blueprint:#3B6E8F; --blueprint-soft:#6C93A9;
+    --brass:#8F5E19; --brass-soft:#B98A3D;
+    --steel:#86867C; --steel-line:#C9C8BC;
+    --caution:#9E3226; --caution-soft:#F3DEDA;
+    --code-bg:#DEDCD1;
+    --violet:#6B5B95; --violet-soft:#9186B8;
+    --shadow: 0 1px 0 rgba(30,34,32,0.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#14181A; --paper-raised:#1B2022; --ink:#E9E7DC; --ink-soft:#B7B6AA;
+      --blueprint:#6FA8C9; --blueprint-soft:#4E7E96;
+      --brass:#D6A056; --brass-soft:#A9793C;
+      --steel:#787A72; --steel-line:#33372F;
+      --caution:#E0796B; --caution-soft:#3A2320;
+      --code-bg:#20251F;
+      --violet:#A99BD6; --violet-soft:#7A6BA3;
+      --shadow: 0 1px 0 rgba(0,0,0,0.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#14181A; --paper-raised:#1B2022; --ink:#E9E7DC; --ink-soft:#B7B6AA;
+    --blueprint:#6FA8C9; --blueprint-soft:#4E7E96;
+    --brass:#D6A056; --brass-soft:#A9793C;
+    --steel:#787A72; --steel-line:#33372F;
+    --caution:#E0796B; --caution-soft:#3A2320;
+    --code-bg:#20251F;
+    --violet:#A99BD6; --violet-soft:#7A6BA3;
+    --shadow: 0 1px 0 rgba(0,0,0,0.4);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:"Source Serif 4", Georgia, "Times New Roman", serif;
+    font-size:17px; line-height:1.65;
+    margin:0; padding:0;
+  }
+  .wrap{max-width:1180px; margin:0 auto; padding:0 clamp(20px,4vw,64px);}
+
+  h1,h2,h3{font-family:"Big Shoulders Display","Arial Narrow",sans-serif; font-weight:800; text-transform:uppercase; letter-spacing:0.01em; text-wrap:balance; margin:0; color:var(--ink);}
+  .mono{font-family:"IBM Plex Mono", ui-monospace, Menlo, monospace;}
+  a{color:var(--blueprint);}
+  p{max-width:66ch;}
+  table{font-variant-numeric:tabular-nums;}
+
+  .hero{padding:clamp(56px,9vw,104px) 0 clamp(40px,6vw,64px); border-bottom:1px solid var(--steel-line); position:relative;}
+  .hero .kicker{display:flex; align-items:center; gap:14px; margin-bottom:22px;}
+  .hero .kicker .tom{width:34px; height:34px; flex:none;}
+  .hero .kicker span{font-family:"IBM Plex Mono"; font-size:13px; letter-spacing:0.14em; text-transform:uppercase; color:var(--ink-soft);}
+  .hero h1{font-size:clamp(40px,6.4vw,80px); line-height:0.96;}
+  .hero h1 em{font-style:normal; color:var(--violet);}
+  .hero .lede{font-size:19px; color:var(--ink-soft); max-width:56ch; margin-top:22px;}
+  .hero .meta{display:flex; gap:28px; flex-wrap:wrap; margin-top:34px; font-family:"IBM Plex Mono"; font-size:12.5px; color:var(--ink-soft); letter-spacing:0.03em;}
+  .hero .meta b{color:var(--ink); font-weight:600;}
+
+  .toc{display:grid; grid-template-columns:repeat(6,1fr); gap:1px; background:var(--steel-line); border:1px solid var(--steel-line); margin-top:40px;}
+  .toc a{background:var(--paper-raised); color:var(--ink); text-decoration:none; padding:16px 14px; display:flex; flex-direction:column; gap:6px;}
+  .toc a:hover{background:var(--code-bg);}
+  .toc .n{font-family:"IBM Plex Mono"; font-size:12px; color:var(--violet);}
+  .toc .t{font-size:13.5px; font-weight:600; line-height:1.25;}
+  @media (max-width:980px){ .toc{grid-template-columns:repeat(3,1fr);} }
+  @media (max-width:560px){ .toc{grid-template-columns:repeat(2,1fr);} }
+
+  .stock{display:inline-flex; align-items:center; gap:6px; font-family:"IBM Plex Mono"; font-size:11px; padding:2px 8px; border:1px solid var(--steel-line); background:var(--code-bg); color:var(--ink-soft); white-space:nowrap;}
+  .stock .sku{color:var(--violet); font-weight:600;}
+
+  section.chapter{padding:clamp(56px,8vw,96px) 0; border-bottom:1px solid var(--steel-line); scroll-margin-top:24px;}
+  section.chapter:last-of-type{border-bottom:none;}
+  .chapter-head{display:grid; grid-template-columns:120px 1fr; gap:28px; margin-bottom:40px; align-items:start;}
+  .chapter-head .num{font-family:"Big Shoulders Display"; font-weight:800; font-size:clamp(64px,8vw,96px); line-height:0.8; color:var(--violet-soft);}
+  .chapter-head h2{font-size:clamp(26px,3.4vw,38px); line-height:1.05; max-width:22ch;}
+  .chapter-head .sub{font-family:"Source Serif 4"; font-style:italic; color:var(--ink-soft); font-size:16px; margin-top:10px; font-weight:400;}
+  .chapter-body{display:grid; grid-template-columns:minmax(0,66ch) 1fr; gap:48px; align-items:start;}
+  @media (max-width:900px){ .chapter-body{grid-template-columns:1fr;} .chapter-head{grid-template-columns:64px 1fr;} }
+
+  .chapter-body > .prose > * + *{margin-top:1.1em;}
+  .chapter-body > .prose h3{font-size:16px; margin-top:2em; letter-spacing:0.02em;}
+  .chapter-body > .prose ul, .chapter-body > .prose ol{padding-left:1.3em; max-width:64ch;}
+  .chapter-body > .prose li + li{margin-top:0.5em;}
+
+  .rail{position:sticky; top:20px; display:flex; flex-direction:column; gap:20px;}
+
+  figure{margin:0; border:1px solid var(--steel-line); background:var(--paper-raised); box-shadow:var(--shadow);}
+  figure svg{display:block; width:100%; height:auto; padding:18px 16px 6px;}
+  figcaption{font-family:"IBM Plex Mono"; font-size:12px; color:var(--ink-soft); padding:10px 16px 16px; border-top:1px dashed var(--steel-line); line-height:1.5;}
+  figcaption b{color:var(--ink); font-weight:600;}
+
+  .table-wrap{overflow-x:auto; border:1px solid var(--steel-line); background:var(--paper-raised);}
+  table{width:100%; border-collapse:collapse; font-size:14.5px; min-width:520px;}
+  th,td{padding:11px 14px; text-align:left; border-bottom:1px solid var(--steel-line); vertical-align:top;}
+  thead th{font-family:"IBM Plex Mono"; font-size:11.5px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-soft); font-weight:600; border-bottom:2px solid var(--steel-line);}
+  tbody tr:last-child td{border-bottom:none;}
+  td .code{font-family:"IBM Plex Mono"; font-size:13px; background:var(--code-bg); padding:1px 6px;}
+  .example-table td.n{font-family:"Source Serif 4"; font-size:14px;}
+
+  .callout{border-left:3px solid var(--caution); background:var(--caution-soft); color:var(--ink); padding:14px 18px; font-size:15px; max-width:64ch;}
+  .callout b{color:var(--caution); font-family:"IBM Plex Mono"; font-size:11.5px; text-transform:uppercase; letter-spacing:0.08em; display:block; margin-bottom:6px;}
+  .note{border-left:3px solid var(--violet); background:var(--paper-raised); padding:14px 18px; font-size:15px; max-width:64ch; color:var(--ink-soft);}
+  .note b{color:var(--violet); font-family:"IBM Plex Mono"; font-size:11.5px; text-transform:uppercase; letter-spacing:0.08em; display:block; margin-bottom:6px;}
+
+  .gloss{display:grid; grid-template-columns:1fr; gap:1px; background:var(--steel-line); border:1px solid var(--steel-line);}
+  .gloss dt{background:var(--paper-raised); padding:14px 16px 2px; font-family:"IBM Plex Mono"; font-weight:600; font-size:14px; color:var(--violet);}
+  .gloss dd{background:var(--paper-raised); margin:0; padding:2px 16px 14px; font-size:15px; color:var(--ink-soft);}
+
+  .map-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--steel-line); border:1px solid var(--steel-line); margin-top:8px;}
+  .map-tile{background:var(--paper-raised); padding:20px 18px;}
+  .map-tile .ic{width:30px; height:30px; color:var(--violet); margin-bottom:10px;}
+  .map-tile h4{font-family:"Big Shoulders Display"; font-weight:700; font-size:16px; text-transform:uppercase; margin:0 0 8px;}
+  .map-tile p{font-size:13.5px; color:var(--ink-soft); max-width:none; margin:0 0 10px;}
+  .map-tile .exs{display:flex; flex-direction:column; gap:5px;}
+  @media (max-width:900px){ .map-grid{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:560px){ .map-grid{grid-template-columns:1fr;} }
+
+  footer{padding:48px 0 80px; color:var(--ink-soft); font-size:13.5px;}
+  footer .fmono{font-family:"IBM Plex Mono"; font-size:12px; letter-spacing:0.04em;}
+  .sources{margin-top:14px; padding-left:1.2em; font-size:12.5px;}
+  .sources li{margin-top:4px;}
+
+  ::selection{background:var(--violet); color:var(--paper);}
+</style>
+</head>
+<body>
+<div class="wrap" id="klodArticle">
+
+  <div class="hero">
+    <div class="kicker">
+      <svg class="tom" viewBox="0 0 34 34" role="img" aria-label="Symbol atlasu — kropla zapachu unosząca się w powietrzu">
+        <circle cx="17" cy="17" r="15.5" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35"/>
+        <circle cx="17" cy="19" r="4" fill="none" stroke="var(--violet)" stroke-width="1.6"/>
+        <circle cx="12" cy="12" r="1.6" fill="var(--violet)"/>
+        <circle cx="22" cy="10" r="1.2" fill="var(--violet)"/>
+        <circle cx="24" cy="15" r="1.6" fill="var(--violet)"/>
+      </svg>
+      <span>Biblioteka Techniczna Kenochem — Zeszyt 03</span>
+    </div>
+    <h1>Atlas <em>aromamarketingu</em></h1>
+    <p class="lede">Jak działa zimna dyfuzja, jak dobrać moc dyfuzora do powierzchni, czym różnią się nasze linie produktowe i jak dobrać zapach tak, żeby budował markę, a nie przeszkadzał klientom.</p>
+    <div class="meta">
+      <div>Rozdział <b>3 z serii</b> — poprzednio: chemia obiektowa</div>
+      <div>Czas lektury <b>~16 min</b></div>
+      <div>Dla <b>sprzedaży, obsługi klienta, doradztwa B2B</b></div>
+    </div>
+
+    <nav class="toc" aria-label="Spis treści">
+      <a href="#slownik"><span class="n">01</span><span class="t">Czym jest aromamarketing</span></a>
+      <a href="#dyfuzja"><span class="n">02</span><span class="t">Jak działa zimna dyfuzja</span></a>
+      <a href="#dobor"><span class="n">03</span><span class="t">Dobór mocy do powierzchni</span></a>
+      <a href="#mapa"><span class="n">04</span><span class="t">Mapa produktów w katalogu</span></a>
+      <a href="#zapach"><span class="n">05</span><span class="t">Dobór zapachu do branży</span></a>
+      <a href="#bezpieczenstwo"><span class="n">06</span><span class="t">Bezpieczeństwo i etyka</span></a>
+    </nav>
+  </div>
+
+  <!-- ================= 01 CZYM JEST ================= -->
+  <section class="chapter" id="slownik">
+    <div class="chapter-head">
+      <div class="num">01</div>
+      <div>
+        <h2>Czym jest aromamarketing</h2>
+        <div class="sub">Zapach jako najkrótsza droga do emocji klienta</div>
+      </div>
+    </div>
+    <div class="chapter-body">
+      <div class="prose">
+        <p><b>Aromamarketing</b> (marketing zapachowy) to celowe nasycanie przestrzeni komercyjnej odpowiednio dobranym zapachem, żeby wpłynąć na nastrój, postrzeganie marki i zachowania zakupowe klientów. W przeciwieństwie do wzroku i słuchu, zmysł węchu jest połączony bezpośrednio z układem limbicznym mózgu — częścią odpowiedzialną za emocje i pamięć — dlatego zapach działa szybciej i bardziej podświadomie niż muzyka czy dekoracja wnętrza.</p>
+        <p>Branże, w których aromamarketing ma dziś ugruntowaną pozycję: hotele i pensjonaty, restauracje i sale bankietowe, sklepy i galerie handlowe, biura, gabinety medyczne i salony urody, salony fryzjerskie.</p>
+        <dl class="gloss">
+          <dt>Dyfuzor elektryczny (ambient)</dt>
+          <dd>Urządzenie pracujące ciągle, nasyca całe pomieszczenie subtelnym zapachem w tle — to właściwy aromamarketing (linia KALA).</dd>
+          <dt>Odświeżacz punktowy</dt>
+          <dd>Jednorazowa aplikacja (spray, żel, wkład) do konkretnego miejsca, np. toalety — rozwiązuje problem zapachowy, nie buduje tożsamości zapachowej marki (linia ONE SHOT).</dd>
+          <dt>Neutralizator</dt>
+          <dd>Rozkłada cząsteczki odpowiedzialne za nieprzyjemny zapach, zamiast go maskować — patrz Zeszyt 02, rozdział o chemii obiektowej.</dd>
+        </dl>
+      </div>
+      <div class="rail">
+        <div class="note"><b>Korzyści biznesowe</b>Wg branżowych źródeł: budowanie prestiżu i poczucia czystości, wydłużenie czasu spędzanego w lokalu, większa motywacja do powrotu, a nawet wzrost efektywności pracy zespołu w biurach.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 02 ZIMNA DYFUZJA ================= -->
+  <section class="chapter" id="dyfuzja">
+    <div class="chapter-head">
+      <div class="num">02</div>
+      <div>
+        <h2>Jak działa<br>zimna dyfuzja</h2>
+        <div class="sub">Żadnego podgrzewania, żadnej wilgoci, żadnego osadu</div>
+      </div>
+    </div>
+    <div class="chapter-body">
+      <div class="prose">
+        <p>Tradycyjne metody aromatyzacji (świece zapachowe, podgrzewacze, aerozole) mają wspólną wadę: podgrzewanie lub rozpylanie w dużych kroplach zmienia strukturę chemiczną kompozycji zapachowej albo powoduje, że zapach szybko opada na podłogę.</p>
+        <p><b>Zimna dyfuzja</b> rozbija olejek zapachowy (postać oleistą) na mikroskopijne cząsteczki za pomocą sprężonego powietrza lub ultradźwięków — bez udziału ciepła. Powstaje sucha mgiełka, która nie opada, tylko łączy się z powietrzem i razem z nim wędruje po pomieszczeniu.</p>
+      </div>
+      <div class="rail">
+        <figure contenteditable="false">
+          <svg viewBox="0 0 420 220" role="img" aria-label="Porównanie: metoda tradycyjna z podgrzewaniem opada w postaci kropel, zimna dyfuzja tworzy suchą mgiełkę unoszącą się w powietrzu">
+            <text x="105" y="24" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="var(--ink-soft)">TRADYCYJNA (ciepło/spray)</text>
+            <circle cx="105" cy="55" r="10" fill="none" stroke="currentColor" stroke-width="1.6"/>
+            <circle cx="90" cy="90" r="3" fill="var(--caution)"/>
+            <circle cx="110" cy="110" r="3" fill="var(--caution)"/>
+            <circle cx="100" cy="135" r="3" fill="var(--caution)"/>
+            <circle cx="118" cy="150" r="3" fill="var(--caution)"/>
+            <line x1="90" y1="93" x2="88" y2="130" stroke="var(--caution)" stroke-width="1" stroke-dasharray="2 2"/>
+            <line x1="110" y1="113" x2="106" y2="140" stroke="var(--caution)" stroke-width="1" stroke-dasharray="2 2"/>
+            <line x1="60" y1="175" x2="150" y2="175" stroke="currentColor" stroke-width="1.4"/>
+            <text x="105" y="195" text-anchor="middle" font-family="Source Serif 4" font-size="12" fill="var(--caution)">krople opadają</text>
+
+            <line x1="210" y1="40" x2="210" y2="200" stroke="var(--steel-line)" stroke-width="1"/>
+
+            <text x="315" y="24" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="var(--ink-soft)">ZIMNA DYFUZJA</text>
+            <circle cx="315" cy="55" r="10" fill="none" stroke="currentColor" stroke-width="1.6"/>
+            <circle cx="290" cy="80" r="1.4" fill="var(--violet)"/>
+            <circle cx="305" cy="70" r="1.4" fill="var(--violet)"/>
+            <circle cx="325" cy="75" r="1.4" fill="var(--violet)"/>
+            <circle cx="340" cy="85" r="1.4" fill="var(--violet)"/>
+            <circle cx="280" cy="100" r="1.4" fill="var(--violet)"/>
+            <circle cx="300" cy="105" r="1.4" fill="var(--violet)"/>
+            <circle cx="330" cy="100" r="1.4" fill="var(--violet)"/>
+            <circle cx="350" cy="105" r="1.4" fill="var(--violet)"/>
+            <circle cx="290" cy="125" r="1.4" fill="var(--violet)"/>
+            <circle cx="315" cy="130" r="1.4" fill="var(--violet)"/>
+            <circle cx="340" cy="125" r="1.4" fill="var(--violet)"/>
+            <circle cx="270" cy="115" r="1.4" fill="var(--violet)"/>
+            <circle cx="360" cy="115" r="1.4" fill="var(--violet)"/>
+            <text x="315" y="195" text-anchor="middle" font-family="Source Serif 4" font-size="12" fill="var(--violet)">sucha mgiełka unosi się</text>
+          </svg>
+          <figcaption><b>Rys. 1.</b> Zimna dyfuzja nie podgrzewa i nie zostawia osadu — mikrocząsteczki zapachu zawieszają się w powietrzu zamiast opadać, zachowując pełnię jakości kompozycji zapachowej.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="chapter-body" style="margin-top:44px;">
+      <div class="prose">
+        <h3>Integracja z wentylacją (HVAC)</h3>
+        <p>W obiektach komercyjnych (hotele, galerie, biurowce) dyfuzory można podłączyć bezpośrednio do systemu wentylacji — mgiełka zapachowa trafia do kanałów wentylacyjnych i rozprowadza się równomiernie po całym budynku z jednego urządzenia, zamiast montować osobny dyfuzor w każdym pomieszczeniu.</p>
+      </div>
+      <div class="rail">
+        <div class="note"><b>Bez wilgoci i tłustego osadu</b>To realna przewaga nad olejkami na bazie wody/pary — zimna dyfuzja nie zmienia wilgotności powietrza i nie zostawia śladów na meblach czy elektronice.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 03 DOBÓR MOCY ================= -->
+  <section class="chapter" id="dobor">
+    <div class="chapter-head">
+      <div class="num">03</div>
+      <div>
+        <h2>Dobór mocy<br>do powierzchni</h2>
+        <div class="sub">Lepiej dopasować niż przewymiarować — ale nie oszczędzać na mocy</div>
+      </div>
+    </div>
+    <div class="chapter-body">
+      <div class="prose">
+        <p>Zbyt słaby dyfuzor to częsty błąd — zapach jest wtedy nierównomiernie rozprowadzony albo ledwo wyczuwalny, a urządzenie i tak zużywa dużo olejku, próbując go "dogonić". Zasada jest prosta: dobieramy moc do realnej powierzchni, a w razie wątpliwości wybieramy model nieco mocniejszy niż słabszy — mocniejsze urządzenia są też oszczędniejsze w przeliczeniu na m² zużytego olejku.</p>
+      </div>
+    </div>
+
+    <div class="wrap" style="padding:0; margin-top:8px;">
+      <div class="table-wrap">
+        <table class="example-table">
+          <thead><tr><th>Model (linia KALA)</th><th>Zasięg</th><th>Typowe zastosowanie</th></tr></thead>
+          <tbody>
+            <tr><td class="n">KALA DESKTOP</td><td class="mono">30 m²</td><td class="n">recepcja, gabinet, mały sklep</td></tr>
+            <tr><td class="n">KALA TV50</td><td class="mono">50 m²</td><td class="n">biuro, mała sala, apka Android/iOS, 10 poziomów intensywności</td></tr>
+            <tr><td class="n">KALA TV100 / BOX100</td><td class="mono">100 m²</td><td class="n">średni lokal, salon, otwarta przestrzeń biurowa</td></tr>
+            <tr><td class="n">KALA MINITUBE 2.0</td><td class="mono">150 m²</td><td class="n">lobby, większa restauracja</td></tr>
+            <tr><td class="n">KALA BOX300</td><td class="mono">300 m²</td><td class="n">sklep średniej wielkości, piętro biurowca</td></tr>
+            <tr><td class="n">KALA BOX1000</td><td class="mono">1000 m²</td><td class="n">duży sklep, galeria, hotel (podłączenie do HVAC)</td></tr>
+            <tr><td class="n">KALA BOX3000</td><td class="mono">&gt;1000 m²</td><td class="n">obiekty wielkopowierzchniowe, centra handlowe</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note" style="margin-top:18px;"><b>Do domu i auta</b><span class="stock">KALA iFresh15</span> — mały, osobisty dyfuzor bez określonego metrażu, do samochodu lub pojedynczego pomieszczenia domowego.</div>
+    </div>
+  </section>
+
+  <!-- ================= 04 MAPA PRODUKTÓW ================= -->
+  <section class="chapter" id="mapa">
+    <div class="chapter-head">
+      <div class="num">04</div>
+      <div>
+        <h2>Mapa produktów<br>w katalogu</h2>
+        <div class="sub">Trzy różne kategorie, które łatwo pomylić przy sprzedaży</div>
+      </div>
+    </div>
+
+    <div class="map-grid">
+      <div class="map-tile">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="7" y="9" width="10" height="13" rx="1"/><path d="M9 9 V6 a3 3 0 0 1 6 0 v3"/><circle cx="12" cy="3" r="0" /></svg>
+        <h4>Dyfuzory ambient</h4>
+        <p>Ciągła praca, całe pomieszczenie, budowanie tożsamości zapachowej marki.</p>
+        <div class="exs"><span class="stock">KALA TV50/TV100/BOX…</span></div>
+      </div>
+      <div class="map-tile">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="3" width="14" height="18" rx="2"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
+        <h4>Odświeżacze punktowe</h4>
+        <p>Jednorazowa, mocna aplikacja do konkretnego problemu — toalety, szatnie.</p>
+        <div class="exs">
+          <span class="stock">Freshtek ONE SHOT 600ml</span>
+          <span class="stock">Normatek ONE SHOT 600ml</span>
+        </div>
+      </div>
+      <div class="map-tile">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2 C9 6 6 10 6 14 a6 6 0 0 0 12 0 c0-4-3-8-6-12 Z"/></svg>
+        <h4>Olejki i wkłady</h4>
+        <p>Materiał eksploatacyjny do dyfuzorów — do uzupełnienia niezależnie od urządzenia.</p>
+        <div class="exs"><span class="stock">Kala Chanti — kilkanaście zapachów, 100/250/500ml</span></div>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top:24px;"><b>Uwaga przy doradzaniu</b>Klient szukający "czegoś do recepcji" prawdopodobnie potrzebuje dyfuzora ambient (KALA), nie odświeżacza ONE SHOT — to dwa różne produkty do dwóch różnych problemów, mimo że oba pachną.</div>
+  </section>
+
+  <!-- ================= 05 DOBÓR ZAPACHU ================= -->
+  <section class="chapter" id="zapach">
+    <div class="chapter-head">
+      <div class="num">05</div>
+      <div>
+        <h2>Dobór zapachu<br>do branży</h2>
+        <div class="sub">Zapach ma być tłem, nie dominantą</div>
+      </div>
+    </div>
+    <div class="chapter-body">
+      <div class="prose">
+        <p>Wybór kompozycji zapachowej powinien wynikać z grupy docelowej i charakteru marki, nie z osobistych upodobań osoby wybierającej. Najczęstszy błąd to zbyt intensywny zapach — dobrze dobrany aromamarketing jest subtelny: wystarczająco wyczuwalny, by wpływać na nastrój, ale nie na tyle mocny, by przytłaczać czy drażnić.</p>
+      </div>
+      <div class="rail">
+        <figure contenteditable="false">
+          <svg viewBox="0 0 420 140" role="img" aria-label="Pasek intensywności zapachu od niewyczuwalnego przez strefę docelową po przytłaczający">
+            <rect x="20" y="55" width="380" height="16" rx="8" fill="none" stroke="var(--steel-line)" stroke-width="1.5"/>
+            <rect x="150" y="55" width="120" height="16" rx="8" fill="var(--violet)" opacity="0.35"/>
+            <line x1="210" y1="45" x2="210" y2="81" stroke="var(--violet)" stroke-width="1.6"/>
+            <text x="40" y="100" font-family="IBM Plex Mono" font-size="10" fill="var(--ink-soft)">niewyczuwalny</text>
+            <text x="210" y="100" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="var(--violet)">strefa docelowa — tło</text>
+            <text x="400" y="100" text-anchor="end" font-family="IBM Plex Mono" font-size="10" fill="var(--caution)">przytłaczający</text>
+          </svg>
+          <figcaption><b>Rys. 2.</b> Cel to środek skali — zapach ma pracować podprogowo, nie stawać się tematem rozmowy klientów.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="wrap" style="padding:0; margin-top:36px;">
+      <div class="table-wrap">
+        <table class="example-table">
+          <thead><tr><th>Branża</th><th>Typowy kierunek zapachowy</th><th>Dlaczego</th></tr></thead>
+          <tbody>
+            <tr><td class="n">Hotel / lobby</td><td class="n">drzewne, piżmowe, eleganckie</td><td class="n">buduje wrażenie luksusu i spójność z pierwszym wrażeniem gościa</td></tr>
+            <tr><td class="n">Spa / gabinet kosmetyczny</td><td class="n">lawenda, cytrusy, zielona herbata</td><td class="n">kojarzone z relaksem i czystością</td></tr>
+            <tr><td class="n">Biuro</td><td class="n">lekkie, cytrusowo-miętowe</td><td class="n">wspiera koncentrację, nie usypia i nie rozprasza</td></tr>
+            <tr><td class="n">Sklep / butik</td><td class="n">zgodny z tożsamością marki</td><td class="n">zapach staje się rozpoznawalnym elementem brandingu</td></tr>
+            <tr><td class="n">Restauracja</td><td class="n">neutralne, niekulinarne z dala od kuchni</td><td class="n">zapach potraw nie może konkurować z aromamarketingiem</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 06 BEZPIECZEŃSTWO ================= -->
+  <section class="chapter" id="bezpieczenstwo" style="border-bottom:none;">
+    <div class="chapter-head">
+      <div class="num">06</div>
+      <div>
+        <h2>Bezpieczeństwo<br>i etyka</h2>
+        <div class="sub">Nie każdy klient chce (albo może) czuć Wasz zapach</div>
+      </div>
+    </div>
+    <div class="chapter-body">
+      <div class="prose">
+        <p>W Unii Europejskiej kompozycje zapachowe do wnętrz podlegają rozporządzeniu <b>REACH</b>, regulującemu dopuszczalne substancje chemiczne — producenci muszą potwierdzić zgodność składu z tymi przepisami.</p>
+        <p>Ważny fakt, o którym warto pamiętać przy doradzaniu klientom: szacuje się, że <b>ok. 30% populacji</b> może reagować negatywnie na niektóre zapachy (od lekkiego dyskomfortu po reakcje alergiczne). Scent Marketing Institute rekomenduje w związku z tym unikanie kompozycji mogących wywoływać silne reakcje oraz transparentność wobec klientów co do stosowania aromamarketingu.</p>
+      </div>
+      <div class="rail">
+        <div class="callout"><b>Zasada praktyczna</b>W przestrzeniach, gdzie klienci spędzają dużo czasu (poczekalnie, gabinety medyczne, biura) — wybieraj niższą intensywność i zapachy o niskim potencjale alergizującym niż w przestrzeniach tranzytowych (lobby, wejście do sklepu).</div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="fmono">Kenochem — Biblioteka Techniczna · Zeszyt 03 z serii · Zeszyt 01: dysze i złączki · Zeszyt 02: chemia obiektowa · Zeszyt 04: chemia profesjonalna do detailingu (w przygotowaniu)</div>
+    <ul class="sources">
+      <li><a href="https://aromapulse.pl/jak-to-dziala/" target="_blank" rel="noopener">Aroma Pulse — Jak działa zimna dyfuzja</a></li>
+      <li><a href="https://aromapulse.pl/aromamarketing-marketing-zapachowy-jak-zapach-zwieksza-sprzedaz-i-wplywa-na-klientow/" target="_blank" rel="noopener">Aroma Pulse — Aromamarketing: jak zapach zwiększa sprzedaż</a></li>
+      <li><a href="https://aromalinea.pl/podstawowe-zasady-doboru-zapachu-do-przestrzeni/" target="_blank" rel="noopener">Aromalinea — Zasady doboru zapachu do przestrzeni</a></li>
+      <li><a href="https://aromalinea.pl/badania-naukowe-dotyczace-skutecznosci-aromamarketingu/" target="_blank" rel="noopener">Aromalinea — Badania naukowe o skuteczności aromamarketingu</a></li>
+      <li><a href="https://kenochem.com/pl/blog/aromamarketing-nowa-technika-marketingu-1665401793" target="_blank" rel="noopener">Kenochem.com — Aromamarketing, nowa technika marketingu</a></li>
+      <li><a href="https://www.air-aroma.com/ecoscent/" target="_blank" rel="noopener">Air Aroma — HVAC Scent System (Ecoscent)</a></li>
+    </ul>
+  </footer>
+
+</div>
+<style>
+  #klodToolbar{
+    position:fixed; top:14px; right:14px; z-index:9999;
+    display:flex; align-items:center; gap:8px;
+    background:var(--paper-raised); border:1px solid var(--steel-line);
+    border-radius:10px; padding:6px 8px; box-shadow:0 2px 10px rgba(0,0,0,0.15);
+    font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:12px;
+  }
+  #klodToolbar button{
+    font-family:inherit; font-size:12px; cursor:pointer; border:1px solid var(--steel-line);
+    background:var(--paper); color:var(--ink); border-radius:6px; padding:5px 9px;
+    line-height:1;
+  }
+  #klodToolbar button:hover{background:var(--code-bg);}
+  #klodToolbar button.primary{background:var(--blueprint); color:var(--paper); border-color:var(--blueprint);}
+  #klodToolbar .klod-status{color:var(--ink-soft); max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  #klodArticle[contenteditable="true"]{
+    outline:2px dashed var(--blueprint); outline-offset:6px; border-radius:4px;
+  }
+  #klodToast{
+    position:fixed; bottom:18px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:var(--paper); font-family:"IBM Plex Mono", monospace;
+    font-size:12.5px; padding:9px 16px; border-radius:8px; z-index:9999;
+    opacity:0; transition:opacity .25s, transform .25s; pointer-events:none;
+  }
+  #klodToast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+</style>
+<div id="klodToolbar"></div>
+<div id="klodToast"></div>
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const SUPABASE_URL = 'https://fgkkvbniyjysgqcjuxpl.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZna2t2Ym5peWp5c2dxY2p1eHBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxNTE0MjgsImV4cCI6MjEwMDcyNzQyOH0.HiiaVnv_G5QR8WQ1YggA_iPRO5I7mJa0nd0C8K9KOHQ';
+const SLUG = 'zeszyt-03-aromamarketing';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const article = document.getElementById('klodArticle');
+const toolbar = document.getElementById('klodToolbar');
+const toast = document.getElementById('klodToast');
+
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2400);
+}
+
+/* ---------- motyw: własny wybór na tej stronie > wybór w katalogu > system ---------- */
+const THEME_PAGE_KEY = 'katalog-theme-override:' + SLUG;
+const THEME_APP_KEY = 'katalog-theme';
+
+function currentTheme() {
+  try {
+    return localStorage.getItem(THEME_PAGE_KEY) || localStorage.getItem(THEME_APP_KEY) || null;
+  } catch { return null; }
+}
+function applyTheme(t) {
+  if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+  else document.documentElement.removeAttribute('data-theme');
+}
+applyTheme(currentTheme());
+
+const themeBtn = document.createElement('button');
+themeBtn.type = 'button';
+themeBtn.title = 'Przełącz jasny / ciemny motyw (tej strony)';
+function syncThemeBtnLabel() {
+  const t = document.documentElement.getAttribute('data-theme');
+  themeBtn.textContent = t === 'dark' ? '☀️ Jasny' : t === 'light' ? '🌙 Ciemny' : '🌓 Motyw';
+}
+syncThemeBtnLabel();
+themeBtn.addEventListener('click', () => {
+  const t = document.documentElement.getAttribute('data-theme');
+  const next = t === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+  try { localStorage.setItem(THEME_PAGE_KEY, next); } catch {}
+  syncThemeBtnLabel();
+});
+toolbar.appendChild(themeBtn);
+
+/* ---------- ładowanie zapisanej treści (jeśli jest w bazie) ---------- */
+let originalHtml = article.innerHTML;
+try {
+  const { data } = await supabase
+    .from('technical_library_articles')
+    .select('html, updated_at')
+    .eq('slug', SLUG)
+    .maybeSingle();
+  if (data && data.html) {
+    article.innerHTML = data.html;
+    originalHtml = data.html;
+  }
+} catch (e) {
+  console.warn('Biblioteka: nie udało się wczytać zapisanej wersji', e);
+}
+
+/* ---------- edycja (tylko zalogowani w katalogu) ---------- */
+const statusEl = document.createElement('span');
+statusEl.className = 'klod-status';
+toolbar.appendChild(statusEl);
+
+const { data: { session } } = await supabase.auth.getSession();
+
+if (!session) {
+  statusEl.textContent = 'Gość — zaloguj się w katalogu, aby edytować';
+} else {
+  let editing = false;
+  const editBtn = document.createElement('button');
+  editBtn.type = 'button';
+  editBtn.textContent = '✏️ Edytuj';
+  const saveBtn = document.createElement('button');
+  saveBtn.type = 'button';
+  saveBtn.textContent = '💾 Zapisz';
+  saveBtn.className = 'primary';
+  saveBtn.style.display = 'none';
+  const cancelBtn = document.createElement('button');
+  cancelBtn.type = 'button';
+  cancelBtn.textContent = 'Anuluj';
+  cancelBtn.style.display = 'none';
+
+  function enterEdit() {
+    editing = true;
+    article.setAttribute('contenteditable', 'true');
+    editBtn.style.display = 'none';
+    saveBtn.style.display = '';
+    cancelBtn.style.display = '';
+    statusEl.textContent = 'Tryb edycji — klikaj i pisz w tekście';
+  }
+  function exitEdit() {
+    editing = false;
+    article.removeAttribute('contenteditable');
+    editBtn.style.display = '';
+    saveBtn.style.display = 'none';
+    cancelBtn.style.display = 'none';
+  }
+
+  editBtn.addEventListener('click', enterEdit);
+  cancelBtn.addEventListener('click', () => {
+    article.innerHTML = originalHtml;
+    exitEdit();
+    statusEl.textContent = '';
+    showToast('Cofnięto zmiany');
+  });
+  saveBtn.addEventListener('click', async () => {
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Zapisuję…';
+    const html = article.innerHTML;
+    const { error } = await supabase.from('technical_library_articles').upsert({
+      slug: SLUG,
+      html,
+      updated_at: new Date().toISOString(),
+      updated_by: session.user.email || session.user.id,
+    });
+    saveBtn.disabled = false;
+    saveBtn.textContent = '💾 Zapisz';
+    if (error) {
+      console.error(error);
+      showToast('Błąd zapisu — spróbuj ponownie');
+      return;
+    }
+    originalHtml = html;
+    exitEdit();
+    statusEl.textContent = '';
+    showToast('Zapisano zmiany');
+  });
+
+  toolbar.appendChild(editBtn);
+  toolbar.appendChild(saveBtn);
+  toolbar.appendChild(cancelBtn);
+}
+</script>
+</body>
+</html>

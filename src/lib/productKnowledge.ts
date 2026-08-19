@@ -4,6 +4,8 @@ import { stripHtml } from './format';
 import { formatLocationCode } from './warehouseLocation';
 import { resolveProductLocation } from './locationStore';
 import { formatDimensions, normalizeProductMeta, type ProductMeta } from './productMeta';
+import { inferProductTypeLabel } from './catalogKind';
+import { getProductDisplayCategory, productNeedsCategoryDecision } from './catalogCategory';
 
 export type KnowledgeLevel = 'weak' | 'fair' | 'good' | 'rich';
 
@@ -71,7 +73,7 @@ export function buildProductKnowledgeRecord(
     sku: product.sku,
     ean: product.ean?.trim() || null,
     catalog: CATALOG_LABELS[product.catalog || 'accessories'],
-    category: product.category,
+    category: getProductDisplayCategory(product),
     name: product.name,
     displayName: product.displayName,
     manufacturer: product.manufacturer?.trim() || null,
@@ -112,7 +114,7 @@ function buildKnowledgeText(
     `SKU: ${product.sku}`,
     product.ean ? `EAN: ${product.ean}` : '',
     `Katalog: ${CATALOG_LABELS[product.catalog || 'accessories']}`,
-    `Kategoria: ${product.category}`,
+    `Kategoria docelowa: ${getProductDisplayCategory(product)}`,
     product.manufacturer ? `Producent: ${product.manufacturer}` : '',
     ctx.includeStock && product.stock != null ? `Stan magazynowy: ${product.stock}` : '',
     ctx.loc ? `Lokalizacja magazynowa: ${ctx.loc}` : '',
@@ -147,25 +149,75 @@ export type ProductKnowledgeCompleteness = {
   missing: string[];
 };
 
+export const MIN_FULL_DESCRIPTION_CHARS = 450;
+export const MIN_SHORT_DESCRIPTION_CHARS = 120;
+
+const GENERIC_CATEGORIES = new Set([
+  '',
+  'produkty',
+  'akcesoria sklepowe',
+  'akcesoria',
+  'inne',
+  'pozostałe',
+  'pozostale',
+]);
+
+function cleanText(value: string | undefined | null): string {
+  return stripHtml(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function hasUsefulDescription(product: Product, meta: ProductMeta): boolean {
+  if (meta.baselinkerDescriptionFull) return true;
+  if ((meta.baselinkerDescriptionChars ?? 0) >= MIN_FULL_DESCRIPTION_CHARS) return true;
+  const full = cleanText(product.description);
+  const short = cleanText(meta.shortDescription);
+  const fullWords = full.split(/\s+/).filter((word) => word.length >= 2).length;
+  return (
+    (full.length >= MIN_FULL_DESCRIPTION_CHARS && fullWords >= 45) ||
+    (full.length >= 300 && short.length >= MIN_SHORT_DESCRIPTION_CHARS)
+  );
+}
+
+function hasProductImage(product: Product): boolean {
+  return Boolean(
+    product.hasImage ||
+      product.imageUrl ||
+      product.customImageUrl ||
+      product.extraImageUrls?.length,
+  );
+}
+
+function hasSpecificCategory(product: Product): boolean {
+  if (productNeedsCategoryDecision(product)) return false;
+  const category = getProductDisplayCategory(product).trim().toLowerCase();
+  if (GENERIC_CATEGORIES.has(category)) return false;
+  return category.length >= 3;
+}
+
 const KNOWLEDGE_CHECKS: {
   label: string;
   weight: number;
   test: (p: Product, meta: ProductMeta) => boolean;
 }[] = [
   {
-    label: 'Krótki opis (co to jest)',
-    weight: 22,
-    test: (_p, m) => (m.shortDescription?.trim().length ?? 0) >= 18,
+    label: 'Nazwa produktu',
+    weight: 14,
+    test: (p) => cleanText(p.displayName || p.name).length >= 8,
   },
   {
-    label: 'Opis pełny',
-    weight: 22,
-    test: (p) => stripHtml(p.description || '').trim().length >= 40,
+    label: 'Zdjęcie',
+    weight: 16,
+    test: (p) => hasProductImage(p),
   },
   {
-    label: 'Parametry techniczne',
+    label: `Pełny opis min. ${MIN_FULL_DESCRIPTION_CHARS} znaków`,
     weight: 18,
-    test: (_p, m) => Object.keys(m.parameters ?? {}).length >= 2,
+    test: hasUsefulDescription,
+  },
+  {
+    label: 'Kategoria szczegółowa',
+    weight: 12,
+    test: hasSpecificCategory,
   },
   {
     label: 'EAN',
@@ -173,27 +225,42 @@ const KNOWLEDGE_CHECKS: {
     test: (p) => !!p.ean?.trim() || !!(p.variants?.some((v) => v.ean?.trim())),
   },
   {
-    label: 'Zdjęcie',
-    weight: 10,
-    test: (p) => !!(p.hasImage || p.imageUrl || p.customImageUrl),
-  },
-  {
     label: 'Producent',
-    weight: 6,
+    weight: 10,
     test: (p) => {
       const m = p.manufacturer?.trim().toLowerCase();
       return !!m && m !== 'wapro';
     },
   },
   {
-    label: 'Logistyka (waga / wymiary / j.m.)',
+    label: 'Cena sprzedaży',
+    weight: 8,
+    test: (p) => p.priceSaleGross != null || p.priceSaleNet != null,
+  },
+  {
+    label: 'Stan z WAPRO',
     weight: 6,
+    test: (p) => typeof p.stock === 'number',
+  },
+  {
+    label: 'Typ rozpoznany',
+    weight: 6,
+    test: (p) => !['Akcesoria', 'Produkt sklepowy'].includes(inferProductTypeLabel(p)),
+  },
+  {
+    label: 'Parametry techniczne',
+    weight: 6,
+    test: (_p, m) => Object.keys(m.parameters ?? {}).length >= 2,
+  },
+  {
+    label: 'Logistyka (waga / wymiary / j.m.)',
+    weight: 5,
     test: (_p, m) =>
       m.weightKg != null || !!formatDimensions(m) || !!m.unit?.trim(),
   },
   {
     label: 'Lokalizacja magazynowa',
-    weight: 6,
+    weight: 5,
     test: (p) =>
       !!formatLocationCode(
         resolveProductLocation(p.id, p.warehouseLocation),
@@ -231,8 +298,8 @@ export function isWeakProductKnowledge(product: Product): boolean {
 
 export function suggestShortDescription(product: Product): string {
   const name = product.displayName?.trim() || product.name?.trim() || product.sku;
-  const cat = product.category?.trim();
-  if (cat && cat !== 'Inne' && !name.toLowerCase().includes(cat.toLowerCase())) {
+  const cat = getProductDisplayCategory(product);
+  if (cat && cat !== 'Do decyzji' && !name.toLowerCase().includes(cat.toLowerCase())) {
     return `${name} — ${cat.toLowerCase()} (Kenochem).`;
   }
   return `${name} — pozycja katalogowa Kenochem.`;
@@ -263,7 +330,7 @@ export function computeKnowledgeStatsByCategory(products: Product[]): CategoryKn
   const map = new Map<string, { total: number; weak: number; scoreSum: number; good: number }>();
 
   for (const p of products) {
-    const cat = p.category || 'Inne';
+    const cat = getProductDisplayCategory(p) || 'Do decyzji';
     const entry = map.get(cat) || { total: 0, weak: 0, scoreSum: 0, good: 0 };
     const k = assessProductKnowledge(p);
     entry.total += 1;

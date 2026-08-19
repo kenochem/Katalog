@@ -1,0 +1,8 @@
+﻿2026-08-13 14:37:18 Wczytano env: C:\Users\Biuro\Projects\katalog\.env
+2026-08-13 14:37:18 Start importu kontrahentow: data\wapro-kontrahenci.tsv
+2026-08-13 14:37:19 Wczytano 20537 kontrahentow z C:\Users\Biuro\Projects\katalog\data\wapro-kontrahenci.tsv { "dryRun": true, "rows": 20537, "preview": [ { "wapro_id": "12660", "name": "12660", "nip": "1231490789", "city": null }, { "wapro_id": "13406", "name": "'' ARCAR '' WASIAK ARKADIUSZ", "nip": "7962628834", "city": null }, { "wapro_id": "9704", "name": "- EURO Przemysław Poprawa", "nip": "8941666327", "city": null }, { "wapro_id": "38047", "name": "Ciąder \" Mięso - Wędliny S.C A. Wesołek, M.", "nip": "6172227342", "city": null }, { "wapro_id": "42291", "name": "DARJAN \" TRANSPORT OSOBOWY DARIUSZ KURCBART", "nip": "6581658973", "city": null } ] }
+2026-08-13 14:37:19 Import kontrahentow zakonczony poprawnie
+2026-08-13 14:37:50 Wczytano env: C:\Users\Biuro\Projects\katalog\.env
+2026-08-13 14:37:51 Start importu kontrahentow: data\wapro-kontrahenci.tsv
+2026-08-13 14:38:14 Wczytano 20537 kontrahentow z C:\Users\Biuro\Projects\katalog\data\wapro-kontrahenci.tsv { "upserted": 20537, "source": "C:\\Users\\Biuro\\Projects\\katalog\\data\\wapro-kontrahenci.tsv" }
+2026-08-13 14:38:14 Import kontrahentow zakonczony poprawnie

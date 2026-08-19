@@ -15,6 +15,7 @@ export function buildSkeletonProduct(row) {
   const name = String(row.name || sku).trim();
   const catalog = row.catalog === 'shop' ? 'shop' : 'accessories';
   const category = String(row.category || (catalog === 'shop' ? 'Inne' : 'Inne części')).trim();
+  const manufacturer = String(row.manufacturer || (catalog === 'accessories' ? 'WAPRO' : '')).trim();
   const id = catalog === 'accessories' ? sku : `shop-${sku}`;
   const importedAt = new Date().toISOString();
 
@@ -24,7 +25,7 @@ export function buildSkeletonProduct(row) {
     name,
     display_name: name,
     category,
-    manufacturer: catalog === 'accessories' ? 'WAPRO' : '',
+    manufacturer,
     ean: '',
     image_url: '',
     custom_image_url: '',
@@ -43,6 +44,8 @@ export function buildSkeletonProduct(row) {
     product_meta: {
       waproImport: true,
       waproSkeleton: true,
+      waproSku: sku,
+      ...(manufacturer ? { waproManufacturer: manufacturer } : {}),
       waproImportedAt: importedAt,
     },
   };
@@ -55,16 +58,28 @@ export async function fetchExistingSkuSet(supabase) {
   while (true) {
     const { data, error } = await supabase
       .from('products')
-      .select('sku')
+      .select('id, sku, product_meta')
       .range(from, from + page - 1)
       .order('sku');
     if (error) throw error;
     if (!data?.length) break;
     for (const row of data) {
       const sku = String(row.sku || '').trim().toUpperCase();
-      if (!sku) continue;
-      seen.add(sku);
-      seen.add(normSkuKey(sku));
+      const id = String(row.id || '').trim().toUpperCase();
+      const meta = row.product_meta && typeof row.product_meta === 'object' ? row.product_meta : {};
+      const candidates = [
+        sku,
+        id.startsWith('SHOP-') ? id.slice(5) : id,
+        meta.waproSku,
+        meta.legacySku,
+        meta.previousSku,
+      ];
+      for (const raw of candidates) {
+        const key = String(raw || '').trim().toUpperCase();
+        if (!key) continue;
+        seen.add(key);
+        seen.add(normSkuKey(key));
+      }
     }
     if (data.length < page) break;
     from += page;

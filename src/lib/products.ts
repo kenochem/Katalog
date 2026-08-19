@@ -10,13 +10,16 @@ import {
 } from './db';
 import type { Product, Kit } from '../types';
 import type { CatalogType } from '../types';
+import type { ProductMeta } from './productMeta';
 
 let localCache: Product[] | null = null;
 let shopCache: Product[] | null = null;
 let accessorySkuCache: Set<string> | null = null;
 
-/** Krótki cache w pamięci — unika ponownego stronicowania Supabase przy przełączaniu katalogów. */
-const FETCH_TTL_MS = 90_000;
+/** Cache w pamięci — unika ponownego pobierania z Supabase przy przełączaniu widoków. */
+const FETCH_TTL_MS = 15 * 60_000;
+
+export type ProductFetchSource = 'json' | 'supabase';
 const fetchMem = new Map<string, { at: number; data: Product[]; inflight?: Promise<Product[]> }>();
 
 function fetchCacheKey(catalog?: CatalogType): string {
@@ -25,8 +28,8 @@ function fetchCacheKey(catalog?: CatalogType): string {
 
 export function invalidateProductsCache(catalog?: CatalogType): void {
   if (catalog) {
-    fetchMem.delete(`${catalog}:auto`);
     fetchMem.delete(`${catalog}:json`);
+    fetchMem.delete(`${catalog}:supabase`);
   } else {
     fetchMem.clear();
   }
@@ -74,16 +77,55 @@ function visibleShopProducts(list: Product[], accessorySkus?: Set<string>): Prod
   return filterShopProducts(withoutHiddenProducts(list), accessorySkus);
 }
 
+function lightProductMeta(meta?: ProductMeta): ProductMeta | undefined {
+  if (!meta) return undefined;
+  const light: ProductMeta = {};
+  for (const key of [
+    'baselinkerProductId',
+    'legacySku',
+    'waproSku',
+    'previousSku',
+    'shopCategoryPath',
+    'baselinkerDescriptionImportedAt',
+    'baselinkerDescriptionChars',
+    'catalogHiddenReason',
+    'catalogHiddenAt',
+  ] as const) {
+    if (meta[key] != null && meta[key] !== '') {
+      (light as Record<string, unknown>)[key] = meta[key];
+    }
+  }
+  if (typeof meta.baselinkerDescriptionFull === 'boolean') {
+    light.baselinkerDescriptionFull = meta.baselinkerDescriptionFull;
+  }
+  if (typeof meta.waproImport === 'boolean') light.waproImport = meta.waproImport;
+  if (typeof meta.waproSkeleton === 'boolean') light.waproSkeleton = meta.waproSkeleton;
+  if (typeof meta.salesExcludeFromSum === 'boolean') {
+    light.salesExcludeFromSum = meta.salesExcludeFromSum;
+  }
+  if (typeof meta.catalogHidden === 'boolean') light.catalogHidden = meta.catalogHidden;
+  return Object.keys(light).length ? light : undefined;
+}
+
+function toListProduct(product: Product): Product {
+  return {
+    ...product,
+    description: '',
+    meta: lightProductMeta(product.meta),
+  };
+}
+
 async function loadBaseProducts(catalog: CatalogType = 'accessories'): Promise<Product[]> {
   if (catalog === 'shop') {
     if (shopCache) return shopCache;
     try {
-      const res = await fetch('/data/shop-products.json');
+      let res = await fetch('/data/shop-products-lite.json');
+      if (!res.ok) res = await fetch('/data/shop-products.json');
       if (!res.ok) return [];
       const accessorySkus = await getAccessorySkuSet();
       shopCache = filterShopProducts(
         ((await res.json()) as Product[]).map((p) => ({
-          ...p,
+          ...toListProduct(p),
           catalog: 'shop' as const,
         })),
         accessorySkus,
@@ -95,20 +137,35 @@ async function loadBaseProducts(catalog: CatalogType = 'accessories'): Promise<P
   }
 
   if (localCache) return localCache;
-  const res = await fetch('/data/products.json');
+  let res = await fetch('/data/products-lite.json');
+  if (!res.ok) res = await fetch('/data/products.json');
   localCache = ((await res.json()) as Product[]).map((p) => ({
-    ...p,
+    ...toListProduct(p),
     catalog: p.catalog || 'accessories',
   }));
   return localCache;
 }
 
+async function loadFullJsonProducts(catalog: CatalogType): Promise<Product[]> {
+  const file = catalog === 'shop' ? '/data/shop-products.json' : '/data/products.json';
+  try {
+    const res = await fetch(file);
+    if (!res.ok) return [];
+    return ((await res.json()) as Product[]).map((p) => ({
+      ...p,
+      catalog,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export async function fetchProducts(
   catalog?: CatalogType,
-  opts?: { force?: boolean; source?: 'auto' | 'json' },
+  opts?: { force?: boolean; source?: ProductFetchSource },
 ): Promise<Product[]> {
   const key = fetchCacheKey(catalog);
-  const source = opts?.source ?? 'auto';
+  const source = opts?.source ?? 'json';
   const cacheKey = `${key}:${source}`;
   const hit = fetchMem.get(cacheKey);
   if (!opts?.force && hit) {
@@ -138,7 +195,7 @@ export async function fetchProducts(
 
 async function fetchProductsUncached(
   catalog?: CatalogType,
-  source: 'auto' | 'json' = 'auto',
+  source: ProductFetchSource = 'json',
 ): Promise<Product[]> {
   const local = getLocalProducts();
   const accessorySkus = await getAccessorySkuSet();
@@ -147,7 +204,7 @@ async function fetchProductsUncached(
     if (cat) {
       const base = await loadBaseProducts(cat);
       return visibleShopProducts(
-        mergeProducts(base, local.filter((p) => (p.catalog || 'accessories') === cat)),
+        mergeProducts(base, local.filter((p) => (p.catalog || 'accessories') === cat).map(toListProduct)),
         accessorySkus,
       );
     }
@@ -155,10 +212,10 @@ async function fetchProductsUncached(
       loadBaseProducts('accessories'),
       loadBaseProducts('shop'),
     ]);
-    return visibleShopProducts(mergeProducts([...acc, ...shop], local), accessorySkus);
+    return visibleShopProducts(mergeProducts([...acc, ...shop], local.map(toListProduct)), accessorySkus);
   };
 
-  if (source === 'json' || !isSupabaseConfigured || !supabase) {
+  if (source !== 'supabase' || !isSupabaseConfigured || !supabase) {
     return fromJsonAndLocal(catalog);
   }
 
@@ -186,15 +243,15 @@ async function fetchProductsUncached(
     if (catalog) {
       const base = await loadBaseProducts(catalog);
       return visibleShopProducts(
-        mergeProducts(base, local.filter((p) => (p.catalog || 'accessories') === catalog)),
+        mergeProducts(base, local.filter((p) => (p.catalog || 'accessories') === catalog).map(toListProduct)),
         accessorySkus,
       );
     }
     const base = await loadBaseProducts('accessories');
-    return visibleShopProducts(mergeProducts(base, local), accessorySkus);
+    return visibleShopProducts(mergeProducts(base, local.map(toListProduct)), accessorySkus);
   }
 
-  const mapped = all.map(rowToProduct);
+  const mapped = all.map(rowToProduct).map(toListProduct);
   const hasShop = mapped.some((p) => p.catalog === 'shop');
   let combined = mapped;
   if (!hasShop) {
@@ -205,7 +262,7 @@ async function fetchProductsUncached(
   const localFiltered = catalog
     ? local.filter((p) => (p.catalog || 'accessories') === catalog)
     : local;
-  const merged = mergeProducts(combined, localFiltered);
+  const merged = mergeProducts(combined, localFiltered.map(toListProduct));
   const scoped = catalog
     ? merged.filter((p) => (p.catalog || 'accessories') === catalog)
     : merged;
@@ -215,8 +272,8 @@ async function fetchProductsUncached(
 export async function fetchProductById(productId: string): Promise<Product | null> {
   if (!isSupabaseConfigured || !supabase) {
     const [acc, shop] = await Promise.all([
-      loadBaseProducts('accessories'),
-      loadBaseProducts('shop'),
+      loadFullJsonProducts('accessories'),
+      loadFullJsonProducts('shop'),
     ]);
     return (
       [...acc, ...shop].find((p) => p.id === productId) ||
@@ -282,6 +339,7 @@ export async function updateProduct(
     const row: Record<string, unknown> = {};
     if (updates.displayName !== undefined) row.display_name = updates.displayName;
     if (updates.category !== undefined) row.category = updates.category;
+    if (updates.manufacturer !== undefined) row.manufacturer = updates.manufacturer;
     if (updates.description !== undefined) row.description = updates.description;
     if (updates.customImageUrl !== undefined) row.custom_image_url = updates.customImageUrl;
     if (updates.imageUrl !== undefined) row.image_url = updates.imageUrl;

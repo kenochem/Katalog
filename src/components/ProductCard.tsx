@@ -14,10 +14,11 @@ import { CATALOG_LABELS } from '../types';
 import { getProductImage, updateProductImage } from '../lib/products';
 import { formatStock, formatPricePln, formatMarginPercent, marginPercent } from '../lib/format';
 import { resolveProductCatalogKind } from '../lib/catalogKind';
-import { isWaproSkeletonProduct } from '../lib/productMeta';
+import { isCatalogHiddenProduct } from '../lib/productMeta';
 import { showToast } from '../lib/toast';
+import { getProductDisplayCategory } from '../lib/catalogCategory';
 import { AddToCollectionMenu } from './AddToCollectionMenu';
-import { BaselinkerTag } from './BaselinkerTag';
+import { BaselinkerTag, WaproMagTag } from './BaselinkerTag';
 
 interface ProductCardProps {
   product: Product;
@@ -79,7 +80,7 @@ export const ProductCard = memo(
   const catalogKind = resolveProductCatalogKind(product);
   const catalogKindShort =
     catalogKind === 'shop' ? 'Produkty' : CATALOG_LABELS.accessories;
-  const waproSkeleton = isWaproSkeletonProduct(product);
+  const catalogHidden = isCatalogHiddenProduct(product);
 
   async function copySku(e: MouseEvent) {
     e.stopPropagation();
@@ -187,6 +188,7 @@ export const ProductCard = memo(
                 </span>
               </button>
               <BaselinkerTag product={product} />
+              <WaproMagTag product={product} />
             </div>
           ) : (
             <div className="flex max-w-full items-center gap-1">
@@ -198,6 +200,7 @@ export const ProductCard = memo(
                 {product.isGroup ? `${product.variants?.length ?? 0} war.` : product.sku}
               </span>
               {!product.isGroup ? <BaselinkerTag product={product} /> : null}
+              {!product.isGroup ? <WaproMagTag product={product} /> : null}
             </div>
           )}
           {collectionUserKey && (
@@ -213,15 +216,6 @@ export const ProductCard = memo(
           <span className="pointer-events-none absolute bottom-2 left-2 z-[2] flex items-center gap-1 rounded-md bg-brand-600/90 px-2 py-0.5 text-xs text-white">
             <Layers className="h-3 w-3" />
             Grupa
-          </span>
-        )}
-
-        {waproSkeleton && !compact && (
-          <span
-            className="pointer-events-none absolute bottom-2 right-2 z-[2] max-w-[min(100%,8rem)] truncate rounded-md bg-amber-600/95 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm"
-            title="Import z Mag WAPRO — uzupełnij zdjęcie i opis"
-          >
-            Mag WAPRO
           </span>
         )}
 
@@ -306,6 +300,16 @@ export const ProductCard = memo(
             {catalogKindShort}
           </span>
         )}
+        {catalogHidden && (
+          <span
+            className={`mb-1 inline-flex w-fit max-w-full truncate rounded-md border border-red-300 bg-red-50 px-2 py-0.5 font-semibold leading-none text-red-800 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-200 ${
+              compact ? 'text-[9px]' : 'text-[10px]'
+            }`}
+            title={product.meta?.catalogHiddenReason || 'Produkt ukryty w katalogu'}
+          >
+            Ukryty
+          </span>
+        )}
         <h3
           className={`font-medium leading-snug text-slate-100 ${
             compact
@@ -333,7 +337,7 @@ export const ProductCard = memo(
         )}
         {!compact && !product.isGroup && (
           <p className={`mt-auto text-slate-500 ${cozy ? 'text-sm' : 'text-xs'}`}>
-            {product.category}
+            {getProductDisplayCategory(product)}
           </p>
         )}
       </button>

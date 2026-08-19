@@ -34,3 +34,32 @@ export function resolveProductCatalogKind(product: Product): CatalogType {
 
   return 'shop';
 }
+
+export function inferProductTypeLabel(product: Product): string {
+  const category = (product.category || '').trim();
+  const categoryLower = category.toLowerCase();
+  const text = `${category} ${product.displayName || ''} ${product.name || ''}`.toLowerCase();
+
+  if (CHEMISTRY_NAME.test(text)) return 'Chemia';
+  if (/szczotk/.test(text)) return 'Szczotka';
+  if (/opryskiwacz|spryskiwacz|atomizer/.test(text)) return 'Opryskiwacz';
+  if (/pianownic|pianownica|foam/.test(text)) return 'Pianownica';
+  if (/pistolet/.test(text)) return 'Pistolet';
+  if (/\blanc|lanca|lancy|lance/.test(text)) return 'Lanca';
+  if (/dysz/.test(text)) return 'Dysza';
+  if (/wąż|waz|węże|weze|przew[oó]d/.test(text)) return 'Wąż';
+  if (/szybkozł|szybkozl|z[łl][aą]cz|adapter|redukcj|ko[nń]c[oó]wk|gwint/.test(text)) {
+    return 'Złącze / adapter';
+  }
+  if (/filtr/.test(text)) return 'Filtr';
+  if (/manometr/.test(text)) return 'Manometr';
+  if (/zaw[oó]r/.test(text)) return 'Zawór';
+  if (/rur/.test(text)) return 'Rurka';
+  if (/zbiornik/.test(text)) return 'Zbiornik';
+
+  if (category && categoryLower !== 'produkty' && categoryLower !== 'akcesoria sklepowe') {
+    return category;
+  }
+
+  return resolveProductCatalogKind(product) === 'shop' ? 'Produkt sklepowy' : 'Akcesoria';
+}

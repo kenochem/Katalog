@@ -1,5 +1,6 @@
 import Fuse from 'fuse.js';
 import type { Product } from '../types';
+import { getProductDisplayCategory } from './catalogCategory';
 
 function normalizeEan(value: string): string {
   return value.replace(/\D/g, '');
@@ -15,6 +16,7 @@ export type FuseProduct = Product & {
   variantEans: string;
   eanNormalized: string;
   tagsText: string;
+  targetCategory: string;
 };
 
 export function createProductSearch(products: Product[]) {
@@ -25,6 +27,7 @@ export function createProductSearch(products: Product[]) {
     variantEans: p.variants?.map((v) => v.ean || '').join(' ') || '',
     eanNormalized: normalizeEan(p.ean || ''),
     tagsText: (p.tags || []).join(' '),
+    targetCategory: getProductDisplayCategory(p),
   }));
 
   return new Fuse(expanded, {
@@ -40,6 +43,7 @@ export function createProductSearch(products: Product[]) {
       { name: 'variantNames', weight: 0.05 },
       { name: 'tagsText', weight: 0.02 },
       { name: 'category', weight: 0.01 },
+      { name: 'targetCategory', weight: 0.03 },
     ],
     threshold: 0.38,
     ignoreLocation: true,
@@ -73,7 +77,7 @@ function listSignature(products: Product[], category: string): string {
 
 function scopeList(products: Product[], category: string): Product[] {
   if (!category || category === 'Wszystkie') return products;
-  return products.filter((p) => p.category === category);
+  return products.filter((p) => getProductDisplayCategory(p) === category);
 }
 
 export function getProductSearchIndex(
@@ -95,7 +99,7 @@ export function getProductSearchIndex(
     }
     searchBlob.set(
       p.id,
-      [p.displayName, p.name, p.manufacturer, p.category, ...(p.tags ?? [])]
+      [p.displayName, p.name, p.manufacturer, p.category, getProductDisplayCategory(p), ...(p.tags ?? [])]
         .filter(Boolean)
         .join(' ')
         .toLowerCase(),

@@ -1,14 +1,18 @@
-import { Copy, Check, Sparkles, Star } from 'lucide-react';
+import { Copy, Check, Loader2, Sparkles, Star } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { AddToCollectionMenu } from '../AddToCollectionMenu';
 import { showToast } from '../../lib/toast';
 import { useMemo, useState } from 'react';
 import type { Product } from '../../types';
-import { CATALOG_LABELS } from '../../types';
 import { formatStock, formatPricePln, formatMarginPercent, marginPercent } from '../../lib/format';
-import { resolveProductCatalogKind } from '../../lib/catalogKind';
+import { inferProductTypeLabel } from '../../lib/catalogKind';
 import { buildProductAiContext } from '../../lib/productAiContext';
 import { baselinkerLinkLabel, hasBaselinkerLink } from '../../lib/baselinkerLink';
+import {
+  getProductDisplayCategory,
+  getProductSourceCategory,
+  productNeedsCategoryDecision,
+} from '../../lib/catalogCategory';
 import {
   formatDimensions,
   parametersToText,
@@ -22,21 +26,31 @@ export function DetailRow({
   mono,
   prominent,
   span,
+  source,
 }: {
   label: string;
   value: string;
   mono?: boolean;
   prominent?: boolean;
   span?: boolean;
+  source?: 'wapro' | 'baselinker';
 }) {
+  const sourceClass =
+    source === 'wapro'
+      ? 'catalog-source-accent catalog-source-accent--wapro'
+      : source === 'baselinker'
+        ? 'catalog-source-accent catalog-source-accent--baselinker'
+        : '';
+
   return (
     <div
-      className={`flex flex-col gap-0.5 bg-slate-950/50 px-4 py-3 sm:flex-row sm:gap-3 ${
+      className={`flex flex-col gap-0.5 bg-slate-950/50 px-4 py-3 sm:flex-row sm:gap-3 ${sourceClass} ${
         span ? 'sm:col-span-2' : ''
       }`}
     >
-      <dt className="shrink-0 text-xs font-medium uppercase tracking-wide text-slate-400 sm:w-32 dark:text-slate-500">
-        {label}
+      <dt className="flex shrink-0 items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-slate-400 sm:w-32 dark:text-slate-500">
+        <span>{label}</span>
+        {source ? <SourceBadge source={source} /> : null}
       </dt>
       <dd
         className={`min-w-0 flex-1 break-words text-slate-200 dark:text-slate-100 ${
@@ -53,9 +67,20 @@ export function DetailRow({
   );
 }
 
+function SourceBadge({ source }: { source: 'wapro' | 'baselinker' }) {
+  return (
+    <span
+      className={`catalog-source-badge catalog-source-badge--${source}`}
+      title={source === 'wapro' ? 'Dane z WAPRO' : 'Dane z BaseLinker'}
+    >
+      {source === 'wapro' ? 'W' : 'BL'}
+    </span>
+  );
+}
+
 function FactSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-800">
+    <div className="overflow-hidden rounded-2xl border border-slate-800 bg-white dark:bg-slate-950/30">
       <p className="border-b border-slate-800 bg-slate-900/80 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
         {title}
       </p>
@@ -76,7 +101,7 @@ export function ProductDetailFacts({
   variantCount?: number;
 }) {
   const meta = detail.meta;
-  const catalogKind = resolveProductCatalogKind(detail);
+  const productTypeLabel = inferProductTypeLabel(detail);
   const imageCount =
     (detail.hasImage || detail.customImageUrl || detail.imageUrl ? 1 : 0) +
     (detail.extraImageUrls?.length ?? 0);
@@ -85,27 +110,39 @@ export function ProductDetailFacts({
     detail.manufacturer.trim().toLowerCase() !== 'wapro'
       ? detail.manufacturer
       : '';
+  const isBaselinker = hasBaselinkerLink(detail);
+  const isWapro = !isBaselinker || Boolean(meta?.waproImport || meta?.waproSku || detail.waproSalesStats);
+  const targetCategory = getProductDisplayCategory(detail);
+  const sourceCategory = getProductSourceCategory(detail);
 
   return (
     <div className="space-y-3">
       <FactSection title="Identyfikacja">
-        <DetailRow label="SKU" value={detail.sku} mono prominent />
-        {!isGroup && <DetailRow label="EAN" value={detail.ean || '—'} mono prominent />}
+        <DetailRow label="SKU" value={detail.sku} mono prominent source={isWapro ? 'wapro' : undefined} />
+        {!isGroup && (
+          <DetailRow
+            label="EAN"
+            value={detail.ean || '—'}
+            mono
+            prominent
+            source={isBaselinker ? 'baselinker' : isWapro ? 'wapro' : undefined}
+          />
+        )}
         <DetailRow label="ID rekordu" value={detail.id} mono span />
         {hasBaselinkerLink(detail) ? (
           <DetailRow
             label="BaseLinker"
             value={baselinkerLinkLabel(detail) ?? 'Powiązany'}
             mono
+            source="baselinker"
           />
         ) : null}
         {meta?.shopCategoryPath ? (
-          <DetailRow label="Kategoria sklepu" value={meta.shopCategoryPath} span />
+          <DetailRow label="Kategoria sklepu" value={meta.shopCategoryPath} span source="baselinker" />
         ) : null}
-        <DetailRow label="Katalog" value={CATALOG_LABELS[detail.catalog || 'accessories']} />
         <DetailRow
-          label="Typ"
-          value={catalogKind === 'shop' ? 'Produkty / sklep' : 'Akcesoria / WAPRO'}
+          label="Typ produktu"
+          value={productTypeLabel}
         />
         {isWaproSkeletonProduct(detail) ? (
           <DetailRow
@@ -114,12 +151,28 @@ export function ProductDetailFacts({
             span
           />
         ) : null}
-        <DetailRow label="Kategoria" value={detail.category} />
-        {mfr ? <DetailRow label="Producent" value={mfr} span /> : null}
-        {detail.name !== detail.displayName ? (
-          <DetailRow label="Nazwa WAPRO / BL" value={detail.name} span />
+        <DetailRow
+          label="Kategoria docelowa"
+          value={targetCategory}
+          source={isBaselinker ? 'baselinker' : undefined}
+        />
+        {productNeedsCategoryDecision(detail) && sourceCategory !== targetCategory ? (
+          <DetailRow
+            label="Kategoria źródłowa"
+            value={sourceCategory}
+            source={isBaselinker ? 'baselinker' : undefined}
+          />
         ) : null}
-        <DetailRow label="Tytuł oferty" value={detail.displayName} span />
+        {mfr ? <DetailRow label="Producent" value={mfr} span source={isWapro ? 'wapro' : undefined} /> : null}
+        {detail.name !== detail.displayName ? (
+          <DetailRow
+            label="Nazwa WAPRO / BL"
+            value={detail.name}
+            span
+            source={isBaselinker ? 'baselinker' : isWapro ? 'wapro' : undefined}
+          />
+        ) : null}
+        <DetailRow label="Tytuł oferty" value={detail.displayName} span source={isBaselinker ? 'baselinker' : undefined} />
       </FactSection>
 
       <FactSection title="Magazyn i media">
@@ -131,11 +184,12 @@ export function ProductDetailFacts({
               : formatStock(detail.stock ?? 0)
           }
           prominent
+          source="wapro"
         />
         {isGroup && variantCount > 0 ? (
-          <DetailRow label="Warianty" value={`${variantCount} pozycji SKU`} />
+          <DetailRow label="Warianty" value={`${variantCount} pozycji SKU`} source="wapro" />
         ) : null}
-        {locationCode ? <DetailRow label="Lokalizacja" value={locationCode} mono span /> : null}
+        {locationCode ? <DetailRow label="Lokalizacja" value={locationCode} mono span source="wapro" /> : null}
         <DetailRow label="Zdjęcia" value={imageCount > 0 ? `${imageCount} plików` : 'Brak'} />
         {detail.tags?.length ? (
           <DetailRow label="Tagi" value={detail.tags.join(' · ')} span />
@@ -148,14 +202,14 @@ export function ProductDetailFacts({
         meta?.vatRate != null) && (
         <FactSection title="Logistyka (BaseLinker)">
           {meta?.weightKg != null ? (
-            <DetailRow label="Waga" value={`${meta.weightKg} kg`} />
+            <DetailRow label="Waga" value={`${meta.weightKg} kg`} source="baselinker" />
           ) : null}
           {formatDimensions(meta) ? (
-            <DetailRow label="Wymiary" value={formatDimensions(meta)!} mono />
+            <DetailRow label="Wymiary" value={formatDimensions(meta)!} mono source="baselinker" />
           ) : null}
-          {meta?.unit ? <DetailRow label="Jednostka" value={meta.unit} /> : null}
+          {meta?.unit ? <DetailRow label="Jednostka" value={meta.unit} source="baselinker" /> : null}
           {meta?.vatRate != null ? (
-            <DetailRow label="VAT" value={`${meta.vatRate}%`} />
+            <DetailRow label="VAT" value={`${meta.vatRate}%`} source="baselinker" />
           ) : null}
         </FactSection>
       )}
@@ -315,7 +369,6 @@ export function ProductDetailCatalogQuickActions({
   onCollectionsChange?: () => void;
 }) {
   const [copiedOffer, setCopiedOffer] = useState(false);
-  const shortLead = detail.meta?.shortDescription?.trim();
 
   async function copyOfferLine() {
     const text = buildSalesOfferLine(detail);
@@ -362,11 +415,6 @@ export function ProductDetailCatalogQuickActions({
           />
         ) : null}
       </div>
-      {shortLead ? (
-        <p className="rounded-xl border border-slate-800 bg-slate-950/50 px-3 py-2.5 text-xs leading-relaxed text-slate-300 line-clamp-3">
-          {shortLead}
-        </p>
-      ) : null}
     </div>
   );
 }
@@ -401,7 +449,7 @@ export function ProductDetailCommercialExtras({ detail }: { detail: Product }) {
   return (
     <div className="space-y-3">
       {meta?.shortDescription?.trim() ? (
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+        <div className="rounded-2xl border border-slate-800 bg-white p-4 dark:bg-slate-950/40">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
             Krótki opis oferty
           </p>
@@ -410,7 +458,7 @@ export function ProductDetailCommercialExtras({ detail }: { detail: Product }) {
       ) : null}
 
       {paramEntries.length > 0 ? (
-        <div className="overflow-hidden rounded-2xl border border-slate-800">
+        <div className="overflow-hidden rounded-2xl border border-slate-800 bg-white dark:bg-slate-950/30">
           <p className="border-b border-slate-800 bg-slate-900/80 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
             Parametry produktu
           </p>
@@ -426,11 +474,11 @@ export function ProductDetailCommercialExtras({ detail }: { detail: Product }) {
       ) : null}
 
       {meta?.internalNote?.trim() ? (
-        <div className="rounded-2xl border border-amber-500/25 bg-amber-500/5 p-4">
+        <div className="rounded-2xl border border-amber-500/25 bg-amber-50 p-4 dark:bg-amber-500/5">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-600/90 dark:text-amber-400">
             Notatka wewnętrzna
           </p>
-          <p className="mt-2 whitespace-pre-wrap text-sm text-amber-100/90">{meta.internalNote}</p>
+          <p className="mt-2 whitespace-pre-wrap text-sm text-amber-950 dark:text-amber-100/90">{meta.internalNote}</p>
         </div>
       ) : null}
     </div>
@@ -477,26 +525,41 @@ export function ProductDetailDataPanel({
 export function ProductDetailDescPanel({
   description,
   shortDescription,
+  loading = false,
+  loadError = false,
 }: {
   description: string;
   shortDescription?: string;
+  loading?: boolean;
+  loadError?: boolean;
 }) {
   return (
     <div className="space-y-3">
       {shortDescription?.trim() ? (
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+        <div className="rounded-2xl border border-slate-800 bg-white p-4 dark:bg-slate-950/40">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
             Lead / krótki opis
           </p>
           <p className="mt-2 text-sm leading-relaxed text-slate-200">{shortDescription}</p>
         </div>
       ) : null}
-      <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+      <div className="rounded-2xl border border-slate-800 bg-white p-4 dark:bg-slate-950/40">
         <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
           Opis pełny
         </p>
         <div className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-200 dark:text-slate-300">
-          {description.trim() ? description : 'Brak opisu — dodaj w trybie edycji lub importuj z BaseLinker.'}
+          {loading ? (
+            <span className="inline-flex items-center gap-2 text-slate-500 dark:text-slate-400">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Ładuję pełny opis produktu...
+            </span>
+          ) : loadError ? (
+            'Nie udało się pobrać pełnego opisu z bazy. Spróbuj odświeżyć produkt.'
+          ) : description.trim() ? (
+            description
+          ) : (
+            'Brak opisu — dodaj w trybie edycji lub importuj z BaseLinker.'
+          )}
         </div>
       </div>
     </div>

@@ -21,6 +21,8 @@ import {
   Shield,
   FolderOpen,
   Boxes,
+  AlertTriangle,
+  BookOpen,
 } from 'lucide-react';
 import type { View } from '../types';
 import type { AppRole } from '../lib/roles';
@@ -53,7 +55,7 @@ export function MobileBottomNav({
   showCatalog = true,
   showCatalogTools = true,
 }: MobileBottomNavProps) {
-  const moreActive = ['kits', 'progress', 'missing-images', 'admin', ...(isStockProduct() ? ['warehouse' as const] : [])].includes(view);
+  const moreActive = ['kits', 'progress', 'catalog-decisions', 'missing-images', 'admin', 'library', ...(isStockProduct() ? ['warehouse' as const] : [])].includes(view);
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-800 bg-slate-950/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
@@ -154,6 +156,7 @@ interface MobileMoreSheetProps {
   loading: boolean;
   syncBusy?: boolean;
   canRequestStockSync: boolean;
+  decisionCount: number;
   missingCount: number;
   kitsCount: number;
   collectionsCount?: number;
@@ -185,6 +188,7 @@ export function MobileMoreSheet({
   loading,
   syncBusy,
   canRequestStockSync,
+  decisionCount,
   missingCount,
   kitsCount,
   collectionsCount = 0,
@@ -249,6 +253,14 @@ export function MobileMoreSheet({
               Widoki
             </p>
             <div className="grid grid-cols-2 gap-2">
+              {showCatalogTools && (
+                <SheetAction
+                  active={view === 'library'}
+                  icon={<BookOpen className="h-4 w-4" />}
+                  label="Biblioteka"
+                  onClick={() => go('library')}
+                />
+              )}
               {showCatalogTools && showCollections && (
                 <SheetAction
                   active={view === 'collections'}
@@ -279,6 +291,14 @@ export function MobileMoreSheet({
                   icon={<BarChart3 className="h-4 w-4" />}
                   label="Postęp zdjęć"
                   onClick={() => go('progress')}
+                />
+              )}
+              {showCatalogTools && roleCan(role, 'viewProgress') && (
+                <SheetAction
+                  active={view === 'catalog-decisions'}
+                  icon={<AlertTriangle className="h-4 w-4" />}
+                  label={`Decyzje (${decisionCount})`}
+                  onClick={() => go('catalog-decisions')}
                 />
               )}
               {showCatalogTools && roleCan(role, 'viewProgress') && (

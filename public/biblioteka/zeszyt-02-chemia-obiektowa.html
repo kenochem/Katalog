@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<script>(function(){try{var t=localStorage.getItem("katalog-theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Atlas chemii obiektowej — pH, dawkowanie, linie produktowe (Eco Shine, Cid Lines, Clinex, Eilfix), bezpieczeństwo. Biblioteka Techniczna Kenochem, Zeszyt 2.">
+<title>Atlas Chemii Obiektowej</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --paper:#E7E6DE; --paper-raised:#F1F0E9; --ink:#1E2220; --ink-soft:#4B4F49;
+    --blueprint:#3B6E8F; --blueprint-soft:#6C93A9;
+    --brass:#8F5E19; --brass-soft:#B98A3D;
+    --steel:#86867C; --steel-line:#C9C8BC;
+    --caution:#9E3226; --caution-soft:#F3DEDA;
+    --code-bg:#DEDCD1;
+    --acid:#B23A2E; --neutral:#4F8F5B; --alka:#5A5FA6;
+    --shadow: 0 1px 0 rgba(30,34,32,0.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#14181A; --paper-raised:#1B2022; --ink:#E9E7DC; --ink-soft:#B7B6AA;
+      --blueprint:#6FA8C9; --blueprint-soft:#4E7E96;
+      --brass:#D6A056; --brass-soft:#A9793C;
+      --steel:#787A72; --steel-line:#33372F;
+      --caution:#E0796B; --caution-soft:#3A2320;
+      --code-bg:#20251F;
+      --acid:#E0796B; --neutral:#7DBF8C; --alka:#9498D6;
+      --shadow: 0 1px 0 rgba(0,0,0,0.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#14181A; --paper-raised:#1B2022; --ink:#E9E7DC; --ink-soft:#B7B6AA;
+    --blueprint:#6FA8C9; --blueprint-soft:#4E7E96;
+    --brass:#D6A056; --brass-soft:#A9793C;
+    --steel:#787A72; --steel-line:#33372F;
+    --caution:#E0796B; --caution-soft:#3A2320;
+    --code-bg:#20251F;
+    --acid:#E0796B; --neutral:#7DBF8C; --alka:#9498D6;
+    --shadow: 0 1px 0 rgba(0,0,0,0.4);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:"Source Serif 4", Georgia, "Times New Roman", serif;
+    font-size:17px; line-height:1.65;
+    margin:0; padding:0;
+  }
+  .wrap{max-width:1180px; margin:0 auto; padding:0 clamp(20px,4vw,64px);}
+
+  h1,h2,h3{font-family:"Big Shoulders Display","Arial Narrow",sans-serif; font-weight:800; text-transform:uppercase; letter-spacing:0.01em; text-wrap:balance; margin:0; color:var(--ink);}
+  .mono{font-family:"IBM Plex Mono", ui-monospace, Menlo, monospace;}
+  .eyebrow{font-family:"IBM Plex Mono"; font-size:12.5px; letter-spacing:0.12em; text-transform:uppercase; color:var(--blueprint);}
+
+  a{color:var(--blueprint);}
+  p{max-width:66ch;}
+  table{font-variant-numeric:tabular-nums;}
+
+  .hero{padding:clamp(56px,9vw,104px) 0 clamp(40px,6vw,64px); border-bottom:1px solid var(--steel-line); position:relative;}
+  .hero .kicker{display:flex; align-items:center; gap:14px; margin-bottom:22px;}
+  .hero .kicker .tom{width:34px; height:34px; flex:none;}
+  .hero .kicker span{font-family:"IBM Plex Mono"; font-size:13px; letter-spacing:0.14em; text-transform:uppercase; color:var(--ink-soft);}
+  .hero h1{font-size:clamp(40px,6.4vw,80px); line-height:0.96;}
+  .hero h1 em{font-style:normal; color:var(--blueprint);}
+  .hero .lede{font-size:19px; color:var(--ink-soft); max-width:56ch; margin-top:22px;}
+  .hero .meta{display:flex; gap:28px; flex-wrap:wrap; margin-top:34px; font-family:"IBM Plex Mono"; font-size:12.5px; color:var(--ink-soft); letter-spacing:0.03em;}
+  .hero .meta b{color:var(--ink); font-weight:600;}
+
+  .toc{display:grid; grid-template-columns:repeat(6,1fr); gap:1px; background:var(--steel-line); border:1px solid var(--steel-line); margin-top:40px;}
+  .toc a{background:var(--paper-raised); color:var(--ink); text-decoration:none; padding:16px 14px; display:flex; flex-direction:column; gap:6px;}
+  .toc a:hover{background:var(--code-bg);}
+  .toc .n{font-family:"IBM Plex Mono"; font-size:12px; color:var(--blueprint);}
+  .toc .t{font-size:13.5px; font-weight:600; line-height:1.25;}
+  @media (max-width:980px){ .toc{grid-template-columns:repeat(3,1fr);} }
+  @media (max-width:560px){ .toc{grid-template-columns:repeat(2,1fr);} }
+
+  .stock{display:inline-flex; align-items:center; gap:6px; font-family:"IBM Plex Mono"; font-size:11px; padding:2px 8px; border:1px solid var(--steel-line); background:var(--code-bg); color:var(--ink-soft); white-space:nowrap;}
+  .stock .sku{color:var(--blueprint); font-weight:600;}
+  .stock .qty{color:var(--brass);}
+
+  section.chapter{padding:clamp(56px,8vw,96px) 0; border-bottom:1px solid var(--steel-line); scroll-margin-top:24px;}
+  section.chapter:last-of-type{border-bottom:none;}
+  .chapter-head{display:grid; grid-template-columns:120px 1fr; gap:28px; margin-bottom:40px; align-items:start;}
+  .chapter-head .num{font-family:"Big Shoulders Display"; font-weight:800; font-size:clamp(64px,8vw,96px); line-height:0.8; color:var(--blueprint-soft);}
+  .chapter-head h2{font-size:clamp(26px,3.4vw,38px); line-height:1.05; max-width:22ch;}
+  .chapter-head .sub{font-family:"Source Serif 4"; font-style:italic; color:var(--ink-soft); font-size:16px; margin-top:10px; font-weight:400;}
+  .chapter-body{display:grid; grid-template-columns:minmax(0,66ch) 1fr; gap:48px; align-items:start;}
+  @media (max-width:900px){ .chapter-body{grid-template-columns:1fr;} .chapter-head{grid-template-columns:64px 1fr;} }
+
+  .chapter-body > .prose > * + *{margin-top:1.1em;}
+  .chapter-body > .prose h3{font-size:16px; margin-top:2em; letter-spacing:0.02em;}
+  .chapter-body > .prose ul, .chapter-body > .prose ol{padding-left:1.3em; max-width:64ch;}
+  .chapter-body > .prose li + li{margin-top:0.5em;}
+
+  .rail{position:sticky; top:20px; display:flex; flex-direction:column; gap:20px;}
+
+  figure{margin:0; border:1px solid var(--steel-line); background:var(--paper-raised); box-shadow:var(--shadow);}
+  figure svg{display:block; width:100%; height:auto; padding:18px 16px 6px;}
+  figcaption{font-family:"IBM Plex Mono"; font-size:12px; color:var(--ink-soft); padding:10px 16px 16px; border-top:1px dashed var(--steel-line); line-height:1.5;}
+  figcaption b{color:var(--ink); font-weight:600;}
+
+  .table-wrap{overflow-x:auto; border:1px solid var(--steel-line); background:var(--paper-raised);}
+  table{width:100%; border-collapse:collapse; font-size:14.5px; min-width:520px;}
+  th,td{padding:11px 14px; text-align:left; border-bottom:1px solid var(--steel-line); vertical-align:top;}
+  thead th{font-family:"IBM Plex Mono"; font-size:11.5px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-soft); font-weight:600; border-bottom:2px solid var(--steel-line);}
+  tbody tr:last-child td{border-bottom:none;}
+  td .code{font-family:"IBM Plex Mono"; font-size:13px; background:var(--code-bg); padding:1px 6px;}
+  .example-table td.n{font-family:"Source Serif 4"; font-size:14px;}
+
+  .callout{border-left:3px solid var(--caution); background:var(--caution-soft); color:var(--ink); padding:14px 18px; font-size:15px; max-width:64ch;}
+  .callout b{color:var(--caution); font-family:"IBM Plex Mono"; font-size:11.5px; text-transform:uppercase; letter-spacing:0.08em; display:block; margin-bottom:6px;}
+  .note{border-left:3px solid var(--blueprint); background:var(--paper-raised); padding:14px 18px; font-size:15px; max-width:64ch; color:var(--ink-soft);}
+  .note b{color:var(--blueprint); font-family:"IBM Plex Mono"; font-size:11.5px; text-transform:uppercase; letter-spacing:0.08em; display:block; margin-bottom:6px;}
+
+  .gloss{display:grid; grid-template-columns:1fr; gap:1px; background:var(--steel-line); border:1px solid var(--steel-line);}
+  .gloss dt{background:var(--paper-raised); padding:14px 16px 2px; font-family:"IBM Plex Mono"; font-weight:600; font-size:14px; color:var(--blueprint);}
+  .gloss dd{background:var(--paper-raised); margin:0; padding:2px 16px 14px; font-size:15px; color:var(--ink-soft);}
+
+  /* map tiles */
+  .map-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--steel-line); border:1px solid var(--steel-line); margin-top:8px;}
+  .map-tile{background:var(--paper-raised); padding:20px 18px;}
+  .map-tile .ic{width:30px; height:30px; color:var(--blueprint); margin-bottom:10px;}
+  .map-tile h4{font-family:"Big Shoulders Display"; font-weight:700; font-size:16px; text-transform:uppercase; margin:0 0 8px;}
+  .map-tile p{font-size:13.5px; color:var(--ink-soft); max-width:none; margin:0 0 10px;}
+  .map-tile .exs{display:flex; flex-direction:column; gap:5px;}
+  @media (max-width:900px){ .map-grid{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:560px){ .map-grid{grid-template-columns:1fr;} }
+
+  /* brand cards */
+  .brand-grid{display:grid; grid-template-columns:1fr; gap:1px; background:var(--steel-line); border:1px solid var(--steel-line); margin-top:8px;}
+  .brand-row{background:var(--paper-raised); padding:18px 20px; display:grid; grid-template-columns:160px 1fr; gap:20px; align-items:start;}
+  .brand-row .bname{font-family:"Big Shoulders Display"; font-weight:800; font-size:19px; letter-spacing:0.01em;}
+  .brand-row .btag{font-family:"IBM Plex Mono"; font-size:10.5px; color:var(--brass); text-transform:uppercase; letter-spacing:0.06em; margin-top:2px;}
+  .brand-row p{font-size:14.5px; color:var(--ink-soft); margin:6px 0 8px; max-width:60ch;}
+  @media (max-width:700px){ .brand-row{grid-template-columns:1fr;} }
+
+  footer{padding:48px 0 80px; color:var(--ink-soft); font-size:13.5px;}
+  footer .fmono{font-family:"IBM Plex Mono"; font-size:12px; letter-spacing:0.04em;}
+
+  ::selection{background:var(--blueprint); color:var(--paper);}
+</style>
+</head>
+<body>
+<div class="wrap" id="klodArticle">
+
+  <div class="hero">
+    <div class="kicker">
+      <svg class="tom" viewBox="0 0 34 34" role="img" aria-label="Symbol atlasu — kropla w zlewce">
+        <circle cx="17" cy="17" r="15.5" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35"/>
+        <path d="M17 8 C13 14 10 18 10 22 a7 7 0 0 0 14 0 C24 18 21 14 17 8 Z" fill="none" stroke="var(--blueprint)" stroke-width="1.6"/>
+      </svg>
+      <span>Biblioteka Techniczna Kenochem — Zeszyt 02</span>
+    </div>
+    <h1>Atlas chemii<br><em>obiektowej</em></h1>
+    <p class="lede">Jak dobrać środek do powierzchni i problemu, co znaczy pH na etykiecie, czym różnią się nasze linie produktowe — Eco Shine, Cid Lines, Clinex, Eilfix, Draco — i jak bezpiecznie je stosować i dawkować.</p>
+    <div class="meta">
+      <div>Rozdział <b>2 z serii</b> — poprzednio: dysze i złączki</div>
+      <div>Czas lektury <b>~20 min</b></div>
+      <div>Dla <b>sprzedaży, magazynu, obsługi klienta</b></div>
+    </div>
+
+    <nav class="toc" aria-label="Spis treści">
+      <a href="#slownik"><span class="n">01</span><span class="t">Słowniczek: pH, koncentrat, RTU</span></a>
+      <a href="#mapa"><span class="n">02</span><span class="t">Mapa zastosowań</span></a>
+      <a href="#ph"><span class="n">03</span><span class="t">Skala pH w praktyce</span></a>
+      <a href="#linie"><span class="n">04</span><span class="t">Linie i marki</span></a>
+      <a href="#dawkowanie"><span class="n">05</span><span class="t">Koncentraty i dawkowanie</span></a>
+      <a href="#bezpieczenstwo"><span class="n">06</span><span class="t">Bezpieczeństwo i diagnostyka</span></a>
+    </nav>
+  </div>
+
+  <!-- ================= 01 SŁOWNICZEK ================= -->
+  <section class="chapter" id="slownik">
+    <div class="chapter-head">
+      <div class="num">01</div>
+      <div>
+        <h2>Słowniczek: pH,<br>koncentrat, RTU</h2>
+        <div class="sub">Cztery pojęcia, które wyjaśniają większość etykiet w dziale chemii</div>
+      </div>
+    </div>
+    <div class="chapter-body">
+      <div class="prose">
+        <dl class="gloss">
+          <dt>pH</dt>
+          <dd>Skala 0–14 mówiąca, czy środek jest kwaśny (0–6), neutralny (ok. 7) czy zasadowy/alkaliczny (8–14). To pojedyncza liczba, która najbardziej wpływa na to, do czego środek się nadaje — patrz rozdział 03.</dd>
+          <dt>Koncentrat</dt>
+          <dd>Produkt rozcieńczany wodą przed użyciem, zwykle w proporcji podanej na etykiecie (np. „1:10" = 1 część środka na 10 części wody). Tańszy w przeliczeniu na litr gotowego roztworu, wymaga dozowania — patrz rozdział 05.</dd>
+          <dt>RTU (Ready To Use)</dt>
+          <dd>Produkt gotowy do użycia — bez rozcieńczania. Wygodniejszy, ale droższy na litr efektywnego mycia niż koncentrat o tym samym działaniu.</dd>
+          <dt>Piana aktywna</dt>
+          <dd>Koncentrat spieniany na urządzeniu piankującym, przyczepia się do pionowych powierzchni i wydłuża czas kontaktu środka z zabrudzeniem — częste w chemii przemysłowej/rolniczej (np. mycie hal, obór).</dd>
+          <dt>Karta charakterystyki (SDS/MSDS)</dt>
+          <dd>Dokument producenta z pełnym składem, zagrożeniami i pierwszą pomocą — obowiązkowy przy chemii profesjonalnej. Warto mieć link do niej przy produktach sprzedawanych firmom (research/HoReCa/rolnictwo).</dd>
+        </dl>
+      </div>
+      <div class="rail">
+        <div class="note"><b>Dlaczego to ważne w sprzedaży</b>Klient rzadko pyta wprost o pH — pyta „czy to nie zniszczy mi posadzki" albo „czy to bezpieczne dla dzieci". Odpowiedź w obu przypadkach zaczyna się od pH produktu.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 02 MAPA ZASTOSOWAŃ ================= -->
+  <section class="chapter" id="mapa">
+    <div class="chapter-head">
+      <div class="num">02</div>
+      <div>
+        <h2>Mapa zastosowań</h2>
+        <div class="sub">Sześć typowych problemów klienta i co realnie mamy na to w magazynie</div>
+      </div>
+    </div>
+
+    <div class="map-grid">
+      <div class="map-tile">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="14" width="18" height="6"/><path d="M3 14 L12 4 L21 14"/></svg>
+        <h4>Podłogi</h4>
+        <p>Codzienne mycie vs. maszynowe szorowanie — różne stężenia i pH.</p>
+        <div class="exs">
+          <span class="stock">Eco Shine ECO FLOOR 1L</span>
+          <span class="stock">Dolphin GRESOL 5L — maszynowe, pH 13</span>
+        </div>
+      </div>
+      <div class="map-tile">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 3 v6 a4 4 0 0 0 8 0 V3"/><path d="M12 13 v8"/><path d="M8 21 h8"/></svg>
+        <h4>Sanitariaty / WC</h4>
+        <p>Kamień i osady wymagają kwasu; codzienna dezynfekcja — neutralnie do lekko zasadowo.</p>
+        <div class="exs">
+          <span class="stock">Eco Shine SANIT SHINE 5L</span>
+          <span class="stock">Eco Shine ECO TOILET 750ml</span>
+        </div>
+      </div>
+      <div class="map-tile">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><path d="M12 7 v5 l3 3"/></svg>
+        <h4>Kuchnia / tłuszcz</h4>
+        <p>Tłuszcz rozpuszcza zasada, nie kwas — odwrotnie niż przy kamieniu.</p>
+        <div class="exs">
+          <span class="stock">Cleante INDUSTRIAL DEGREASER 5L</span>
+          <span class="stock">Draco GRILL &amp; OVEN 750ml</span>
+        </div>
+      </div>
+      <div class="map-tile">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="1"/><path d="M4 12 h16 M12 4 v16"/></svg>
+        <h4>Szyby i lustra</h4>
+        <p>Szybkie odparowanie = alkohol w składzie; bez smug na błyszczących powierzchniach.</p>
+        <div class="exs">
+          <span class="stock">Eilfix KRISTALL KLAR 5L — z alkoholem</span>
+          <span class="stock">Cartec GLASS CLEANER XL 1L</span>
+        </div>
+      </div>
+      <div class="map-tile">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3 a9 9 0 1 0 9 9"/><path d="M12 3 v9 l6 3"/></svg>
+        <h4>Dezynfekcja</h4>
+        <p>Codzienne mycie ≠ dezynfekcja — trzeba osobnego preparatu z czasem działania.</p>
+        <div class="exs">
+          <span class="stock">Cid Lines ALCO CID A 1L</span>
+          <span class="stock">Cid Lines DM CID 5L — chlorowy</span>
+        </div>
+      </div>
+      <div class="map-tile">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21 c-4-4-7-7.5-7-11 a7 7 0 0 1 14 0 c0 3.5-3 7-7 11 Z"/></svg>
+        <h4>Zapachy / odory</h4>
+        <p>Neutralizator ≠ odświeżacz — jeden usuwa źródło zapachu, drugi go maskuje.</p>
+        <div class="exs">
+          <span class="stock">AROMA Odourco 500ml — neutralizator</span>
+          <span class="stock">ECO SHINE Fresh Air 500ml — odświeżacz</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="note" style="margin-top:24px;"><b>Rozróżnienie warte zapamiętania</b>Neutralizator zapachu (np. Odourco) rozkłada cząsteczki odpowiedzialne za odór. Odświeżacz powietrza (np. linia Fresh Air) dokłada swój zapach na wierzch — nie usuwa problemu, tylko go maskuje. Przy uporczywym odorze (mocz, dym, pleśń) klientowi trzeba polecić neutralizator, nie odświeżacz.</div>
+  </section>
+
+  <!-- ================= 03 SKALA pH ================= -->
+  <section class="chapter" id="ph">
+    <div class="chapter-head">
+      <div class="num">03</div>
+      <div>
+        <h2>Skala pH<br>w praktyce</h2>
+        <div class="sub">Ta sama liczba, dwa zupełnie różne zastosowania</div>
+      </div>
+    </div>
+    <div class="chapter-body">
+      <div class="prose">
+        <p>Zasada jest prosta i działa niemal zawsze: <b>kamień i osady mineralne rozpuszcza kwas (pH niskie), tłuszcz i brud organiczny rozpuszcza zasada (pH wysokie)</b>. Środek neutralny (pH ok. 7) jest bezpieczny uniwersalnie, ale słabszy w obu tych zadaniach specjalistycznych.</p>
+        <p>To nie teoria — to realny rozrzut produktów, które mamy na magazynie:</p>
+      </div>
+    </div>
+
+    <div class="wrap" style="padding:0; margin-top:8px;">
+      <figure contenteditable="false">
+        <svg viewBox="0 0 900 220" role="img" aria-label="Skala pH od 0 do 14 z przykładami produktów z naszego katalogu rozmieszczonymi wg ich rzeczywistego pH">
+          <defs>
+            <linearGradient id="phGrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="var(--acid)"/>
+              <stop offset="50%" stop-color="var(--neutral)"/>
+              <stop offset="100%" stop-color="var(--alka)"/>
+            </linearGradient>
+          </defs>
+          <!-- bar -->
+          <rect x="40" y="60" width="820" height="14" fill="url(#phGrad)" opacity="0.85"/>
+          <!-- ticks 0..14 -->
+          <g font-family="IBM Plex Mono" font-size="10" fill="var(--ink-soft)">
+            <text x="40" y="94" text-anchor="middle">0</text>
+            <text x="333" y="94" text-anchor="middle">7</text>
+            <text x="860" y="94" text-anchor="middle">14</text>
+          </g>
+          <g font-family="IBM Plex Mono" font-size="9" fill="var(--ink-soft)" opacity="0.7">
+            <text x="99" y="52" text-anchor="middle">kwaśne</text>
+            <text x="800" y="52" text-anchor="middle">zasadowe</text>
+          </g>
+
+          <!-- markers: x = 40 + ph/14*820 -->
+          <!-- pH1 Entkalker -->
+          <g>
+            <line x1="98" y1="74" x2="98" y2="120" stroke="currentColor" stroke-width="1"/>
+            <circle cx="98" cy="74" r="4.5" fill="var(--acid)"/>
+            <text x="98" y="136" text-anchor="middle" font-family="Source Serif 4" font-size="12" fill="currentColor">Eilfix ENTKALKER</text>
+            <text x="98" y="151" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="var(--acid)">pH 1</text>
+          </g>
+          <!-- pH6 Floor Shine -->
+          <g>
+            <line x1="274" y1="74" x2="274" y2="176" stroke="currentColor" stroke-width="1"/>
+            <circle cx="274" cy="74" r="4.5" fill="var(--neutral)"/>
+            <text x="274" y="192" text-anchor="middle" font-family="Source Serif 4" font-size="12" fill="currentColor">Eco Shine FLOOR SHINE</text>
+            <text x="274" y="207" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="var(--neutral)">pH 6</text>
+          </g>
+          <!-- pH7 Uniwersal Clean -->
+          <g>
+            <line x1="333" y1="74" x2="333" y2="120" stroke="currentColor" stroke-width="1"/>
+            <circle cx="333" cy="74" r="4.5" fill="var(--neutral)"/>
+            <text x="333" y="136" text-anchor="middle" font-family="Source Serif 4" font-size="12" fill="currentColor">Dolphin UNIWERSAL</text>
+            <text x="333" y="151" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="var(--neutral)">pH 7</text>
+          </g>
+          <!-- pH9 Kristall Klar -->
+          <g>
+            <line x1="509" y1="74" x2="509" y2="176" stroke="currentColor" stroke-width="1"/>
+            <circle cx="509" cy="74" r="4.5" fill="var(--alka)"/>
+            <text x="509" y="192" text-anchor="middle" font-family="Source Serif 4" font-size="12" fill="currentColor">Eilfix KRISTALL KLAR</text>
+            <text x="509" y="207" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="var(--alka)">pH 9</text>
+          </g>
+          <!-- pH9.5 Wischpflege -->
+          <g>
+            <line x1="538" y1="74" x2="538" y2="120" stroke="currentColor" stroke-width="1"/>
+            <circle cx="538" cy="74" r="4.5" fill="var(--alka)"/>
+            <text x="538" y="136" text-anchor="middle" font-family="Source Serif 4" font-size="12" fill="currentColor">Eilfix WISCHPFLEGE</text>
+            <text x="538" y="151" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="var(--alka)">pH 9,5</text>
+          </g>
+          <!-- pH13 Gresol -->
+          <g>
+            <line x1="802" y1="74" x2="802" y2="176" stroke="currentColor" stroke-width="1"/>
+            <circle cx="802" cy="74" r="4.5" fill="var(--alka)"/>
+            <text x="802" y="192" text-anchor="middle" font-family="Source Serif 4" font-size="12" fill="currentColor">Dolphin GRESOL</text>
+            <text x="802" y="207" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="var(--alka)">pH 13</text>
+          </g>
+        </svg>
+        <figcaption><b>Rys. 1.</b> Realne pH sześciu produktów z naszego magazynu (dane z kart produktowych). Zwróć uwagę na rozstaw: odkamieniacz do ekspresów (pH 1) i mocny płyn do maszynowego mycia podłóg (pH 13) to niemal przeciwne krańce skali — i dlatego nigdy nie stosuje się ich zamiennie.</figcaption>
+      </figure>
+    </div>
+
+    <div class="chapter-body" style="margin-top:44px;">
+      <div class="prose">
+        <h3>Co z tego wynika przy doradzaniu</h3>
+        <ul>
+          <li><b>Osad wapienny, kamień, rdza</b> (czajniki, ekspresy, armatura) → środek kwaśny, pH 1–4. Przykład: Eilfix ENTKALKER.</li>
+          <li><b>Codzienne mycie, powierzchnie delikatne</b> → pH zbliżone do 7. Przykład: Dolphin UNIWERSAL CLEAN.</li>
+          <li><b>Tłuszcz, mocne zabrudzenia przemysłowe, podłogi maszynowe</b> → środek zasadowy, pH 9–13. Przykład: Dolphin GRESOL.</li>
+        </ul>
+      </div>
+      <div class="rail">
+        <div class="callout"><b>Uwaga na powierzchnie</b>Silnie zasadowe środki (pH &gt;11) mogą matowić niektóre lakiery, aluminium i kamień naturalny przy zbyt długim kontakcie. Silnie kwaśne (pH &lt;3) mogą trawić beton i marmur. Zawsze sprawdź na niewidocznym fragmencie przy nowym zastosowaniu.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 04 LINIE I MARKI ================= -->
+  <section class="chapter" id="linie">
+    <div class="chapter-head">
+      <div class="num">04</div>
+      <div>
+        <h2>Linie i marki</h2>
+        <div class="sub">Który dostawca do jakiego klienta</div>
+      </div>
+    </div>
+
+    <div class="brand-grid">
+      <div class="brand-row">
+        <div><div class="bname">Eco Shine</div><div class="btag">dom · biuro · uniwersalna</div></div>
+        <div>
+          <p>Najszerszy asortyment w katalogu (100+ pozycji) — od mycia podłóg po odświeżacze i płyny do zmywarek. Dobra pierwsza propozycja dla klienta bez sprecyzowanych wymagań, częściowo linia ekologiczna.</p>
+          <span class="stock">APC MAX — uniwersalny koncentrat czyszczący</span>
+        </div>
+      </div>
+      <div class="brand-row">
+        <div><div class="bname">Cid Lines</div><div class="btag">rolnictwo · weterynaria · przemysł spożywczy</div></div>
+        <div>
+          <p>Chemia do obór, kurników, wędzarni i narzędzi weterynaryjnych — mocne piany aktywne i preparaty chlorowe do CIP (mycie instalacji w miejscu). Dla klienta rolniczego/przemysłowego, nie do zwykłego domu czy biura.</p>
+          <span class="stock">BIO CID S — piana aktywna do mycia obory</span>
+        </div>
+      </div>
+      <div class="brand-row">
+        <div><div class="bname">Clinex</div><div class="btag">profesjonalny obiekt · HoReCa · biurowce</div></div>
+        <div>
+          <p>Typowa profesjonalna chemia obiektowa — mycie posadzek, szyb, udrażnianie kanalizacji, odplamiacze. Dobra propozycja dla firm sprzątających i zarządców obiektów.</p>
+          <span class="stock">Clinex DRILL 1L — udrażnianie kanalizacji</span>
+        </div>
+      </div>
+      <div class="brand-row">
+        <div><div class="bname">Eilfix</div><div class="btag">koncentraty niemieckiego standardu</div></div>
+        <div>
+          <p>Silne koncentraty z bardzo dokładnie podanym dawkowaniem na etykiecie (widzieliśmy 1:10 do 1:200 w tej samej linii) — dobre tam, gdzie liczy się precyzyjny koszt na litr roztworu, nie wygoda RTU.</p>
+          <span class="stock">WISCHPFLEGE — antypoślizgowy do podłóg, 1:200</span>
+        </div>
+      </div>
+      <div class="brand-row">
+        <div><div class="bname">Draco</div><div class="btag">techniczna · warsztat · odtłuszczanie</div></div>
+        <div>
+          <p>Bliżej chemii warsztatowej/przemysłowej niż porządkowej — odtłuszczacze, żele do mycia rąk, mycie kostki brukowej. Dobra propozycja dla klienta warsztatowego, nie stricte obiektowego.</p>
+          <span class="stock">Dr FOAM FLUX 23kg — alkaliczny płyn odtłuszczający</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 05 DAWKOWANIE ================= -->
+  <section class="chapter" id="dawkowanie">
+    <div class="chapter-head">
+      <div class="num">05</div>
+      <div>
+        <h2>Koncentraty<br>i dawkowanie</h2>
+        <div class="sub">Dlaczego 1:10 i 1:200 to zupełnie inna ekonomia</div>
+      </div>
+    </div>
+    <div class="chapter-body">
+      <div class="prose">
+        <p>Proporcja rozcieńczenia (np. „1:200") oznacza: 1 część koncentratu na 200 części wody. To nie przypadkowa liczba — silniejsze koncentraty (niższy współczynnik jak 1:10) są zwykle droższe za litr, ale starczają na znacznie mniej roztworu roboczego niż produkty projektowane do mocnego rozcieńczenia.</p>
+      </div>
+      <div class="rail">
+        <figure contenteditable="false">
+          <svg viewBox="0 0 420 190" role="img" aria-label="Porównanie dwóch proporcji rozcieńczenia: 1 do 10 oraz 1 do 200 na przykładzie realnych produktów">
+            <text x="100" y="24" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="currentColor">1 : 10</text>
+            <rect x="50" y="34" width="100" height="120" fill="none" stroke="currentColor" stroke-width="1.6"/>
+            <rect x="50" y="142" width="100" height="12" fill="var(--brass)"/>
+            <text x="100" y="172" text-anchor="middle" font-family="Source Serif 4" font-size="11" fill="var(--ink-soft)">Teppich Shampoo</text>
+
+            <text x="320" y="24" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="currentColor">1 : 200</text>
+            <rect x="270" y="34" width="100" height="120" fill="none" stroke="currentColor" stroke-width="1.6"/>
+            <rect x="270" y="153" width="100" height="1" fill="var(--brass)"/>
+            <text x="320" y="172" text-anchor="middle" font-family="Source Serif 4" font-size="11" fill="var(--ink-soft)">Wischpflege</text>
+          </svg>
+          <figcaption><b>Rys. 2.</b> Ten sam kanister koncentratu Wischpflege (1:200) daje ok. 20× więcej gotowego roztworu niż Teppich Shampoo (1:10) — mimo że oba to „koncentraty" na tej samej półce.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="wrap" style="padding:0; margin-top:36px;">
+      <div class="table-wrap">
+        <table class="example-table">
+          <thead><tr><th>Produkt</th><th>Proporcja</th><th>Zastosowanie</th></tr></thead>
+          <tbody>
+            <tr><td class="n">Eilfix ENTKALKER</td><td class="mono">1:5 – 1:20</td><td class="n">mocny odkamieniacz — mało wody, silne stężenie</td></tr>
+            <tr><td class="n">Eilfix TEPPICH SHAMPOO</td><td class="mono">1:10</td><td class="n">pranie dywanów</td></tr>
+            <tr><td class="n">Eco Shine SANIT SHINE</td><td class="mono">1:1 – 1:100</td><td class="n">elastyczne — mocniej na trudny kamień, słabiej na bieżąco</td></tr>
+            <tr><td class="n">Dolphin GRESOL</td><td class="mono">50–150 ml / 10 l</td><td class="n">maszynowe mycie podłóg, dawkowanie wg twardości brudu</td></tr>
+            <tr><td class="n">Eilfix WISCHPFLEGE</td><td class="mono">1:200</td><td class="n">bieżąca pielęgnacja podłóg — bardzo ekonomiczne</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note" style="margin-top:18px;"><b>Praktyczna wskazówka dla sprzedaży</b>Klient patrzący tylko na cenę za litr koncentratu może przepłacać — policz razem z nim koszt <i>litra gotowego roztworu</i> (cena ÷ proporcja rozcieńczenia). Produkt droższy w kanistrze bywa tańszy w użyciu.</div>
+    </div>
+  </section>
+
+  <!-- ================= 06 BEZPIECZEŃSTWO + DIAGNOSTYKA ================= -->
+  <section class="chapter" id="bezpieczenstwo" style="border-bottom:none;">
+    <div class="chapter-head">
+      <div class="num">06</div>
+      <div>
+        <h2>Bezpieczeństwo<br>i diagnostyka</h2>
+        <div class="sub">Jedna zasada, której nie można złamać — i szybka ściągawka</div>
+      </div>
+    </div>
+
+    <div class="chapter-body">
+      <div class="prose">
+        <p>Najważniejsza zasada w całej chemii obiektowej: <b>nigdy nie mieszać środków chlorowych z kwaśnymi</b> (np. odkamieniaczem). Reakcja uwalnia gaz chlorowy — toksyczny nawet w małych ilościach, w zamkniętym pomieszczeniu (łazienka, magazyn) może być groźny dla zdrowia.</p>
+      </div>
+      <div class="rail">
+        <figure contenteditable="false">
+          <svg viewBox="0 0 420 170" role="img" aria-label="Ostrzeżenie: mieszanie środka chlorowego z kwaśnym uwalnia toksyczny gaz">
+            <circle cx="90" cy="70" r="26" fill="none" stroke="var(--alka)" stroke-width="2"/>
+            <text x="90" y="76" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="var(--alka)">CHLOR</text>
+            <circle cx="330" cy="70" r="26" fill="none" stroke="var(--acid)" stroke-width="2"/>
+            <text x="330" y="76" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="var(--acid)">KWAS</text>
+            <line x1="116" y1="70" x2="185" y2="70" stroke="currentColor" stroke-width="1.4" marker-end="url(#a1)"/>
+            <line x1="304" y1="70" x2="235" y2="70" stroke="currentColor" stroke-width="1.4" marker-end="url(#a2)"/>
+            <path d="M210 40 L225 70 L195 70 Z" fill="var(--caution)"/>
+            <text x="210" y="64" text-anchor="middle" font-family="IBM Plex Mono" font-size="13" font-weight="700" fill="var(--paper)">!</text>
+            <text x="210" y="120" text-anchor="middle" font-family="Source Serif 4" font-size="13" fill="var(--caution)">toksyczny gaz chlorowy</text>
+            <defs>
+              <marker id="a1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><polygon points="0,0 7,3 0,6" fill="currentColor"/></marker>
+              <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><polygon points="0,0 7,3 0,6" fill="currentColor"/></marker>
+            </defs>
+          </svg>
+          <figcaption><b>Rys. 3.</b> Dotyczy np. Cid Lines CHLOROFRESH / DM CID zmieszanych z dowolnym odkamieniaczem (Eilfix ENTKALKER, Eco Shine SANIT SHINE). Nigdy nie łączyć — nawet resztek w tym samym wiadrze.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="wrap" style="padding:0; margin-top:44px;">
+      <div class="table-wrap">
+        <table class="example-table">
+          <thead><tr><th>Objaw / potrzeba klienta</th><th>Co sprawdzić</th><th>Co zaproponować</th></tr></thead>
+          <tbody>
+            <tr><td class="n"><b>„Nic nie usuwa kamienia z prysznica"</b></td><td class="n">czy dotychczas używany środek jest w ogóle kwaśny</td><td class="n">Eilfix ENTKALKER albo Eco Shine SANIT SHINE (mocniej rozcieńczone)</td></tr>
+            <tr><td class="n"><b>„Tłuste plamy zostają po myciu"</b></td><td class="n">czy środek jest zasadowy, nie neutralny</td><td class="n">Cleante INDUSTRIAL DEGREASER / Draco GRILL &amp; OVEN</td></tr>
+            <tr><td class="n"><b>„Zapach wraca mimo sprzątania"</b></td><td class="n">odświeżacz zamiast neutralizatora</td><td class="n">AROMA Odourco — neutralizator, nie maskujący zapach</td></tr>
+            <tr><td class="n"><b>„Podłoga śliska po myciu"</b></td><td class="n">brak formuły antypoślizgowej, za mocne stężenie</td><td class="n">Eilfix WISCHPFLEGE — dedykowana formuła 1:200</td></tr>
+            <tr><td class="n"><b>„Potrzebna dezynfekcja, nie tylko mycie"</b></td><td class="n">czy obecny produkt w ogóle ma działanie biobójcze</td><td class="n">Cid Lines ALCO CID A — dedykowany preparat do dezynfekcji</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="fmono">Kenochem — Biblioteka Techniczna · Zeszyt 02 z serii · Zeszyt 01: dysze i złączki · Zeszyt 03: aromamarketing · Zeszyt 04: chemia profesjonalna do detailingu (w przygotowaniu)</div>
+  </footer>
+
+</div>
+<style>
+  #klodToolbar{
+    position:fixed; top:14px; right:14px; z-index:9999;
+    display:flex; align-items:center; gap:8px;
+    background:var(--paper-raised); border:1px solid var(--steel-line);
+    border-radius:10px; padding:6px 8px; box-shadow:0 2px 10px rgba(0,0,0,0.15);
+    font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:12px;
+  }
+  #klodToolbar button{
+    font-family:inherit; font-size:12px; cursor:pointer; border:1px solid var(--steel-line);
+    background:var(--paper); color:var(--ink); border-radius:6px; padding:5px 9px;
+    line-height:1;
+  }
+  #klodToolbar button:hover{background:var(--code-bg);}
+  #klodToolbar button.primary{background:var(--blueprint); color:var(--paper); border-color:var(--blueprint);}
+  #klodToolbar .klod-status{color:var(--ink-soft); max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  #klodArticle[contenteditable="true"]{
+    outline:2px dashed var(--blueprint); outline-offset:6px; border-radius:4px;
+  }
+  #klodToast{
+    position:fixed; bottom:18px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:var(--paper); font-family:"IBM Plex Mono", monospace;
+    font-size:12.5px; padding:9px 16px; border-radius:8px; z-index:9999;
+    opacity:0; transition:opacity .25s, transform .25s; pointer-events:none;
+  }
+  #klodToast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+</style>
+<div id="klodToolbar"></div>
+<div id="klodToast"></div>
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const SUPABASE_URL = 'https://fgkkvbniyjysgqcjuxpl.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZna2t2Ym5peWp5c2dxY2p1eHBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxNTE0MjgsImV4cCI6MjEwMDcyNzQyOH0.HiiaVnv_G5QR8WQ1YggA_iPRO5I7mJa0nd0C8K9KOHQ';
+const SLUG = 'zeszyt-02-chemia-obiektowa';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const article = document.getElementById('klodArticle');
+const toolbar = document.getElementById('klodToolbar');
+const toast = document.getElementById('klodToast');
+
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2400);
+}
+
+/* ---------- motyw: własny wybór na tej stronie > wybór w katalogu > system ---------- */
+const THEME_PAGE_KEY = 'katalog-theme-override:' + SLUG;
+const THEME_APP_KEY = 'katalog-theme';
+
+function currentTheme() {
+  try {
+    return localStorage.getItem(THEME_PAGE_KEY) || localStorage.getItem(THEME_APP_KEY) || null;
+  } catch { return null; }
+}
+function applyTheme(t) {
+  if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+  else document.documentElement.removeAttribute('data-theme');
+}
+applyTheme(currentTheme());
+
+const themeBtn = document.createElement('button');
+themeBtn.type = 'button';
+themeBtn.title = 'Przełącz jasny / ciemny motyw (tej strony)';
+function syncThemeBtnLabel() {
+  const t = document.documentElement.getAttribute('data-theme');
+  themeBtn.textContent = t === 'dark' ? '☀️ Jasny' : t === 'light' ? '🌙 Ciemny' : '🌓 Motyw';
+}
+syncThemeBtnLabel();
+themeBtn.addEventListener('click', () => {
+  const t = document.documentElement.getAttribute('data-theme');
+  const next = t === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+  try { localStorage.setItem(THEME_PAGE_KEY, next); } catch {}
+  syncThemeBtnLabel();
+});
+toolbar.appendChild(themeBtn);
+
+/* ---------- ładowanie zapisanej treści (jeśli jest w bazie) ---------- */
+let originalHtml = article.innerHTML;
+try {
+  const { data } = await supabase
+    .from('technical_library_articles')
+    .select('html, updated_at')
+    .eq('slug', SLUG)
+    .maybeSingle();
+  if (data && data.html) {
+    article.innerHTML = data.html;
+    originalHtml = data.html;
+  }
+} catch (e) {
+  console.warn('Biblioteka: nie udało się wczytać zapisanej wersji', e);
+}
+
+/* ---------- edycja (tylko zalogowani w katalogu) ---------- */
+const statusEl = document.createElement('span');
+statusEl.className = 'klod-status';
+toolbar.appendChild(statusEl);
+
+const { data: { session } } = await supabase.auth.getSession();
+
+if (!session) {
+  statusEl.textContent = 'Gość — zaloguj się w katalogu, aby edytować';
+} else {
+  let editing = false;
+  const editBtn = document.createElement('button');
+  editBtn.type = 'button';
+  editBtn.textContent = '✏️ Edytuj';
+  const saveBtn = document.createElement('button');
+  saveBtn.type = 'button';
+  saveBtn.textContent = '💾 Zapisz';
+  saveBtn.className = 'primary';
+  saveBtn.style.display = 'none';
+  const cancelBtn = document.createElement('button');
+  cancelBtn.type = 'button';
+  cancelBtn.textContent = 'Anuluj';
+  cancelBtn.style.display = 'none';
+
+  function enterEdit() {
+    editing = true;
+    article.setAttribute('contenteditable', 'true');
+    editBtn.style.display = 'none';
+    saveBtn.style.display = '';
+    cancelBtn.style.display = '';
+    statusEl.textContent = 'Tryb edycji — klikaj i pisz w tekście';
+  }
+  function exitEdit() {
+    editing = false;
+    article.removeAttribute('contenteditable');
+    editBtn.style.display = '';
+    saveBtn.style.display = 'none';
+    cancelBtn.style.display = 'none';
+  }
+
+  editBtn.addEventListener('click', enterEdit);
+  cancelBtn.addEventListener('click', () => {
+    article.innerHTML = originalHtml;
+    exitEdit();
+    statusEl.textContent = '';
+    showToast('Cofnięto zmiany');
+  });
+  saveBtn.addEventListener('click', async () => {
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Zapisuję…';
+    const html = article.innerHTML;
+    const { error } = await supabase.from('technical_library_articles').upsert({
+      slug: SLUG,
+      html,
+      updated_at: new Date().toISOString(),
+      updated_by: session.user.email || session.user.id,
+    });
+    saveBtn.disabled = false;
+    saveBtn.textContent = '💾 Zapisz';
+    if (error) {
+      console.error(error);
+      showToast('Błąd zapisu — spróbuj ponownie');
+      return;
+    }
+    originalHtml = html;
+    exitEdit();
+    statusEl.textContent = '';
+    showToast('Zapisano zmiany');
+  });
+
+  toolbar.appendChild(editBtn);
+  toolbar.appendChild(saveBtn);
+  toolbar.appendChild(cancelBtn);
+}
+</script>
+</body>
+</html>

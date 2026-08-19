@@ -1,0 +1,72 @@
+KENOCHEM KATALOG - aktualizacja sync WAPRO, 2026-08-19
+
+CEL
+Ta paczka naprawia import nowych pozycji z WAPRO do katalogu.
+Po sync skrypt sam tworzy aktualny plik:
+  C:\katalog-sync\wapro-mag-catalog.json
+i automatycznie dodaje do Supabase nowe SKU, ktorych jeszcze nie ma w katalogu.
+
+PLIKI DO WRZUCENIA NA SERWER
+Skopiuj do C:\katalog-sync i nadpisz:
+  sync-wapro-stock-server.ps1
+  install-katalog-stock-schedule.ps1
+
+Nie nadpisuj:
+  katalog-sync.env
+
+MINIMALNY ENV
+W pliku C:\katalog-sync\katalog-sync.env musza byc:
+  SUPABASE_URL=...
+  SUPABASE_SERVICE_ROLE_KEY=...
+
+Opcjonalnie, jesli SQL WAPRO nie jest na localhost:
+  WAPRO_SQL_SERVER=NAZWA_SERWERA_LUB_INSTANCJI
+  WAPRO_SQL_DATABASE=WAPRO
+
+Auto-import nowych SKU jest wlaczony domyslnie.
+Zeby go wylaczyc:
+  WAPRO_AUTO_IMPORT=0
+
+KOMENDY NA SERWERZE
+1. Otworz PowerShell jako administrator.
+
+2. Zrob backup obecnych plikow:
+  cd C:\katalog-sync
+  copy .\sync-wapro-stock-server.ps1 .\sync-wapro-stock-server.ps1.bak-20260819
+  copy .\install-katalog-stock-schedule.ps1 .\install-katalog-stock-schedule.ps1.bak-20260819
+
+3. Skopiuj pliki z tej paczki do C:\katalog-sync.
+
+4. Test konkretnego SKU:
+  powershell -NoProfile -ExecutionPolicy Bypass -File C:\katalog-sync\sync-wapro-stock-server.ps1 -DiagnoseSku DET000119
+
+Jesli SKU istnieje w WAPRO, powinienes zobaczyc stock/ceny.
+Jesli pojawi sie blad polaczenia SQL, popraw WAPRO_SQL_SERVER / WAPRO_SQL_DATABASE w katalog-sync.env.
+Jesli pojawi sie "brak w mapie WAPRO", to DET000119 nie wystepuje jako INDEKS_KATALOGOWY w dbo.ARTYKUL.
+
+5. Pelny sync:
+  powershell -NoProfile -ExecutionPolicy Bypass -File C:\katalog-sync\sync-wapro-stock-server.ps1
+
+Po pelnym sync sprawdz log:
+  notepad C:\katalog-sync\sync.log
+
+Szukaj w logu:
+  WAPRO katalog Mag JSON
+  WAPRO auto-import
+  nowe SKU z Mag
+
+6. Raport produktow z katalogu bez dopasowania WAPRO:
+  C:\katalog-sync\sync-unmatched-products.csv
+  C:\katalog-sync\sync-unmatched-products.json
+
+To sa pozycje juz istniejace w katalogu, ktorych SKU nie pasuje do WAPRO.
+Typowo sa to stare SKU z BaseLinkera typu BL...
+
+7. Po udanym tescie mozna odswiezyc harmonogram:
+  powershell -NoProfile -ExecutionPolicy Bypass -File C:\katalog-sync\install-katalog-stock-schedule.ps1
+
+CO POWINNO SIE STAC PO NAPRAWIE
+- DET000119, jesli istnieje w WAPRO jako INDEKS_KATALOGOWY, pojawi sie w katalogu po pelnym sync.
+- Nowe SKU z WAPRO beda dodawane automatycznie jako produkty-szkielety.
+- Nie trzeba recznie kopiowac starego wapro-mag-catalog.json z komputera.
+- Przy ostrzezeniach sync dostaniesz konkretny CSV z lista problematycznych pozycji.

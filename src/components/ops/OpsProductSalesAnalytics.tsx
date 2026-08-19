@@ -43,6 +43,7 @@ import {
   buildProductSalesMetrics,
   CATALOG_PRODUCT_URL,
   fetchProductsForSalesAnalytics,
+  invalidateSalesAnalyticsCache,
   isSalesExcludedService,
   normalizeSkuToken,
   parseSkuSearchTokens,
@@ -239,11 +240,13 @@ export function OpsProductSalesAnalytics({ onBack }: { onBack: () => void }) {
   const [xyzFilter, setXyzFilter] = useState<XyzFilter>('all');
   const [insightsOpen, setInsightsOpen] = useState(false);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (opts?: { force?: boolean }) => {
     setLoadError(null);
     try {
       const catalogFilter = catalog === 'all' ? undefined : catalog;
-      const list = await fetchProductsForSalesAnalytics(catalogFilter, period);
+      const list = await fetchProductsForSalesAnalytics(catalogFilter, period, {
+        force: opts?.force,
+      });
       setProducts(list.map((p) => buildProductSalesMetrics(p, period)));
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : 'Błąd ładowania produktów');
@@ -592,7 +595,8 @@ export function OpsProductSalesAnalytics({ onBack }: { onBack: () => void }) {
         showToast(done?.message ?? 'Błąd sync na serwerze Mag.', 'error');
         return;
       }
-      await loadData();
+      invalidateSalesAnalyticsCache();
+      await loadData({ force: true });
       showToast('Dane sprzedaży zaktualizowane.', 'ok');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Błąd odświeżania', 'error');

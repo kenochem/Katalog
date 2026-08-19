@@ -1,0 +1,22 @@
+-- Eksport producenta (kategoria WAPRO Mag = marka) + SKU.
+-- Kenochem: ARTYKUL.ID_KATEGORII = KATEGORIA_ARTYKULU.ID_KATEGORII
+-- GROUP BY — jeden wiersz na SKU (ARTYKUL ma wiele wierszy / magazyny).
+--
+-- Test TOP 5:
+--   sqlcmd -S DESKTOP-PANA1RQ -d WAPRO -E -W -Q "SET NOCOUNT ON; SELECT TOP 5 sku, manufacturer FROM (SELECT LTRIM(RTRIM(a.INDEKS_KATALOGOWY)) AS sku, LTRIM(RTRIM(MAX(k.NAZWA))) AS manufacturer FROM dbo.ARTYKUL a LEFT JOIN dbo.KATEGORIA_ARTYKULU k ON k.ID_KATEGORII = a.ID_KATEGORII WHERE a.INDEKS_KATALOGOWY IS NOT NULL GROUP BY LTRIM(RTRIM(a.INDEKS_KATALOGOWY))) x ORDER BY sku"
+--
+-- Eksport CSV:
+--   sqlcmd -S DESKTOP-PANA1RQ -d WAPRO -E -W -h-1 -s";" -f 65001 -i C:\katalog-sync\wapro-manufacturer-export.sql -o C:\katalog-sync\wapro-manufacturers.csv
+
+SET NOCOUNT ON;
+
+SELECT
+  LTRIM(RTRIM(a.INDEKS_KATALOGOWY)) AS sku,
+  LTRIM(RTRIM(MAX(k.NAZWA))) AS wapro_manufacturer
+FROM dbo.ARTYKUL a WITH (NOLOCK)
+LEFT JOIN dbo.KATEGORIA_ARTYKULU k WITH (NOLOCK)
+  ON k.ID_KATEGORII = a.ID_KATEGORII
+WHERE a.INDEKS_KATALOGOWY IS NOT NULL
+  AND LTRIM(RTRIM(a.INDEKS_KATALOGOWY)) <> ''
+GROUP BY LTRIM(RTRIM(a.INDEKS_KATALOGOWY))
+ORDER BY sku;

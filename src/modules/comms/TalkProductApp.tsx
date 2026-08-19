@@ -14,6 +14,7 @@ import { useTheme } from '../../lib/theme';
 import { InstallAppHint } from '../../components/InstallAppHint';
 import { roleCan } from '../../lib/roles';
 import { ContextHelp } from '../../components/ContextHelp';
+import { TALK_SUSPENDED } from '../../app/moduleRegistry';
 
 /** Produkt Talk — komunikator (Messenger-like), ten sam pasek co katalog. */
 export function TalkProductApp() {
@@ -65,6 +66,18 @@ export function TalkProductApp() {
 
   if (mode === 'gate') {
     return <LoginGate />;
+  }
+
+  if (TALK_SUSPENDED) {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-slate-50 px-6 text-center dark:bg-slate-950">
+        <p className="text-lg font-semibold text-slate-800 dark:text-slate-100">Talk tymczasowo wyłączony</p>
+        <p className="max-w-md text-sm text-slate-600 dark:text-slate-400">
+          Moduł czatu jest zawieszony, żeby ograniczyć transfer danych z Supabase. Katalog i Operacje działają
+          normalnie w Suite.
+        </p>
+      </div>
+    );
   }
 
   const inChat = view !== 'admin';

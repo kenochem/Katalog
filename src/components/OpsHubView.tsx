@@ -56,6 +56,7 @@ import { ContextHelp } from './ContextHelp';
 import { inferContextHelpId } from '../lib/contextHelp';
 import { OpsProductSalesAnalytics } from './ops/OpsProductSalesAnalytics';
 import { OpsSonaxAnalytics, SonaxWorkspaceTile } from './ops/OpsSonaxAnalytics';
+import { OpsCustomersPanel } from './ops/OpsCustomersPanel';
 
 type OpsToolId =
   | 'hub'
@@ -68,6 +69,7 @@ type OpsToolId =
   | 'marketplace'
   | 'analytics-lab'
   | 'product-sales'
+  | 'customers'
   | 'workspace-builder'
   | 'stat-builder'
   | 'cost-model'
@@ -208,6 +210,7 @@ const TOOL_IDS = new Set<OpsToolId>([
   'marketplace',
   'analytics-lab',
   'product-sales',
+  'customers',
   'workspace-builder',
   'stat-builder',
   'cost-model',
@@ -823,6 +826,10 @@ export function OpsHubView() {
     return <OpsProductSalesAnalytics onBack={() => setTool('hub')} />;
   }
 
+  if (tool === 'customers') {
+    return <OpsCustomersPanel onBack={() => setTool('hub')} />;
+  }
+
   if (tool === 'workspace-builder') {
     return (
       <WorkspaceBuilderPanel
@@ -1092,6 +1099,12 @@ function FinanceOperationsHome({
               title="Analiza sprzedazy produktow"
               subtitle="Rankingi Mag WAPRO: najlepiej, najgorzej, netto, wolumen"
               onClick={() => onOpenTool('product-sales')}
+            />
+            <ToolCard
+              icon={<Building2 className="h-5 w-5" />}
+              title="Baza klientow WAPRO"
+              subtitle="Kontrahenci, NIP, adresy, miejscowosci, limity i warunki platnosci"
+              onClick={() => onOpenTool('customers')}
             />
             <ToolCard
               icon={<BarChart3 className="h-5 w-5" />}
