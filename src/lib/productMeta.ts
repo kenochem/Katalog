@@ -17,6 +17,13 @@ export interface ProductMeta {
   previousSku?: string;
   /** Ścieżka kategorii ze sklepu WP (pełne drzewo). */
   shopCategoryPath?: string;
+  /** ID liścia kategorii ze sklepu WP. */
+  shopCategoryWpId?: number;
+  /** Źródło ostatniego automatycznego przypisania kategorii. */
+  categoryAssignedBy?: 'shop-sku' | 'heuristic' | string;
+  categoryAssignedAt?: string;
+  categoryAssignmentConfidence?: number;
+  categoryAssignmentReason?: string;
   /** Import opisów z BaseLinkera bez konieczności wożenia pełnego HTML-a na liście. */
   baselinkerDescriptionImportedAt?: string;
   baselinkerDescriptionChars?: number;
@@ -43,6 +50,11 @@ export const PRODUCT_META_LABELS: Record<
     | 'knowledgeBotLast'
     | 'parameters'
     | 'shopCategoryPath'
+    | 'shopCategoryWpId'
+    | 'categoryAssignedBy'
+    | 'categoryAssignedAt'
+    | 'categoryAssignmentConfidence'
+    | 'categoryAssignmentReason'
     | 'baselinkerDescriptionImportedAt'
     | 'baselinkerDescriptionChars'
     | 'baselinkerDescriptionFull'
@@ -94,6 +106,9 @@ export function normalizeProductMeta(raw: unknown): ProductMeta | undefined {
   str('shortDescription');
   str('internalNote');
   str('shopCategoryPath');
+  str('categoryAssignedBy');
+  str('categoryAssignedAt');
+  str('categoryAssignmentReason');
   str('baselinkerDescriptionImportedAt');
   str('waproImportedAt');
   str('catalogHiddenReason');
@@ -103,6 +118,16 @@ export function normalizeProductMeta(raw: unknown): ProductMeta | undefined {
   num('heightCm');
   num('depthCm');
   num('vatRate');
+  {
+    const v = o.shopCategoryWpId;
+    const n = typeof v === 'number' ? v : typeof v === 'string' ? parseInt(v, 10) : NaN;
+    if (Number.isFinite(n)) meta.shopCategoryWpId = n;
+  }
+  {
+    const v = o.categoryAssignmentConfidence;
+    const n = typeof v === 'number' ? v : typeof v === 'string' ? parseFloat(v.replace(',', '.')) : NaN;
+    if (Number.isFinite(n)) meta.categoryAssignmentConfidence = n;
+  }
   {
     const v = o.baselinkerDescriptionChars;
     const n = typeof v === 'number' ? v : typeof v === 'string' ? parseFloat(v.replace(',', '.')) : NaN;

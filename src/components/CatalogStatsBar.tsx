@@ -1,4 +1,5 @@
 import { Download } from 'lucide-react';
+import { useMemo } from 'react';
 import type { Product } from '../types';
 import {
   computeCatalogStats,
@@ -21,7 +22,7 @@ export function CatalogStatsBar({
   catalogLabel,
   exportLabel = 'Eksportuj widok (CSV)',
 }: CatalogStatsBarProps) {
-  const stats = computeCatalogStats(catalogProducts);
+  const stats = useMemo(() => computeCatalogStats(catalogProducts), [catalogProducts]);
 
   function handleExport() {
     if (filtered.length === 0) {

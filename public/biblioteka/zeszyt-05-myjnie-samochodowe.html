@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<script>(function(){try{var t=localStorage.getItem("katalog-theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Atlas myjni samochodowych — rodzaje myjni, jak działa myjnia samoobsługowa i portalowa, dobór chemii Orion krok po kroku, szczotki i sprzęt. Biblioteka Techniczna Kenochem, Zeszyt 5.">
+<title>Atlas Myjni Samochodowych</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --paper:#E7E6DE; --paper-raised:#F1F0E9; --ink:#1E2220; --ink-soft:#4B4F49;
+    --blueprint:#3B6E8F; --blueprint-soft:#6C93A9;
+    --brass:#8F5E19; --brass-soft:#B98A3D;
+    --steel:#86867C; --steel-line:#C9C8BC;
+    --caution:#9E3226; --caution-soft:#F3DEDA;
+    --code-bg:#DEDCD1;
+    --accent:#1E7A6E; --accent-soft:#4C9A8E;
+    --shadow: 0 1px 0 rgba(30,34,32,0.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#14181A; --paper-raised:#1B2022; --ink:#E9E7DC; --ink-soft:#B7B6AA;
+      --blueprint:#6FA8C9; --blueprint-soft:#4E7E96;
+      --brass:#D6A056; --brass-soft:#A9793C;
+      --steel:#787A72; --steel-line:#33372F;
+      --caution:#E0796B; --caution-soft:#3A2320;
+      --code-bg:#20251F;
+      --accent:#4FBBA9; --accent-soft:#3A8577;
+      --shadow: 0 1px 0 rgba(0,0,0,0.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#14181A; --paper-raised:#1B2022; --ink:#E9E7DC; --ink-soft:#B7B6AA;
+    --blueprint:#6FA8C9; --blueprint-soft:#4E7E96;
+    --brass:#D6A056; --brass-soft:#A9793C;
+    --steel:#787A72; --steel-line:#33372F;
+    --caution:#E0796B; --caution-soft:#3A2320;
+    --code-bg:#20251F;
+    --accent:#4FBBA9; --accent-soft:#3A8577;
+    --shadow: 0 1px 0 rgba(0,0,0,0.4);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:"Source Serif 4", Georgia, "Times New Roman", serif;
+    font-size:17px; line-height:1.65;
+    margin:0; padding:0;
+  }
+  .wrap{max-width:1180px; margin:0 auto; padding:0 clamp(20px,4vw,64px);}
+
+  h1,h2,h3{font-family:"Big Shoulders Display","Arial Narrow",sans-serif; font-weight:800; text-transform:uppercase; letter-spacing:0.01em; text-wrap:balance; margin:0; color:var(--ink);}
+  .mono{font-family:"IBM Plex Mono", ui-monospace, Menlo, monospace;}
+  a{color:var(--blueprint);}
+  p{max-width:66ch;}
+  table{font-variant-numeric:tabular-nums;}
+
+  .hero{padding:clamp(56px,9vw,104px) 0 clamp(40px,6vw,64px); border-bottom:1px solid var(--steel-line); position:relative;}
+  .hero .kicker{display:flex; align-items:center; gap:14px; margin-bottom:22px;}
+  .hero .kicker .tom{width:34px; height:34px; flex:none;}
+  .hero .kicker span{font-family:"IBM Plex Mono"; font-size:13px; letter-spacing:0.14em; text-transform:uppercase; color:var(--ink-soft);}
+  .hero h1{font-size:clamp(38px,6vw,74px); line-height:0.98;}
+  .hero h1 em{font-style:normal; color:var(--accent);}
+  .hero .lede{font-size:19px; color:var(--ink-soft); max-width:58ch; margin-top:22px;}
+  .hero .meta{display:flex; gap:28px; flex-wrap:wrap; margin-top:34px; font-family:"IBM Plex Mono"; font-size:12.5px; color:var(--ink-soft); letter-spacing:0.03em;}
+  .hero .meta b{color:var(--ink); font-weight:600;}
+
+  .toc{display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--steel-line); border:1px solid var(--steel-line); margin-top:40px;}
+  .toc a{background:var(--paper-raised); color:var(--ink); text-decoration:none; padding:16px 14px; display:flex; flex-direction:column; gap:6px;}
+  .toc a:hover{background:var(--code-bg);}
+  .toc .n{font-family:"IBM Plex Mono"; font-size:12px; color:var(--accent);}
+  .toc .t{font-size:13.5px; font-weight:600; line-height:1.25;}
+  @media (max-width:980px){ .toc{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:560px){ .toc{grid-template-columns:1fr;} }
+
+  .stock{display:inline-flex; align-items:center; gap:6px; font-family:"IBM Plex Mono"; font-size:11px; padding:2px 8px; border:1px solid var(--steel-line); background:var(--code-bg); color:var(--ink-soft); white-space:nowrap;}
+  .stock .sku{color:var(--accent); font-weight:600;}
+
+  section.chapter{padding:clamp(56px,8vw,96px) 0; border-bottom:1px solid var(--steel-line); scroll-margin-top:24px;}
+  section.chapter:last-of-type{border-bottom:none;}
+  .chapter-head{display:grid; grid-template-columns:120px 1fr; gap:28px; margin-bottom:40px; align-items:start;}
+  .chapter-head .num{font-family:"Big Shoulders Display"; font-weight:800; font-size:clamp(64px,8vw,96px); line-height:0.8; color:var(--accent-soft);}
+  .chapter-head h2{font-size:clamp(26px,3.4vw,38px); line-height:1.05; max-width:24ch;}
+  .chapter-head .sub{font-family:"Source Serif 4"; font-style:italic; color:var(--ink-soft); font-size:16px; margin-top:10px; font-weight:400;}
+  .chapter-body{display:grid; grid-template-columns:minmax(0,66ch) 1fr; gap:48px; align-items:start;}
+  @media (max-width:900px){ .chapter-body{grid-template-columns:1fr;} .chapter-head{grid-template-columns:64px 1fr;} }
+
+  .chapter-body > .prose > * + *{margin-top:1.1em;}
+  .chapter-body > .prose h3{font-size:16px; margin-top:2em; letter-spacing:0.02em;}
+  .chapter-body > .prose ul, .chapter-body > .prose ol{padding-left:1.3em; max-width:64ch;}
+  .chapter-body > .prose li + li{margin-top:0.5em;}
+
+  .rail{position:sticky; top:20px; display:flex; flex-direction:column; gap:20px;}
+
+  figure{margin:0; border:1px solid var(--steel-line); background:var(--paper-raised); box-shadow:var(--shadow);}
+  figure svg{display:block; width:100%; height:auto; padding:18px 16px 6px;}
+  figcaption{font-family:"IBM Plex Mono"; font-size:12px; color:var(--ink-soft); padding:10px 16px 16px; border-top:1px dashed var(--steel-line); line-height:1.5;}
+  figcaption b{color:var(--ink); font-weight:600;}
+
+  .table-wrap{overflow-x:auto; border:1px solid var(--steel-line); background:var(--paper-raised);}
+  table{width:100%; border-collapse:collapse; font-size:14.5px; min-width:520px;}
+  th,td{padding:11px 14px; text-align:left; border-bottom:1px solid var(--steel-line); vertical-align:top;}
+  thead th{font-family:"IBM Plex Mono"; font-size:11.5px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-soft); font-weight:600; border-bottom:2px solid var(--steel-line);}
+  tbody tr:last-child td{border-bottom:none;}
+  td .code{font-family:"IBM Plex Mono"; font-size:13px; background:var(--code-bg); padding:1px 6px;}
+  .example-table td.n{font-family:"Source Serif 4"; font-size:14px;}
+
+  .callout{border-left:3px solid var(--caution); background:var(--caution-soft); color:var(--ink); padding:14px 18px; font-size:15px; max-width:64ch;}
+  .callout b{color:var(--caution); font-family:"IBM Plex Mono"; font-size:11.5px; text-transform:uppercase; letter-spacing:0.08em; display:block; margin-bottom:6px;}
+  .note{border-left:3px solid var(--accent); background:var(--paper-raised); padding:14px 18px; font-size:15px; max-width:64ch; color:var(--ink-soft);}
+  .note b{color:var(--accent); font-family:"IBM Plex Mono"; font-size:11.5px; text-transform:uppercase; letter-spacing:0.08em; display:block; margin-bottom:6px;}
+
+  .gloss{display:grid; grid-template-columns:1fr; gap:1px; background:var(--steel-line); border:1px solid var(--steel-line);}
+  .gloss dt{background:var(--paper-raised); padding:14px 16px 2px; font-family:"IBM Plex Mono"; font-weight:600; font-size:14px; color:var(--accent);}
+  .gloss dd{background:var(--paper-raised); margin:0; padding:2px 16px 14px; font-size:15px; color:var(--ink-soft);}
+
+  .map-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--steel-line); border:1px solid var(--steel-line); margin-top:8px;}
+  .map-tile{background:var(--paper-raised); padding:20px 18px;}
+  .map-tile .ic{width:30px; height:30px; color:var(--accent); margin-bottom:10px;}
+  .map-tile h4{font-family:"Big Shoulders Display"; font-weight:700; font-size:16px; text-transform:uppercase; margin:0 0 8px;}
+  .map-tile p{font-size:13.5px; color:var(--ink-soft); max-width:none; margin:0 0 10px;}
+  .map-tile .exs{display:flex; flex-direction:column; gap:5px;}
+  @media (max-width:900px){ .map-grid{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:560px){ .map-grid{grid-template-columns:1fr;} }
+
+  .steps{display:flex; flex-direction:column; gap:1px; background:var(--steel-line); border:1px solid var(--steel-line); margin-top:8px;}
+  .step{background:var(--paper-raised); padding:16px 18px; display:grid; grid-template-columns:34px 1fr; gap:14px; align-items:start;}
+  .step .sn{font-family:"Big Shoulders Display"; font-weight:800; font-size:22px; color:var(--accent);}
+  .step h4{font-family:"Big Shoulders Display"; font-weight:700; font-size:15px; text-transform:uppercase; margin:0 0 4px;}
+  .step p{font-size:14px; color:var(--ink-soft); margin:0; max-width:none;}
+
+  footer{padding:48px 0 80px; color:var(--ink-soft); font-size:13.5px;}
+  footer .fmono{font-family:"IBM Plex Mono"; font-size:12px; letter-spacing:0.04em;}
+  .sources{margin-top:14px; padding-left:1.2em; font-size:12.5px;}
+  .sources li{margin-top:4px;}
+
+  ::selection{background:var(--accent); color:var(--paper);}
+</style>
+</head>
+<body>
+<div class="wrap" id="klodArticle">
+
+  <div class="hero">
+    <div class="kicker">
+      <svg class="tom" viewBox="0 0 34 34" role="img" aria-label="Symbol atlasu — sylwetka samochodu pod strumieniem wody">
+        <circle cx="17" cy="17" r="15.5" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35"/>
+        <path d="M8 21 q1-6 5-6 h8 q4 0 5 6 Z" fill="none" stroke="var(--accent)" stroke-width="1.6"/>
+        <circle cx="12" cy="22" r="1.6" fill="var(--accent)"/>
+        <circle cx="22" cy="22" r="1.6" fill="var(--accent)"/>
+        <line x1="12" y1="9" x2="10" y2="13" stroke="var(--accent)" stroke-width="1.2"/>
+        <line x1="17" y1="8" x2="16" y2="13" stroke="var(--accent)" stroke-width="1.2"/>
+        <line x1="22" y1="9" x2="23" y2="13" stroke="var(--accent)" stroke-width="1.2"/>
+      </svg>
+      <span>Biblioteka Techniczna Kenochem — Zeszyt 05</span>
+    </div>
+    <h1>Atlas <em>myjni</em> samochodowych</h1>
+    <p class="lede">Czym różni się myjnia portalowa od tunelowej i bezdotykowej, jak naprawdę działa stanowisko samoobsługowe krok po kroku i którym produktem z naszego katalogu obsłużyć każdy etap programu mycia.</p>
+    <div class="meta">
+      <div>Rozdział <b>5 z serii</b> — poprzednio: sprzęt do aplikacji chemii</div>
+      <div>Czas lektury <b>~22 min</b></div>
+      <div>Dla <b>doradztwa B2B, obsługi klientów prowadzących myjnie</b></div>
+    </div>
+
+    <nav class="toc" aria-label="Spis treści">
+      <a href="#rodzaje"><span class="n">01</span><span class="t">Rodzaje myjni</span></a>
+      <a href="#stanowisko"><span class="n">02</span><span class="t">Jak działa stanowisko self-service</span></a>
+      <a href="#program"><span class="n">03</span><span class="t">Program krok po kroku</span></a>
+      <a href="#chemia"><span class="n">04</span><span class="t">Chemia z katalogu na każdy etap</span></a>
+      <a href="#portalowe"><span class="n">05</span><span class="t">Myjnie portalowe i tunelowe</span></a>
+      <a href="#szczotki"><span class="n">06</span><span class="t">Szczotki i sprzęt na stanowisku</span></a>
+      <a href="#specjalne"><span class="n">07</span><span class="t">Felgi, owady, silnik — etapy specjalne</span></a>
+      <a href="#dobor"><span class="n">08</span><span class="t">Jak doradzać właścicielowi myjni</span></a>
+    </nav>
+  </div>
+
+  <!-- ================= 01 RODZAJE ================= -->
+  <section class="chapter" id="rodzaje">
+    <div class="chapter-head">
+      <div class="num">01</div>
+      <div>
+        <h2>Rodzaje myjni<br>samochodowych</h2>
+        <div class="sub">Cztery modele biznesowe, cztery różne wymagania wobec chemii</div>
+      </div>
+    </div>
+    <div class="chapter-body">
+      <div class="prose">
+        <p>Zanim doradzimy klientowi chemię czy sprzęt, trzeba wiedzieć, jakim typem myjni zarządza — bo to determinuje wymaganą pienistość, agresywność środka i sposób dozowania. Cztery podstawowe modele:</p>
+        <dl class="gloss">
+          <dt>Myjnia samoobsługowa (self-service)</dt>
+          <dd>Kilka niezależnych stanowisk z myjką wysokociśnieniową uruchamianą na żeton/monetę/kartę. Klient sam wybiera program (piana, mycie, wosk) i myje ręcznie lancą. Największy segment odbiorców Kenochem w tej kategorii.</dd>
+          <dt>Myjnia portalowa (bramowa)</dt>
+          <dd>Auto stoi nieruchomo, a portal ze szczotkami i dyszami przejeżdża wzdłuż nadwozia tam i z powrotem. Kompaktowa (mały teren), może pracować w trybie obsługowym lub samoobsługowym.</dd>
+          <dt>Myjnia tunelowa</dt>
+          <dd>Pełna automatyzacja — auto jedzie na taśmociągu przez tunel, w którym kolejno pracują urządzenia myjące. Najwyższa przepustowość (nawet kilkadziesiąt aut/h), typowa dla stacji paliw i dużych lokalizacji.</dd>
+          <dt>Myjnia bezdotykowa</dt>
+          <dd>Mycie wyłącznie strumieniem wody i chemii pod ciśnieniem z ręcznej lancy — bez szczotek. Może być osobnym stanowiskiem self-service albo jednym z programów w myjni portalowej.</dd>
+        </dl>
+      </div>
+      <div class="rail">
+        <div class="note"><b>Dlaczego to ważne</b>Portal i tunel pracują ze szczotkami — potrzebują chemii o kontrolowanej, niższej pienistości (piana w szczotce utrudnia mechaniczne czyszczenie). Self-service i bezdotykowa działają wyłącznie ciśnieniem i chemią — tu wysoka, gęsta piana jest pożądana, bo to ona wykonuje pracę zamiast szczotki.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 02 STANOWISKO SELF-SERVICE ================= -->
+  <section class="chapter" id="stanowisko">
+    <div class="chapter-head">
+      <div class="num">02</div>
+      <div>
+        <h2>Jak działa<br>stanowisko self-service</h2>
+        <div class="sub">Myjka + proporcjonalny dozownik chemii + kilka zaworów programowych</div>
+      </div>
+    </div>
+    <div class="chapter-body">
+      <div class="prose">
+        <p>Sercem stanowiska jest myjka wysokociśnieniowa (patrz Zeszyt 01) połączona z <b>dozownikiem proporcjonalnym</b> — urządzeniem, które w locie miesza koncentrat chemii z wodą w ustalonej proporcji (typowo od ok. 1–3% dla piany po kilkanaście % dla wosku). Klient wrzuca żeton/monetę lub płaci kartą, uruchamiając licznik czasu; obracając pokrętło programów, przełącza, który zawór chemii jest aktywny — reszta czasu to czysta woda pod ciśnieniem.</p>
+        <p>Koncentraty (Orion sprzedawany w kanistrach 5/20/22 kg) trzymane są w osobnym pomieszczeniu technicznym lub szafce przy stanowisku, skąd wężykami trafiają do dozownika każdego boksu.</p>
+      </div>
+      <div class="rail">
+        <figure contenteditable="false">
+          <svg viewBox="0 0 420 220" role="img" aria-label="Schemat stanowiska samoobsługowego: kanister koncentratu podłączony do dozownika proporcjonalnego, który miesza go z wodą pod ciśnieniem z myjki, sterowany pokrętłem programów">
+            <rect x="20" y="130" width="46" height="60" fill="var(--code-bg)" stroke="currentColor" stroke-width="1.4"/>
+            <text x="43" y="200" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="var(--ink-soft)">koncentrat</text>
+            <line x1="66" y1="150" x2="120" y2="150" stroke="var(--accent)" stroke-width="2"/>
+            <rect x="120" y="120" width="60" height="60" fill="none" stroke="currentColor" stroke-width="1.6"/>
+            <text x="150" y="115" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="var(--ink-soft)">dozownik proporcjonalny</text>
+            <line x1="120" y1="100" x2="150" y2="120" stroke="currentColor" stroke-width="2"/>
+            <text x="105" y="90" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="var(--ink-soft)">woda pod ciśnieniem</text>
+            <line x1="180" y1="150" x2="230" y2="150" stroke="currentColor" stroke-width="2.4"/>
+            <circle cx="255" cy="150" r="22" fill="none" stroke="currentColor" stroke-width="1.6"/>
+            <text x="255" y="154" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="var(--ink-soft)">pokrętło</text>
+            <text x="255" y="188" text-anchor="middle" font-family="IBM Plex Mono" font-size="8" fill="var(--accent)">1 piana · 2 mycie · 3 płukanie · 4 wosk</text>
+            <line x1="277" y1="150" x2="330" y2="150" stroke="var(--accent)" stroke-width="3"/>
+            <text x="360" y="145" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="var(--ink-soft)">lanca</text>
+          </svg>
+          <figcaption><b>Rys. 1.</b> Ten sam obwód wody, ta sama myjka — pokrętło programów jedynie przełącza, który zawór chemii dokłada się do strumienia.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 03 PROGRAM KROK PO KROKU ================= -->
+  <section class="chapter" id="program">
+    <div class="chapter-head">
+      <div class="num">03</div>
+      <div>
+        <h2>Program<br>krok po kroku</h2>
+        <div class="sub">Pominięcie jednego etapu psuje efekt całego mycia</div>
+      </div>
+    </div>
+    <div class="chapter-body">
+      <div class="prose">
+        <p>Typowy program self-service ma pięć–sześć etapów, w ustalonej kolejności. Każdy etap ma inny cel chemiczny i inne wymagane ciśnienie — dlatego dozowniki mają osobne, skalibrowane proporcje dla każdego programu, a nie jeden uniwersalny.</p>
+      </div>
+    </div>
+    <div class="steps">
+      <div class="step"><div class="sn">1</div><div><h4>Aktywna piana</h4><p>Woda + pieniący środek zasadowy, niskie ciśnienie natrysku. Gęsta piana pokrywa auto i rozpuszcza brud, tłuszcz i resztki owadów, zanim cokolwiek zetrze się mechanicznie.</p></div></div>
+      <div class="step"><div class="sn">2</div><div><h4>Mycie zasadnicze</h4><p>Wyższe ciśnienie (ok. 80–100 bar), silniejszy detergent. To etap, który faktycznie usuwa zabrudzenie ze strumieniem — piana z kroku 1 tylko je poluzowała.</p></div></div>
+      <div class="step"><div class="sn">3</div><div><h4>Płukanie</h4><p>Czysta woda pod pełnym ciśnieniem — zdejmuje pianę i chemię ze wszystkich zakamarków, listew i szczelin felg. Pominięcie tego kroku zostawia smugi i osad.</p></div></div>
+      <div class="step"><div class="sn">4</div><div><h4>Woskowanie</h4><p>Woda + wosk polimerowy, niższe ciśnienie (ok. 50 bar). Wosk tworzy powłokę ułatwiającą spływanie wody i utrudniającą osiadanie nowego brudu.</p></div></div>
+      <div class="step"><div class="sn">5</div><div><h4>Nabłyszczanie wodą demineralizowaną</h4><p>Finałowe płukanie wodą pozbawioną minerałów (osmoza/dejonizacja) — zapobiega zaciekom i plamom po wyschnięciu, których zwykła woda kranowa by zostawiła.</p></div></div>
+    </div>
+    <div class="wrap" style="padding:0; margin-top:24px;">
+      <div class="callout"><b>Częsty błąd klientów</b>Pominięcie płukania między pianą a woskiem — wosk nałożony na niezmytą pianę/detergent nie związuje się prawidłowo z lakierem i szybko spłukuje się przy pierwszym deszczu.</div>
+    </div>
+  </section>
+
+  <!-- ================= 04 CHEMIA Z KATALOGU ================= -->
+  <section class="chapter" id="chemia">
+    <div class="chapter-head">
+      <div class="num">04</div>
+      <div>
+        <h2>Chemia z katalogu<br>na każdy etap</h2>
+        <div class="sub">Linia Orion — flagowa chemia myjniowa Kenochem</div>
+      </div>
+    </div>
+    <div class="chapter-body">
+      <div class="prose">
+        <p>Linia <b>Orion</b> to nasza podstawowa oferta dla myjni — pokrywa wszystkie etapy programu, w opakowaniach dopasowanych do zużycia (od 1 kg próbnie po 20–22 kg dla pracujących stanowisk). Do bezdotykowego mycia alternatywą jest linia <b>Easy-Wash</b> (Diamond Wash, Super Active Wash), a do trudnych, tłustych zabrudzeń — <b>Cartec Royal Forte</b>.</p>
+      </div>
+    </div>
+    <div class="wrap" style="padding:0; margin-top:8px;">
+      <div class="table-wrap">
+        <table class="example-table">
+          <thead><tr><th>Etap programu</th><th>Produkt</th><th>Charakter</th></tr></thead>
+          <tbody>
+            <tr><td class="n">Aktywna piana</td><td class="n"><span class="stock">Orion V-80</span> <span class="stock">Orion ACTIV FOAM 20L</span> <span class="stock">Eco SELF CLEANER 22kg</span></td><td class="n">zasadowa, wysokopienna</td></tr>
+            <tr><td class="n">Piana zapachowa premium</td><td class="n"><span class="stock">Eco SELF FOAM Cherry</span> <span class="stock">MAXIMUS HD</span> <span class="stock">OPTIMA Magic Foam</span></td><td class="n">jak wyżej + kompozycja zapachowa</td></tr>
+            <tr><td class="n">Mycie zasadnicze / portal / tunel</td><td class="n"><span class="stock">Orion ACTIVE Shampoo 20L</span></td><td class="n">kontrolowana pienistość do pracy ze szczotką</td></tr>
+            <tr><td class="n">Mycie bezdotykowe</td><td class="n"><span class="stock">Orion FORMOL 20L</span> <span class="stock">Orion NOX Clean 5L</span> <span class="stock">Easy-Wash Diamond Wash</span></td><td class="n">silny detergent, bez udziału szczotki</td></tr>
+            <tr><td class="n">Ręczne mycie (wiadro/szampon)</td><td class="n"><span class="stock">Orion SHAMPOO Intensive</span></td><td class="n">łagodny, do mycia gąbką/rękawicą</td></tr>
+            <tr><td class="n">Woskowanie / osuszanie</td><td class="n"><span class="stock">Orion POLIMER WAX 20L</span> <span class="stock">POLIMER DRY 20L</span> <span class="stock">Green Wax Polimer</span> <span class="stock">Polimer Blue Wax</span></td><td class="n">polimerowe, ułatwiają spływ wody</td></tr>
+            <tr><td class="n">Piana polerująca</td><td class="n"><span class="stock">OPTIMA FOAM POLITUR 20L</span></td><td class="n">dodatkowy połysk przed woskiem</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note" style="margin-top:18px;"><b>Zasada doboru opakowania</b>Małe stanowisko / test nowego produktu → 1–5 kg. Pracująca myjnia z ciągłym zużyciem → 20–22 kg, bo cena za litr spada, a wymiana kanistra jest rzadsza.</div>
+    </div>
+  </section>
+
+  <!-- ================= 05 PORTALOWE I TUNELOWE ================= -->
+  <section class="chapter" id="portalowe">
+    <div class="chapter-head">
+      <div class="num">05</div>
+      <div>
+        <h2>Myjnie portalowe<br>i tunelowe</h2>
+        <div class="sub">Ta sama chemia, inny nośnik mechaniczny — szczotka zamiast samej wody</div>
+      </div>
+    </div>
+    <div class="chapter-body">
+      <div class="prose">
+        <p>W portalu (który przejeżdża wzdłuż stojącego auta) i w tunelu (auto jedzie na taśmie) pracę wykonuje głównie <b>szczotka</b> — obrotowy element z włosia, który mechanicznie ściera zabrudzenie, podczas gdy dysze na tej samej ramie dozują wodę i chemię. Włosie w profesjonalnych szczotkach myjniowych to zwykle <b>PE (polietylen)</b> — miękkie i odporne na niskie temperatury, dobrane tak, by skutecznie czyścić, nie rysując lakieru.</p>
+        <p>Dlatego chemia do portalu/tunelu (<span class="stock">Orion ACTIV FOAM 20L</span>, <span class="stock">ACTIVE Shampoo 20L</span> — oba opisane wprost jako "na myjnię portalową i tunelową") ma inaczej wyważoną pienistość niż chemia do czysto ręcznego self-service: nadmiar piany w szczotce obrotowej pogarsza kontakt włosia z powierzchnią, zamiast pomagać.</p>
+      </div>
+      <div class="rail">
+        <div class="note"><b>Przepustowość</b>Portal: jedno auto na raz, ok. 5–10 min cyklu. Tunel: auto za autem na taśmie, nawet kilkadziesiąt aut/h — stąd dużo większe zużycie chemii i sens kupowania jej w największych opakowaniach.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 06 SZCZOTKI I SPRZĘT ================= -->
+  <section class="chapter" id="szczotki">
+    <div class="chapter-head">
+      <div class="num">06</div>
+      <div>
+        <h2>Szczotki i sprzęt<br>na stanowisku</h2>
+        <div class="sub">Poza chemią — to, co klient trzyma w rękach</div>
+      </div>
+    </div>
+    <div class="chapter-body">
+      <div class="prose">
+        <p>Na stanowisku self-service klient korzysta z pistoletu obrotowego na lancy (patrz Zeszyt 01, rozdz. 03 — piśmiennictwo o gwintach M22 i wariantach zimowych Weep) oraz — coraz częściej — ze szczotki z przepływem wody, którą dokańcza mycie ręcznie po etapie piany. W katalogu mamy kilka wariantów szerokości i typu włosia:</p>
+        <ul>
+          <li><b>60 mm</b> — do felg, wnęk, trudno dostępnych miejsc.</li>
+          <li><b>90 mm</b> — do dużych płaskich powierzchni (dach, maska, boki).</li>
+          <li>Włosie <b>naturalne</b> — delikatniejsze, mniejsze ryzyko rys na lakierze.</li>
+          <li>Włosie <b>MTM / EASY</b> — warianty producenckie o różnej twardości i żywotności.</li>
+        </ul>
+      </div>
+      <div class="rail">
+        <div class="note"><b>W katalogu</b><span class="stock">Szczotka do myjni 60mm biała</span> · <span class="stock">S 90mm komplet</span> · <span class="stock">MTM 60/90mm</span> · <span class="stock">EASY 90mm</span> — wszystkie z przepływem wody przez rączkę.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 07 ETAPY SPECJALNE ================= -->
+  <section class="chapter" id="specjalne">
+    <div class="chapter-head">
+      <div class="num">07</div>
+      <div>
+        <h2>Felgi, owady, silnik<br>— etapy specjalne</h2>
+        <div class="sub">Dodatkowe programy, które podnoszą przychód ze stanowiska</div>
+      </div>
+    </div>
+    <div class="chapter-body">
+      <div class="prose">
+        <p>Poza podstawowym programem wiele stanowisk oferuje osobne, płatne dodatkowo etapy — to dobra okazja do cross-sellu przy doradzaniu klientowi asortymentu:</p>
+        <dl class="gloss">
+          <dt>Czyszczenie felg — "Krwawa felga"</dt>
+          <dd><span class="stock">Orion RED WHEEL</span> to kwasowy preparat zmieniający kolor na czerwony w kontakcie z pyłem żelaznym z okładzin hamulcowych — wizualny dowód skuteczności, chętnie kupowany osobno. Uwaga: kwasowy, wymaga sprzętu z uszczelnieniami odpornymi chemicznie (patrz Zeszyt 04, rozdz. 04).</dd>
+          <dt>Usuwanie owadów</dt>
+          <dd><span class="stock">Orion Anti INSECT 5/22kg</span> — osobny, mocniejszy preparat do zaschniętych resztek owadów na pasie przednim i lusterkach, nakładany przed główną pianą.</dd>
+          <dt>Mycie silnika</dt>
+          <dd><span class="stock">Orion MOTO CLEANER 5/22kg</span> — mocny odtłuszczacz do komory silnika, osobne stanowisko lub usługa dodatkowa (wymaga ostrożności przy elementach elektrycznych).</dd>
+          <dt>Mech i glony (flota, rolnictwo)</dt>
+          <dd><span class="stock">Orion Moss&amp;Algae cleaner 5L</span> — do pojazdów stojących długo na zewnątrz (przyczepy, maszyny rolnicze), inny profil zabrudzenia niż bieżący kurz drogowy.</dd>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 08 DORADZTWO ================= -->
+  <section class="chapter" id="dobor" style="border-bottom:none;">
+    <div class="chapter-head">
+      <div class="num">08</div>
+      <div>
+        <h2>Jak doradzać<br>właścicielowi myjni</h2>
+        <div class="sub">Pytania kontrolne przed zaproponowaniem zestawu</div>
+      </div>
+    </div>
+
+    <div class="map-grid">
+      <div class="map-tile">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="7" width="18" height="12" rx="2"/><path d="M7 7 V5 h10 v2"/></svg>
+        <h4>Jaki typ myjni</h4>
+        <p>Self-service, portal, tunel czy bezdotykowa — decyduje o wymaganej pienistości chemii (rozdz. 05).</p>
+      </div>
+      <div class="map-tile">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7 v5 l4 2"/></svg>
+        <h4>Ile stanowisk / jaki ruch</h4>
+        <p>Niski ruch → mniejsze opakowania, częstsza rotacja produktów sezonowych. Wysoki ruch → kanistry 20–22 kg.</p>
+      </div>
+      <div class="map-tile">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2 C9 6 6 10 6 14 a6 6 0 0 0 12 0 c0-4-3-8-6-12 Z"/></svg>
+        <h4>Twardość wody</h4>
+        <p>Bez stacji uzdatniania/osmozy — częstsze osady i plamy po wyschnięciu, warto to zaznaczyć przy programie nabłyszczania.</p>
+      </div>
+      <div class="map-tile">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 12 h8 M12 8 v8"/></svg>
+        <h4>Programy dodatkowe</h4>
+        <p>Felgi, owady, silnik — czy stanowisko już je ma, czy to szansa na dosprzedaż osobnych produktów.</p>
+      </div>
+      <div class="map-tile">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="3" width="14" height="18" rx="2"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
+        <h4>Segment pojazdów</h4>
+        <p>Osobowe, flota, ciężarowe (LKW) — inne linie i większe opakowania (<span class="stock">TRUCK CLEANER 4100</span>, <span class="stock">MULTITRUCK Frozen</span>).</p>
+      </div>
+      <div class="map-tile">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M12 3 v3 M12 18 v3 M3 12 h3 M18 12 h3"/></svg>
+        <h4>Sprzęt zużywalny</h4>
+        <p>Szczotki, lance, dysze — dopytaj o stan bieżący, to regularny, powtarzalny zakup (Zeszyt 01 i 04).</p>
+      </div>
+    </div>
+
+    <div class="wrap" style="padding:0; margin-top:28px;">
+      <div class="note"><b>Punkt wyjścia do rozmowy</b>"Jaki macie program mycia i ile etapów?" — odpowiedź od razu pokazuje, czy brakuje któregoś z pięciu podstawowych kroków z rozdz. 03, co jest naturalnym wstępem do zaproponowania brakującego produktu.</div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="fmono">Kenochem — Biblioteka Techniczna · Zeszyt 05 z serii</div>
+    <ul class="sources">
+      <li><a href="https://www.carfax.eu/pl/blog/myjnia-automatyczna-czy-samoobslugowa" target="_blank" rel="noopener">CARFAX — Myjnia automatyczna czy samoobsługowa</a></li>
+      <li><a href="https://washpartner.pl/blog/jakie-s%C4%85-rodzaje-myjni-samochodowych-i-czym-si%C4%99-r%C3%B3%C5%BCni%C4%85.html" target="_blank" rel="noopener">Washpartner — Rodzaje myjni samochodowych</a></li>
+      <li><a href="https://chemvision.pl/jak-myc-auto-w-myjni-bezdotykowej-kolejnosc-programow-bledy-i-porady/" target="_blank" rel="noopener">Chemvision — Kolejność programów mycia bezdotykowego</a></li>
+      <li><a href="https://myjnia-rybnik.pl/programy-myjni/" target="_blank" rel="noopener">Myjnia Rybnik — Opis programów myjni</a></li>
+      <li><a href="https://www.szczotkidozamiatarek.pl/jakie-szczotki-techniczne-znajda-zastosowanie-w-myjniach-samochodowych/" target="_blank" rel="noopener">Materiały szczotek myjniowych — włosie PE</a></li>
+      <li><a href="https://www.karcher.com/pl/professional/know-how-dla-profesjonalistow/myjnia-samochodowa-automatyczna-doskonaly-sposob-na-rozwoj-oferty-stacji-paliw-lub-serwisu-samochodowego.html" target="_blank" rel="noopener">Kärcher — Myjnia automatyczna, know-how</a></li>
+    </ul>
+  </footer>
+
+</div>
+<style>
+  #klodToolbar{
+    position:fixed; top:14px; right:14px; z-index:9999;
+    display:flex; align-items:center; gap:8px;
+    background:var(--paper-raised); border:1px solid var(--steel-line);
+    border-radius:10px; padding:6px 8px; box-shadow:0 2px 10px rgba(0,0,0,0.15);
+    font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:12px;
+  }
+  #klodToolbar button{
+    font-family:inherit; font-size:12px; cursor:pointer; border:1px solid var(--steel-line);
+    background:var(--paper); color:var(--ink); border-radius:6px; padding:5px 9px;
+    line-height:1;
+  }
+  #klodToolbar button:hover{background:var(--code-bg);}
+  #klodToolbar button.primary{background:var(--blueprint); color:var(--paper); border-color:var(--blueprint);}
+  #klodToolbar .klod-status{color:var(--ink-soft); max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  #klodArticle[contenteditable="true"]{
+    outline:2px dashed var(--blueprint); outline-offset:6px; border-radius:4px;
+  }
+  #klodToast{
+    position:fixed; bottom:18px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:var(--paper); font-family:"IBM Plex Mono", monospace;
+    font-size:12.5px; padding:9px 16px; border-radius:8px; z-index:9999;
+    opacity:0; transition:opacity .25s, transform .25s; pointer-events:none;
+  }
+  #klodToast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+</style>
+<div id="klodToolbar"></div>
+<div id="klodToast"></div>
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const SUPABASE_URL = 'https://fgkkvbniyjysgqcjuxpl.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZna2t2Ym5peWp5c2dxY2p1eHBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxNTE0MjgsImV4cCI6MjEwMDcyNzQyOH0.HiiaVnv_G5QR8WQ1YggA_iPRO5I7mJa0nd0C8K9KOHQ';
+const SLUG = 'zeszyt-05-myjnie-samochodowe';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const article = document.getElementById('klodArticle');
+const toolbar = document.getElementById('klodToolbar');
+const toast = document.getElementById('klodToast');
+
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2400);
+}
+
+/* ---------- motyw: własny wybór na tej stronie > wybór w katalogu > system ---------- */
+const THEME_PAGE_KEY = 'katalog-theme-override:' + SLUG;
+const THEME_APP_KEY = 'katalog-theme';
+
+function currentTheme() {
+  try {
+    return localStorage.getItem(THEME_PAGE_KEY) || localStorage.getItem(THEME_APP_KEY) || null;
+  } catch { return null; }
+}
+function applyTheme(t) {
+  if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+  else document.documentElement.removeAttribute('data-theme');
+}
+applyTheme(currentTheme());
+
+const themeBtn = document.createElement('button');
+themeBtn.type = 'button';
+themeBtn.title = 'Przełącz jasny / ciemny motyw (tej strony)';
+function syncThemeBtnLabel() {
+  const t = document.documentElement.getAttribute('data-theme');
+  themeBtn.textContent = t === 'dark' ? '☀️ Jasny' : t === 'light' ? '🌙 Ciemny' : '🌓 Motyw';
+}
+syncThemeBtnLabel();
+themeBtn.addEventListener('click', () => {
+  const t = document.documentElement.getAttribute('data-theme');
+  const next = t === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+  try { localStorage.setItem(THEME_PAGE_KEY, next); } catch {}
+  syncThemeBtnLabel();
+});
+toolbar.appendChild(themeBtn);
+
+/* ---------- ładowanie zapisanej treści (jeśli jest w bazie) ---------- */
+let originalHtml = article.innerHTML;
+try {
+  const { data } = await supabase
+    .from('technical_library_articles')
+    .select('html, updated_at')
+    .eq('slug', SLUG)
+    .maybeSingle();
+  if (data && data.html) {
+    article.innerHTML = data.html;
+    originalHtml = data.html;
+  }
+} catch (e) {
+  console.warn('Biblioteka: nie udało się wczytać zapisanej wersji', e);
+}
+
+/* ---------- edycja (tylko zalogowani w katalogu) ---------- */
+const statusEl = document.createElement('span');
+statusEl.className = 'klod-status';
+toolbar.appendChild(statusEl);
+
+const { data: { session } } = await supabase.auth.getSession();
+
+if (!session) {
+  statusEl.textContent = 'Gość — zaloguj się w katalogu, aby edytować';
+} else {
+  let editing = false;
+  const editBtn = document.createElement('button');
+  editBtn.type = 'button';
+  editBtn.textContent = '✏️ Edytuj';
+  const saveBtn = document.createElement('button');
+  saveBtn.type = 'button';
+  saveBtn.textContent = '💾 Zapisz';
+  saveBtn.className = 'primary';
+  saveBtn.style.display = 'none';
+  const cancelBtn = document.createElement('button');
+  cancelBtn.type = 'button';
+  cancelBtn.textContent = 'Anuluj';
+  cancelBtn.style.display = 'none';
+
+  function enterEdit() {
+    editing = true;
+    article.setAttribute('contenteditable', 'true');
+    editBtn.style.display = 'none';
+    saveBtn.style.display = '';
+    cancelBtn.style.display = '';
+    statusEl.textContent = 'Tryb edycji — klikaj i pisz w tekście';
+  }
+  function exitEdit() {
+    editing = false;
+    article.removeAttribute('contenteditable');
+    editBtn.style.display = '';
+    saveBtn.style.display = 'none';
+    cancelBtn.style.display = 'none';
+  }
+
+  editBtn.addEventListener('click', enterEdit);
+  cancelBtn.addEventListener('click', () => {
+    article.innerHTML = originalHtml;
+    exitEdit();
+    statusEl.textContent = '';
+    showToast('Cofnięto zmiany');
+  });
+  saveBtn.addEventListener('click', async () => {
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Zapisuję…';
+    const html = article.innerHTML;
+    const { error } = await supabase.from('technical_library_articles').upsert({
+      slug: SLUG,
+      html,
+      updated_at: new Date().toISOString(),
+      updated_by: session.user.email || session.user.id,
+    });
+    saveBtn.disabled = false;
+    saveBtn.textContent = '💾 Zapisz';
+    if (error) {
+      console.error(error);
+      showToast('Błąd zapisu — spróbuj ponownie');
+      return;
+    }
+    originalHtml = html;
+    exitEdit();
+    statusEl.textContent = '';
+    showToast('Zapisano zmiany');
+  });
+
+  toolbar.appendChild(editBtn);
+  toolbar.appendChild(saveBtn);
+  toolbar.appendChild(cancelBtn);
+}
+</script>
+</body>
+</html>

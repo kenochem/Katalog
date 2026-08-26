@@ -71,6 +71,36 @@ export function isSalesExcludedFromSum(
   return false;
 }
 
+/** Wewnętrzne towary firmowe (palety, obudowy serwisowe, komplety naprawcze) —
+ * nie są przeznaczone do sprzedaży, więc brak obrotu to nie „martwy stock”. */
+const INTERNAL_NON_SALE_NAME_PATTERNS = [
+  /^paleta\b/i,
+  /\bobudowa przednia\b/i,
+  /\bkomplet\w*\s+zaw/i,
+];
+
+/** Zgłoszony ręcznie błędny/zdublowany wpis (nie realny towar do sprzedaży). */
+const DEAD_STOCK_KNOWN_ERROR_SKUS = new Set(['BL152657474']);
+
+export function isInternalNonSaleItem(product: Product): boolean {
+  const sku = product.sku?.trim().toUpperCase();
+  if (sku && DEAD_STOCK_KNOWN_ERROR_SKUS.has(sku)) return true;
+  const hay = normalizeHaystack(product);
+  return INTERNAL_NON_SALE_NAME_PATTERNS.some((re) => re.test(hay));
+}
+
+/** Pełne wykluczenie dla widoku „martwy stock”: KPI-wykluczenia + kwiatki + towary wewnętrzne. */
+export function isDeadStockExcluded(
+  product: Product,
+  userExcluded?: Set<string>,
+): boolean {
+  return (
+    isSalesExcludedFromSum(product, userExcluded) ||
+    isSalesDecorativeLine(product) ||
+    isInternalNonSaleItem(product)
+  );
+}
+
 export function buildSalesExcludedSkuSet(extra: string[] = []): Set<string> {
   const set = new Set<string>();
   for (const sku of [...loadSalesExcludedSkus(), ...extra]) {

@@ -19,8 +19,9 @@
       (function () {
         try {
           var t = localStorage.getItem('katalog-theme');
+          document.documentElement.classList.remove('dark', 'theme-cookie');
           if (t === 'dark') document.documentElement.classList.add('dark');
-          else document.documentElement.classList.remove('dark');
+          else if (t === 'cookie') document.documentElement.classList.add('theme-cookie');
         } catch (e) {}
       })();
     </script>
@@ -28,6 +29,7 @@
       /* Bez białego flashu zanim wczyta się CSS / React */
       html, body { margin: 0; min-height: 100%; background: #f5f7fb; color: #0f172a; }
       html.dark, html.dark body { background: #020617; color: #e2e8f0; }
+      html.theme-cookie, html.theme-cookie body { background: #fbf1e2; color: #3a2712; }
       #root { min-height: 100dvh; }
     </style>
   </head>

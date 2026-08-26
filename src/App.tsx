@@ -5,8 +5,6 @@ import {
   ImageOff,
   Loader2,
   Plus,
-  BarChart3,
-  Sparkles,
   Pencil,
   Star,
   Printer,
@@ -21,14 +19,18 @@ import {
   FolderOpen,
   ScanBarcode,
   Boxes,
-  Home,
   AlertTriangle,
-  BookOpen,
+  EyeOff,
 } from 'lucide-react';
 import type { Product, Kit, View, CatalogType, CatalogListFilter } from './types';
 import { CATALOG_LABELS, deriveCategories } from './types';
 import { parseWaproSyncMessage } from './lib/waproSkuMatch';
-import { fetchProducts, fetchKits, getProductImage, updateProduct, invalidateProductsCache } from './lib/products';
+import {
+  recordWaproSyncDone,
+  recordWaproSyncError,
+  recordWaproSyncStarted,
+} from './lib/syncNotifications';
+import { fetchProducts, fetchKits, getProductImage, updateProduct, invalidateProductsCache, productListSignature } from './lib/products';
 import { getProductSearchIndex } from './lib/productSearchIndex';
 import { isCatalogSearchPending, useDebouncedCatalogSearch } from './lib/useDebouncedCatalogSearch';
 import {
@@ -76,6 +78,7 @@ import {
   getDeferredInstall,
 } from './lib/pwaInstall';
 import { useAuth } from './lib/auth';
+import { isSupabaseConfigured } from './lib/supabase';
 import { roleCan, ROLE_LABELS } from './lib/roles';
 import { branding, moduleEnabled, APP_PRODUCT } from './app/moduleRegistry';
 import { canUseCrmModule, canViewOpsModule, canUseCommsModule } from './app/productAccess';
@@ -99,7 +102,6 @@ import {
   manufacturerCounts as buildManufacturerCounts,
   effectiveManufacturer,
 } from './lib/waproManufacturers';
-import { CATALOG_LENS_ENABLED } from './lib/catalogFeatures';
 import { resolveProductCatalogKind } from './lib/catalogKind';
 import { isCatalogHiddenProduct } from './lib/productMeta';
 import {
@@ -120,6 +122,9 @@ import {
 } from './suite/hubLoaders';
 import { HubCatalogSubNav } from './components/hub/HubCatalogSubNav';
 import { LibraryView } from './components/LibraryView';
+import { CatalogLogsView } from './components/CatalogLogsView';
+import { CatalogHiddenView } from './components/CatalogHiddenView';
+import { LeftSidebarNav } from './components/LeftSidebarNav';
 import {
   CatalogDecisionView,
   buildCatalogDecisionRows,
@@ -139,9 +144,6 @@ const CatalogProgressView = lazy(() =>
   import('./components/progress/CatalogProgressView').then((m) => ({
     default: m.CatalogProgressView,
   })),
-);
-const VisualSearchModal = lazy(() =>
-  import('./components/VisualSearchModal').then((m) => ({ default: m.VisualSearchModal })),
 );
 const AdminHubPanel = lazy(() =>
   import('./components/AdminHubPanel').then((m) => ({ default: m.AdminHubPanel })),
@@ -226,7 +228,7 @@ export default function App() {
   const catalogHeaderRef = useRef<HTMLDivElement>(null);
   const opsStandalone = APP_PRODUCT === 'ops';
   const sellStandalone = APP_PRODUCT === 'sell';
-  const { toggleTheme, isDark } = useTheme();
+  const { toggleTheme, theme } = useTheme();
   const {
     mode,
     user,
@@ -235,6 +237,7 @@ export default function App() {
     signOut,
     exitGuest,
   } = useAuth();
+  const shouldUseSupabaseCatalog = mode === 'signed_in' && isSupabaseConfigured;
   const [catalogCache, setCatalogCache] = useState<
     Partial<Record<CatalogType, Product[]>>
   >({});
@@ -279,10 +282,11 @@ export default function App() {
   });
   const [labelQueue, setLabelQueue] = useState<LabelQueueItem[]>(() => getLabelQueue());
   const [stockBusyId, setStockBusyId] = useState<string | null>(null);
+  const [restoreHiddenBusyId, setRestoreHiddenBusyId] = useState<string | null>(null);
+  const [categoryBusyId, setCategoryBusyId] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
-  const [showVisualSearch, setShowVisualSearch] = useState(false);
   const [missingCategory, setMissingCategory] = useState('Wszystkie');
   const [gridDensity, setGridDensity] = useState<GridDensity>(loadGridDensity);
   const [showMobileMore, setShowMobileMore] = useState(false);
@@ -403,18 +407,24 @@ export default function App() {
     setSyncBusy(true);
     const scope: StockSyncScope =
       catalogListFilter === 'all' ? 'all' : catalogListFilter;
+    const label =
+      scope === 'all'
+        ? 'oba katalogi'
+        : scope === 'shop'
+          ? 'Produkty'
+          : 'Akcesoria';
     try {
       const res = await requestWaproStockSync(scope);
       if (!res.ok) {
         showToast(res.error || 'Nie udało się zlecić syncu', 'error');
+        recordWaproSyncError({
+          userId: user?.id,
+          scopeLabel: label,
+          message: res.error || 'Nie udało się zlecić syncu',
+        });
         return;
       }
-      const label =
-        scope === 'all'
-          ? 'oba katalogi'
-          : scope === 'shop'
-            ? 'Produkty'
-            : 'Akcesoria';
+      recordWaproSyncStarted({ userId: user?.id, requestId: res.id, scopeLabel: label });
       showToast(`Sync WAPRO (${label}): stany i ceny — czekam…`, 'info', 4000);
       const started = Date.now();
       while (Date.now() - started < 180_000) {
@@ -424,6 +434,14 @@ export default function App() {
         if (res.id && last.id !== res.id) continue;
         if (last.status === 'done') {
           const parsed = parseWaproSyncMessage(last.message);
+          recordWaproSyncDone({
+            userId: user?.id,
+            requestId: last.id,
+            scopeLabel: label,
+            summary: parsed.summary,
+            stats: parsed.stats,
+            warningHint: parsed.warningHint,
+          });
           showToast(parsed.summary || `Sync ${label} zakończony — odświeżam katalog`, 'ok', 9000);
           if (parsed.stats.newSkuFromMag && parsed.stats.newSkuFromMag > 0) {
             showToast(
@@ -440,7 +458,14 @@ export default function App() {
           return;
         }
         if (last.status === 'error') {
-          showToast(last.message || 'Sync WAPRO — błąd', 'error', 8000);
+          const message = last.message || 'Sync WAPRO — błąd';
+          recordWaproSyncError({
+            userId: user?.id,
+            requestId: last.id,
+            scopeLabel: label,
+            message,
+          });
+          showToast(message, 'error', 8000);
           return;
         }
       }
@@ -462,6 +487,7 @@ export default function App() {
     if (!roleCan(role, 'printLabels') && view === 'labels') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'progress') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'catalog-decisions') setView(fallback);
+    if (!roleCan(role, 'viewProgress') && view === 'catalog-hidden') setView(fallback);
     if (!roleCan(role, 'manageFavorites') && view === 'favorites') setView(fallback);
     if (!roleCan(role, 'manageKits') && view === 'kits') setView(fallback);
     if (!canViewOpsModule(role) && view === 'ops') setView(fallback);
@@ -509,7 +535,7 @@ export default function App() {
       ro.disconnect();
       window.removeEventListener('resize', syncTop);
     };
-  }, [embeddedInHub, view]);
+  }, [embeddedInHub, view, mode]);
 
   useEffect(() => {
     if (!embeddedInHub || !suiteHub) return;
@@ -627,23 +653,20 @@ export default function App() {
       (p) => resolveProductCatalogKind(p) === catalogListFilter,
     );
   }, [allProducts, catalogListFilter]);
+  const activeProducts = useMemo(
+    () => products.filter((p) => !isCatalogHiddenProduct(p)),
+    [products],
+  );
+  const activeAllProducts = useMemo(
+    () => allProducts.filter((p) => !isCatalogHiddenProduct(p)),
+    [allProducts],
+  );
 
   const defaultAddCatalog = useMemo(
     (): CatalogType =>
       catalogListFilter === 'all' ? loadSavedCatalog() : catalogListFilter,
     [catalogListFilter],
   );
-
-  const lensProducts = useMemo(
-    () =>
-      allProducts.filter((p) => (p.catalog || 'accessories') === 'shop'),
-    [allProducts],
-  );
-
-  const canOpenLens =
-    CATALOG_LENS_ENABLED &&
-    roleCan(role, 'useLens') &&
-    catalogListFilter !== 'accessories';
 
   const syncScope: StockSyncScope =
     catalogListFilter === 'all' ? 'all' : catalogListFilter;
@@ -677,16 +700,17 @@ export default function App() {
 
   const loadCatalog = useCallback(async (catalog: CatalogType, fromSupabase = false) => {
     if (opsStandalone) return;
-    if (!fromSupabase && (catalogCacheRef.current[catalog]?.length ?? 0) > 0) return;
+    const useSupabase = fromSupabase || shouldUseSupabaseCatalog;
+    if (!useSupabase && (catalogCacheRef.current[catalog]?.length ?? 0) > 0) return;
     try {
-      const data = fromSupabase
+      const data = useSupabase
         ? await fetchProducts(catalog, { force: true, source: 'supabase' })
         : await fetchProducts(catalog, { source: 'json' });
       setCatalogCache((prev) => ({ ...prev, [catalog]: data }));
     } catch (err) {
       console.warn('loadCatalog', catalog, err);
     }
-  }, [opsStandalone]);
+  }, [opsStandalone, shouldUseSupabaseCatalog]);
 
   const loadData = useCallback(async () => {
     if (opsStandalone) {
@@ -716,16 +740,26 @@ export default function App() {
     }
   }, [opsStandalone]);
 
+  const initialCatalogLoadRef = useRef('');
   useEffect(() => {
     if (opsStandalone) {
       setLoading(false);
       setShopLoading(false);
       return;
     }
+    if (mode === 'loading') return;
+
+    const sourceKey = shouldUseSupabaseCatalog ? 'supabase' : 'json';
+    const initialKey = `${sourceKey}:${catalogListFilter}`;
+    if (initialCatalogLoadRef.current === initialKey) return;
+    initialCatalogLoadRef.current = initialKey;
+
     let cancelled = false;
 
     async function loadCatalogFast(catalog: CatalogType) {
-      const data = await fetchProducts(catalog, { source: 'json' });
+      const data = shouldUseSupabaseCatalog
+        ? await fetchProducts(catalog, { force: true, source: 'supabase' })
+        : await fetchProducts(catalog, { source: 'json' });
       if (cancelled) return data;
       setCatalogCache((prev) => ({ ...prev, [catalog]: data }));
       setLoading(false);
@@ -736,8 +770,10 @@ export default function App() {
       const filter = catalogListFilter;
       const needAcc = catalogFilterNeedsAccessories(filter);
       const needShop = catalogFilterNeedsShop(filter);
-      const hasAcc = (catalogCache.accessories?.length ?? 0) > 0;
-      const hasShop = (catalogCache.shop?.length ?? 0) > 0;
+      const hasAcc =
+        !shouldUseSupabaseCatalog && (catalogCache.accessories?.length ?? 0) > 0;
+      const hasShop =
+        !shouldUseSupabaseCatalog && (catalogCache.shop?.length ?? 0) > 0;
 
       if ((!needAcc || hasAcc) && (!needShop || hasShop)) {
         setLoading(false);
@@ -747,6 +783,23 @@ export default function App() {
       setLoading(true);
       setError(null);
       try {
+        if (filter === 'all' && shouldUseSupabaseCatalog) {
+          setShopLoading(true);
+          const [accData, shopData] = await Promise.all([
+            fetchProducts('accessories', { force: true, source: 'supabase' }),
+            fetchProducts('shop', { force: true, source: 'supabase' }),
+          ]);
+          if (cancelled) return;
+          setCatalogCache((prev) => ({
+            ...prev,
+            accessories: accData,
+            shop: shopData,
+          }));
+          setLoading(false);
+          setShopLoading(false);
+          return;
+        }
+
         if (filter === 'all') {
           if (!hasAcc && needAcc) {
             await loadCatalogFast('accessories');
@@ -757,7 +810,9 @@ export default function App() {
           if (!hasShop && needShop) {
             setShopLoading(true);
             try {
-              const shopData = await fetchProducts('shop', { source: 'json' });
+              const shopData = shouldUseSupabaseCatalog
+                ? await fetchProducts('shop', { force: true, source: 'supabase' })
+                : await fetchProducts('shop', { source: 'json' });
               if (cancelled) return;
               setCatalogCache((prev) => ({ ...prev, shop: shopData }));
             } finally {
@@ -772,7 +827,9 @@ export default function App() {
         } else if (filter === 'shop' && !hasShop) {
           setShopLoading(true);
           try {
-            const shopData = await fetchProducts('shop', { source: 'json' });
+            const shopData = shouldUseSupabaseCatalog
+              ? await fetchProducts('shop', { force: true, source: 'supabase' })
+              : await fetchProducts('shop', { source: 'json' });
             if (cancelled) return;
             setCatalogCache((prev) => ({ ...prev, shop: shopData }));
             setLoading(false);
@@ -800,17 +857,18 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- pierwsze wczytanie wg zapisanego filtra
-  }, []);
+  }, [catalogListFilter, mode, opsStandalone, shouldUseSupabaseCatalog]);
 
   useEffect(() => {
     if (opsStandalone || !isCatalogProduct()) return;
+    if (shouldUseSupabaseCatalog) return;
     void fetch('/data/products-lite.json', { cache: 'force-cache' }).catch(() => undefined);
     void fetch('/data/shop-products-lite.json', { cache: 'force-cache' }).catch(() => undefined);
-  }, [opsStandalone]);
+  }, [opsStandalone, shouldUseSupabaseCatalog]);
 
   useEffect(() => {
     if (opsStandalone || mode !== 'signed_in') return;
+    if (shouldUseSupabaseCatalog) return;
     if (loading || shopLoading) return;
 
     const filter = catalogListFilter;
@@ -841,7 +899,18 @@ export default function App() {
           });
         }
         if (!cancelled) {
-          setCatalogCache((prev) => ({ ...prev, ...next }));
+          const changed: Partial<Record<CatalogType, Product[]>> = {};
+          for (const cat of Object.keys(next) as CatalogType[]) {
+            const fresh = next[cat];
+            if (!fresh) continue;
+            const current = catalogCache[cat] ?? [];
+            if (productListSignature(fresh) !== productListSignature(current)) {
+              changed[cat] = fresh;
+            }
+          }
+          if (Object.keys(changed).length > 0) {
+            setCatalogCache((prev) => ({ ...prev, ...changed }));
+          }
         }
       } catch (err) {
         console.warn('supabase catalog hydrate', err);
@@ -1105,17 +1174,21 @@ export default function App() {
   );
 
   const missingImages = useMemo(
-    () => products.filter((p) => !getProductImage(p)),
+    () => activeProducts.filter((p) => !getProductImage(p)),
+    [activeProducts],
+  );
+  const hiddenProducts = useMemo(
+    () => products.filter(isCatalogHiddenProduct),
     [products],
   );
   const catalogDecisionRows = useMemo(
-    () => buildCatalogDecisionRows(products),
-    [products],
+    () => buildCatalogDecisionRows(activeProducts),
+    [activeProducts],
   );
 
   const lowStockCount = useMemo(
-    () => products.filter((p) => p.stock <= 5).length,
-    [products],
+    () => activeProducts.filter((p) => p.stock <= 5).length,
+    [activeProducts],
   );
 
   const hubOverlay =
@@ -1178,6 +1251,50 @@ export default function App() {
     });
     invalidateProductsCache();
   }, []);
+
+  const handleRestoreHiddenProduct = useCallback(async (product: Product) => {
+    const nextMeta = { ...(product.meta ?? {}) };
+    delete nextMeta.catalogHidden;
+    delete nextMeta.catalogHiddenReason;
+    delete nextMeta.catalogHiddenAt;
+
+    const restored: Product = { ...product, meta: nextMeta };
+    setRestoreHiddenBusyId(product.id);
+    patchProductInCache(product.id, () => restored);
+    if (selectedProduct?.id === product.id) setSelectedProduct(restored);
+
+    try {
+      await updateProduct(product.id, { meta: nextMeta });
+      showToast('Produkt przywrócony do katalogu', 'ok');
+    } catch (err) {
+      console.error(err);
+      patchProductInCache(product.id, () => product);
+      if (selectedProduct?.id === product.id) setSelectedProduct(product);
+      showToast('Nie udało się przywrócić produktu', 'error');
+    } finally {
+      setRestoreHiddenBusyId(null);
+    }
+  }, [selectedProduct]);
+
+  const handleApplyDecisionCategory = useCallback(async (product: Product, nextCategory: string) => {
+    const previous = product;
+    const updated: Product = { ...product, category: nextCategory };
+    setCategoryBusyId(product.id);
+    patchProductInCache(product.id, () => updated);
+    if (selectedProduct?.id === product.id) setSelectedProduct(updated);
+
+    try {
+      await updateProduct(product.id, { category: nextCategory });
+      showToast(`Ustawiono kategorię: ${nextCategory}`, 'ok', 2200);
+    } catch (err) {
+      console.error(err);
+      patchProductInCache(product.id, () => previous);
+      if (selectedProduct?.id === product.id) setSelectedProduct(previous);
+      showToast('Nie udało się zapisać kategorii', 'error');
+    } finally {
+      setCategoryBusyId(null);
+    }
+  }, [selectedProduct]);
 
   const openMissingImages = useCallback((categoryFilter = 'Wszystkie') => {
     setMissingCategory(categoryFilter);
@@ -1246,6 +1363,13 @@ export default function App() {
         count: missingImages.length,
         onClick: () => openMissingImages(),
       });
+      items.push({
+        id: 'catalog-hidden',
+        label: 'Ukryte',
+        icon: <EyeOff className="h-4 w-4" />,
+        count: hiddenProducts.length,
+        onClick: () => setView('catalog-hidden'),
+      });
     }
     return items;
   }, [
@@ -1256,6 +1380,7 @@ export default function App() {
     collectionUserKey,
     catalogDecisionRows.length,
     missingImages.length,
+    hiddenProducts.length,
     openMissingImages,
   ]);
 
@@ -1269,9 +1394,6 @@ export default function App() {
           onOpenProduct={setSelectedProduct}
           onNavigate={setView}
           onOpenMissingImages={() => openMissingImages()}
-          onOpenLens={
-            canOpenLens ? () => setShowVisualSearch(true) : undefined
-          }
           onOpenScanner={() => setShowScanner(true)}
           onSyncStock={() => void handleSyncStock()}
           canSyncStock={
@@ -1295,7 +1417,6 @@ export default function App() {
       search,
       handleSearchChange,
       products,
-      canOpenLens,
       role,
       mode,
       syncBusy,
@@ -1336,6 +1457,8 @@ export default function App() {
   if (mode === 'gate') {
     return <LoginGate />;
   }
+
+  const showSidebar = !embeddedInHub && view !== 'ops' && view !== 'crm' && view !== 'admin';
 
   const appShell = (
     <div
@@ -1380,7 +1503,17 @@ export default function App() {
                 {branding.headerTitle}
               </h1>
             </div>
-            <div className="ml-auto lg:hidden">
+            <div className="ml-auto flex shrink-0 items-center gap-1 lg:hidden">
+              {!opsStandalone && !sellStandalone && view !== 'admin' && (
+                <RefreshControls
+                  loading={loading}
+                  onRefresh={loadData}
+                  catalog={syncScope}
+                  canRequestStockSync={
+                    mode === 'signed_in' && roleCan(role, 'editStock')
+                  }
+                />
+              )}
               <AppHeaderActions
                 role={role}
                 view={view}
@@ -1496,19 +1629,6 @@ export default function App() {
                 Dodaj
               </button>
             )}
-            {view !== 'ops' &&
-              view !== 'crm' &&
-              view !== 'admin' &&
-              canOpenLens && (
-              <button
-                type="button"
-                onClick={() => setShowVisualSearch(true)}
-                className="flex shrink-0 items-center gap-1.5 rounded-lg border border-brand-500/40 bg-brand-500/10 px-3 py-2 text-sm font-medium text-brand-300 hover:bg-brand-500/20"
-              >
-                <Sparkles className="h-4 w-4" />
-                Lens
-              </button>
-            )}
             {!opsStandalone && !sellStandalone && view !== 'admin' && roleCan(role, 'editStock') && (
               <button
                 type="button"
@@ -1542,118 +1662,37 @@ export default function App() {
           </div>
         </div>
 
-        {/* Desktop nav tabs — tylko w trybie katalogu (nie Operacje / CRM) */}
-        {view !== 'ops' && view !== 'crm' && view !== 'admin' && (
-        <div className="hidden border-t border-slate-800/60 px-3 py-2 sm:px-4 lg:flex lg:items-center lg:gap-4 xl:px-6">
-          <nav className="flex min-w-0 flex-1 flex-wrap gap-1">
-            {isCatalogProduct() && (
-              <NavTab
-                active={view === 'home'}
-                onClick={() => setView('home')}
-                icon={<Home className="h-4 w-4" />}
-                label="Start"
-              />
-            )}
-            <NavTab
-              active={view === 'catalog'}
-              onClick={() => setView('catalog')}
-              icon={<Search className="h-4 w-4" />}
-              label="Katalog"
-              count={products.length}
-            />
-            <NavTab
-              active={view === 'library'}
-              onClick={() => setView('library')}
-              icon={<BookOpen className="h-4 w-4" />}
-              label="Biblioteka"
-            />
-            {roleCan(role, 'manageFavorites') && (
-              <NavTab
-                active={view === 'favorites'}
-                onClick={() => setView('favorites')}
-                icon={<Star className="h-4 w-4" />}
-                label="Ulubione"
-                count={favoriteCount}
-                highlight={favoriteCount > 0}
-              />
-            )}
-            {isCatalogProduct() && collectionUserKey && (
-              <NavTab
-                active={view === 'collections'}
-                onClick={() => setView('collections')}
-                icon={<FolderOpen className="h-4 w-4" />}
-                label="Foldery"
-                count={collectionCount > 0 ? collectionCount : undefined}
-              />
-            )}
-            {roleCan(role, 'manageKits') && (
-              <NavTab
-                active={view === 'kits'}
-                onClick={() => setView('kits')}
-                icon={<Layers className="h-4 w-4" />}
-                label="Zestawy"
-                count={catalogKits.length}
-              />
-            )}
-            {roleCan(role, 'viewProgress') && (
-              <NavTab
-                active={view === 'progress'}
-                onClick={() => setView('progress')}
-                icon={<BarChart3 className="h-4 w-4" />}
-                label="Postęp"
-              />
-            )}
-            {roleCan(role, 'viewProgress') && (
-              <NavTab
-                active={view === 'catalog-decisions'}
-                onClick={() => setView('catalog-decisions')}
-                icon={<AlertTriangle className="h-4 w-4" />}
-                label="Decyzje"
-                count={catalogDecisionRows.length}
-                highlight={catalogDecisionRows.length > 0}
-              />
-            )}
-            {roleCan(role, 'viewProgress') && (
-              <NavTab
-                active={view === 'missing-images'}
-                onClick={() => openMissingImages()}
-                icon={<ImageOff className="h-4 w-4" />}
-                label="Bez zdjęć"
-                count={missingImages.length}
-                highlight={missingImages.length > 0}
-              />
-            )}
-            {roleCan(role, 'printLabels') && (
-              <NavTab
-                active={view === 'labels'}
-                onClick={() => {
-                  refreshLabelQueue();
-                  setView('labels');
-                }}
-                icon={<Printer className="h-4 w-4" />}
-                label="Etykiety"
-                count={labelQueue.length}
-                highlight={labelQueue.length > 0}
-              />
-            )}
-            {isStockProduct() &&
-              (roleCan(role, 'printLabels') || roleCan(role, 'editStock')) && (
-              <NavTab
-                active={view === 'warehouse'}
-                onClick={() => setView('warehouse')}
-                icon={<Boxes className="h-4 w-4" />}
-                label="Magazyn"
-              />
-            )}
-          </nav>
-        </div>
-        )}
       </header>
       </div>
       )}
 
+      {showSidebar && (
+        <LeftSidebarNav
+          view={view}
+          setView={setView}
+          role={role}
+          userId={user?.id}
+          isCatalogProduct={isCatalogProduct()}
+          isStockProduct={isStockProduct()}
+          collectionUserKey={collectionUserKey}
+          productsCount={products.length}
+          favoriteCount={favoriteCount}
+          collectionCount={collectionCount}
+          catalogKitsCount={catalogKits.length}
+          catalogDecisionCount={catalogDecisionRows.length}
+          hiddenProductsCount={hiddenProducts.length}
+          missingImagesCount={missingImages.length}
+          labelQueueCount={labelQueue.length}
+          onOpenMissingImages={openMissingImages}
+          onOpenLabels={() => {
+            refreshLabelQueue();
+            setView('labels');
+          }}
+        />
+      )}
+
       <main
-        className={`px-3 py-3 sm:px-4 sm:py-4 xl:px-6 xl:py-5 ${
+        className={`px-3 py-3 sm:px-4 sm:py-4 xl:px-6 xl:py-5 ${showSidebar ? 'lg:pl-60 xl:pl-60' : ''} ${
           canUseCrmModule(role) && orderCount > 0 && view !== 'crm'
             ? 'xl:pr-[24rem]'
             : ''
@@ -1694,6 +1733,7 @@ export default function App() {
               kits: catalogKits.length,
               decisions: catalogDecisionRows.length,
               missing: missingImages.length,
+              hidden: hiddenProducts.length,
               labels: labelQueue.length,
             }}
             role={{
@@ -1722,7 +1762,7 @@ export default function App() {
           </div>
         ) : view === 'home' && isCatalogProduct() ? (
           <CatalogHomeView
-            allProducts={allProducts}
+            allProducts={activeAllProducts}
             missingImagesCount={missingImages.length}
             decisionCount={catalogDecisionRows.length}
             canSyncStock={mode === 'signed_in' && roleCan(role, 'editStock')}
@@ -1807,7 +1847,19 @@ export default function App() {
           <CatalogDecisionView
             products={products}
             onOpenProduct={setSelectedProduct}
+            onApplyCategory={handleApplyDecisionCategory}
+            categoryBusyId={categoryBusyId}
+            onOpenHidden={() => setView('catalog-hidden')}
           />
+        ) : view === 'catalog-hidden' && isCatalogProduct() ? (
+          <CatalogHiddenView
+            products={hiddenProducts}
+            restoringId={restoreHiddenBusyId}
+            onOpenProduct={setSelectedProduct}
+            onRestoreProduct={handleRestoreHiddenProduct}
+          />
+        ) : view === 'logs' && isCatalogProduct() ? (
+          <CatalogLogsView userId={user?.id} />
         ) : view === 'library' ? (
           <LibraryView />
         ) : view === 'warehouse' && isStockProduct() ? (
@@ -1974,20 +2026,6 @@ export default function App() {
         </Suspense>
       )}
 
-      {showVisualSearch && canOpenLens && !opsStandalone && (
-        <Suspense fallback={null}>
-          <VisualSearchModal
-            products={lensProducts}
-            onClose={() => setShowVisualSearch(false)}
-            onSelect={(product) => {
-              setSelectedProduct(product);
-              setView('catalog');
-            }}
-          />
-        </Suspense>
-      )}
-
-
       {!embeddedInHub && !opsStandalone && (
       <>
       <MobileBottomNav
@@ -2012,7 +2050,6 @@ export default function App() {
         role={role}
         displayLabel={displayLabel}
         roleLabel={ROLE_LABELS[role]}
-        lensAvailable={canOpenLens}
         view={view}
         editMode={editMode}
         loading={loading}
@@ -2020,6 +2057,7 @@ export default function App() {
         canRequestStockSync={mode === 'signed_in' && roleCan(role, 'editStock')}
         decisionCount={catalogDecisionRows.length}
         missingCount={missingImages.length}
+        hiddenCount={hiddenProducts.length}
         kitsCount={catalogKits.length}
         collectionsCount={collectionCount}
         showCollections={isCatalogProduct() && !!collectionUserKey}
@@ -2030,11 +2068,10 @@ export default function App() {
         }}
         onToggleEdit={() => setEditMode((v) => !v)}
         onAddProduct={() => setShowAddProduct(true)}
-        onLens={() => setShowVisualSearch(true)}
         onOpenAdmin={() => setView('admin')}
         onInstallApp={triggerInstallApp}
         onToggleTheme={toggleTheme}
-        isDark={isDark}
+        theme={theme}
         onRefresh={loadData}
         onSyncStock={() => void handleSyncStock()}
         onSignOut={() => {
@@ -2164,52 +2201,6 @@ function CatalogSwitch({
     >
       {icon}
       <span className="truncate">{label}</span>
-    </button>
-  );
-}
-
-function NavTab({
-  active,
-  onClick,
-  icon,
-  label,
-  count,
-  highlight,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-  count?: number;
-  highlight?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium transition sm:gap-2 sm:px-4 sm:text-sm ${
-        active
-          ? 'bg-brand-600 text-white'
-          : highlight
-            ? 'bg-amber-500 text-amber-950 hover:bg-amber-600'
-            : 'text-slate-400 hover:bg-slate-800 hover:text-slate-50'
-      }`}
-    >
-      {icon}
-      <span>{label}</span>
-      {count !== undefined && (
-        <span
-          className={`rounded-full px-1.5 py-0.5 text-[10px] sm:text-xs ${
-            active
-              ? 'bg-black/20 text-white'
-              : highlight
-                ? 'bg-amber-950/15 text-amber-950'
-                : 'bg-slate-700 text-slate-400'
-          }`}
-        >
-          {count}
-        </span>
-      )}
     </button>
   );
 }

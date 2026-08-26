@@ -80,7 +80,6 @@
     "@perspective-dev/viewer-datagrid": "^5.1.0",
     "@supabase/supabase-js": "^2.49.4",
     "@tanstack/react-table": "^9.0.0",
-    "@xenova/transformers": "^2.17.2",
     "echarts": "^6.1.0",
     "fuse.js": "^7.1.0",
     "html5-qrcode": "^2.3.8",

@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<script>(function(){try{var t=localStorage.getItem("katalog-theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Atlas sprzętu do aplikacji chemii — opryskiwacze ciśnieniowe, pianownice ręczne, pistolety pneumatyczne Tornador, zbiorniki natrysku. Biblioteka Techniczna Kenochem, Zeszyt 4.">
+<title>Atlas Sprzętu do Aplikacji Chemii</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --paper:#E7E6DE; --paper-raised:#F1F0E9; --ink:#1E2220; --ink-soft:#4B4F49;
+    --blueprint:#3B6E8F; --blueprint-soft:#6C93A9;
+    --brass:#8F5E19; --brass-soft:#B98A3D;
+    --steel:#86867C; --steel-line:#C9C8BC;
+    --caution:#9E3226; --caution-soft:#F3DEDA;
+    --code-bg:#DEDCD1;
+    --accent:#946A22; --accent-soft:#B98A3D;
+    --shadow: 0 1px 0 rgba(30,34,32,0.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#14181A; --paper-raised:#1B2022; --ink:#E9E7DC; --ink-soft:#B7B6AA;
+      --blueprint:#6FA8C9; --blueprint-soft:#4E7E96;
+      --brass:#D6A056; --brass-soft:#A9793C;
+      --steel:#787A72; --steel-line:#33372F;
+      --caution:#E0796B; --caution-soft:#3A2320;
+      --code-bg:#20251F;
+      --accent:#E0AA5C; --accent-soft:#A9793C;
+      --shadow: 0 1px 0 rgba(0,0,0,0.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#14181A; --paper-raised:#1B2022; --ink:#E9E7DC; --ink-soft:#B7B6AA;
+    --blueprint:#6FA8C9; --blueprint-soft:#4E7E96;
+    --brass:#D6A056; --brass-soft:#A9793C;
+    --steel:#787A72; --steel-line:#33372F;
+    --caution:#E0796B; --caution-soft:#3A2320;
+    --code-bg:#20251F;
+    --accent:#E0AA5C; --accent-soft:#A9793C;
+    --shadow: 0 1px 0 rgba(0,0,0,0.4);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:"Source Serif 4", Georgia, "Times New Roman", serif;
+    font-size:17px; line-height:1.65;
+    margin:0; padding:0;
+  }
+  .wrap{max-width:1180px; margin:0 auto; padding:0 clamp(20px,4vw,64px);}
+
+  h1,h2,h3{font-family:"Big Shoulders Display","Arial Narrow",sans-serif; font-weight:800; text-transform:uppercase; letter-spacing:0.01em; text-wrap:balance; margin:0; color:var(--ink);}
+  .mono{font-family:"IBM Plex Mono", ui-monospace, Menlo, monospace;}
+  a{color:var(--blueprint);}
+  p{max-width:66ch;}
+  table{font-variant-numeric:tabular-nums;}
+
+  .hero{padding:clamp(56px,9vw,104px) 0 clamp(40px,6vw,64px); border-bottom:1px solid var(--steel-line); position:relative;}
+  .hero .kicker{display:flex; align-items:center; gap:14px; margin-bottom:22px;}
+  .hero .kicker .tom{width:34px; height:34px; flex:none;}
+  .hero .kicker span{font-family:"IBM Plex Mono"; font-size:13px; letter-spacing:0.14em; text-transform:uppercase; color:var(--ink-soft);}
+  .hero h1{font-size:clamp(38px,6vw,74px); line-height:0.98;}
+  .hero h1 em{font-style:normal; color:var(--accent);}
+  .hero .lede{font-size:19px; color:var(--ink-soft); max-width:58ch; margin-top:22px;}
+  .hero .meta{display:flex; gap:28px; flex-wrap:wrap; margin-top:34px; font-family:"IBM Plex Mono"; font-size:12.5px; color:var(--ink-soft); letter-spacing:0.03em;}
+  .hero .meta b{color:var(--ink); font-weight:600;}
+
+  .toc{display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--steel-line); border:1px solid var(--steel-line); margin-top:40px;}
+  .toc a{background:var(--paper-raised); color:var(--ink); text-decoration:none; padding:16px 14px; display:flex; flex-direction:column; gap:6px;}
+  .toc a:hover{background:var(--code-bg);}
+  .toc .n{font-family:"IBM Plex Mono"; font-size:12px; color:var(--accent);}
+  .toc .t{font-size:13.5px; font-weight:600; line-height:1.25;}
+  @media (max-width:980px){ .toc{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:560px){ .toc{grid-template-columns:1fr;} }
+
+  .stock{display:inline-flex; align-items:center; gap:6px; font-family:"IBM Plex Mono"; font-size:11px; padding:2px 8px; border:1px solid var(--steel-line); background:var(--code-bg); color:var(--ink-soft); white-space:nowrap;}
+  .stock .sku{color:var(--accent); font-weight:600;}
+
+  section.chapter{padding:clamp(56px,8vw,96px) 0; border-bottom:1px solid var(--steel-line); scroll-margin-top:24px;}
+  section.chapter:last-of-type{border-bottom:none;}
+  .chapter-head{display:grid; grid-template-columns:120px 1fr; gap:28px; margin-bottom:40px; align-items:start;}
+  .chapter-head .num{font-family:"Big Shoulders Display"; font-weight:800; font-size:clamp(64px,8vw,96px); line-height:0.8; color:var(--accent-soft);}
+  .chapter-head h2{font-size:clamp(26px,3.4vw,38px); line-height:1.05; max-width:24ch;}
+  .chapter-head .sub{font-family:"Source Serif 4"; font-style:italic; color:var(--ink-soft); font-size:16px; margin-top:10px; font-weight:400;}
+  .chapter-body{display:grid; grid-template-columns:minmax(0,66ch) 1fr; gap:48px; align-items:start;}
+  @media (max-width:900px){ .chapter-body{grid-template-columns:1fr;} .chapter-head{grid-template-columns:64px 1fr;} }
+
+  .chapter-body > .prose > * + *{margin-top:1.1em;}
+  .chapter-body > .prose h3{font-size:16px; margin-top:2em; letter-spacing:0.02em;}
+  .chapter-body > .prose ul, .chapter-body > .prose ol{padding-left:1.3em; max-width:64ch;}
+  .chapter-body > .prose li + li{margin-top:0.5em;}
+
+  .rail{position:sticky; top:20px; display:flex; flex-direction:column; gap:20px;}
+
+  figure{margin:0; border:1px solid var(--steel-line); background:var(--paper-raised); box-shadow:var(--shadow);}
+  figure svg{display:block; width:100%; height:auto; padding:18px 16px 6px;}
+  figcaption{font-family:"IBM Plex Mono"; font-size:12px; color:var(--ink-soft); padding:10px 16px 16px; border-top:1px dashed var(--steel-line); line-height:1.5;}
+  figcaption b{color:var(--ink); font-weight:600;}
+
+  .table-wrap{overflow-x:auto; border:1px solid var(--steel-line); background:var(--paper-raised);}
+  table{width:100%; border-collapse:collapse; font-size:14.5px; min-width:520px;}
+  th,td{padding:11px 14px; text-align:left; border-bottom:1px solid var(--steel-line); vertical-align:top;}
+  thead th{font-family:"IBM Plex Mono"; font-size:11.5px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-soft); font-weight:600; border-bottom:2px solid var(--steel-line);}
+  tbody tr:last-child td{border-bottom:none;}
+  td .code{font-family:"IBM Plex Mono"; font-size:13px; background:var(--code-bg); padding:1px 6px;}
+  .example-table td.n{font-family:"Source Serif 4"; font-size:14px;}
+
+  .callout{border-left:3px solid var(--caution); background:var(--caution-soft); color:var(--ink); padding:14px 18px; font-size:15px; max-width:64ch;}
+  .callout b{color:var(--caution); font-family:"IBM Plex Mono"; font-size:11.5px; text-transform:uppercase; letter-spacing:0.08em; display:block; margin-bottom:6px;}
+  .note{border-left:3px solid var(--accent); background:var(--paper-raised); padding:14px 18px; font-size:15px; max-width:64ch; color:var(--ink-soft);}
+  .note b{color:var(--accent); font-family:"IBM Plex Mono"; font-size:11.5px; text-transform:uppercase; letter-spacing:0.08em; display:block; margin-bottom:6px;}
+
+  .gloss{display:grid; grid-template-columns:1fr; gap:1px; background:var(--steel-line); border:1px solid var(--steel-line);}
+  .gloss dt{background:var(--paper-raised); padding:14px 16px 2px; font-family:"IBM Plex Mono"; font-weight:600; font-size:14px; color:var(--accent);}
+  .gloss dd{background:var(--paper-raised); margin:0; padding:2px 16px 14px; font-size:15px; color:var(--ink-soft);}
+
+  .map-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--steel-line); border:1px solid var(--steel-line); margin-top:8px;}
+  .map-tile{background:var(--paper-raised); padding:20px 18px;}
+  .map-tile .ic{width:30px; height:30px; color:var(--accent); margin-bottom:10px;}
+  .map-tile h4{font-family:"Big Shoulders Display"; font-weight:700; font-size:16px; text-transform:uppercase; margin:0 0 8px;}
+  .map-tile p{font-size:13.5px; color:var(--ink-soft); max-width:none; margin:0 0 10px;}
+  .map-tile .exs{display:flex; flex-direction:column; gap:5px;}
+  @media (max-width:900px){ .map-grid{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:560px){ .map-grid{grid-template-columns:1fr;} }
+
+  .swatch-row{display:flex; gap:14px; flex-wrap:wrap; margin-top:16px;}
+  .swatch{display:flex; align-items:center; gap:8px; font-family:"IBM Plex Mono"; font-size:12.5px; color:var(--ink-soft); border:1px solid var(--steel-line); background:var(--paper-raised); padding:8px 12px;}
+  .swatch .dot{width:14px; height:14px; border-radius:50%; flex:none; border:1px solid rgba(0,0,0,0.15);}
+
+  footer{padding:48px 0 80px; color:var(--ink-soft); font-size:13.5px;}
+  footer .fmono{font-family:"IBM Plex Mono"; font-size:12px; letter-spacing:0.04em;}
+  .sources{margin-top:14px; padding-left:1.2em; font-size:12.5px;}
+  .sources li{margin-top:4px;}
+
+  ::selection{background:var(--accent); color:var(--paper);}
+</style>
+</head>
+<body>
+<div class="wrap" id="klodArticle">
+
+  <div class="hero">
+    <div class="kicker">
+      <svg class="tom" viewBox="0 0 34 34" role="img" aria-label="Symbol atlasu — pistolet spryskujący z rozchodzącym się strumieniem">
+        <circle cx="17" cy="17" r="15.5" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35"/>
+        <path d="M10 22 L16 13 L18 13 L14 22 Z" fill="var(--accent)"/>
+        <line x1="19" y1="12" x2="26" y2="8" stroke="var(--accent)" stroke-width="1.4"/>
+        <line x1="20" y1="15" x2="27" y2="14" stroke="var(--accent)" stroke-width="1.4"/>
+        <line x1="19" y1="18" x2="26" y2="20" stroke="var(--accent)" stroke-width="1.4"/>
+      </svg>
+      <span>Biblioteka Techniczna Kenochem — Zeszyt 04</span>
+    </div>
+    <h1>Atlas sprzętu do <em>aplikacji chemii</em></h1>
+    <p class="lede">Czym różni się opryskiwacz od pianownicy, dlaczego kolor lanki Kwazar ma znaczenie, jak działa pistolet pneumatyczny Tornador i który zestaw zaproponować klientowi zależnie od tego, co i gdzie czyści.</p>
+    <div class="meta">
+      <div>Rozdział <b>4 z serii</b> — poprzednio: aromamarketing</div>
+      <div>Czas lektury <b>~20 min</b></div>
+      <div>Dla <b>magazynu, sprzedaży, doradztwa B2B</b></div>
+    </div>
+
+    <nav class="toc" aria-label="Spis treści">
+      <a href="#mapa"><span class="n">01</span><span class="t">Mapa sprzętu do aplikacji</span></a>
+      <a href="#opryskiwacze"><span class="n">02</span><span class="t">Opryskiwacze ciśnieniowe</span></a>
+      <a href="#pianownice"><span class="n">03</span><span class="t">Pianownice ręczne</span></a>
+      <a href="#kolory"><span class="n">04</span><span class="t">Kolor = odporność chemiczna</span></a>
+      <a href="#tornador"><span class="n">05</span><span class="t">Pistolety pneumatyczne</span></a>
+      <a href="#zbiorniki"><span class="n">06</span><span class="t">Zbiorniki i stacje natrysku</span></a>
+      <a href="#bhp"><span class="n">07</span><span class="t">Bezpieczeństwo i PPE</span></a>
+      <a href="#dobor"><span class="n">08</span><span class="t">Jak dobierać i sprzedawać</span></a>
+    </nav>
+  </div>
+
+  <!-- ================= 01 MAPA ================= -->
+  <section class="chapter" id="mapa">
+    <div class="chapter-head">
+      <div class="num">01</div>
+      <div>
+        <h2>Mapa sprzętu<br>do aplikacji chemii</h2>
+        <div class="sub">Sześć rodzin urządzeń, sześć różnych zasad działania</div>
+      </div>
+    </div>
+    <div class="chapter-body">
+      <div class="prose">
+        <p>Zeszyt 01 opisał <b>iniektory</b> — urządzenia wykorzystujące efekt Venturiego, czyli strumień wody z myjki ciśnieniowej do zasysania i rozpylania chemii. Ten zeszyt dotyczy sprzętu, który ma <b>własne, niezależne źródło ciśnienia</b> — nie potrzebuje myjki ciśnieniowej, żeby nanieść produkt. To zupełnie inna rodzina narzędzi, często ważniejsza w codziennej pracy magazynu i handlowca, bo trafia też do klientów bez myjki (biura, obiekty, detailing wnętrz).</p>
+        <dl class="gloss">
+          <dt>Opryskiwacz ciśnieniowy</dt>
+          <dd>Zbiornik + ręczna pompka tłocząca powietrze nad ciecz. Ciecz wypychana jest ciśnieniem powietrza przez wężyk, lancę i dyszę. Uniwersalny — do cienkich płynów, nie do gęstej piany.</dd>
+          <dt>Pianownica ręczna ciśnieniowa</dt>
+          <dd>Taki sam mechanizm jak opryskiwacz (ręczna pompka), ale z dyszą spieniającą — na wyjściu ciecz miesza się z powietrzem i tworzy aktywną pianę. Nie myli się z iniektorem Venturiego (patrz rozdz. 03).</dd>
+          <dt>Pistolet pneumatyczny (Tornador/Benbow)</dt>
+          <dd>Zasilany sprężarką warsztatową (nie ręcznie) — wirująca dysza tworzy mini-tornado powietrza, które wybija brud z tapicerki i szczelin, zamiast go w nie wbijać.</dd>
+          <dt>Zbiornik/stacja natrysku chemii</dt>
+          <dd>Stacjonarny, większy odpowiednik opryskiwacza (24–100+ l) — na kółkach lub montowany na stałe, zasilany sprężonym powietrzem z instalacji obiektu.</dd>
+          <dt>Pistolet ogrodowy/wysokociśnieniowy</dt>
+          <dd>Montowany na wężu z myjki lub z sieci wodociągowej — reguluje strumień wody, czasem z dozowaniem chemii z osobnego zbiorniczka (patrz też Zeszyt 01, rozdz. 03).</dd>
+          <dt>Szczotka z przepływem</dt>
+          <dd>Mechaniczna aplikacja kontaktowa — chemia (albo czysta woda) płynie przez rączkę prosto do włosia, łącząc szorowanie z dozowaniem na bieżąco.</dd>
+        </dl>
+      </div>
+      <div class="rail">
+        <div class="note"><b>Dlaczego to ważne przy sprzedaży</b>Klient, który pyta o "coś do spryskania felg" i klient, który pyta o "coś do spienienia szamponu na masce" — potrzebują dwóch różnych urządzeń, mimo że oba wyglądają jak "spryskiwacz z lancą".</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 02 OPRYSKIWACZE ================= -->
+  <section class="chapter" id="opryskiwacze">
+    <div class="chapter-head">
+      <div class="num">02</div>
+      <div>
+        <h2>Opryskiwacze<br>ciśnieniowe ręczne</h2>
+        <div class="sub">Kwazar Orion — jak działa najprostsze narzędzie w katalogu</div>
+      </div>
+    </div>
+    <div class="chapter-body">
+      <div class="prose">
+        <p>Zasada jest prostsza niż w myjce ciśnieniowej: ręczna pompka wtłacza powietrze do zamkniętego zbiornika, aż nad powierzchnią cieczy zbierze się poduszka sprężonego powietrza (typowo do <b>3–3,5 bar</b>). Po naciśnięciu spustu zawór otwiera drogę — ciśnienie powietrza wypycha ciecz rurką ssącą, przez wężyk i lancę, aż do wymiennej dyszy.</p>
+        <p>Cała rodzina <b>Kwazar Orion</b> działa właśnie tak. Występuje w kilku liniach pojemnościowych — od kompaktowego 3-litrowego, przez najpopularniejsze 6 i 9 l (seria PRO+), po 12-litrowy model z osłoną herbicydową do dużych powierzchni zewnętrznych. Zbiornik ma przezroczysty wskaźnik poziomu, a lanca (60–120 cm, teleskopowa w wersjach większych) pozwala pracować bez schylania się.</p>
+      </div>
+      <div class="rail">
+        <figure contenteditable="false">
+          <svg viewBox="0 0 420 240" role="img" aria-label="Przekrój opryskiwacza ciśnieniowego: pompka tłoczy powietrze do zbiornika, ciśnienie wypycha ciecz przez rurkę ssącą, wężyk i lancę do dyszy">
+            <rect x="60" y="70" width="130" height="140" rx="10" fill="none" stroke="currentColor" stroke-width="1.6"/>
+            <rect x="66" y="140" width="118" height="64" fill="var(--code-bg)"/>
+            <text x="125" y="130" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="var(--accent)">sprężone powietrze</text>
+            <text x="125" y="180" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="var(--ink-soft)">ciecz</text>
+            <line x1="130" y1="80" x2="130" y2="40" stroke="currentColor" stroke-width="4"/>
+            <rect x="120" y="18" width="20" height="26" fill="none" stroke="currentColor" stroke-width="1.6"/>
+            <text x="130" y="12" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="var(--ink-soft)">pompka ręczna</text>
+            <line x1="140" y1="195" x2="230" y2="130" stroke="currentColor" stroke-width="2.4"/>
+            <line x1="230" y1="130" x2="330" y2="100" stroke="currentColor" stroke-width="3.4"/>
+            <circle cx="330" cy="100" r="4" fill="var(--accent)"/>
+            <line x1="335" y1="95" x2="360" y2="82" stroke="var(--accent)" stroke-width="1.2"/>
+            <line x1="336" y1="100" x2="362" y2="97" stroke="var(--accent)" stroke-width="1.2"/>
+            <line x1="335" y1="106" x2="360" y2="114" stroke="var(--accent)" stroke-width="1.2"/>
+            <text x="345" y="130" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="var(--accent)">dysza</text>
+            <text x="60" y="228" font-family="IBM Plex Mono" font-size="9" fill="var(--ink-soft)">zawór bezpieczeństwa chroni przed przepompowaniem</text>
+          </svg>
+          <figcaption><b>Rys. 1.</b> Opryskiwacz ciśnieniowy nie potrzebuje żadnego zewnętrznego źródła zasilania — całe ciśnienie robocze pochodzi z kilkunastu ruchów ręcznej pompki.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="wrap" style="padding:0; margin-top:36px;">
+      <div class="table-wrap">
+        <table class="example-table">
+          <thead><tr><th>Model</th><th>Pojemność</th><th>Ciśnienie robocze</th><th>Waga</th><th>Typowe zastosowanie</th></tr></thead>
+          <tbody>
+            <tr><td class="n">Orion Garden</td><td class="mono">6 l</td><td class="mono">3,5 bar</td><td class="mono">~2,7 kg</td><td class="n">ogród, dezynfekcja obiektowa, mały detailing</td></tr>
+            <tr><td class="n">Orion PRO+</td><td class="mono">6 / 9 l</td><td class="mono">3,5 bar</td><td class="mono">2,8 / 3,2 kg</td><td class="n">profesjonalne mycie, aplikacja środków obiektowych</td></tr>
+            <tr><td class="n">Orion Super</td><td class="mono">3 / 6 / 9 / 12 l</td><td class="mono">3,5 bar</td><td class="mono">1,7–3,9 kg</td><td class="n">duże powierzchnie zewnętrzne, elewacje, tarasy</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note" style="margin-top:18px;"><b>Rodzina dysz Kwazar</b>Do lancy Orion pasuje kilka wymiennych dysz o różnej charakterystyce strumienia: <span class="stock">Cone (stożkowa)</span>, <span class="stock">Evenfan (płaska)</span>, <span class="stock">Deflector (odchylająca)</span>, <span class="stock">LowDrift (ograniczająca znoszenie mgiełki)</span> oraz okrągła regulowana — dobór zależy od tego, czy zależy nam na precyzyjnym punkcie, czy na równomiernym pasie natrysku.</div>
+    </div>
+  </section>
+
+  <!-- ================= 03 PIANOWNICE RĘCZNE ================= -->
+  <section class="chapter" id="pianownice">
+    <div class="chapter-head">
+      <div class="num">03</div>
+      <div>
+        <h2>Pianownice<br>ręczne ciśnieniowe</h2>
+        <div class="sub">Ta sama pompka, inna dysza, zupełnie inny efekt</div>
+      </div>
+    </div>
+    <div class="chapter-body">
+      <div class="prose">
+        <p>Pianownica ręczna (np. <b>Kwazar Venus 2L</b>) jest zbudowana identycznie jak opryskiwacz z rozdz. 02 — ręczna pompka, zbiornik pod ciśnieniem, zawór bezpieczeństwa. Różnicę robi <b>dysza spieniająca</b> na końcu lancy: zmusza ciecz do przejścia przez drobną siateczkę/labirynt, gdzie miesza się z powietrzem i tworzy gęstą, kremową pianę zamiast mgiełki. Venus pracuje przy niższym ciśnieniu niż Orion (ok. <b>2,2 bar</b>), bo piana nie wymaga tak dużej energii wyrzutu jak natrysk na duży dystans.</p>
+        <p><b>To nie jest to samo co iniektor Venturiego</b> opisany w Zeszycie 01. Pianownica ręczna sama wytwarza ciśnienie (pompka) i nie potrzebuje myjki — świetnie sprawdza się tam, gdzie nie ma dostępu do wody pod ciśnieniem: wnętrza samochodów, biura, obiekty bez myjki. Iniektor Venturiego z kolei wymaga strumienia wody z myjki, ale generuje dużo więcej piany na minutę przy dużo mniejszym wysiłku fizycznym — stąd jego przewaga w myjniach, gdzie liczy się przepustowość.</p>
+      </div>
+      <div class="rail">
+        <div class="note"><b>W katalogu</b><span class="stock">Kwazar Venus 2L</span> — 2,2 bar, uszczelnienia FPM, zestaw 3 dysz o różnej gęstości piany.<br><span class="stock">WAPRO Epoca OP TEC ONE Foamer 10L</span> — większy zbiornik, do intensywnej pracy sezonowej.<br><span class="stock">Vikan Pianownica przemysłowa 93053</span> — montowana na wężu ogrodowym, do dużych powierzchni obiektowych.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 04 KOLORY ================= -->
+  <section class="chapter" id="kolory">
+    <div class="chapter-head">
+      <div class="num">04</div>
+      <div>
+        <h2>Kolor lanki<br>= odporność chemiczna</h2>
+        <div class="sub">Dlaczego nie każdy Orion pasuje do każdego środka</div>
+      </div>
+    </div>
+    <div class="chapter-body">
+      <div class="prose">
+        <p>Standardowe opryskiwacze i pianownice Kwazar mają uszczelnienia z <b>NBR</b> (kauczuk nitrylowy) — odporne na typowe środki obojętne i lekko zasadowe, ale degradujące się pod wpływem silnych kwasów, zasad i wielu rozpuszczalników organicznych (patrz Zeszyt 02, skala pH). Dla środków agresywnych Kwazar oferuje osobne linie z uszczelnieniami <b>FPM/Viton</b>, odpornymi na dużo szerszy zakres chemii:</p>
+        <ul>
+          <li><b>Standard</b> — uszczelnienia NBR, do środków neutralnych/lekko zasadowych (szampony, wosk na mokro, płukanki).</li>
+          <li><b>Alka Line</b> — do środków silnie zasadowych (aktywna piana, odtłuszczacze, preparaty do felg alkaliczne).</li>
+          <li><b>Acid Line / HD Acid</b> — do środków kwasowych (odrdzewiacze, kwaśne preparaty do felg, usuwanie osadów wapiennych).</li>
+        </ul>
+        <p>Sprzedaż niewłaściwej linii do agresywnej chemii to gwarantowana reklamacja — uszczelnienie puchnie lub twardnieje i urządzenie zaczyna przeciekać po kilku–kilkunastu użyciach.</p>
+      </div>
+      <div class="rail">
+        <div class="callout"><b>Pytanie kontrolne przy sprzedaży</b>Zawsze pytaj, jakim środkiem klient będzie napełniał zbiornik. Jeśli to coś kwasowego lub silnie zasadowego (nie sam szampon) — proponuj wariant Acid Line / Alka Line, nie standard.</div>
+      </div>
+    </div>
+    <div class="swatch-row">
+      <div class="swatch"><span class="dot" style="background:#c0392b"></span>Acid Line — środki kwasowe</div>
+      <div class="swatch"><span class="dot" style="background:#2e6da4"></span>Alka Line — środki zasadowe</div>
+      <div class="swatch"><span class="dot" style="background:#8a8a80"></span>Standard NBR — środki neutralne</div>
+    </div>
+  </section>
+
+  <!-- ================= 05 TORNADOR ================= -->
+  <section class="chapter" id="tornador">
+    <div class="chapter-head">
+      <div class="num">05</div>
+      <div>
+        <h2>Pistolety pneumatyczne<br>Tornador / Benbow</h2>
+        <div class="sub">Mini-tornado ze sprężarki warsztatowej zamiast ręcznej pompki</div>
+      </div>
+    </div>
+    <div class="chapter-body">
+      <div class="prose">
+        <p>Zupełnie inna rodzina — zasilana nie ręczną pompką, tylko sprężarką warsztatową (typowo 6–8 bar na wejściu). Wewnątrz pistoletu obraca się zagięta rurka: sprężone powietrze wprawia ją w szybki ruch wirowy, a wypływające z niej powietrze zasysa po drodze niewielką ilość płynu ze zbiorniczka. Powstaje wirujący strumień — miniaturowe tornado — które <b>wybija brud z powierzchni materiału zamiast wbijać go głębiej</b>, jak zrobiłby to zwykły strumień pod ciśnieniem.</p>
+        <p>Stąd zastosowanie tam, gdzie zwykłe spryskanie i wycieranie nie sięga: szczeliny tapicerki, otwory nawiewów klimatyzacji, panele drzwi, kratki głośników.</p>
+      </div>
+      <div class="rail">
+        <figure contenteditable="false">
+          <svg viewBox="0 0 420 200" role="img" aria-label="Zasada działania pistoletu Tornador: sprężone powietrze wprawia w ruch obrotowy rurkę, zasysając płyn i tworząc wirujący strumień wybijający brud z powierzchni">
+            <rect x="30" y="80" width="70" height="46" rx="6" fill="var(--code-bg)" stroke="currentColor" stroke-width="1.4"/>
+            <text x="65" y="140" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="var(--ink-soft)">zbiornik płynu</text>
+            <line x1="100" y1="100" x2="150" y2="100" stroke="currentColor" stroke-width="2"/>
+            <path d="M150 80 h30 a20 20 0 0 1 0 40 h-30 Z" fill="none" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M180 88 q14 12 0 24" fill="none" stroke="var(--accent)" stroke-width="2"/>
+            <text x="165" y="70" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="var(--ink-soft)">obrotowa rurka</text>
+            <g stroke="var(--accent)" stroke-width="1.6" fill="none">
+              <path d="M215 100 q20 -18 40 0 q20 18 40 0" opacity="0.9"/>
+              <path d="M215 100 q20 18 40 0 q20 -18 40 0" opacity="0.6"/>
+              <path d="M215 100 q20 -10 40 0 q20 10 40 0" opacity="0.35"/>
+            </g>
+            <text x="300" y="130" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="var(--accent)">wirujący strumień powietrza + płyn</text>
+            <rect x="355" y="70" width="10" height="60" fill="var(--steel)" opacity="0.5"/>
+            <text x="360" y="150" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="var(--ink-soft)">tapicerka</text>
+          </svg>
+          <figcaption><b>Rys. 2.</b> Wirujące powietrze odrywa zabrudzenie z powierzchni i włókien, zamiast wbijać je głębiej jak zwykły strumień punktowy.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="wrap" style="padding:0; margin-top:36px;">
+      <div class="table-wrap">
+        <table class="example-table">
+          <thead><tr><th>Model</th><th>Funkcja</th><th>Zastosowanie</th></tr></thead>
+          <tbody>
+            <tr><td class="n">Benbow 001 Blow Gun</td><td class="n">przedmuch (bez zbiornika)</td><td class="n">suszenie, czyszczenie na sucho, przedmuch szczelin</td></tr>
+            <tr><td class="n">Benbow 008 / 109</td><td class="n">pistolet suszący</td><td class="n">osuszanie tapicerki i wykładzin po praniu</td></tr>
+            <tr><td class="n">Benbow 013 Foam Gun</td><td class="n">pianownica pneumatyczna, 2 dysze</td><td class="n">nakładanie piany aktywnej na tapicerkę przed praniem</td></tr>
+            <tr><td class="n">Benbow 055 Vacuum Washer</td><td class="n">pistolet piorący + odkurzacz</td><td class="n">pranie i jednoczesne odsysanie z tapicerki</td></tr>
+            <tr><td class="n">Benbow 056 Classic</td><td class="n">pistolet piorący, obrotowa rurka</td><td class="n">czyszczenie tapicerki, dywaników, boczków drzwi</td></tr>
+            <tr><td class="n">Benbow 104 PRO Super Black</td><td class="n">pistolet piorący, wersja PRO</td><td class="n">intensywna praca detailingowa, flota, myjnie ręczne</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout" style="margin-top:18px;"><b>Sprzęt towarzyszący</b>Wszystkie modele wymagają sprężarki warsztatowej (nie są zasilane ręcznie) — przy sprzedaży klientowi bez sprężarki od razu dopytaj o to, zanim zaproponujesz Tornador zamiast np. pianownicy ręcznej.</div>
+    </div>
+  </section>
+
+  <!-- ================= 06 ZBIORNIKI ================= -->
+  <section class="chapter" id="zbiorniki">
+    <div class="chapter-head">
+      <div class="num">06</div>
+      <div>
+        <h2>Zbiorniki<br>i stacje natrysku chemii</h2>
+        <div class="sub">Ten sam mechanizm co opryskiwacz, tylko w skali obiektu</div>
+      </div>
+    </div>
+    <div class="chapter-body">
+      <div class="prose">
+        <p>Zbiorniki natrysku chemii (24, 50, 100 l) to stacjonarny odpowiednik ręcznego opryskiwacza — działają na identycznej zasadzie ciśnienia powietrza nad cieczą, tylko zamiast ręcznej pompki mają <b>wlot powietrza</b> podłączany do instalacji sprężonego powietrza obiektu (kompresor, sieć pneumatyczna myjni), a ciśnienie utrzymuje <b>zawór kulowy</b> (typowo do 8 bar). Na kółkach, więc łatwo przewieźć między stanowiskami.</p>
+        <p>Wersje ze stali malowanej wystarczają do większości środków; wersje <b>INOX</b> (stal nierdzewna) są odpornością zbliżone do linii Acid Line z rozdz. 04 — wybieramy je, gdy zbiornik ma stale pracować z kwaśną lub silnie zasadową chemią, bo stal malowana koroduje przy stałym kontakcie.</p>
+      </div>
+      <div class="rail">
+        <div class="note"><b>W katalogu</b><span class="stock">Zbiornik natrysku chemii 24L</span> · <span class="stock">50L</span> · <span class="stock">100L</span> — stal malowana.<br><span class="stock">Zbiornik INOX 24L / 50L / 100L</span> — do środków agresywnych, praca ciągła.<br>Do każdego: <span class="stock">zawór kulowy 8 bar</span>, <span class="stock">wlot powietrza</span>, <span class="stock">wlew</span> jako części zamienne.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 07 BHP ================= -->
+  <section class="chapter" id="bhp">
+    <div class="chapter-head">
+      <div class="num">07</div>
+      <div>
+        <h2>Bezpieczeństwo<br>i PPE</h2>
+        <div class="sub">Sprzęt do aplikacji stawia pracownika bliżej stężonej chemii niż mycie wodą</div>
+      </div>
+    </div>
+    <div class="chapter-body">
+      <div class="prose">
+        <p>Przy pracy z opryskiwaczami i pianownicami ryzyko kontaktu ze stężoną chemią i jej oparami jest wyższe niż przy zwykłym myciu wodą — dlatego przy sprzedaży sprzętu do środków kwasowych/zasadowych warto od razu przypomnieć o rękawicach odpornych chemicznie i okularach.</p>
+        <p>Przy pracy w zamkniętych pomieszczeniach z oparami rozpuszczalników (np. niektóre preparaty do felg, odtłuszczacze) stosuje się półmaski z filtrami:</p>
+        <dl class="gloss">
+          <dt>Filtr klasy A (A1/A2)</dt>
+          <dd>Chroni przed parami organicznymi — rozpuszczalnikami, niektórymi odtłuszczaczami. A2 ma większą pojemność sorbentu niż A1, dla dłuższej/intensywniejszej pracy.</dd>
+          <dt>Filtr klasy P (P2/P3)</dt>
+          <dd>Chroni przed pyłami i aerozolami (mgiełka z opryskiwacza). P2 zatrzymuje min. 94% cząstek — wystarcza do typowej pracy z natryskiem.</dd>
+        </dl>
+      </div>
+      <div class="rail">
+        <div class="callout"><b>Kombinacja praktyczna</b>Przy aplikacji stężonych środków w zamkniętej hali najczęściej rekomenduje się filtr łączony <b>A1P2</b> lub <b>A2P2</b> — jednocześnie opary i mgiełka aerozolu.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 08 DOBÓR I SPRZEDAŻ ================= -->
+  <section class="chapter" id="dobor" style="border-bottom:none;">
+    <div class="chapter-head">
+      <div class="num">08</div>
+      <div>
+        <h2>Jak dobierać<br>i sprzedawać</h2>
+        <div class="sub">Cztery typowe scenariusze klienta</div>
+      </div>
+    </div>
+
+    <div class="map-grid">
+      <div class="map-tile">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="10" width="16" height="10" rx="1"/><path d="M8 10 V6 a4 4 0 0 1 8 0 v4"/></svg>
+        <h4>Detailing wnętrz</h4>
+        <p>Bez dostępu do myjki — czyszczenie tapicerki, klimatyzacji, szczelin.</p>
+        <div class="exs"><span class="stock">Pistolet pneumatyczny Tornador/Benbow</span><span class="stock">Pianownica Venus 2L</span></div>
+      </div>
+      <div class="map-tile">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3 v9 M8 8 l4 -5 4 5"/><path d="M5 13 h14 l-2 8 H7 Z"/></svg>
+        <h4>Duże powierzchnie zewnętrzne</h4>
+        <p>Elewacje, tarasy, dezynfekcja placów — bez potrzeby myjki ciśnieniowej.</p>
+        <div class="exs"><span class="stock">Orion Super 9L / 12L</span></div>
+      </div>
+      <div class="map-tile">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M8 12 h8 M12 8 v8"/></svg>
+        <h4>Myjnia bezdotykowa / obiekt</h4>
+        <p>Wysoka przepustowość, praca cały dzień, stałe stanowisko.</p>
+        <div class="exs"><span class="stock">Zbiornik natrysku 50–100L</span><span class="stock">Iniektor Venturiego (Zeszyt 01)</span></div>
+      </div>
+      <div class="map-tile">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2 C9 6 6 10 6 14 a6 6 0 0 0 12 0 c0-4-3-8-6-12 Z"/></svg>
+        <h4>Środki agresywne (kwas/zasada)</h4>
+        <p>Odrdzewiacze, mocne odtłuszczacze, dezynfekcja przemysłowa.</p>
+        <div class="exs"><span class="stock">Orion / Venus — Acid Line lub Alka Line</span><span class="stock">Zbiornik INOX</span></div>
+      </div>
+      <div class="map-tile">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9 h18"/></svg>
+        <h4>Codzienne szorowanie</h4>
+        <p>Ręczne mycie z bieżącym dozowaniem środka podczas szorowania.</p>
+        <div class="exs"><span class="stock">Szczotki do myjni z przepływem (MTM, EASY)</span></div>
+      </div>
+      <div class="map-tile">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="3" width="14" height="18" rx="2"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
+        <h4>Ogród i mały biznes</h4>
+        <p>Niewielkie ilości, sporadyczne użycie, ograniczony budżet.</p>
+        <div class="exs"><span class="stock">Orion Garden 6L</span></div>
+      </div>
+    </div>
+
+    <div class="wrap" style="padding:0; margin-top:28px;">
+      <div class="note"><b>Zasada cross-sell</b>Klient kupujący opryskiwacz lub pianownicę do środka agresywnego — zawsze dopytaj o rękawice i okulary (rozdz. 07) oraz o zapasowe dysze/uszczelnienia (zużywają się szybciej przy pracy z kwasami niż z neutralną chemią).</div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="fmono">Kenochem — Biblioteka Techniczna · Zeszyt 04 z serii</div>
+    <ul class="sources">
+      <li><a href="https://kwazar.com.pl/shop/profesjonalne-opryskiwacze-ogrodowe/orion-super-1" target="_blank" rel="noopener">Kwazar — Opryskiwacz ciśnieniowy Orion Super</a></li>
+      <li><a href="https://sklep.techkar.pl/kwazar-orion-pro-6l,3,7010,7003" target="_blank" rel="noopener">Kwazar Orion PRO+ 6L — dane techniczne</a></li>
+      <li><a href="https://kenochem.com/pl/products/akcesoria/pianownice/kwazar-venus-2l-pianownica-reczna-3461" target="_blank" rel="noopener">Kenochem.com — Kwazar Venus 2L, pianownica ręczna</a></li>
+      <li><a href="https://kenochem.com/pl/menu/akcesoria/pistolety-piorace-tornadory-280" target="_blank" rel="noopener">Kenochem.com — Pistolety piorące Tornador i BenBow</a></li>
+      <li><a href="https://www.auto-swiat.pl/porady/eksploatacja/test-tornador-gun-zrob-sobie-trabe-powietrzna-i-wyczysc-tapicerke-auta/xsvz1ns" target="_blank" rel="noopener">Auto Świat — zasada działania Tornador Gun</a></li>
+      <li><a href="https://chemiczna-hurtownia.pl/pl/n/Polmaski-ochronne-3M-i-nie-tylko-rodzaje%2C-dobor-filtrow-i-zasady-bezpiecznego-uzytkowania/193" target="_blank" rel="noopener">Dobór filtrów ochronnych P2/P3, A1/A2</a></li>
+    </ul>
+  </footer>
+
+</div>
+<style>
+  #klodToolbar{
+    position:fixed; top:14px; right:14px; z-index:9999;
+    display:flex; align-items:center; gap:8px;
+    background:var(--paper-raised); border:1px solid var(--steel-line);
+    border-radius:10px; padding:6px 8px; box-shadow:0 2px 10px rgba(0,0,0,0.15);
+    font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:12px;
+  }
+  #klodToolbar button{
+    font-family:inherit; font-size:12px; cursor:pointer; border:1px solid var(--steel-line);
+    background:var(--paper); color:var(--ink); border-radius:6px; padding:5px 9px;
+    line-height:1;
+  }
+  #klodToolbar button:hover{background:var(--code-bg);}
+  #klodToolbar button.primary{background:var(--blueprint); color:var(--paper); border-color:var(--blueprint);}
+  #klodToolbar .klod-status{color:var(--ink-soft); max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  #klodArticle[contenteditable="true"]{
+    outline:2px dashed var(--blueprint); outline-offset:6px; border-radius:4px;
+  }
+  #klodToast{
+    position:fixed; bottom:18px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:var(--paper); font-family:"IBM Plex Mono", monospace;
+    font-size:12.5px; padding:9px 16px; border-radius:8px; z-index:9999;
+    opacity:0; transition:opacity .25s, transform .25s; pointer-events:none;
+  }
+  #klodToast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+</style>
+<div id="klodToolbar"></div>
+<div id="klodToast"></div>
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const SUPABASE_URL = 'https://fgkkvbniyjysgqcjuxpl.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZna2t2Ym5peWp5c2dxY2p1eHBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxNTE0MjgsImV4cCI6MjEwMDcyNzQyOH0.HiiaVnv_G5QR8WQ1YggA_iPRO5I7mJa0nd0C8K9KOHQ';
+const SLUG = 'zeszyt-04-aplikacja-chemii';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const article = document.getElementById('klodArticle');
+const toolbar = document.getElementById('klodToolbar');
+const toast = document.getElementById('klodToast');
+
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2400);
+}
+
+/* ---------- motyw: własny wybór na tej stronie > wybór w katalogu > system ---------- */
+const THEME_PAGE_KEY = 'katalog-theme-override:' + SLUG;
+const THEME_APP_KEY = 'katalog-theme';
+
+function currentTheme() {
+  try {
+    return localStorage.getItem(THEME_PAGE_KEY) || localStorage.getItem(THEME_APP_KEY) || null;
+  } catch { return null; }
+}
+function applyTheme(t) {
+  if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+  else document.documentElement.removeAttribute('data-theme');
+}
+applyTheme(currentTheme());
+
+const themeBtn = document.createElement('button');
+themeBtn.type = 'button';
+themeBtn.title = 'Przełącz jasny / ciemny motyw (tej strony)';
+function syncThemeBtnLabel() {
+  const t = document.documentElement.getAttribute('data-theme');
+  themeBtn.textContent = t === 'dark' ? '☀️ Jasny' : t === 'light' ? '🌙 Ciemny' : '🌓 Motyw';
+}
+syncThemeBtnLabel();
+themeBtn.addEventListener('click', () => {
+  const t = document.documentElement.getAttribute('data-theme');
+  const next = t === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+  try { localStorage.setItem(THEME_PAGE_KEY, next); } catch {}
+  syncThemeBtnLabel();
+});
+toolbar.appendChild(themeBtn);
+
+/* ---------- ładowanie zapisanej treści (jeśli jest w bazie) ---------- */
+let originalHtml = article.innerHTML;
+try {
+  const { data } = await supabase
+    .from('technical_library_articles')
+    .select('html, updated_at')
+    .eq('slug', SLUG)
+    .maybeSingle();
+  if (data && data.html) {
+    article.innerHTML = data.html;
+    originalHtml = data.html;
+  }
+} catch (e) {
+  console.warn('Biblioteka: nie udało się wczytać zapisanej wersji', e);
+}
+
+/* ---------- edycja (tylko zalogowani w katalogu) ---------- */
+const statusEl = document.createElement('span');
+statusEl.className = 'klod-status';
+toolbar.appendChild(statusEl);
+
+const { data: { session } } = await supabase.auth.getSession();
+
+if (!session) {
+  statusEl.textContent = 'Gość — zaloguj się w katalogu, aby edytować';
+} else {
+  let editing = false;
+  const editBtn = document.createElement('button');
+  editBtn.type = 'button';
+  editBtn.textContent = '✏️ Edytuj';
+  const saveBtn = document.createElement('button');
+  saveBtn.type = 'button';
+  saveBtn.textContent = '💾 Zapisz';
+  saveBtn.className = 'primary';
+  saveBtn.style.display = 'none';
+  const cancelBtn = document.createElement('button');
+  cancelBtn.type = 'button';
+  cancelBtn.textContent = 'Anuluj';
+  cancelBtn.style.display = 'none';
+
+  function enterEdit() {
+    editing = true;
+    article.setAttribute('contenteditable', 'true');
+    editBtn.style.display = 'none';
+    saveBtn.style.display = '';
+    cancelBtn.style.display = '';
+    statusEl.textContent = 'Tryb edycji — klikaj i pisz w tekście';
+  }
+  function exitEdit() {
+    editing = false;
+    article.removeAttribute('contenteditable');
+    editBtn.style.display = '';
+    saveBtn.style.display = 'none';
+    cancelBtn.style.display = 'none';
+  }
+
+  editBtn.addEventListener('click', enterEdit);
+  cancelBtn.addEventListener('click', () => {
+    article.innerHTML = originalHtml;
+    exitEdit();
+    statusEl.textContent = '';
+    showToast('Cofnięto zmiany');
+  });
+  saveBtn.addEventListener('click', async () => {
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Zapisuję…';
+    const html = article.innerHTML;
+    const { error } = await supabase.from('technical_library_articles').upsert({
+      slug: SLUG,
+      html,
+      updated_at: new Date().toISOString(),
+      updated_by: session.user.email || session.user.id,
+    });
+    saveBtn.disabled = false;
+    saveBtn.textContent = '💾 Zapisz';
+    if (error) {
+      console.error(error);
+      showToast('Błąd zapisu — spróbuj ponownie');
+      return;
+    }
+    originalHtml = html;
+    exitEdit();
+    statusEl.textContent = '';
+    showToast('Zapisano zmiany');
+  });
+
+  toolbar.appendChild(editBtn);
+  toolbar.appendChild(saveBtn);
+  toolbar.appendChild(cancelBtn);
+}
+</script>
+</body>
+</html>

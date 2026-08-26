@@ -1,4 +1,4 @@
-import { BookOpen, Droplet, ExternalLink, Wind, Wrench } from 'lucide-react';
+import { BookOpen, CarFront, Droplet, ExternalLink, SprayCan, Wind, Wrench } from 'lucide-react';
 
 type LibraryEntry = {
   id: string;
@@ -40,6 +40,26 @@ const LIBRARY_ENTRIES: LibraryEntry[] = [
     file: '/biblioteka/zeszyt-03-aromamarketing.html',
     icon: Wind,
     accent: 'text-violet-600 bg-violet-100 dark:text-violet-300 dark:bg-violet-500/15',
+  },
+  {
+    id: 'aplikacja-chemii',
+    number: '04',
+    title: 'Atlas Sprzętu do Aplikacji Chemii',
+    description:
+      'Opryskiwacze ciśnieniowe i pianownice ręczne (Kwazar Orion/Venus), kolory linii wg odporności chemicznej, pistolety pneumatyczne Tornador/Benbow, zbiorniki natrysku, BHP i dobór zestawu do zastosowania.',
+    file: '/biblioteka/zeszyt-04-aplikacja-chemii.html',
+    icon: SprayCan,
+    accent: 'text-amber-600 bg-amber-100 dark:text-amber-300 dark:bg-amber-500/15',
+  },
+  {
+    id: 'myjnie-samochodowe',
+    number: '05',
+    title: 'Atlas Myjni Samochodowych',
+    description:
+      'Rodzaje myjni (portalowe, tunelowe, bezdotykowe, self-service), jak działa stanowisko samoobsługowe krok po kroku, dobór chemii Orion na każdy etap programu i szczotki myjniowe.',
+    file: '/biblioteka/zeszyt-05-myjnie-samochodowe.html',
+    icon: CarFront,
+    accent: 'text-teal-600 bg-teal-100 dark:text-teal-300 dark:bg-teal-500/15',
   },
 ];
 
@@ -96,7 +116,7 @@ export function LibraryView() {
 
         <div className="flex flex-col justify-center gap-1 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/30 dark:text-slate-500">
           <p className="font-medium text-slate-600 dark:text-slate-400">Kolejne zeszyty w przygotowaniu</p>
-          <p>Zeszyt 04: chemia profesjonalna do detailingu — pasty polerskie, powłoki, technika nakładania.</p>
+          <p>Zeszyt 06: chemia profesjonalna do detailingu — pasty polerskie, powłoki, technika nakładania.</p>
         </div>
       </section>
     </div>

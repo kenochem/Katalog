@@ -54,7 +54,6 @@ export type RoleAction =
   | 'addProduct'
   | 'uploadImage'
   | 'deleteImage'
-  | 'useLens'
   | 'printLabels'
   | 'manageFavorites'
   | 'manageKits'
@@ -76,7 +75,6 @@ export const ROLE_ACTION_LABELS: Record<RoleAction, string> = {
   addProduct: 'Dodawanie produktów',
   uploadImage: 'Dodawanie zdjęć',
   deleteImage: 'Usuwanie zdjęć',
-  useLens: 'Lens (zdjęcie)',
   printLabels: 'Etykiety',
   manageFavorites: 'Ulubione',
   manageKits: 'Zestawy',
@@ -103,7 +101,6 @@ const ALL_FALSE: Record<RoleAction, boolean> = {
   addProduct: false,
   uploadImage: false,
   deleteImage: false,
-  useLens: false,
   printLabels: false,
   manageFavorites: false,
   manageKits: false,
@@ -132,7 +129,6 @@ export const DEFAULT_ROLE_MATRIX: Record<AppRole, Record<RoleAction, boolean>> =
     editProduct: true,
     addProduct: true,
     uploadImage: true,
-    useLens: true,
     printLabels: true,
     manageFavorites: true,
     manageKits: true,
@@ -148,7 +144,6 @@ export const DEFAULT_ROLE_MATRIX: Record<AppRole, Record<RoleAction, boolean>> =
     ...ALL_FALSE,
     editStock: true,
     uploadImage: true,
-    useLens: true,
     printLabels: true,
     manageFavorites: true,
     switchCatalog: true,
@@ -163,7 +158,6 @@ export const DEFAULT_ROLE_MATRIX: Record<AppRole, Record<RoleAction, boolean>> =
     addProduct: true,
     uploadImage: true,
     deleteImage: true,
-    useLens: true,
     printLabels: true,
     manageFavorites: true,
     manageKits: true,
@@ -185,7 +179,6 @@ export const DEFAULT_ROLE_MATRIX: Record<AppRole, Record<RoleAction, boolean>> =
     addProduct: true,
     uploadImage: true,
     deleteImage: true,
-    useLens: true,
     printLabels: true,
     manageFavorites: true,
     manageKits: true,

@@ -1,4 +1,4 @@
-import type { CatalogListFilter } from '../types';
+import type { CatalogListFilter, View } from '../types';
 import type { CatalogSort } from './search';
 import { supabase, isSupabaseConfigured } from './supabase';
 
@@ -8,6 +8,8 @@ export interface CatalogUserPreferences {
   sort?: CatalogSort;
   gridDensity?: GridDensityPref;
   catalogListFilter?: CatalogListFilter;
+  sidebarOrder?: View[];
+  sidebarHidden?: View[];
 }
 
 export interface UserPreferencesPayload {
@@ -29,6 +31,7 @@ function readLocalCache(): UserPreferencesPayload {
 function writeLocalCache(payload: UserPreferencesPayload): void {
   try {
     localStorage.setItem(LOCAL_KEY, JSON.stringify(payload));
+    window.dispatchEvent(new CustomEvent('katalog-user-preferences-changed'));
   } catch {
     /* quota */
   }

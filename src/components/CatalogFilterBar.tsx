@@ -304,6 +304,8 @@ export function CatalogFilterBar({
   catalogKindCounts,
 }: CatalogFilterBarProps) {
   const [openMenu, setOpenMenu] = useState<MenuId>(null);
+  const [mobileCategoryExpanded, setMobileCategoryExpanded] = useState(false);
+  const [mobileManufacturerExpanded, setMobileManufacturerExpanded] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
 
   useClickOutside(barRef, () => setOpenMenu(null), openMenu !== null);
@@ -792,13 +794,43 @@ export function CatalogFilterBar({
               </button>
             </div>
             <div className="space-y-5 px-4 py-4">
-              <MobileFilterSection title="Kategoria">
-                {categoryGrid('grid gap-1.5 sm:grid-cols-2')}
-              </MobileFilterSection>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setMobileCategoryExpanded((v) => !v)}
+                  className="mb-2 flex w-full items-center justify-between gap-2"
+                >
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    Kategoria
+                  </span>
+                  <span className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-slate-300">
+                    <span className="max-w-[12rem] truncate">{categoryLabel}</span>
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 shrink-0 transition-transform ${mobileCategoryExpanded ? 'rotate-180' : ''}`}
+                    />
+                  </span>
+                </button>
+                {mobileCategoryExpanded && categoryGrid('grid gap-1.5 sm:grid-cols-2')}
+              </div>
               {showManufacturerFilter && (
-                <MobileFilterSection title="Producent / marka">
-                  {manufacturerGrid('grid gap-1.5 sm:grid-cols-2')}
-                </MobileFilterSection>
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setMobileManufacturerExpanded((v) => !v)}
+                    className="mb-2 flex w-full items-center justify-between gap-2"
+                  >
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      Producent / marka
+                    </span>
+                    <span className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-slate-300">
+                      <span className="max-w-[12rem] truncate">{manufacturerLabel}</span>
+                      <ChevronDown
+                        className={`h-3.5 w-3.5 shrink-0 transition-transform ${mobileManufacturerExpanded ? 'rotate-180' : ''}`}
+                      />
+                    </span>
+                  </button>
+                  {mobileManufacturerExpanded && manufacturerGrid('grid gap-1.5 sm:grid-cols-2')}
+                </div>
               )}
               <MobileFilterSection title="Stan magazynowy">
                 <div className="flex flex-wrap gap-1.5">

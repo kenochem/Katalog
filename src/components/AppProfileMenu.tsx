@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Camera,
+  Cookie,
   LogOut,
   MessageCircle,
   Settings2,
@@ -14,7 +15,9 @@ import { canAccessAdminPanel } from '../lib/adminAccess';
 import { UserAvatar } from './UserAvatar';
 import { useUserAvatar } from '../lib/useUserAvatar';
 import { saveUserAvatarFile } from '../lib/userAvatar';
-import { useTheme } from '../lib/theme';
+import { THEME_LABELS, useTheme } from '../lib/theme';
+
+const THEME_MENU_ICONS = { light: Sun, dark: Moon, cookie: Cookie } as const;
 import { showToast } from '../lib/toast';
 
 interface AppProfileMenuProps {
@@ -36,7 +39,8 @@ export function AppProfileMenu({
     signOut,
     exitGuest,
   } = useAuth();
-  const { isDark, toggleTheme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
+  const ThemeIcon = THEME_MENU_ICONS[theme];
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -175,8 +179,8 @@ export function AppProfileMenu({
                 }}
                 className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-800"
               >
-                {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                Motyw: {isDark ? 'jasny' : 'ciemny'}
+                <ThemeIcon className="h-4 w-4" />
+                Motyw: {THEME_LABELS[theme]}
               </button>
             </li>
             <li>

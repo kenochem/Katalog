@@ -1,16 +1,18 @@
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import {
   AlertTriangle,
   ArrowRight,
   BookOpen,
   Boxes,
+  CheckCircle2,
   ExternalLink,
   ImageOff,
-  LayoutGrid,
+  PackageX,
   ScanBarcode,
   Search,
   Sparkles,
   Star,
+  TrendingDown,
 } from 'lucide-react';
 import type { CatalogType } from '../types';
 import { computeCatalogStats } from '../lib/catalogExport';
@@ -48,77 +50,94 @@ export function CatalogHomeView({
   onFocusSearch,
   onOpenScanner,
 }: CatalogHomeViewProps) {
-  const stats = computeCatalogStats(allProducts as Parameters<typeof computeCatalogStats>[0]);
+  const stats = useMemo(
+    () => computeCatalogStats(allProducts as Parameters<typeof computeCatalogStats>[0]),
+    [allProducts],
+  );
   const lowStock = stats.lowStock;
 
   return (
-    <div className="catalog-home-view mx-auto max-w-5xl space-y-10 pb-12 pt-2">
-      <section className="text-center sm:text-left">
-        <p className="text-xs font-medium uppercase tracking-wider text-brand-400/90">
-          Kenochem Katalog
-        </p>
-        <h1 className="mt-1 inline-flex items-center justify-center gap-2 text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-100 sm:justify-start sm:text-3xl">
-          Witaj w katalogu
-          <ContextHelp id="catalog" side="left" />
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600 dark:text-slate-400 sm:text-[15px]">
-          Jedno miejsce na stany i ofertę: części do myjni, chemia i produkty sklepowe.
-          Wpisz indeks WAPRO, zeskanuj EAN albo wejdź na pełną listę — filtry i kategorie są
-          w katalogu.
-        </p>
-      </section>
-
-      <button
-        type="button"
-        onClick={() => onOpenCatalog('all')}
-        className="group flex w-full flex-col gap-3 rounded-2xl border border-brand-300 bg-gradient-to-br from-brand-50 via-white to-slate-50 p-5 text-left shadow-sm shadow-slate-200/70 transition hover:border-brand-400 dark:border-brand-500/40 dark:from-brand-500/20 dark:via-slate-900/90 dark:to-slate-950 dark:shadow-lg dark:shadow-brand-950/25 dark:hover:border-brand-400/55 sm:flex-row sm:items-center sm:justify-between sm:p-7"
-      >
-        <div className="flex items-start gap-4">
-          <span className="rounded-xl bg-brand-100 p-3 text-brand-700 dark:bg-brand-500/25 dark:text-brand-200">
-            <LayoutGrid className="h-7 w-7" />
-          </span>
-          <div>
-            <span className="text-lg font-semibold text-slate-950 dark:text-slate-50 sm:text-xl">
+    <div className="catalog-home-view mx-auto max-w-5xl space-y-8 pb-12 pt-2">
+      {/* Pasek działania: powitanie + wyszukiwanie + wejście do katalogu w jednym miejscu */}
+      <section className="relative rounded-3xl border border-brand-200/70 bg-gradient-to-br from-brand-50 via-white to-white px-5 py-6 shadow-sm shadow-slate-200/60 dark:border-brand-500/20 dark:from-brand-500/10 dark:via-slate-900/60 dark:to-slate-950 dark:shadow-none sm:px-8 sm:py-8">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 overflow-hidden rounded-3xl"
+        >
+          <div className="absolute -right-20 -top-24 h-64 w-64 rounded-full bg-brand-300/20 blur-3xl dark:bg-brand-500/10" />
+        </div>
+        <div className="relative">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600 dark:text-brand-300">
+                Kenochem Katalog
+              </p>
+              <h1 className="mt-1 inline-flex items-center gap-2 text-2xl font-bold tracking-tight text-slate-950 dark:text-slate-100 sm:text-3xl">
+                Witaj w katalogu
+                <ContextHelp id="catalog" side="left" />
+              </h1>
+            </div>
+            <button
+              type="button"
+              onClick={() => onOpenCatalog('all')}
+              className="group inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-500 hover:gap-3"
+            >
               Wejdź do katalogu
-            </span>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              Pełna lista produktów z wyszukiwaniem, filtrami, cenami, zdjęciami i stanami.
-            </p>
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </button>
+          </div>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600 dark:text-slate-400 sm:text-[15px]">
+            Jedno miejsce na stany i ofertę: części do myjni, chemia i produkty sklepowe —{' '}
+            {stats.total.toLocaleString('pl-PL')} pozycji, filtry i kategorie w środku.
+          </p>
+
+          <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-stretch">
+            <button
+              type="button"
+              onClick={onFocusSearch}
+              className="flex flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-left shadow-sm transition hover:border-brand-400 dark:border-slate-700/80 dark:bg-slate-900/70 dark:hover:border-brand-500/40"
+            >
+              <Search className="h-5 w-5 shrink-0 text-brand-500" />
+              <span className="text-sm text-slate-600 dark:text-slate-400">
+                Szukaj SKU, EAN lub nazwy…
+              </span>
+            </button>
+            {onOpenScanner && (
+              <button
+                type="button"
+                onClick={onOpenScanner}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-brand-300 bg-white px-5 py-3.5 text-sm font-medium text-brand-800 shadow-sm transition hover:bg-brand-50 dark:border-brand-500/35 dark:bg-slate-900/70 dark:text-brand-200 dark:hover:bg-brand-500/10"
+              >
+                <ScanBarcode className="h-5 w-5" />
+                Skanuj EAN
+              </button>
+            )}
           </div>
         </div>
-        <span className="inline-flex items-center justify-center gap-2 self-start rounded-xl bg-brand-600 px-5 py-3 text-sm font-medium text-white group-hover:bg-brand-500 sm:self-center">
-          {stats.total.toLocaleString('pl-PL')} SKU
-          <ArrowRight className="h-4 w-4" />
-        </span>
-      </button>
+      </section>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
-        <StatCard label="Pozycji" value={stats.total} />
-        <StatCard label="Na stanie" value={stats.inStock} tone="ok" />
-        <StatCard label="Brak na stanie" value={stats.outOfStock} tone="warn" />
-        <StatCard label="Niski stan ≤5" value={lowStock} tone="amber" />
-      </div>
-
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
-        <button
-          type="button"
-          onClick={onFocusSearch}
-          className="flex flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-left shadow-sm transition hover:border-brand-400 dark:border-slate-700/80 dark:bg-slate-900/60 dark:hover:border-brand-500/40"
-        >
-          <Search className="h-5 w-5 shrink-0 text-brand-400" />
-          <span className="text-sm text-slate-600 dark:text-slate-400">Szukaj SKU, EAN lub nazwy…</span>
-        </button>
-        {onOpenScanner && (
-          <button
-            type="button"
-            onClick={onOpenScanner}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-brand-300 bg-brand-50 px-5 py-3.5 text-sm font-medium text-brand-800 hover:bg-brand-100 dark:border-brand-500/35 dark:bg-brand-500/10 dark:text-brand-200 dark:hover:bg-brand-500/20"
-          >
-            <ScanBarcode className="h-5 w-5" />
-            Skanuj EAN
-          </button>
-        )}
-      </div>
+      {/* Statystyki jako jeden pasek z podziałami — mniej osobnych "boxów" */}
+      <section className="grid grid-cols-2 divide-x divide-y divide-slate-200 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900/40 sm:grid-cols-4 sm:divide-y-0">
+        <StatCell label="Pozycji" value={stats.total} icon={<Boxes className="h-4 w-4" />} />
+        <StatCell
+          label="Na stanie"
+          value={stats.inStock}
+          tone="ok"
+          icon={<CheckCircle2 className="h-4 w-4" />}
+        />
+        <StatCell
+          label="Brak na stanie"
+          value={stats.outOfStock}
+          tone="warn"
+          icon={<PackageX className="h-4 w-4" />}
+        />
+        <StatCell
+          label="Niski stan ≤5"
+          value={lowStock}
+          tone="amber"
+          icon={<TrendingDown className="h-4 w-4" />}
+        />
+      </section>
 
       {quickActions.length > 0 && (
         <section>
@@ -149,27 +168,28 @@ export function CatalogHomeView({
         </section>
       )}
 
-      <section>
-        <div className="mb-3 flex items-end justify-between gap-3">
+      {/* Zadania porządkowe — jedna karta, paski postępu zamiast wykresów kołowych */}
+      <section className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/35">
+        <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-800">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-500">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
               Porządkowanie katalogu
             </p>
-            <h2 className="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-100">
+            <h2 className="mt-0.5 text-base font-semibold text-slate-950 dark:text-slate-100">
               Najważniejsze zadania
             </h2>
           </div>
           <button
             type="button"
             onClick={() => onOpenCatalog('all')}
-            className="hidden rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:border-brand-400 hover:text-brand-700 dark:border-slate-700 dark:bg-transparent dark:text-slate-300 dark:hover:border-brand-500/40 dark:hover:text-brand-200 sm:inline-flex"
+            className="hidden rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 hover:border-brand-400 hover:text-brand-700 dark:border-slate-700 dark:text-slate-300 dark:hover:border-brand-500/40 dark:hover:text-brand-200 sm:inline-flex"
           >
             Otwórz listę
           </button>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <DonutStatusCard
-            icon={<AlertTriangle className="h-5 w-5" />}
+        <div className="divide-y divide-slate-100 dark:divide-slate-800">
+          <TaskRow
+            icon={<AlertTriangle className="h-4 w-4" />}
             label="Decyzje"
             description="Kategorie, brakujące źródła danych i trudne przypadki do ręcznego sprawdzenia."
             value={decisionCount}
@@ -178,8 +198,8 @@ export function CatalogHomeView({
             actionLabel="Przejdź do decyzji"
             onClick={quickActions.find((a) => a.id === 'catalog-decisions')?.onClick}
           />
-          <DonutStatusCard
-            icon={<ImageOff className="h-5 w-5" />}
+          <TaskRow
+            icon={<ImageOff className="h-4 w-4" />}
             label="Bez zdjęć"
             description="Produkty wymagające zdjęcia lub podmiany grafiki."
             value={missingImagesCount}
@@ -191,91 +211,102 @@ export function CatalogHomeView({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-5 dark:border-slate-800/80 dark:bg-slate-900/30">
-        <h2 className="text-sm font-medium text-slate-900 dark:text-slate-300">W skrócie</h2>
-        <ul className="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-400">
-          <li className="flex gap-2">
-            <Star className="mt-0.5 h-4 w-4 shrink-0 text-amber-400/80" />
-            <span>
-              <strong className="font-medium text-slate-900 dark:text-slate-300">Ulubione</strong> — szybki dostęp
-              do często używanych indeksów (zakładka w menu).
-            </span>
-          </li>
-          <li className="flex gap-2">
-            <Boxes className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
-            <span>
-              Stany pochodzą z <strong className="font-medium text-slate-900 dark:text-slate-300">WAPRO</strong>
-              {canSyncStock ? ' — sync w prawym górnym rogu po zalogowaniu.' : '.'}
-            </span>
-          </li>
-          {missingImagesCount > 0 && onOpenMissingImages && (
-            <li className="flex gap-2">
-              <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded bg-amber-500/20 text-[10px] font-bold text-amber-300">
-                {missingImagesCount > 99 ? '99+' : missingImagesCount}
+      {/* W skrócie + Biblioteka wiedzy razem — mniej sekcji na końcu strony */}
+      <section className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-5 dark:border-slate-800/80 dark:bg-slate-900/30">
+          <h2 className="text-sm font-medium text-slate-900 dark:text-slate-300">W skrócie</h2>
+          <ul className="mt-3 space-y-1.5 text-sm text-slate-600 dark:text-slate-400">
+            <li className="flex items-start gap-3 rounded-xl px-2 py-1.5 transition hover:bg-black/[0.03] dark:hover:bg-white/[0.05]">
+              <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-500 dark:bg-amber-500/10 dark:text-amber-300">
+                <Star className="h-3.5 w-3.5" />
               </span>
-              <span>
-                <button
-                  type="button"
-                  onClick={onOpenMissingImages}
-                  className="font-medium text-amber-700 underline decoration-amber-500/40 underline-offset-2 hover:text-amber-900 dark:text-amber-200/90 dark:hover:text-amber-100"
-                >
-                  {missingImagesCount} pozycji bez zdjęcia
-                </button>
-                {' — warto uzupełnić w widoku „Bez zdjęć”.'}
+              <span className="pt-1">
+                <strong className="font-medium text-slate-900 dark:text-slate-300">Ulubione</strong> — szybki
+                dostęp do często używanych indeksów (zakładka w menu).
               </span>
             </li>
-          )}
-          {canSyncStock && (
-            <li className="flex gap-2">
-              <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-brand-400/80" />
-              <span>
-                Nowy indeks w Mag? Dodaj produkt ręcznie, potem{' '}
-                <strong className="font-medium text-slate-900 dark:text-slate-300">Sync WAPRO</strong>, aby pobrać
-                stan.
+            <li className="flex items-start gap-3 rounded-xl px-2 py-1.5 transition hover:bg-black/[0.03] dark:hover:bg-white/[0.05]">
+              <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                <Boxes className="h-3.5 w-3.5" />
+              </span>
+              <span className="pt-1">
+                Stany pochodzą z <strong className="font-medium text-slate-900 dark:text-slate-300">WAPRO</strong>
+                {canSyncStock ? ' — sync w prawym górnym rogu po zalogowaniu.' : '.'}
               </span>
             </li>
-          )}
-        </ul>
-      </section>
-
-      <section className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:flex sm:items-center sm:justify-between sm:gap-4 dark:border-slate-800/70 dark:bg-slate-900/25">
-        <div className="flex gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/15 text-violet-300">
-            <BookOpen className="h-5 w-5" />
-          </span>
-          <div>
-            <h2 className="inline-flex items-center gap-2 text-sm font-medium text-slate-900 dark:text-slate-200">
-              Biblioteka wiedzy (AI)
-              <ContextHelp id="guide" side="left" />
-            </h2>
-            <p className="mt-0.5 max-w-lg text-xs leading-relaxed text-slate-600 dark:text-slate-500">
-              Statyczny indeks produktów ze specyfikacją — do skrapowania przez boty. Uzupełniaj
-              opisy i parametry w kartach produktów, potem odśwież export.
-            </p>
-          </div>
+            {missingImagesCount > 0 && onOpenMissingImages && (
+              <li className="flex items-start gap-3 rounded-xl px-2 py-1.5 transition hover:bg-black/[0.03] dark:hover:bg-white/[0.05]">
+                <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-[10px] font-bold text-amber-600 dark:bg-amber-500/15 dark:text-amber-300">
+                  {missingImagesCount > 99 ? '99+' : missingImagesCount}
+                </span>
+                <span className="pt-1">
+                  <button
+                    type="button"
+                    onClick={onOpenMissingImages}
+                    className="font-medium text-amber-700 underline decoration-amber-500/40 underline-offset-2 hover:text-amber-900 dark:text-amber-200/90 dark:hover:text-amber-100"
+                  >
+                    {missingImagesCount} pozycji bez zdjęcia
+                  </button>
+                  {' — warto uzupełnić w widoku „Bez zdjęć”.'}
+                </span>
+              </li>
+            )}
+            {canSyncStock && (
+              <li className="flex items-start gap-3 rounded-xl px-2 py-1.5 transition hover:bg-black/[0.03] dark:hover:bg-white/[0.05]">
+                <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-300">
+                  <Sparkles className="h-3.5 w-3.5" />
+                </span>
+                <span className="pt-1">
+                  Nowy indeks w Mag? Dodaj produkt ręcznie, potem{' '}
+                  <strong className="font-medium text-slate-900 dark:text-slate-300">Sync WAPRO</strong>, aby
+                  pobrać stan.
+                </span>
+              </li>
+            )}
+          </ul>
         </div>
-        <a
-          href="/data/knowledge/manifest.json"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-3 inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 hover:border-violet-400 hover:text-violet-700 dark:border-slate-700 dark:text-slate-300 dark:hover:border-violet-500/40 dark:hover:text-violet-200 sm:mt-0"
-        >
-          manifest.json
-          <ExternalLink className="h-3.5 w-3.5" />
-        </a>
+
+        <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-5 dark:border-slate-800/70 dark:bg-slate-900/25">
+          <div className="flex gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/15 text-violet-600 dark:text-violet-300">
+              <BookOpen className="h-5 w-5" />
+            </span>
+            <div>
+              <h2 className="inline-flex items-center gap-2 text-sm font-medium text-slate-900 dark:text-slate-200">
+                Biblioteka wiedzy (AI)
+                <ContextHelp id="guide" side="left" />
+              </h2>
+              <p className="mt-0.5 text-xs leading-relaxed text-slate-600 dark:text-slate-500">
+                Statyczny indeks produktów ze specyfikacją — do skrapowania przez boty. Uzupełniaj opisy i
+                parametry w kartach produktów, potem odśwież export.
+              </p>
+            </div>
+          </div>
+          <a
+            href="/data/knowledge/manifest.json"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-flex w-fit shrink-0 items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 hover:border-violet-400 hover:text-violet-700 dark:border-slate-700 dark:text-slate-300 dark:hover:border-violet-500/40 dark:hover:text-violet-200"
+          >
+            manifest.json
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        </div>
       </section>
     </div>
   );
 }
 
-function StatCard({
+function StatCell({
   label,
   value,
   tone = 'default',
+  icon,
 }: {
   label: string;
   value: number;
   tone?: 'default' | 'ok' | 'warn' | 'amber';
+  icon?: ReactNode;
 }) {
   const valueClass =
     tone === 'ok'
@@ -285,11 +316,20 @@ function StatCard({
         : tone === 'amber'
           ? 'text-amber-700 dark:text-amber-400/90'
           : 'text-slate-950 dark:text-slate-100';
+  const iconClass =
+    tone === 'ok'
+      ? 'text-emerald-500 dark:text-emerald-300'
+      : tone === 'warn'
+        ? 'text-rose-500 dark:text-rose-300'
+        : tone === 'amber'
+          ? 'text-amber-500 dark:text-amber-300'
+          : 'text-slate-400 dark:text-slate-500';
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm sm:px-4 dark:border-slate-800/80 dark:bg-slate-900/40">
-      <p className="text-[10px] uppercase tracking-wide text-slate-500 sm:text-[11px]">
-        {label}
-      </p>
+    <div className="px-4 py-3.5 sm:px-5">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[10px] uppercase tracking-wide text-slate-500 sm:text-[11px]">{label}</p>
+        {icon && <span className={iconClass}>{icon}</span>}
+      </div>
       <p className={`mt-1 text-xl font-semibold tabular-nums sm:text-2xl ${valueClass}`}>
         {value.toLocaleString('pl-PL')}
       </p>
@@ -297,7 +337,7 @@ function StatCard({
   );
 }
 
-function DonutStatusCard({
+function TaskRow({
   icon,
   label,
   description,
@@ -318,55 +358,41 @@ function DonutStatusCard({
 }) {
   const pct = total > 0 ? Math.min(100, Math.round((value / total) * 100)) : 0;
   const done = Math.max(0, total - value);
-  const color = tone === 'warn' ? '#fb7185' : '#f59e0b';
-  const bg = `conic-gradient(${color} ${pct}%, rgba(51,65,85,.55) 0)`;
+  const barClass = tone === 'warn' ? 'bg-rose-400 dark:bg-rose-500' : 'bg-amber-400 dark:bg-amber-500';
+  const chipClass =
+    tone === 'warn'
+      ? 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300'
+      : 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300';
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/35">
-      <div className="flex items-center gap-4">
-        <div
-          className="relative flex h-24 w-24 shrink-0 items-center justify-center rounded-full"
-          style={{ background: bg }}
-          aria-label={`${label}: ${value} z ${total}`}
-        >
-          <div className="absolute inset-3 rounded-full bg-white dark:bg-slate-950" />
-          <div className="relative text-center">
-            <p className="text-xl font-semibold tabular-nums text-slate-950 dark:text-slate-100">
-              {pct}%
-            </p>
-            <p className="text-[10px] uppercase tracking-wide text-slate-600 dark:text-slate-500">
-              wymaga
-            </p>
-          </div>
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className={`rounded-lg p-2 ${tone === 'warn' ? 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300' : 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300'}`}>
-              {icon}
-            </span>
+    <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 flex-1 items-start gap-3">
+        <span className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${chipClass}`}>
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <h3 className="font-semibold text-slate-950 dark:text-slate-100">{label}</h3>
-          </div>
-          <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{description}</p>
-          <div className="mt-3 flex flex-wrap gap-2 text-xs">
-            <span className="rounded-lg bg-slate-100 px-2 py-1 text-slate-800 dark:bg-slate-950/70 dark:text-slate-300">
-              {value.toLocaleString('pl-PL')} do pracy
-            </span>
-            <span className="rounded-lg bg-emerald-50 px-2 py-1 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300">
-              {done.toLocaleString('pl-PL')} OK
+            <span className="text-xs tabular-nums text-slate-500">
+              {value.toLocaleString('pl-PL')} do pracy · {done.toLocaleString('pl-PL')} OK
             </span>
           </div>
-          {onClick ? (
-            <button
-              type="button"
-              onClick={onClick}
-              className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 hover:border-brand-400 hover:text-brand-700 dark:border-slate-700 dark:text-slate-300 dark:hover:border-brand-500/40 dark:hover:text-brand-200"
-            >
-              {actionLabel}
-              <ArrowRight className="h-3.5 w-3.5" />
-            </button>
-          ) : null}
+          <p className="mt-0.5 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{description}</p>
+          <div className="mt-2 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+            <div className={`h-full rounded-full ${barClass}`} style={{ width: `${pct}%` }} />
+          </div>
         </div>
       </div>
+      {onClick ? (
+        <button
+          type="button"
+          onClick={onClick}
+          className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 hover:border-brand-400 hover:text-brand-700 dark:border-slate-700 dark:text-slate-300 dark:hover:border-brand-500/40 dark:hover:text-brand-200 sm:self-center"
+        >
+          {actionLabel}
+          <ArrowRight className="h-3.5 w-3.5" />
+        </button>
+      ) : null}
     </div>
   );
 }

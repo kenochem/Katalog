@@ -1,12 +1,11 @@
-import { LogOut, Moon, Settings2, Sun } from 'lucide-react';
+import { LogOut, Settings2 } from 'lucide-react';
 import type { View } from '../types';
 import { canAccessAdminPanel } from '../lib/adminAccess';
 import { roleCan, type AppRole } from '../lib/roles';
 import { useAuth } from '../lib/auth';
-import { useTheme } from '../lib/theme';
-import { showToast } from '../lib/toast';
 import { AppNotificationCenter } from './AppNotificationCenter';
 import { AppProfileMenu } from './AppProfileMenu';
+import { ThemeSwitcher } from './ThemeSwitcher';
 import { APP_PRODUCT } from '../app/moduleRegistry';
 
 interface AppHeaderActionsProps {
@@ -32,7 +31,6 @@ export function AppHeaderActions({
   onOpenChatSettings,
 }: AppHeaderActionsProps) {
   const canAdmin = canAccessAdminPanel(role);
-  const { isDark, toggleTheme } = useTheme();
   const { mode, signOut, exitGuest } = useAuth();
   const adminActive = view === 'admin';
   const notificationScope =
@@ -67,23 +65,9 @@ export function AppHeaderActions({
     else void signOut();
   }
 
-  function handleToggleTheme() {
-    const nextDark = !isDark;
-    toggleTheme();
-    showToast(nextDark ? 'Wlaczono motyw ciemny' : 'Wlaczono motyw jasny', 'info');
-  }
-
   return (
     <div className="hub-header-actions flex shrink-0 items-center gap-1.5 sm:gap-2">
-      <button
-        type="button"
-        onClick={handleToggleTheme}
-        className="hub-header-btn hub-header-btn--icon hub-header-btn--ghost inline-flex"
-        title={isDark ? 'Motyw jasny' : 'Motyw ciemny'}
-        aria-label={isDark ? 'Włącz motyw jasny' : 'Włącz motyw ciemny'}
-      >
-        {isDark ? <Sun className="h-4 w-4 shrink-0" /> : <Moon className="h-4 w-4 shrink-0" />}
-      </button>
+      <ThemeSwitcher />
       {showAdminShortcut && canAdmin && (
         <button
           type="button"

@@ -59,6 +59,32 @@
   --color-slate-950: #020617;
 }
 
+/* Motyw ciasteczkowy — jasny, ciepłe tony karmelu/mleka zamiast zieleni/błękitu */
+.theme-cookie {
+  --color-brand-50: #fbf1de;
+  --color-brand-100: #f3e0b8;
+  --color-brand-200: #6b4118;
+  --color-brand-300: #7a4b1c;
+  --color-brand-400: #8f5a22;
+  --color-brand-500: #b4772e;
+  --color-brand-600: #8f5a22;
+  --color-brand-700: #7a4b1c;
+  --color-brand-800: #6b4118;
+  --color-brand-900: #4a2d10;
+
+  --color-slate-50: #2b1d0f;
+  --color-slate-100: #3a2712;
+  --color-slate-200: #55391c;
+  --color-slate-300: #6e4a26;
+  --color-slate-400: #8a6440;
+  --color-slate-500: #a9835f;
+  --color-slate-600: #c7a67e;
+  --color-slate-700: #e1c79e;
+  --color-slate-800: #efddbe;
+  --color-slate-900: #fffdf9;
+  --color-slate-950: #fbf1e2;
+}
+
 * {
   -webkit-tap-highlight-color: transparent;
   box-sizing: border-box;
@@ -109,6 +135,109 @@ input[type="search"]::-webkit-search-cancel-button {
   border-color: #e2e8f0;
   background: #ffffff;
   color: #0f172a;
+}
+
+/*
+  Katalog w jasnym motywie ma wygladac normalnie: ciemny tekst na jasnych
+  powierzchniach. Projekt ma odwrócona skale slate, dlatego widoki katalogowe
+  dostaja lokalna normalizacje zamiast polegac na klasach text-slate-*.
+*/
+html:not(.dark) .catalog-readable-light {
+  color: #0f172a !important;
+}
+
+html:not(.dark) .catalog-readable-light .surface-panel,
+html:not(.dark) .catalog-readable-light.bg-white,
+html:not(.dark) .catalog-readable-light.bg-white\/95,
+html:not(.dark) .catalog-readable-light.bg-slate-900,
+html:not(.dark) .catalog-readable-light.bg-slate-950,
+html:not(.dark) .catalog-readable-light .bg-white,
+html:not(.dark) .catalog-readable-light .bg-white\/95,
+html:not(.dark) .catalog-readable-light .bg-slate-900,
+html:not(.dark) .catalog-readable-light .bg-slate-900\/30,
+html:not(.dark) .catalog-readable-light .bg-slate-900\/45,
+html:not(.dark) .catalog-readable-light .bg-slate-900\/80 {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) .catalog-readable-light .bg-slate-50,
+html:not(.dark) .catalog-readable-light .bg-slate-100,
+html:not(.dark) .catalog-readable-light .bg-slate-800,
+html:not(.dark) .catalog-readable-light .bg-slate-950,
+html:not(.dark) .catalog-readable-light .bg-slate-950\/30,
+html:not(.dark) .catalog-readable-light .bg-slate-950\/50,
+html:not(.dark) .catalog-readable-light .bg-slate-950\/60 {
+  background-color: #f8fafc !important;
+}
+
+html:not(.dark) .catalog-readable-light .hover\:bg-slate-50:hover,
+html:not(.dark) .catalog-readable-light .hover\:bg-slate-100:hover,
+html:not(.dark) .catalog-readable-light .hover\:bg-slate-800:hover,
+html:not(.dark) .catalog-readable-light .hover\:bg-slate-900:hover,
+html:not(.dark) .catalog-readable-light .hover\:bg-slate-950\/30:hover {
+  background-color: #f1f5f9 !important;
+}
+
+html:not(.dark) .catalog-readable-light .border-slate-200,
+html:not(.dark) .catalog-readable-light.border-slate-200,
+html:not(.dark) .catalog-readable-light .border-slate-300,
+html:not(.dark) .catalog-readable-light.border-slate-300,
+html:not(.dark) .catalog-readable-light .border-slate-700,
+html:not(.dark) .catalog-readable-light.border-slate-700,
+html:not(.dark) .catalog-readable-light .border-slate-800,
+html:not(.dark) .catalog-readable-light.border-slate-800,
+html:not(.dark) .catalog-readable-light .border-slate-800\/60 {
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) .catalog-readable-light .divide-slate-200 > :not([hidden]) ~ :not([hidden]),
+html:not(.dark) .catalog-readable-light .divide-slate-800 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) .catalog-readable-light .text-white {
+  color: #ffffff !important;
+}
+
+html:not(.dark) .catalog-readable-light .text-slate-50,
+html:not(.dark) .catalog-readable-light .text-slate-100,
+html:not(.dark) .catalog-readable-light .text-slate-200,
+html:not(.dark) .catalog-readable-light .text-slate-300,
+html:not(.dark) .catalog-readable-light .text-slate-800,
+html:not(.dark) .catalog-readable-light .text-slate-900,
+html:not(.dark) .catalog-readable-light .text-slate-950 {
+  color: #0f172a !important;
+}
+
+html:not(.dark) .catalog-readable-light .text-slate-400,
+html:not(.dark) .catalog-readable-light .text-slate-500,
+html:not(.dark) .catalog-readable-light .text-slate-600,
+html:not(.dark) .catalog-readable-light .text-slate-700 {
+  color: #475569 !important;
+}
+
+html:not(.dark) .catalog-readable-light .hover\:text-slate-50:hover,
+html:not(.dark) .catalog-readable-light .hover\:text-slate-100:hover,
+html:not(.dark) .catalog-readable-light .hover\:text-slate-900:hover,
+html:not(.dark) .catalog-readable-light .hover\:text-slate-950:hover {
+  color: #0f172a !important;
+}
+
+html:not(.dark) .catalog-readable-light .bg-brand-600,
+html:not(.dark) .catalog-readable-light .bg-brand-500 {
+  color: #ffffff !important;
+}
+
+html:not(.dark) .catalog-readable-light .bg-brand-50,
+html:not(.dark) .catalog-readable-light .bg-brand-500\/15 {
+  background-color: #e5f6e6 !important;
+}
+
+html:not(.dark) .catalog-readable-light .text-brand-200,
+html:not(.dark) .catalog-readable-light .text-brand-300,
+html:not(.dark) .catalog-readable-light .text-brand-700,
+html:not(.dark) .catalog-readable-light .text-brand-800 {
+  color: #1f6124 !important;
 }
 
 /*
@@ -724,6 +853,52 @@ html:not(.dark) .catalog-home-view .bg-slate-950,
 html:not(.dark) .catalog-home-view .bg-slate-950\/70,
 html:not(.dark) .catalog-home-view .bg-slate-950\/80 {
   background-color: #f8fafc !important;
+}
+
+/* Katalog logi — w jasnym/cookie motywie tekst ma byc klasycznie czytelny. */
+html:not(.dark) .catalog-logs-view {
+  color: #0f172a;
+}
+
+html:not(.dark) .catalog-logs-view .text-slate-50,
+html:not(.dark) .catalog-logs-view .text-slate-100,
+html:not(.dark) .catalog-logs-view .text-slate-200,
+html:not(.dark) .catalog-logs-view .text-slate-300,
+html:not(.dark) .catalog-logs-view .text-slate-800,
+html:not(.dark) .catalog-logs-view .text-slate-900,
+html:not(.dark) .catalog-logs-view .text-slate-950 {
+  color: #0f172a !important;
+}
+
+html:not(.dark) .catalog-logs-view .text-slate-400,
+html:not(.dark) .catalog-logs-view .text-slate-500,
+html:not(.dark) .catalog-logs-view .text-slate-600,
+html:not(.dark) .catalog-logs-view .text-slate-700 {
+  color: #475569 !important;
+}
+
+html:not(.dark) .catalog-logs-view .border-slate-200,
+html:not(.dark) .catalog-logs-view .border-slate-300,
+html:not(.dark) .catalog-logs-view .border-slate-700,
+html:not(.dark) .catalog-logs-view .border-slate-800 {
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) .catalog-logs-view .bg-slate-50 {
+  background-color: #f8fafc !important;
+}
+
+html:not(.dark) .catalog-logs-view .bg-slate-900,
+html:not(.dark) .catalog-logs-view .bg-slate-950 {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) .catalog-logs-view input {
+  color: #0f172a !important;
+}
+
+html:not(.dark) .catalog-logs-view input::placeholder {
+  color: #64748b !important;
 }
 
 .catalog-grid-pending {

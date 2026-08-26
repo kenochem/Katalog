@@ -6,7 +6,13 @@ import {
   stockSyncScopeLabel,
   type StockSyncScope,
 } from '../lib/stockSync';
+import { useAuth } from '../lib/auth';
 import { showToast } from '../lib/toast';
+import {
+  recordWaproSyncDone,
+  recordWaproSyncError,
+  recordWaproSyncStarted,
+} from '../lib/syncNotifications';
 import { parseWaproSyncMessage } from '../lib/waproSkuMatch';
 import { DatabaseSyncIcon } from './DatabaseSyncIcon';
 
@@ -31,9 +37,11 @@ export function RefreshControls({
   catalog = 'all',
   className = '',
 }: RefreshControlsProps) {
+  const { user } = useAuth();
   const [syncBusy, setSyncBusy] = useState(false);
   const scope: StockSyncScope = catalog;
   const scopeLabel = stockSyncScopeLabel(scope);
+  const userId = user?.id;
 
   async function onSyncStock() {
     setSyncBusy(true);
@@ -41,8 +49,14 @@ export function RefreshControls({
       const res = await requestWaproStockSync(scope);
       if (!res.ok) {
         showToast(res.error || 'Nie udało się zlecić syncu WAPRO', 'error');
+        recordWaproSyncError({
+          userId,
+          scopeLabel,
+          message: res.error || 'Nie udało się zlecić syncu WAPRO',
+        });
         return;
       }
+      recordWaproSyncStarted({ userId, requestId: res.id, scopeLabel });
       showToast(
         `Sync WAPRO (${scopeLabel}): stany i ceny jak w Mag — czekam…`,
         'info',
@@ -61,6 +75,14 @@ export function RefreshControls({
         if (last.id === res.id || !res.id) {
           if (last.status === 'done') {
             const parsed = parseWaproSyncMessage(last.message);
+            recordWaproSyncDone({
+              userId,
+              requestId: last.id,
+              scopeLabel,
+              summary: parsed.summary,
+              stats: parsed.stats,
+              warningHint: parsed.warningHint,
+            });
             showToast(
               parsed.summary || `Sync ${scopeLabel} zakończony. Odświeżam.`,
               'ok',
@@ -86,7 +108,14 @@ export function RefreshControls({
             return;
           }
           if (last.status === 'error') {
-            showToast(last.message || 'Sync WAPRO zakończył się błędem', 'error', 8000);
+            const message = last.message || 'Sync WAPRO zakończył się błędem';
+            recordWaproSyncError({
+              userId,
+              requestId: last.id,
+              scopeLabel,
+              message,
+            });
+            showToast(message, 'error', 8000);
             return;
           }
         }

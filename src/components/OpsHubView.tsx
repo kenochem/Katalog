@@ -13,6 +13,7 @@ import {
   FileSpreadsheet,
   Landmark,
   LineChart,
+  PackageX,
   Plus,
   ReceiptText,
   Settings2,
@@ -55,6 +56,7 @@ import { showToast } from '../lib/toast';
 import { ContextHelp } from './ContextHelp';
 import { inferContextHelpId } from '../lib/contextHelp';
 import { OpsProductSalesAnalytics } from './ops/OpsProductSalesAnalytics';
+import { OpsDeadStockAnalysis } from './ops/OpsDeadStockAnalysis';
 import { OpsSonaxAnalytics, SonaxWorkspaceTile } from './ops/OpsSonaxAnalytics';
 import { OpsCustomersPanel } from './ops/OpsCustomersPanel';
 
@@ -69,6 +71,7 @@ type OpsToolId =
   | 'marketplace'
   | 'analytics-lab'
   | 'product-sales'
+  | 'dead-stock-analysis'
   | 'customers'
   | 'workspace-builder'
   | 'stat-builder'
@@ -210,6 +213,7 @@ const TOOL_IDS = new Set<OpsToolId>([
   'marketplace',
   'analytics-lab',
   'product-sales',
+  'dead-stock-analysis',
   'customers',
   'workspace-builder',
   'stat-builder',
@@ -822,6 +826,10 @@ export function OpsHubView() {
     );
   }
 
+  if (tool === 'dead-stock-analysis') {
+    return <OpsDeadStockAnalysis onBack={() => setTool('hub')} />;
+  }
+
   if (tool === 'product-sales') {
     return <OpsProductSalesAnalytics onBack={() => setTool('hub')} />;
   }
@@ -1099,6 +1107,12 @@ function FinanceOperationsHome({
               title="Analiza sprzedazy produktow"
               subtitle="Rankingi Mag WAPRO: najlepiej, najgorzej, netto, wolumen"
               onClick={() => onOpenTool('product-sales')}
+            />
+            <ToolCard
+              icon={<PackageX className="h-5 w-5" />}
+              title="Analiza martwego stocku"
+              subtitle="Towar bez sprzedazy w wybranym okresie i suma zamrozonych pieniedzy"
+              onClick={() => onOpenTool('dead-stock-analysis')}
             />
             <ToolCard
               icon={<Building2 className="h-5 w-5" />}

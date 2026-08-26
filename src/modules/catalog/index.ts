@@ -7,4 +7,3 @@ export { KitsView } from '../../components/KitsView';
 export { PhotoProgressView } from '../../components/PhotoProgressView';
 export { AddProductModal } from '../../components/AddProductModal';
 export { BarcodeScanner } from '../../components/BarcodeScanner';
-export { VisualSearchModal } from '../../components/VisualSearchModal';

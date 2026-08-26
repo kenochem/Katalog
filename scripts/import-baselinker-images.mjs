@@ -14,6 +14,7 @@ import { basename, resolve } from 'node:path';
 
 const PREVIEW_PATH = resolve('data/baselinker-image-import-preview.json');
 const APPLY = process.argv.includes('--apply');
+const MISSING_ONLY = process.argv.includes('--missing-only');
 
 function argValue(name) {
   const pref = `${name}=`;
@@ -158,22 +159,32 @@ function uniqueUrls(urls) {
   return out;
 }
 
+function hasCatalogPrimaryImage(product) {
+  return Boolean(
+    String(product.custom_image_url || '').trim() ||
+      String(product.image_url || '').trim(),
+  );
+}
+
 function buildPatch(product, bl) {
   const currentCustom = String(product.custom_image_url || '').trim();
   const currentPrimary = String(product.image_url || '').trim();
   const currentExtras = Array.isArray(product.extra_images) ? product.extra_images : [];
   const patch = {};
   const fields = [];
+  const incomingPrimary = bl.primary || (!currentCustom && !currentPrimary ? bl.extras[0] || '' : '');
 
-  if (!currentCustom && bl.primary && bl.primary !== currentPrimary) {
-    patch.image_url = bl.primary;
+  if (MISSING_ONLY && hasCatalogPrimaryImage(product)) return null;
+
+  if (!currentCustom && incomingPrimary && incomingPrimary !== currentPrimary) {
+    patch.image_url = incomingPrimary;
     fields.push(currentPrimary ? 'image_url_changed' : 'image_url_added');
   }
 
   const extras = uniqueUrls([
     ...currentExtras,
-    ...(currentPrimary && currentPrimary !== bl.primary ? [currentPrimary] : []),
-    ...bl.extras,
+    ...(currentPrimary && currentPrimary !== incomingPrimary ? [currentPrimary] : []),
+    ...bl.extras.filter((url) => url !== incomingPrimary),
   ]);
   if (JSON.stringify(extras) !== JSON.stringify(currentExtras)) {
     patch.extra_images = extras;
@@ -227,6 +238,10 @@ console.log(`CSV: ${basename(csvPath)} rows=${rows.length}, imageSkuKeys=${sourc
 const supabase = createClient(url, key);
 const products = await fetchAllProducts(supabase);
 console.log(`Supabase products=${products.length}`);
+if (MISSING_ONLY) {
+  const missingPrimary = products.filter((p) => !hasCatalogPrimaryImage(p)).length;
+  console.log(`Tryb --missing-only: sprawdzam tylko produkty bez glownego zdjecia (${missingPrimary})`);
+}
 
 const plan = [];
 for (const product of products) {

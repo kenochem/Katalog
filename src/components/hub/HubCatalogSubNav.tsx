@@ -1,4 +1,4 @@
-import { AlertTriangle, BarChart3, BookOpen, Home, ImageOff, Layers, Printer, Search, Star } from 'lucide-react';
+import { AlertTriangle, BarChart3, BookOpen, EyeOff, Home, ImageOff, Layers, Printer, Search, Star } from 'lucide-react';
 import type { View } from '../../types';
 
 export function HubCatalogSubNav({
@@ -15,6 +15,7 @@ export function HubCatalogSubNav({
     kits: number;
     decisions: number;
     missing: number;
+    hidden: number;
     labels: number;
   };
   role: {
@@ -38,6 +39,7 @@ export function HubCatalogSubNav({
   if (role.progress) {
     tabs.push({ id: 'progress', label: 'Postęp', icon: BarChart3 });
     tabs.push({ id: 'catalog-decisions', label: 'Decyzje', icon: AlertTriangle, count: counts.decisions });
+    tabs.push({ id: 'catalog-hidden', label: 'Ukryte', icon: EyeOff, count: counts.hidden });
     tabs.push({ id: 'missing-images', label: 'Bez zdjęć', icon: ImageOff, count: counts.missing });
   }
   if (role.labels) {
@@ -45,7 +47,7 @@ export function HubCatalogSubNav({
   }
 
   return (
-    <nav className="mb-3 flex gap-1 overflow-x-auto rounded-xl bg-slate-900/80 p-1 ring-1 ring-slate-800 scrollbar-none">
+    <nav className="catalog-readable-light mb-3 flex gap-1 overflow-x-auto rounded-xl bg-white p-1 ring-1 ring-slate-200 scrollbar-none dark:bg-slate-900/80 dark:ring-slate-800">
       {tabs.map((tab) => {
         const active = view === tab.id;
         const Icon = tab.icon;
@@ -55,13 +57,15 @@ export function HubCatalogSubNav({
             type="button"
             onClick={() => onView(tab.id)}
             className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium sm:text-sm ${
-              active ? 'bg-slate-700 text-white' : 'text-slate-400 hover:bg-slate-800'
+              active
+                ? 'bg-brand-600 text-white'
+                : 'text-slate-700 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50'
             }`}
           >
             <Icon className="h-3.5 w-3.5" />
             {tab.label}
             {tab.count !== undefined && tab.count > 0 && (
-              <span className="rounded-md bg-slate-950/60 px-1.5 text-[10px] tabular-nums">
+              <span className={`rounded-md px-1.5 text-[10px] tabular-nums ${active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-950/60 dark:text-slate-300'}`}>
                 {tab.count}
               </span>
             )}

@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => {
   return {
   plugins: [react(), tailwindcss()],
   optimizeDeps: {
-    exclude: ['@xenova/transformers', 'tesseract.js'],
+    exclude: ['tesseract.js'],
   },
   worker: {
     format: 'es',
@@ -46,7 +46,6 @@ export default defineConfig(({ mode }) => {
           if (id.includes('react-dom') || id.includes('/react/')) return 'react';
           if (id.includes('leaflet')) return 'leaflet';
           if (id.includes('recharts')) return 'recharts';
-          if (id.includes('@xenova/transformers')) return 'transformers';
         },
       },
     },

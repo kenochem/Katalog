@@ -2,14 +2,14 @@
   X, Camera, Upload, Loader2, Package, Pencil, Save, Trash2,
   Minus, Plus, Images, Printer, Tag, ArrowLeft,
   FileText, Barcode, Copy, Check, Scissors, Undo2, Layers,
-  Sparkles, TrendingUp,
+  Sparkles, TrendingUp, Star,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import type { Product, ProductVariant } from '../types';
 import { ACCESSORY_CATEGORIES } from '../types';
 import { manufacturerOptions, normalizeManufacturer, effectiveManufacturer } from '../lib/waproManufacturers';
 import {
-  getProductImage, getProductImages, updateProductImage, addProductExtraImage,
+  getProductImage, getProductImages, updateProductImage, addProductExtraImage, setProductPrimaryImage,
   updateProduct, deleteProductImage, deleteProductExtraImage, fetchProductById,
   deleteProduct, isProductSkuTaken,
 } from '../lib/products';
@@ -127,6 +127,7 @@ export function ProductDetail({
   const [removeBgBusy, setRemoveBgBusy] = useState(false);
   const [revertBusy, setRevertBusy] = useState(false);
   const [deleteProductBusy, setDeleteProductBusy] = useState(false);
+  const [settingPrimary, setSettingPrimary] = useState(false);
   const [imageDragOver, setImageDragOver] = useState(false);
   const [imagePreviewOpen, setImagePreviewOpen] = useState(false);
   const [hasImageRevert, setHasImageRevert] = useState(
@@ -342,6 +343,32 @@ export function ProductDetail({
     void handleUpload(file);
   }
 
+  async function handleSetAsPrimary() {
+    if (!displayImage || isPrimarySelected) return;
+    setSettingPrimary(true);
+    try {
+      await setProductPrimaryImage(product.id, displayImage);
+      setLocalPrimaryImage(displayImage);
+      setLocalExtraImages((prev) => prev.filter((url) => url !== displayImage));
+      const oldPrimary = primaryImage;
+      const extras = (detail.extraImageUrls || []).filter((url) => url !== displayImage);
+      if (oldPrimary && !extras.includes(oldPrimary)) extras.push(oldPrimary);
+      syncProduct({
+        ...detail,
+        customImageUrl: displayImage,
+        extraImageUrls: extras,
+        hasImage: true,
+      });
+      onImageUpdated?.(product.id, displayImage);
+      showToast('Ustawiono jako zdjęcie główne', 'ok');
+    } catch (err) {
+      console.error(err);
+      showToast('Nie udało się ustawić zdjęcia głównego', 'error');
+    } finally {
+      setSettingPrimary(false);
+    }
+  }
+
   async function handleDeleteImage() {
     if (!displayImage) return;
     const message = allImages.length > 1
@@ -539,10 +566,10 @@ export function ProductDetail({
   const canDeleteProduct = roleCan(role, 'deleteProduct');
   const stockTone =
     detail.stock <= 0
-      ? 'text-red-400 bg-red-500/10 border-red-500/30'
+      ? 'bg-red-600 text-white border-red-500'
       : detail.stock <= 5
-        ? 'text-amber-300 bg-amber-500/10 border-amber-500/30'
-        : 'text-emerald-300 bg-emerald-500/10 border-emerald-500/30';
+        ? 'bg-amber-500 text-amber-950 border-amber-400'
+        : 'bg-emerald-600 text-white border-emerald-500';
 
   const canUploadImages = roleCan(role, 'uploadImage');
   const hubTabs = useMemo(() => {
@@ -696,8 +723,8 @@ export function ProductDetail({
                       EAN {detail.ean}
                     </button>
                   )}
-                  <span className={`rounded-lg border px-2.5 py-1 text-xs font-medium ${stockTone}`}>
-                    {detail.stock <= 0 ? 'Brak' : formatStock(detail.stock)}
+                  <span className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-semibold ${stockTone}`}>
+                    Stan: {detail.stock <= 0 ? 'Brak' : formatStock(detail.stock)}
                   </span>
                   {showPrices &&
                     (detail.priceSaleGross != null || detail.priceSaleNet != null) && (
@@ -846,24 +873,44 @@ export function ProductDetail({
                   className="h-full w-full object-contain p-4"
                 />
               </button>
-              {roleCan(role, 'deleteImage') && (
-                <button
-                  type="button"
-                  disabled={deleting || uploading || uploadingExtra}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void handleDeleteImage();
-                  }}
-                  className="absolute right-3 top-3 flex items-center gap-1.5 rounded-lg bg-red-600/90 px-3 py-2 text-sm font-medium text-white shadow-lg backdrop-blur transition hover:bg-red-500 disabled:opacity-50"
-                >
-                  {deleting ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-4 w-4" />
-                  )}
-                  {allImages.length > 1 ? 'Usuń to zdjęcie' : 'Usuń zdjęcie'}
-                </button>
-              )}
+              <div className="absolute right-3 top-3 flex items-center gap-1.5">
+                {canUploadImages && isExtraSelected && (
+                  <button
+                    type="button"
+                    disabled={settingPrimary || deleting || uploading || uploadingExtra}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void handleSetAsPrimary();
+                    }}
+                    className="flex items-center gap-1.5 rounded-lg bg-brand-600/90 px-3 py-2 text-sm font-medium text-white shadow-lg backdrop-blur transition hover:bg-brand-500 disabled:opacity-50"
+                  >
+                    {settingPrimary ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Star className="h-4 w-4" />
+                    )}
+                    Ustaw jako główne
+                  </button>
+                )}
+                {roleCan(role, 'deleteImage') && (
+                  <button
+                    type="button"
+                    disabled={deleting || uploading || uploadingExtra}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void handleDeleteImage();
+                    }}
+                    className="flex items-center gap-1.5 rounded-lg bg-red-600/90 px-3 py-2 text-sm font-medium text-white shadow-lg backdrop-blur transition hover:bg-red-500 disabled:opacity-50"
+                  >
+                    {deleting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                    {allImages.length > 1 ? 'Usuń to zdjęcie' : 'Usuń zdjęcie'}
+                  </button>
+                )}
+              </div>
               {allImages.length > 1 && !hubStyle && (
                 <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5 rounded-xl bg-black/75 p-1.5 backdrop-blur">
                   {allImages.map((url, idx) => (

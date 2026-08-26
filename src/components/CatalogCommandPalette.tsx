@@ -15,7 +15,7 @@ import {
   Package,
   Printer,
   Search,
-  Sparkles,
+  ScrollText,
   Star,
   FolderOpen,
   X,
@@ -39,7 +39,6 @@ interface CatalogCommandPaletteProps {
   onOpenProduct: (p: Product) => void;
   onNavigate: (view: View) => void;
   onOpenMissingImages?: () => void;
-  onOpenLens?: () => void;
   onOpenScanner?: () => void;
   onSyncStock?: () => void;
   canSyncStock?: boolean;
@@ -60,7 +59,6 @@ export function CatalogCommandPalette({
   onOpenProduct,
   onNavigate,
   onOpenMissingImages,
-  onOpenLens,
   onOpenScanner,
   onSyncStock,
   canSyncStock,
@@ -107,6 +105,12 @@ export function CatalogCommandPalette({
         label: 'Widok: Katalog',
         icon: <Search className="h-4 w-4" />,
         run: wrap(() => onNavigate('catalog')),
+      },
+      {
+        id: 'nav-logs',
+        label: 'Widok: Logi sync',
+        icon: <ScrollText className="h-4 w-4" />,
+        run: wrap(() => onNavigate('logs')),
       },
     ];
     if (canFavorites) {
@@ -158,14 +162,6 @@ export function CatalogCommandPalette({
         run: wrap(() => onNavigate('labels')),
       });
     }
-    if (onOpenLens) {
-      items.push({
-        id: 'lens',
-        label: 'Lens — szukaj po zdjęciu',
-        icon: <Sparkles className="h-4 w-4" />,
-        run: wrap(onOpenLens),
-      });
-    }
     if (onOpenScanner) {
       items.push({
         id: 'scan',
@@ -187,7 +183,6 @@ export function CatalogCommandPalette({
   }, [
     onNavigate,
     onOpenMissingImages,
-    onOpenLens,
     onOpenScanner,
     onSyncStock,
     canSyncStock,

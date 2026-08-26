@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured, STORAGE_BUCKET } from './supabase';
+import { compressImageFile } from './imageCompress';
 import { getLocalProducts, saveLocalProduct, mergeProducts, hideProductId, removeLocalProduct, getHiddenProductIds } from './localStore';
 import {
   rowToProduct,
@@ -67,6 +68,15 @@ function filterShopProducts(list: Product[], accessorySkus?: Set<string>): Produ
   return list.filter((p) => isShopProductAllowed(p, accessorySkus));
 }
 
+/**
+ * Lekki "odcisk palca" listy produktów po polach widocznych na ekranie (stan, cena, zdjęcie).
+ * Używany do pominięcia zbędnego re-renderu, gdy świeże dane z Supabase są identyczne z tym,
+ * co już pokazuje UI (np. po statycznym JSON) — patrz efekt "hydrate" w App.tsx.
+ */
+export function productListSignature(list: Product[]): string {
+  return list.map((p) => `${p.id}|${p.stock}|${p.priceSaleGross ?? ''}|${p.hasImage ? 1 : 0}`).join(';');
+}
+
 function withoutHiddenProducts(list: Product[]): Product[] {
   const hidden = getHiddenProductIds();
   if (!hidden.size) return list;
@@ -86,6 +96,11 @@ function lightProductMeta(meta?: ProductMeta): ProductMeta | undefined {
     'waproSku',
     'previousSku',
     'shopCategoryPath',
+    'shopCategoryWpId',
+    'categoryAssignedBy',
+    'categoryAssignedAt',
+    'categoryAssignmentConfidence',
+    'categoryAssignmentReason',
     'baselinkerDescriptionImportedAt',
     'baselinkerDescriptionChars',
     'catalogHiddenReason',
@@ -400,28 +415,44 @@ export async function updateProduct(
   }
 }
 
+function withCacheBust(url: string): string {
+  const joiner = url.includes('?') ? '&' : '?';
+  return `${url}${joiner}v=${Date.now()}`;
+}
+
 async function uploadProductImageFile(
   productId: string,
   file: File,
   suffix = '',
 ): Promise<string> {
-  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  // Telefony robia zdjecia 10-50 MP (nieraz kilkanascie MB) - bez skalowania
+  // surowy plik szedl prosto na serwer, co na slabszych telefonach potrafilo
+  // wywalic upload bledem braku pamieci. Kompresujemy do JPEG max 1600px.
+  const originalExt = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  const compressed = await compressImageFile(file);
+  const wasCompressed = compressed !== (file as Blob);
+  const ext = wasCompressed ? 'jpg' : originalExt;
   const path = suffix
     ? `products/${productId}-${suffix}.${ext}`
     : `products/${productId}.${ext}`;
 
-  const contentType =
-    file.type ||
-    (ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg');
+  const contentType = wasCompressed
+    ? 'image/jpeg'
+    : file.type ||
+      (ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg');
 
   if (isSupabaseConfigured && supabase) {
     const { error } = await supabase.storage
       .from(STORAGE_BUCKET)
-      .upload(path, file, { upsert: true, contentType });
+      .upload(path, compressed, { upsert: true, contentType });
     if (error) throw error;
 
     const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
-    return data.publicUrl;
+    // Ta sama ścieżka jest nadpisywana przy każdym uploadzie (upsert) — bez
+    // cache-bustingu przeglądarka/CDN serwuje stare bajty pod tym samym URL-em
+    // (usunięte zdjęcie potrafi więc "wrócić" po wgraniu nowego). Patrz ten sam
+    // problem rozwiązany wcześniej w userAvatar.ts.
+    return withCacheBust(data.publicUrl);
   }
 
   return fileToDataUrl(file);
@@ -435,7 +466,7 @@ async function removeStorageUrl(url: string): Promise<void> {
   const idx = url.indexOf(marker);
   if (idx === -1) return;
 
-  const path = url.slice(idx + marker.length);
+  const path = url.slice(idx + marker.length).split('?')[0];
   await supabase.storage.from(STORAGE_BUCKET).remove([path]);
 }
 
@@ -495,6 +526,25 @@ export async function addProductExtraImage(
     hasImage: true,
   });
   return url;
+}
+
+export async function setProductPrimaryImage(
+  productId: string,
+  url: string,
+): Promise<void> {
+  const existing = await getExistingProduct(productId);
+  if (!existing) return;
+  const currentPrimary = getProductImage(existing);
+  if (!currentPrimary || currentPrimary === url) return;
+
+  const extras = (existing.extraImageUrls || []).filter((u) => u !== url);
+  if (!extras.includes(currentPrimary)) extras.push(currentPrimary);
+
+  await updateProduct(productId, {
+    customImageUrl: url,
+    extraImageUrls: extras,
+    hasImage: true,
+  });
 }
 
 export async function deleteProductImage(productId: string): Promise<void> {
@@ -610,17 +660,21 @@ export async function deleteKit(kitId: string): Promise<void> {
 export async function uploadKitImage(kitId: string, file: File): Promise<string> {
   if (!supabase) throw new Error('Supabase nie skonfigurowany');
 
-  const ext = file.name.split('.').pop() || 'jpg';
+  const originalExt = file.name.split('.').pop() || 'jpg';
+  const compressed = await compressImageFile(file);
+  const wasCompressed = compressed !== (file as Blob);
+  const ext = wasCompressed ? 'jpg' : originalExt;
   const path = `kits/${kitId}.${ext}`;
 
   const { error } = await supabase.storage
     .from(STORAGE_BUCKET)
-    .upload(path, file, { upsert: true, contentType: file.type });
+    .upload(path, compressed, { upsert: true, contentType: wasCompressed ? 'image/jpeg' : file.type });
   if (error) throw error;
 
   const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
-  await supabase.from('kits').update({ image_url: data.publicUrl }).eq('id', kitId);
-  return data.publicUrl;
+  const publicUrl = withCacheBust(data.publicUrl);
+  await supabase.from('kits').update({ image_url: publicUrl }).eq('id', kitId);
+  return publicUrl;
 }
 
 export function getProductImage(product: Product): string | null {
