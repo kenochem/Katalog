@@ -3,6 +3,7 @@ import {
   ChevronUp,
   ClipboardCopy,
   FileDown,
+  FileText,
   History,
   Loader2,
   Minus,
@@ -29,6 +30,7 @@ export interface CrmOrderCartPanelProps {
   onPdf: () => void;
   onSaveHistory: () => void;
   onSendDiscord: () => void;
+  onGoToQuote: () => void;
   saving?: boolean;
   sending?: boolean;
   onClose?: () => void;
@@ -46,6 +48,7 @@ export function CrmOrderCartPanel({
   onPdf,
   onSaveHistory,
   onSendDiscord,
+  onGoToQuote,
   saving,
   sending,
   onClose,
@@ -55,7 +58,6 @@ export function CrmOrderCartPanel({
   const totalQty = items.reduce((s, d) => s + d.quantity, 0);
   const grossTotal = draftTotal * 1.23;
   const hasItems = items.length > 0;
-  const isQuote = draft.kind === 'quote';
 
   function bump(productId: string, delta: number) {
     const nextItems = items
@@ -66,14 +68,6 @@ export function CrmOrderCartPanel({
     onSync({ ...draft, items: nextItems });
   }
 
-  function updateNote(note: string) {
-    onSync({ ...draft, note });
-  }
-
-  function setKind(kind: 'order' | 'quote') {
-    onSync({ ...draft, kind });
-  }
-
   return (
     <div
       className={`crm-order-cart flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-xl shadow-black/25 ${className}`}
@@ -82,7 +76,7 @@ export function CrmOrderCartPanel({
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-base font-semibold text-slate-50">
             <ShoppingCart className="h-5 w-5 shrink-0 text-brand-400" />
-            {isQuote ? 'Oferta' : 'Koszyk'}
+            Koszyk
             {hasItems && (
               <span className="rounded-full bg-amber-500/90 px-2 py-0.5 text-[10px] font-bold text-slate-950">
                 {totalQty}
@@ -95,7 +89,7 @@ export function CrmOrderCartPanel({
               {activeClient ? ` · ${activeClient.displayName}` : ''}
             </p>
           ) : (
-            <p className="mt-0.5 text-xs text-slate-500">Dodaj produkty z wyszukiwarki</p>
+            <p className="mt-0.5 text-xs text-slate-500">Dodaj produkty z katalogu obok</p>
           )}
         </div>
         {onClose && (
@@ -110,33 +104,13 @@ export function CrmOrderCartPanel({
         )}
       </div>
 
-      <div className="shrink-0 border-b border-slate-800 px-3 py-2">
-        <div className="grid grid-cols-2 gap-1 rounded-lg bg-slate-950/80 p-0.5">
-          <button
-            type="button"
-            onClick={() => setKind('order')}
-            className={`rounded-md py-1.5 text-[11px] font-semibold ${
-              draft.kind !== 'quote' ? 'bg-brand-600 text-white' : 'text-slate-500'
-            }`}
-          >
-            Zamówienie
-          </button>
-          <button
-            type="button"
-            onClick={() => setKind('quote')}
-            className={`rounded-md py-1.5 text-[11px] font-semibold ${
-              draft.kind === 'quote' ? 'bg-amber-400 text-amber-950' : 'text-slate-500'
-            }`}
-          >
-            Prośba o ofertę
-          </button>
-        </div>
-      </div>
-
       {!hasItems ? (
         <div className="flex flex-1 flex-col items-center justify-center px-4 py-10 text-center">
           <ShoppingCart className="h-10 w-10 text-slate-600" />
           <p className="mt-3 text-sm text-slate-400">Koszyk jest pusty</p>
+          <p className="mt-1 max-w-[14rem] text-xs text-slate-500">
+            Użyj zielonego + na karcie produktu w katalogu.
+          </p>
         </div>
       ) : (
         <>
@@ -193,6 +167,9 @@ export function CrmOrderCartPanel({
                         <Plus className="h-3.5 w-3.5" />
                       </button>
                     </div>
+                    {p && (
+                      <p className="text-[9px] text-slate-500">dostępne: {p.stock ?? 0}</p>
+                    )}
                     <button
                       type="button"
                       className="text-slate-500 hover:text-red-400"
@@ -213,16 +190,6 @@ export function CrmOrderCartPanel({
           </ul>
 
           <div className="shrink-0 space-y-2.5 border-t border-slate-800 bg-slate-950/40 px-4 py-3">
-            <label className="block">
-              <span className="text-[10px] uppercase tracking-wide text-slate-500">Notatka</span>
-              <textarea
-                value={draft.note}
-                onChange={(e) => updateNote(e.target.value)}
-                rows={2}
-                className="input-field mt-1 resize-none text-xs"
-                placeholder="Termin, dostawa…"
-              />
-            </label>
             <div className="grid grid-cols-2 gap-2">
               <div className="rounded-xl border border-slate-800 bg-slate-900/80 px-3 py-2">
                 <p className="text-[10px] uppercase tracking-wide text-slate-500">Netto</p>
@@ -237,6 +204,29 @@ export function CrmOrderCartPanel({
                 </p>
               </div>
             </div>
+
+            <button
+              type="button"
+              onClick={onGoToQuote}
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-amber-400 px-3 py-2.5 text-sm font-semibold text-amber-950 hover:bg-amber-300"
+            >
+              <FileText className="h-4 w-4" />
+              Przygotuj ofertę PDF
+            </button>
+
+            <button
+              type="button"
+              onClick={onSendDiscord}
+              disabled={sending}
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-brand-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-brand-500 disabled:opacity-50"
+            >
+              {sending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+              Wyślij zamówienie na Discord
+            </button>
 
             <div className="flex flex-wrap gap-1.5">
               <button
@@ -273,19 +263,6 @@ export function CrmOrderCartPanel({
                   <History className="h-3.5 w-3.5" />
                 )}
                 Zapisz
-              </button>
-              <button
-                type="button"
-                onClick={onSendDiscord}
-                disabled={sending}
-                className="inline-flex flex-1 items-center justify-center gap-1 rounded-xl bg-brand-600 px-3 py-2 text-xs font-semibold text-white hover:bg-brand-500 disabled:opacity-50"
-              >
-                {sending ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Send className="h-3.5 w-3.5" />
-                )}
-                Discord
               </button>
             </div>
           </div>

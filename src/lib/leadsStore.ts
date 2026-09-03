@@ -1,6 +1,7 @@
-const LEADS_KEY = 'katalog-sales-leads';
+import { supabase } from './supabase';
+
 const PIPELINE_KEY = 'katalog-pipeline-config';
-const SEED_KEY = 'katalog-leads-seeded';
+const CHANGED_EVENT = 'katalog-leads-changed';
 
 export type LeadStage = 'new' | 'contact' | 'offer' | 'negotiation' | 'won' | 'lost';
 
@@ -25,6 +26,8 @@ export interface SalesLead {
   valueEstimate: number;
   sortOrder?: number;
   source?: string;
+  /** Handlowiec przypisany do leada (nazwa widoczna na karcie). */
+  ownerName?: string;
   activities: LeadActivity[];
   createdAt: string;
   updatedAt: string;
@@ -65,6 +68,9 @@ const DEFAULT_PIPELINE: PipelineConfig = {
   ],
 };
 
+// Etykiety etapow leja to tylko kosmetyka (nazwy kolumn) — zostaja w localStorage,
+// bez ryzyka utraty danych przy zmianie urzadzenia. Same leady (SalesLead[]) sa
+// w Supabase (tabela crm_leads), prywatne per handlowiec — patrz cache ponizej.
 function readJson<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key);
@@ -85,7 +91,61 @@ export function loadPipelineConfig(): PipelineConfig {
 
 export function savePipelineConfig(config: PipelineConfig) {
   writeJson(PIPELINE_KEY, config);
-  window.dispatchEvent(new CustomEvent('katalog-leads-changed'));
+  window.dispatchEvent(new CustomEvent(CHANGED_EVENT));
+}
+
+/**
+ * Leady w pamieci (Supabase = zrodlo prawdy). loadLeads() zostaje synchroniczny —
+ * uzywany w wielu miejscach jak zwykla funkcja — a odswiezanie z bazy dzieje sie
+ * w tle i po zakonczeniu odpala CHANGED_EVENT (komponenty juz na niego nasluchuja).
+ */
+let cache: SalesLead[] = [];
+let cacheReady = false;
+let inFlight: Promise<void> | null = null;
+
+function mapRow(row: Record<string, unknown>): SalesLead {
+  return {
+    id: String(row.id),
+    title: String(row.title || ''),
+    companyName: String(row.company_name || ''),
+    contactName: row.contact_name ? String(row.contact_name) : undefined,
+    phone: row.phone ? String(row.phone) : undefined,
+    email: row.email ? String(row.email) : undefined,
+    clientId: row.client_id ? String(row.client_id) : undefined,
+    stage: (row.stage as LeadStage) || 'new',
+    valueEstimate: Number(row.value_estimate) || 0,
+    sortOrder: Number(row.sort_order) || 0,
+    source: row.source ? String(row.source) : undefined,
+    ownerName: row.owner_name ? String(row.owner_name) : undefined,
+    activities: Array.isArray(row.activities) ? (row.activities as LeadActivity[]) : [],
+    createdAt: String(row.created_at || ''),
+    updatedAt: String(row.updated_at || ''),
+    closedAt: row.closed_at ? String(row.closed_at) : undefined,
+    closeReason: row.close_reason ? String(row.close_reason) : undefined,
+  };
+}
+
+async function refreshCache(): Promise<void> {
+  if (!supabase) {
+    cacheReady = true;
+    return;
+  }
+  const { data, error } = await supabase
+    .from('crm_leads')
+    .select('*')
+    .order('sort_order', { ascending: true });
+  if (!error && data) {
+    cache = data.map((r) => mapRow(r as Record<string, unknown>));
+  }
+  cacheReady = true;
+  window.dispatchEvent(new CustomEvent(CHANGED_EVENT));
+}
+
+export function ensureLeadsLoaded(): void {
+  if (cacheReady || inFlight) return;
+  inFlight = refreshCache().finally(() => {
+    inFlight = null;
+  });
 }
 
 function compareLeadOrder(a: SalesLead, b: SalesLead): number {
@@ -99,8 +159,8 @@ function leadsInStage(leads: SalesLead[], stage: LeadStage): SalesLead[] {
 }
 
 function normalizeLeadSortOrders(leads: SalesLead[]): SalesLead[] {
-  let changed = false;
   const next = leads.map((l) => ({ ...l }));
+  const changed: SalesLead[] = [];
   for (const stage of ACTIVE_STAGES) {
     const inStage = leadsInStage(next, stage);
     inStage.forEach((lead, index) => {
@@ -109,23 +169,83 @@ function normalizeLeadSortOrders(leads: SalesLead[]): SalesLead[] {
         const idx = next.findIndex((l) => l.id === lead.id);
         if (idx >= 0) {
           next[idx] = { ...next[idx], sortOrder: expected };
-          changed = true;
+          changed.push(next[idx]);
         }
       }
     });
   }
-  if (changed) writeJson(LEADS_KEY, next);
+  if (changed.length) {
+    cache = next;
+    void persistPatch(changed);
+  }
   return next;
 }
 
-export function loadLeads(): SalesLead[] {
-  const leads = readJson<SalesLead[]>(LEADS_KEY, []);
-  return normalizeLeadSortOrders(leads);
+/** Zapisz tylko zmienione leady do Supabase (update po id) — bez pelnego rewrite. */
+async function persistPatch(leads: SalesLead[]): Promise<void> {
+  if (!supabase || !leads.length) return;
+  await Promise.all(
+    leads.map((l) =>
+      supabase!
+        .from('crm_leads')
+        .update({
+          title: l.title,
+          company_name: l.companyName,
+          contact_name: l.contactName || null,
+          phone: l.phone || null,
+          email: l.email || null,
+          client_id: l.clientId || null,
+          stage: l.stage,
+          value_estimate: l.valueEstimate,
+          sort_order: l.sortOrder ?? 0,
+          source: l.source || null,
+          owner_name: l.ownerName || null,
+          activities: l.activities,
+          closed_at: l.closedAt || null,
+          close_reason: l.closeReason || null,
+          updated_at: l.updatedAt,
+        })
+        .eq('id', l.id),
+    ),
+  );
 }
 
-function saveLeads(leads: SalesLead[]) {
-  writeJson(LEADS_KEY, leads);
-  window.dispatchEvent(new CustomEvent('katalog-leads-changed'));
+async function persistInsert(lead: SalesLead, userId: string): Promise<void> {
+  if (!supabase) return;
+  await supabase.from('crm_leads').insert({
+    id: lead.id,
+    user_id: userId,
+    title: lead.title,
+    company_name: lead.companyName,
+    contact_name: lead.contactName || null,
+    phone: lead.phone || null,
+    email: lead.email || null,
+    client_id: lead.clientId || null,
+    stage: lead.stage,
+    value_estimate: lead.valueEstimate,
+    sort_order: lead.sortOrder ?? 0,
+    source: lead.source || null,
+    owner_name: lead.ownerName || null,
+    activities: lead.activities,
+    created_at: lead.createdAt,
+    updated_at: lead.updatedAt,
+  });
+}
+
+export function deleteLead(id: string): void {
+  cache = cache.filter((l) => l.id !== id);
+  window.dispatchEvent(new CustomEvent(CHANGED_EVENT));
+  void supabase?.from('crm_leads').delete().eq('id', id);
+}
+
+export function loadLeads(): SalesLead[] {
+  ensureLeadsLoaded();
+  return normalizeLeadSortOrders(cache);
+}
+
+function updateCache(leads: SalesLead[]) {
+  cache = leads;
+  window.dispatchEvent(new CustomEvent(CHANGED_EVENT));
 }
 
 export function getOpenLeads(): SalesLead[] {
@@ -149,22 +269,25 @@ export function getBoardLayout(): Record<LeadStage, string[]> {
 
 export function applyBoardLayout(layout: Record<LeadStage, string[]>): void {
   const leads = loadLeads().map((l) => ({ ...l }));
+  const changed: SalesLead[] = [];
   for (const stage of ACTIVE_STAGES) {
     const ids = layout[stage] ?? [];
     ids.forEach((id, index) => {
       const idx = leads.findIndex((l) => l.id === id);
       if (idx >= 0) {
+        const wasStage = leads[idx].stage;
         leads[idx] = {
           ...leads[idx],
           stage,
           sortOrder: index * 10,
-          updatedAt:
-            leads[idx].stage !== stage ? new Date().toISOString() : leads[idx].updatedAt,
+          updatedAt: wasStage !== stage ? new Date().toISOString() : leads[idx].updatedAt,
         };
+        changed.push(leads[idx]);
       }
     });
   }
-  saveLeads(leads);
+  updateCache(leads);
+  void persistPatch(changed);
 }
 
 export function getClosedLeads(): SalesLead[] {
@@ -185,12 +308,13 @@ export function createLead(input: {
   clientId?: string;
   valueEstimate?: number;
   source?: string;
+  ownerName?: string;
 }): SalesLead {
   const now = new Date().toISOString();
   const inStage = loadLeads().filter((l) => l.stage === 'new');
   const maxOrder = inStage.reduce((m, l) => Math.max(m, l.sortOrder ?? 0), -1);
   const lead: SalesLead = {
-    id: `lead-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    id: crypto.randomUUID(),
     title: input.title.trim(),
     companyName: input.companyName.trim(),
     contactName: input.contactName?.trim(),
@@ -201,6 +325,7 @@ export function createLead(input: {
     sortOrder: maxOrder + 10,
     valueEstimate: input.valueEstimate ?? 0,
     source: input.source?.trim() || 'Ręcznie',
+    ownerName: input.ownerName?.trim() || undefined,
     activities: [
       {
         id: `act-${Date.now()}`,
@@ -212,15 +337,23 @@ export function createLead(input: {
     createdAt: now,
     updatedAt: now,
   };
-  saveLeads([lead, ...loadLeads()]);
+  updateCache([lead, ...loadLeads()]);
+  void supabase?.auth.getUser().then(({ data }) => {
+    if (data?.user) void persistInsert(lead, data.user.id);
+  });
   return lead;
 }
 
 export function updateLead(id: string, patch: Partial<SalesLead>) {
-  const leads = loadLeads().map((l) =>
-    l.id === id ? { ...l, ...patch, updatedAt: new Date().toISOString() } : l,
-  );
-  saveLeads(leads);
+  const now = new Date().toISOString();
+  let updated: SalesLead | null = null;
+  const leads = loadLeads().map((l) => {
+    if (l.id !== id) return l;
+    updated = { ...l, ...patch, updatedAt: now };
+    return updated;
+  });
+  updateCache(leads);
+  if (updated) void persistPatch([updated]);
 }
 
 export function moveLeadStage(id: string, stage: LeadStage) {
@@ -269,12 +402,14 @@ export function addActivity(leadId: string, type: LeadActivityType, body: string
     body: body.trim(),
     createdAt: new Date().toISOString(),
   };
-  leads[idx] = {
-    ...leads[idx],
-    activities: [act, ...leads[idx].activities],
+  const next = [...leads];
+  next[idx] = {
+    ...next[idx],
+    activities: [act, ...next[idx].activities],
     updatedAt: act.createdAt,
   };
-  saveLeads(leads);
+  updateCache(next);
+  void persistPatch([next[idx]]);
 }
 
 export function pipelineStats() {
@@ -297,8 +432,17 @@ export function pipelineStats() {
   };
 }
 
-export function seedDemoLeads() {
+const SEED_KEY = 'katalog-leads-seeded-v2';
+
+/** Demo-leady tylko przy pierwszym uzyciu i tylko jesli handlowiec faktycznie
+ * nie ma jeszcze zadnych leadow w bazie (nie tylko flaga w localStorage). */
+export async function seedDemoLeadsIfEmpty(): Promise<void> {
   if (localStorage.getItem(SEED_KEY)) return;
+  localStorage.setItem(SEED_KEY, '1');
+  ensureLeadsLoaded();
+  if (inFlight) await inFlight;
+  if (cache.length > 0) return;
+
   const demos: Parameters<typeof createLead>[0][] = [
     {
       title: 'Zapytanie o wiertła HSS — partia 200 szt.',
@@ -323,15 +467,13 @@ export function seedDemoLeads() {
       source: 'Telefon',
     },
   ];
-  for (const d of demos) createLead(d);
-  const leads = loadLeads();
-  if (leads[1]) {
-    moveLeadStage(leads[1].id, 'contact');
-    addActivity(leads[1].id, 'call', 'Rozmowa wstępna — zainteresowani pakietem chemii.');
+  const created = demos.map((d) => createLead(d));
+  if (created[1]) {
+    moveLeadStage(created[1].id, 'contact');
+    addActivity(created[1].id, 'call', 'Rozmowa wstępna — zainteresowani pakietem chemii.');
   }
-  if (leads[2]) {
-    moveLeadStage(leads[2].id, 'offer');
-    addActivity(leads[2].id, 'offer_sent', 'Oferta PDF wysłana mailem, termin odpowiedzi 7 dni.');
+  if (created[2]) {
+    moveLeadStage(created[2].id, 'offer');
+    addActivity(created[2].id, 'offer_sent', 'Oferta PDF wysłana mailem, termin odpowiedzi 7 dni.');
   }
-  localStorage.setItem(SEED_KEY, '1');
 }

@@ -1,30 +1,34 @@
 import { useCallback, useEffect, useState } from 'react';
 
-export type ThemeMode = 'light' | 'dark' | 'cookie';
+export type ThemeMode = 'light' | 'dark' | 'gray' | 'cookie';
 
 const THEME_KEY = 'katalog-theme';
-const THEME_ORDER: ThemeMode[] = ['light', 'dark', 'cookie'];
-const THEME_CLASS: Record<ThemeMode, string | null> = {
-  light: null,
-  dark: 'dark',
-  cookie: 'theme-cookie',
+const THEME_ORDER: ThemeMode[] = ['light', 'dark', 'gray', 'cookie'];
+const THEME_CLASSES: Record<ThemeMode, string[]> = {
+  light: [],
+  dark: ['dark'],
+  gray: ['dark', 'theme-gray'],
+  cookie: ['theme-cookie'],
 };
 const THEME_COLOR: Record<ThemeMode, string> = {
   light: '#33b33b',
   dark: '#020617',
+  gray: '#323a3f',
   cookie: '#c17f2a',
 };
 
 export const THEME_LABELS: Record<ThemeMode, string> = {
   light: 'Jasny',
   dark: 'Ciemny',
+  gray: 'Szary',
   cookie: 'Ciasteczkowy',
 };
 
 function readTheme(): ThemeMode {
   try {
     const v = localStorage.getItem(THEME_KEY);
-    return v === 'dark' || v === 'cookie' ? v : 'light';
+    if (v === 'dark' || v === 'gray' || v === 'cookie') return v;
+    return 'light';
   } catch {
     return 'light';
   }
@@ -32,9 +36,8 @@ function readTheme(): ThemeMode {
 
 function applyTheme(theme: ThemeMode) {
   const root = document.documentElement;
-  root.classList.remove('dark', 'theme-cookie');
-  const cls = THEME_CLASS[theme];
-  if (cls) root.classList.add(cls);
+  root.classList.remove('dark', 'theme-cookie', 'theme-gray');
+  for (const cls of THEME_CLASSES[theme]) root.classList.add(cls);
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', THEME_COLOR[theme]);
 }
@@ -66,5 +69,5 @@ export function useTheme() {
     setThemeState(next);
   }, []);
 
-  return { theme, setTheme, toggleTheme, isDark: theme === 'dark' };
+  return { theme, setTheme, toggleTheme, isDark: theme === 'dark' || theme === 'gray' };
 }

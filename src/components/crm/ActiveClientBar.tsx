@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Building2, ChevronDown, MapPin, Search, User, X } from 'lucide-react';
+import { ChevronDown, Loader2, MapPin, Plus, RefreshCw, Search, User, X } from 'lucide-react';
 import type { CrmClient } from '../../lib/crm';
+import { getClientIcon } from './clientIcons';
 
 interface ActiveClientBarProps {
   clients: CrmClient[];
@@ -8,6 +9,9 @@ interface ActiveClientBarProps {
   onSelect: (client: CrmClient) => void;
   onClear?: () => void;
   openSignal?: number;
+  onAddClient?: () => void;
+  onRefresh?: () => void;
+  refreshing?: boolean;
 }
 
 export function ActiveClientBar({
@@ -16,6 +20,9 @@ export function ActiveClientBar({
   onSelect,
   onClear,
   openSignal,
+  onAddClient,
+  onRefresh,
+  refreshing,
 }: ActiveClientBarProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -52,7 +59,12 @@ export function ActiveClientBar({
             activeClient ? 'bg-brand-600/30 text-brand-200' : 'bg-slate-800 text-slate-500'
           }`}
         >
-          {activeClient ? <Building2 className="h-5 w-5" /> : <User className="h-5 w-5" />}
+          {activeClient
+            ? (() => {
+                const Icon = getClientIcon(activeClient.icon);
+                return <Icon className="h-5 w-5" />;
+              })()
+            : <User className="h-5 w-5" />}
         </span>
         <div className="min-w-0 flex-1">
           {activeClient ? (
@@ -86,7 +98,7 @@ export function ActiveClientBar({
             onClick={() => setOpen(false)}
           />
           <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-40 overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl shadow-black/50">
-            <div className="border-b border-slate-800 p-3">
+            <div className="space-y-2 border-b border-slate-800 p-3">
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                 <input
@@ -96,6 +108,36 @@ export function ActiveClientBar({
                   placeholder="Szukaj: nazwa, NIP, adres…"
                   className="input-field w-full pl-9"
                 />
+              </div>
+              <div className="flex gap-1.5">
+                {onAddClient && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpen(false);
+                      onAddClient();
+                    }}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-brand-600 px-3 py-2 text-xs font-semibold text-white hover:bg-brand-500"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Dodaj klienta
+                  </button>
+                )}
+                {onRefresh && (
+                  <button
+                    type="button"
+                    onClick={onRefresh}
+                    disabled={refreshing}
+                    className="flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-slate-700 px-3 py-2 text-xs font-medium text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+                    title="Odśwież listę klientów"
+                  >
+                    {refreshing ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+                )}
               </div>
             </div>
             <ul className="max-h-64 overflow-y-auto p-2">
@@ -111,11 +153,16 @@ export function ActiveClientBar({
                         setOpen(false);
                         setQuery('');
                       }}
-                      className={`flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-slate-800 ${
+                      className={`group flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-colors duration-150 hover:bg-slate-800 ${
                         activeClient?.id === c.id ? 'bg-brand-500/10' : ''
                       }`}
                     >
-                      <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-400" />
+                      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-brand-400 transition-colors group-hover:bg-brand-500/20 group-hover:text-brand-300">
+                        {(() => {
+                          const Icon = getClientIcon(c.icon);
+                          return <Icon className="h-4 w-4" />;
+                        })()}
+                      </span>
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-slate-100">
                           {c.displayName}

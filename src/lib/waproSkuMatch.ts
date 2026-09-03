@@ -82,6 +82,15 @@ export type WaproSyncStats = {
   bootstrapped?: number;
   warnings?: number;
   newSkuFromMag?: number;
+  updated?: number;
+  unchanged?: number;
+  manualStock?: number;
+  missingWapro?: number;
+  filledPrices?: number;
+  sqlSku?: number;
+  unmatchedReport?: string;
+  mode?: string;
+  scope?: string;
 };
 
 /** Parsuje skrócony raport z sync-wapro-stock (serwer / lokalny). */
@@ -102,15 +111,30 @@ export function parseWaproSyncMessage(message: string | null | undefined): {
   if (warn) stats.warnings = Number(warn[1]);
   const neu = raw.match(/nowe SKU z Mag:\s*(\d+)/i);
   if (neu) stats.newSkuFromMag = Number(neu[1]);
+  const upd = raw.match(/Zaktualizowano:\s*(\d+)/i);
+  if (upd) stats.updated = Number(upd[1]);
+  const same = raw.match(/bez zmian:\s*(\d+)/i);
+  if (same) stats.unchanged = Number(same[1]);
+  const manual = raw.match(/reczne stan:\s*(\d+)/i);
+  if (manual) stats.manualStock = Number(manual[1]);
+  const missing = raw.match(/brak w WAPRO:\s*(\d+)/i);
+  if (missing) stats.missingWapro = Number(missing[1]);
+  const prices = raw.match(/uzupelnione pola cen:\s*(\d+)/i);
+  if (prices) stats.filledPrices = Number(prices[1]);
+  const sql = raw.match(/SKU z SQL:\s*(\d+)/i);
+  if (sql) stats.sqlSku = Number(sql[1]);
+  stats.unmatchedReport = raw.match(/raport brakow:\s*([^.,]+)/i)?.[1]?.trim();
+  stats.mode = raw.match(/Tryb WAPRO:\s*([^.,]+)/i)?.[1]?.trim();
+  stats.scope = raw.match(/Zakres:\s*([^.,]+)/i)?.[1]?.trim();
 
   let warningHint: string | undefined;
   if (stats.warnings && stats.warnings > 0) {
-    warningHint = `${stats.warnings} starych pozycji do sprawdzenia: SKU bez dopasowania w WAPRO. Sync nowych produktów działa dalej.`;
-  } else if (/brak w WAPRO:\s*[1-9]/i.test(raw)) {
-    const m = raw.match(/brak w WAPRO:\s*(\d+)/i);
-    if (m && Number(m[1]) > 0) {
-      warningHint = `${m[1]} pozycji w katalogu nie ma odpowiednika w Mag. To lista porządkowa, nie błąd dodawania nowych produktów.`;
-    }
+    warningHint = `${stats.warnings} pozycji wymaga uwagi — szczegóły w logach (raport techniczny).`;
+  } else if (stats.missingWapro && stats.missingWapro > 0) {
+    const report = stats.unmatchedReport ? ` Plik: ${stats.unmatchedReport}.` : '';
+    warningHint = `${stats.missingWapro} indeksów katalogowych nie ma w Mag WAPRO — lista porządkowa, nie błąd syncu.${report}`;
+  } else if (stats.sqlSku === 0) {
+    warningHint = 'Eksport SQL z Mag zwrócił 0 wierszy — sprawdź sync na serwerze.';
   }
 
   return { summary: raw, stats, warningHint };

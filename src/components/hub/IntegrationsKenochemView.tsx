@@ -5,8 +5,10 @@ import {
   Plug,
   RefreshCw,
   Server,
+  Settings2,
 } from 'lucide-react';
 import { dispatchHubNavigate } from '../../app/hubNavigation';
+import { openGlobalAdminPanel } from '../../lib/adminNavigation';
 
 function Card({
   icon,
@@ -48,6 +50,12 @@ export function IntegrationsKenochemView() {
         </div>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
+        <Card
+          icon={<Settings2 className="h-5 w-5" />}
+          title="Panel administracyjny"
+          desc="Konta użytkowników, role i macierz uprawnień — globalnie dla całego Kenochem."
+          onClick={() => openGlobalAdminPanel()}
+        />
         <Card
           icon={<Server className="h-5 w-5" />}
           title="WAPRO Mag / SQL"

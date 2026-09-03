@@ -5,9 +5,16 @@ import type { WaproSyncStats } from './waproSkuMatch';
 function syncDetails(stats: WaproSyncStats) {
   return {
     'Nowe SKU z Mag': stats.newSkuFromMag ?? 0,
+    'Zaktualizowano': stats.updated ?? 0,
+    'Bez zmian': stats.unchanged ?? 0,
+    'Ręczny stan': stats.manualStock ?? 0,
+    'Brak w WAPRO': stats.missingWapro ?? 0,
+    'Uzupełnione ceny': stats.filledPrices ?? 0,
+    'SKU z SQL': stats.sqlSku ?? 0,
     'Odkryte stany/ceny': stats.bootstrapped ?? 0,
     'Ostrzeżenia': stats.warnings ?? 0,
     'Dopasowane po alt SKU': stats.linkedViaAltSku ?? 0,
+    ...(stats.unmatchedReport ? { 'Raport braków': stats.unmatchedReport } : {}),
   };
 }
 

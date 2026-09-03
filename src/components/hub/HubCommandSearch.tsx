@@ -3,6 +3,7 @@ import { Search, X } from 'lucide-react';
 import type { HubView } from '../../app/hubNavigation';
 import { dispatchHubNavigate } from '../../app/hubNavigation';
 import { dispatchAppView } from '../../suite/hubViewMap';
+import { openGlobalAdminPanel } from '../../lib/adminNavigation';
 import type { View } from '../../types';
 
 interface HubCommandItem {
@@ -17,11 +18,13 @@ export function HubCommandSearch({
   onOpenChange,
   canCrm,
   canOps,
+  canAdmin,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   canCrm: boolean;
   canOps: boolean;
+  canAdmin: boolean;
 }) {
   const [q, setQ] = useState('');
 
@@ -52,8 +55,14 @@ export function HubCommandSearch({
       { id: 'progress', label: 'Postęp zdjęć', run: () => app('progress') },
       { id: 'missing', label: 'Produkty bez zdjęć', run: () => app('missing-images') },
       { id: 'comms', label: 'Talk — czat', run: () => go('comms') },
-      { id: 'admin', label: 'Panel admin', run: () => go('admin') },
     );
+    if (canAdmin) {
+      list.push({
+        id: 'admin',
+        label: 'Administracja — konta i uprawnienia',
+        run: () => openGlobalAdminPanel(),
+      });
+    }
     const needle = q.trim().toLowerCase();
     if (!needle) return list;
     return list.filter(
@@ -61,7 +70,7 @@ export function HubCommandSearch({
         i.label.toLowerCase().includes(needle) ||
         i.id.toLowerCase().includes(needle),
     );
-  }, [q, canCrm, canOps]);
+  }, [q, canCrm, canOps, canAdmin]);
 
   if (!open) return null;
 

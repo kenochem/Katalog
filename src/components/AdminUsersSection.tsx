@@ -3,8 +3,11 @@ import { Loader2, UserPlus } from 'lucide-react';
 import {
   ACCOUNT_ROLES,
   ROLE_LABELS,
+  ROLE_DESCRIPTIONS,
   type AccountRole,
 } from '../lib/roles';
+import { summarizeRolePermissions } from '../lib/access';
+import { RoleChangePreview } from './AdminPermissionsSection';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 
@@ -207,6 +210,32 @@ export function AdminUsersSection() {
 
   return (
     <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 sm:p-5">
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        {ACCOUNT_ROLES.map((r) => {
+          const summary = summarizeRolePermissions(r);
+          return (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setRole(r)}
+              className={`rounded-xl border px-3 py-2.5 text-left transition ${
+                role === r
+                  ? 'border-violet-500/40 bg-violet-500/10'
+                  : 'border-slate-800 bg-slate-950/30 hover:border-slate-700'
+              }`}
+            >
+              <p className="text-sm font-semibold text-slate-100">{ROLE_LABELS[r]}</p>
+              <p className="mt-0.5 line-clamp-2 text-[10px] leading-snug text-slate-500">
+                {ROLE_DESCRIPTIONS[r]}
+              </p>
+              <p className="mt-1.5 text-[10px] font-medium tabular-nums text-violet-400">
+                {summary.total} uprawnień
+              </p>
+            </button>
+          );
+        })}
+      </div>
+
       <form
         onSubmit={onCreate}
         className="space-y-2 rounded-2xl border border-slate-800 bg-slate-950/40 p-4"
@@ -251,6 +280,9 @@ export function AdminUsersSection() {
             ))}
           </select>
         </div>
+        {role !== 'handlowiec' && (
+          <RoleChangePreview fromRole="handlowiec" toRole={role} />
+        )}
         <button
           type="submit"
           disabled={busy}
@@ -273,7 +305,9 @@ export function AdminUsersSection() {
         </div>
       ) : (
         <ul className="grid gap-2 lg:grid-cols-2">
-          {users.map((u) => (
+          {users.map((u) => {
+            const userSummary = summarizeRolePermissions(u.role);
+            return (
             <li
               key={u.id}
               className="rounded-xl border border-slate-800 bg-slate-950/30 p-3"
@@ -282,6 +316,9 @@ export function AdminUsersSection() {
                 <div className="min-w-0">
                   <p className="truncate font-medium text-slate-100">{u.display_name}</p>
                   <p className="truncate text-xs text-slate-500">{u.email}</p>
+                  <p className="mt-1 text-[10px] text-slate-600">
+                    {ROLE_LABELS[u.role]} · {userSummary.total} uprawnień
+                  </p>
                 </div>
                 <span
                   className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
@@ -326,7 +363,8 @@ export function AdminUsersSection() {
                 </button>
               </div>
             </li>
-          ))}
+            );
+          })}
           {users.length === 0 && (
             <p className="py-4 text-center text-sm text-slate-500 lg:col-span-2">
               Brak użytkowników w profiles.

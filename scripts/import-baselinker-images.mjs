@@ -11,6 +11,13 @@
 import { createClient } from '@supabase/supabase-js';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
+import {
+  isBaselinkerCdnUrl,
+  isKenochemShopUrl,
+  pickBaselinkerPrimaryImage,
+  sortCatalogImageCandidates,
+  uniqueHttpUrls,
+} from './lib/catalogImageUrls.mjs';
 
 const PREVIEW_PATH = resolve('data/baselinker-image-import-preview.json');
 const APPLY = process.argv.includes('--apply');
@@ -150,15 +157,6 @@ function pickImages(product, index) {
   );
 }
 
-function uniqueUrls(urls) {
-  const out = [];
-  for (const url of urls) {
-    const clean = String(url || '').trim();
-    if (clean.startsWith('http') && !out.includes(clean)) out.push(clean);
-  }
-  return out;
-}
-
 function hasCatalogPrimaryImage(product) {
   return Boolean(
     String(product.custom_image_url || '').trim() ||
@@ -168,30 +166,49 @@ function hasCatalogPrimaryImage(product) {
 
 function buildPatch(product, bl) {
   const currentCustom = String(product.custom_image_url || '').trim();
+  if (currentCustom) return null;
+
   const currentPrimary = String(product.image_url || '').trim();
   const currentExtras = Array.isArray(product.extra_images) ? product.extra_images : [];
   const patch = {};
   const fields = [];
-  const incomingPrimary = bl.primary || (!currentCustom && !currentPrimary ? bl.extras[0] || '' : '');
 
-  if (MISSING_ONLY && hasCatalogPrimaryImage(product)) return null;
+  const incomingPrimary = pickBaselinkerPrimaryImage(bl);
+  const pool = uniqueHttpUrls([
+    incomingPrimary,
+    ...bl.extras,
+    currentPrimary,
+    ...currentExtras,
+  ]);
 
-  if (!currentCustom && incomingPrimary && incomingPrimary !== currentPrimary) {
-    patch.image_url = incomingPrimary;
+  const primary =
+    incomingPrimary ||
+    sortCatalogImageCandidates(pool.filter(Boolean), '')[0] ||
+    '';
+
+  const shouldReplacePrimary =
+    primary &&
+    (primary !== currentPrimary ||
+      (isKenochemShopUrl(currentPrimary) && isBaselinkerCdnUrl(primary)));
+
+  if (MISSING_ONLY && hasCatalogPrimaryImage(product) && !shouldReplacePrimary) return null;
+
+  if (shouldReplacePrimary) {
+    patch.image_url = primary;
     fields.push(currentPrimary ? 'image_url_changed' : 'image_url_added');
   }
 
-  const extras = uniqueUrls([
-    ...currentExtras,
-    ...(currentPrimary && currentPrimary !== incomingPrimary ? [currentPrimary] : []),
-    ...bl.extras.filter((url) => url !== incomingPrimary),
-  ]);
+  const extras = sortCatalogImageCandidates(
+    pool.filter((u) => !primary || u.split('?')[0] !== primary.split('?')[0]),
+    '',
+  );
   if (JSON.stringify(extras) !== JSON.stringify(currentExtras)) {
     patch.extra_images = extras;
     fields.push('extra_images_merged');
   }
 
-  const hasImage = Boolean(currentCustom || patch.image_url || currentPrimary || extras.length);
+  const nextPrimary = patch.image_url ?? currentPrimary;
+  const hasImage = Boolean(nextPrimary || extras.length);
   if (hasImage !== Boolean(product.has_image)) {
     patch.has_image = hasImage;
     fields.push('has_image');

@@ -13,6 +13,7 @@ import {
   Download,
   Sun,
   Moon,
+  Palette,
   Cookie,
   LogOut,
   RefreshCw,
@@ -35,7 +36,7 @@ import { isStockProduct } from '../app/productLayout';
 import { DatabaseSyncIcon } from './DatabaseSyncIcon';
 import { THEME_LABELS, type ThemeMode } from '../lib/theme';
 
-const THEME_SHEET_ICONS = { light: Sun, dark: Moon, cookie: Cookie } as const;
+const THEME_SHEET_ICONS = { light: Sun, dark: Moon, gray: Palette, cookie: Cookie } as const;
 
 interface MobileBottomNavProps {
   view: View;

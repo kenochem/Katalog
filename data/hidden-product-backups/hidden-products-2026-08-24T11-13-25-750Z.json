@@ -1,0 +1,1453 @@
+{
+  "generatedAt": "2026-08-24T11:13:25.479Z",
+  "count": 104,
+  "rows": [
+    {
+      "id": "shop-GRA000015",
+      "sku": "GRA000015",
+      "name": "DETAIL ACTIVE SAFE 20L - DT-0114",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000016",
+      "sku": "GRA000016",
+      "name": "DETAIL ACTIVE SAFE 5L - DT-0113",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000017",
+      "sku": "GRA000017",
+      "name": "DETAIL IRON 5L - DT-0133",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000021",
+      "sku": "GRA000021",
+      "name": "DETAIL LEATHER CLEAN 5L - DT-0174",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z",
+        "shopCategoryPath": "Chemia samochodowa › Wnętrze samochodu › Skóra samochodowa",
+        "shopCategoryWpId": 1088,
+        "categoryAssignedAt": "2026-08-24T10:43:36.705Z",
+        "categoryAssignedBy": "heuristic",
+        "categoryAssignmentReason": "Skóra samochodowa",
+        "categoryAssignmentConfidence": 90
+      }
+    },
+    {
+      "id": "shop-GRA000022",
+      "sku": "GRA000022",
+      "name": "DETAIL GLAZIER 5L - DT-0175",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000023",
+      "sku": "GRA000023",
+      "name": "DETAIL SUPER WAX 5L - DT-0125",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z",
+        "shopCategoryPath": "Chemia samochodowa › Pielęgnacja lakieru › Woski samochodowe",
+        "shopCategoryWpId": 1095,
+        "categoryAssignedAt": "2026-08-24T10:43:36.798Z",
+        "categoryAssignedBy": "heuristic",
+        "categoryAssignmentReason": "wosk samochodowy",
+        "categoryAssignmentConfidence": 82
+      }
+    },
+    {
+      "id": "shop-GRA000024",
+      "sku": "GRA000024",
+      "name": "DETAIL TIRE 5L - DT-0131",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000025",
+      "sku": "GRA000025",
+      "name": "DETAIL ACTIVE SAFE 1000 ML - DT-0158",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000026",
+      "sku": "GRA000026",
+      "name": "DETAIL MOTOR CONCERVANT 1000 ML -DT-0164",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000027",
+      "sku": "GRA000027",
+      "name": "DETAIL IRON 1000 ML - DT-0162",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000028",
+      "sku": "GRA000028",
+      "name": "DETAIL MULTI CLEANER 1000 ML - DT-0157",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000029",
+      "sku": "GRA000029",
+      "name": "DETAIL HYDRO SHAMPOO 1000 ML - DT-0159",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000030",
+      "sku": "GRA000030",
+      "name": "DETAIL SUPER WAX 1000 ML - DT-0160",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z",
+        "shopCategoryPath": "Chemia samochodowa › Pielęgnacja lakieru › Woski samochodowe",
+        "shopCategoryWpId": 1095,
+        "categoryAssignedAt": "2026-08-24T10:43:37.052Z",
+        "categoryAssignedBy": "heuristic",
+        "categoryAssignmentReason": "wosk samochodowy",
+        "categoryAssignmentConfidence": 82
+      }
+    },
+    {
+      "id": "shop-GRA000031",
+      "sku": "GRA000031",
+      "name": "DETAIL TIRE 1000 ML - DT-0161",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000032",
+      "sku": "GRA000032",
+      "name": "DETAIL MOTOR 1000 ML - DT-0163",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000033",
+      "sku": "GRA000033",
+      "name": "DETAIL BITUM 1L - DT-0180",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000034",
+      "sku": "GRA000034",
+      "name": "DETAIL IRON 500 ML - DT-0132",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000035",
+      "sku": "GRA000035",
+      "name": "DETAIL ULTRA CLEAN 500 ML - DT-0108",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000037",
+      "sku": "GRA000037",
+      "name": "DETAIL CLEAN GLASS 500 ML-DT-0122",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000038",
+      "sku": "GRA000038",
+      "name": "DETAIL FAST POLISH 500 ML - DT-0127",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z",
+        "shopCategoryPath": "Chemia samochodowa › Pielęgnacja lakieru › Pasty polerskie",
+        "shopCategoryWpId": 1092,
+        "categoryAssignedAt": "2026-08-24T10:44:27.959Z",
+        "categoryAssignedBy": "heuristic",
+        "categoryAssignmentReason": "Pasty polerskie",
+        "categoryAssignmentConfidence": 90
+      }
+    },
+    {
+      "id": "shop-GRA000039",
+      "sku": "GRA000039",
+      "name": "DETAIL PLASTIC 500 ML - DT-0112",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000040",
+      "sku": "GRA000040",
+      "name": "DETAIL LEATHER CLEAN 500 ML - DT-0110",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z",
+        "shopCategoryPath": "Chemia samochodowa › Wnętrze samochodu › Skóra samochodowa",
+        "shopCategoryWpId": 1088,
+        "categoryAssignedAt": "2026-08-24T10:43:37.258Z",
+        "categoryAssignedBy": "heuristic",
+        "categoryAssignmentReason": "Skóra samochodowa",
+        "categoryAssignmentConfidence": 90
+      }
+    },
+    {
+      "id": "shop-GRA000041",
+      "sku": "GRA000041",
+      "name": "DETAIL HYDRO SHAMPOO 500 ML - DT-0115",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000042",
+      "sku": "GRA000042",
+      "name": "DETAIL SUPER WAX 500 ML - DT-0124",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z",
+        "shopCategoryPath": "Chemia samochodowa › Pielęgnacja lakieru › Woski samochodowe",
+        "shopCategoryWpId": 1095,
+        "categoryAssignedAt": "2026-08-24T10:43:37.306Z",
+        "categoryAssignedBy": "heuristic",
+        "categoryAssignmentReason": "wosk samochodowy",
+        "categoryAssignmentConfidence": 82
+      }
+    },
+    {
+      "id": "shop-GRA000043",
+      "sku": "GRA000043",
+      "name": "DETAIL LEATHER 500 ML - DT-0111",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z",
+        "shopCategoryPath": "Chemia samochodowa › Wnętrze samochodu › Skóra samochodowa",
+        "shopCategoryWpId": 1088,
+        "categoryAssignedAt": "2026-08-24T10:44:32.209Z",
+        "categoryAssignedBy": "heuristic",
+        "categoryAssignmentReason": "Skóra samochodowa",
+        "categoryAssignmentConfidence": 90
+      }
+    },
+    {
+      "id": "shop-GRA000044",
+      "sku": "GRA000044",
+      "name": "DETAIL MOTOR CONCERVANT 500 ML - DT-0137",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000045",
+      "sku": "GRA000045",
+      "name": "DETAIL REMOVER 500 ML - DT-0134",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000046",
+      "sku": "GRA000046",
+      "name": "Detail ORANGE OG 0,5L - odplamiacz do tapicerki samochodowej",
+      "manufacturer": "DETAIL",
+      "stock": 0,
+      "product_meta": {
+        "vatRate": 23,
+        "weightKg": 0.5,
+        "shopCategoryPath": "Chemia profesjonalna › Pranie dywanów i tapicerki › Pranie tapicerki",
+        "shopCategoryWpId": 1194,
+        "shortDescription": "GRASS Orange (OG)\n\nMocny odplamiacz na bazie naturalnych wyciągów z pomarańczy.\n\n Usuwa trwałe plamy z materiałów winylowych, wykładzin dywanowych, szkła, metalu, plastiku, gumy, lakieru i tekstyliów.",
+        "categoryAssignedAt": "2026-08-24T10:26:03.009Z",
+        "categoryAssignedBy": "shop-sku",
+        "baselinkerProductId": "152655113",
+        "baselinkerEnrichedAt": "2026-08-07T11:59:14.138950Z",
+        "categoryAssignmentReason": "dokładne SKU z kenochem.098.pl",
+        "baselinkerDescriptionFull": true,
+        "baselinkerDescriptionChars": 773,
+        "categoryAssignmentConfidence": 100,
+        "baselinkerDescriptionImportedAt": "2026-08-18T10:58:28.215Z"
+      }
+    },
+    {
+      "id": "shop-GRA000047",
+      "sku": "GRA000047",
+      "name": "DETAIL TIRE 500 ML - DT-0130",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000048",
+      "sku": "GRA000048",
+      "name": "DETAIL MOTOR MT 0,5l mycie silnika dressing",
+      "manufacturer": "DETAIL",
+      "stock": 0,
+      "product_meta": {
+        "vatRate": 23,
+        "weightKg": 0.5,
+        "shopCategoryPath": "Chemia samochodowa › Felgi i opony › Dressingi i czernidła do opon",
+        "shopCategoryWpId": 1078,
+        "shortDescription": "GRASS Motor (MT)\n\n Środek do czyszczenia komór silników samochodów i motocykli, a także zespołów przekładniowych oraz zawieszenia.",
+        "categoryAssignedAt": "2026-08-24T10:25:12.528Z",
+        "categoryAssignedBy": "shop-sku",
+        "baselinkerProductId": "152655108",
+        "baselinkerEnrichedAt": "2026-08-07T11:59:14.268018Z",
+        "categoryAssignmentReason": "dokładne SKU z kenochem.098.pl",
+        "baselinkerDescriptionFull": true,
+        "baselinkerDescriptionChars": 739,
+        "categoryAssignmentConfidence": 100,
+        "baselinkerDescriptionImportedAt": "2026-08-18T10:58:28.215Z"
+      }
+    },
+    {
+      "id": "shop-GRA000049",
+      "sku": "GRA000049",
+      "name": "DETAIL GENERAL QUARTZ 50 ML - DT-0117",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000050",
+      "sku": "GRA000050",
+      "name": "DETAIL GLASS COAT 50 ML - DT-0118",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000051",
+      "sku": "GRA000051",
+      "name": "DETAIL GLASS CLEAN 250 ML - DT-0121",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000052",
+      "sku": "GRA000052",
+      "name": "DETAIL FARTUCH DETAILINGOWY - DT-0149",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000053",
+      "sku": "GRA000053",
+      "name": "DETAIL KOSZULKA ROZMIAR L - DT-0147",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000054",
+      "sku": "GRA000054",
+      "name": "DETAIL KOSZULKA ROZMIAR M - DT-0146",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000055",
+      "sku": "GRA000055",
+      "name": "DETAIL KOSZULKA ROZMIAR XL - DT-0148",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000056",
+      "sku": "GRA000056",
+      "name": "DETAIL NANO GLASS 250 ML - DT-0119",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000057",
+      "sku": "GRA000057",
+      "name": "DETAIL SZCZOTKA DETAILINGOWA - DT-0167",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000058",
+      "sku": "GRA000058",
+      "name": "DETAIL MIKROFIBRA - DT-0165",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000059",
+      "sku": "GRA000059",
+      "name": "DETAIL BUTELKA SPIENIAJĄCA - DT-0169",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z",
+        "shopCategoryPath": "Sprzęt i akcesoria czyszczące › Opryskiwacze i dozowanie › Butelki i opakowania",
+        "shopCategoryWpId": 1168,
+        "categoryAssignedAt": "2026-08-24T10:43:38.090Z",
+        "categoryAssignedBy": "heuristic",
+        "categoryAssignmentReason": "Butelki i opakowania",
+        "categoryAssignmentConfidence": 86
+      }
+    },
+    {
+      "id": "shop-GRA000060",
+      "sku": "GRA000060",
+      "name": "DETAIL GĄBKA Z MAKROPORAMI - DT-0166",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z",
+        "shopCategoryPath": "Sprzęt i akcesoria czyszczące › Mikrofibry, gąbki i pady › Gąbki i rękawice",
+        "shopCategoryWpId": 1155,
+        "categoryAssignedAt": "2026-08-24T10:43:38.131Z",
+        "categoryAssignedBy": "heuristic",
+        "categoryAssignmentReason": "gąbka lub rękawica",
+        "categoryAssignmentConfidence": 88
+      }
+    },
+    {
+      "id": "shop-GRA000061",
+      "sku": "GRA000061",
+      "name": "DETAIL RĘKAWICZKI DETAILINGOWE - DT-0170",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000062",
+      "sku": "GRA000062",
+      "name": "DETAIL APLIKATOR 40x90x23 MM - DT-0100",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000135",
+      "sku": "GRA000135",
+      "name": "DETAIL Second Phase 5L",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000138",
+      "sku": "GRA000138",
+      "name": "DETAIL Remover 5L",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000139",
+      "sku": "GRA000139",
+      "name": "DETAIL BITUM 5L",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000141",
+      "sku": "GRA000141",
+      "name": "DETAIL Second Phase 1L",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000144",
+      "sku": "GRA000144",
+      "name": "DETAIL Polishing agent RD Reductant500ml",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000175",
+      "sku": "GRA000175",
+      "name": "DETAIL Quartz Reload 250ml",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000184",
+      "sku": "GRA000184",
+      "name": "DETAIL TEXTIL 5L - DT-0278",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000187",
+      "sku": "GRA000187",
+      "name": "DETAIL REMOVER 5L - DT-0328",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000190",
+      "sku": "GRA000190",
+      "name": "DETAIL TEXTIL 1L - DT-0277",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-GRA000192",
+      "sku": "GRA000192",
+      "name": "DETAIL Quick Detailer 1L",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z",
+        "shopCategoryPath": "Chemia samochodowa › Pielęgnacja lakieru › Quick detailery",
+        "shopCategoryWpId": 1094,
+        "categoryAssignedAt": "2026-08-24T10:43:47.991Z",
+        "categoryAssignedBy": "heuristic",
+        "categoryAssignmentReason": "Quick detailery",
+        "categoryAssignmentConfidence": 94
+      }
+    },
+    {
+      "id": "shop-GRA000197",
+      "sku": "GRA000197",
+      "name": "DETAIL Quick Detailer 0,5L",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z",
+        "shopCategoryPath": "Chemia samochodowa › Pielęgnacja lakieru › Quick detailery",
+        "shopCategoryWpId": 1094,
+        "categoryAssignedAt": "2026-08-24T10:43:48.234Z",
+        "categoryAssignedBy": "heuristic",
+        "categoryAssignmentReason": "Quick detailery",
+        "categoryAssignmentConfidence": 94
+      }
+    },
+    {
+      "id": "shop-GRA000198",
+      "sku": "GRA000198",
+      "name": "DETAIL HARD WAX",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z",
+        "shopCategoryPath": "Chemia samochodowa › Pielęgnacja lakieru › Woski samochodowe",
+        "shopCategoryWpId": 1095,
+        "categoryAssignedAt": "2026-08-24T10:43:48.385Z",
+        "categoryAssignedBy": "heuristic",
+        "categoryAssignmentReason": "wosk samochodowy",
+        "categoryAssignmentConfidence": 82
+      }
+    },
+    {
+      "id": "shop-GRA000199",
+      "sku": "GRA000199",
+      "name": "DETAIL RUBBER BLACKING APPLICATOR",
+      "manufacturer": "GRASS",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.610Z"
+      }
+    },
+    {
+      "id": "shop-PAP000005",
+      "sku": "PAP000005",
+      "name": "CLEAN TECH EasyOne Spray Wax 0,5L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z",
+        "shopCategoryPath": "Chemia samochodowa › Pielęgnacja lakieru › Woski samochodowe",
+        "shopCategoryWpId": 1095,
+        "categoryAssignedAt": "2026-08-24T10:44:13.419Z",
+        "categoryAssignedBy": "heuristic",
+        "categoryAssignmentReason": "wosk samochodowy",
+        "categoryAssignmentConfidence": 82
+      }
+    },
+    {
+      "id": "shop-PAP000006",
+      "sku": "PAP000006",
+      "name": "CLEAN TECH APC 0,5L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z",
+        "shopCategoryPath": "Chemia profesjonalna › Chemia obiektowa › Mycie powierzchni",
+        "shopCategoryWpId": 1176,
+        "categoryAssignedAt": "2026-08-24T10:44:13.448Z",
+        "categoryAssignedBy": "heuristic",
+        "categoryAssignmentReason": "Mycie powierzchni",
+        "categoryAssignmentConfidence": 74
+      }
+    },
+    {
+      "id": "shop-PAP000008",
+      "sku": "PAP000008",
+      "name": "CLEAN TECH  Bug OFF 0,5 L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000009",
+      "sku": "PAP000009",
+      "name": "CLEAN TECH  Bug OFF 5 L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000012",
+      "sku": "PAP000012",
+      "name": "CLEAN TECH  Clean Wheel 0,5 L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000013",
+      "sku": "PAP000013",
+      "name": "CLEAN TECH  Clean Wheel 5L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000014",
+      "sku": "PAP000014",
+      "name": "CLEAN TECH EasyOne Spray Wax  1 L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z",
+        "shopCategoryPath": "Chemia samochodowa › Pielęgnacja lakieru › Woski samochodowe",
+        "shopCategoryWpId": 1095,
+        "categoryAssignedAt": "2026-08-24T10:44:34.773Z",
+        "categoryAssignedBy": "heuristic",
+        "categoryAssignmentReason": "wosk samochodowy",
+        "categoryAssignmentConfidence": 82
+      }
+    },
+    {
+      "id": "shop-PAP000015",
+      "sku": "PAP000015",
+      "name": "CLEAN TECH Glass Cleaner 1 L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000016",
+      "sku": "PAP000016",
+      "name": "CLEAN TECH Inside Cleaner 0,5 L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000017",
+      "sku": "PAP000017",
+      "name": "CLEAN TECH Inside Cleaner 5 L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000018",
+      "sku": "PAP000018",
+      "name": "CLEAN TECH Interior Dressing 0,5 L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000019",
+      "sku": "PAP000019",
+      "name": "CLEAN TECH Interior Dressing 1 L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000020",
+      "sku": "PAP000020",
+      "name": "CLEAN TECH Leather Cleaner 0,5 L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z",
+        "shopCategoryPath": "Chemia samochodowa › Wnętrze samochodu › Skóra samochodowa",
+        "shopCategoryWpId": 1088,
+        "categoryAssignedAt": "2026-08-24T10:44:13.697Z",
+        "categoryAssignedBy": "heuristic",
+        "categoryAssignmentReason": "Skóra samochodowa",
+        "categoryAssignmentConfidence": 90
+      }
+    },
+    {
+      "id": "shop-PAP000021",
+      "sku": "PAP000021",
+      "name": "CLEAN TECH Leather QD 0,5 L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z",
+        "shopCategoryPath": "Chemia samochodowa › Pielęgnacja lakieru › Quick detailery",
+        "shopCategoryWpId": 1094,
+        "categoryAssignedAt": "2026-08-24T10:44:13.727Z",
+        "categoryAssignedBy": "heuristic",
+        "categoryAssignmentReason": "Quick detailery",
+        "categoryAssignmentConfidence": 94
+      }
+    },
+    {
+      "id": "shop-PAP000022",
+      "sku": "PAP000022",
+      "name": "CLEAN TECH Red DeWheel 5 L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000023",
+      "sku": "PAP000023",
+      "name": "CLEAN TECH Shot Foam 1 L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000024",
+      "sku": "PAP000024",
+      "name": "CLEAN TECH Shot Foam 5 L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000025",
+      "sku": "PAP000025",
+      "name": "CLEAN TECH Tech Cleaner 0,5 L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000026",
+      "sku": "PAP000026",
+      "name": "CLEAN TECH Tech Cleaner 5 L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000027",
+      "sku": "PAP000027",
+      "name": "CleanTech TIRE and RUBBER Cleaner 500ml - do czyszczeia opon",
+      "manufacturer": "CLEANTECH / CLEANTLE",
+      "stock": 0,
+      "product_meta": {
+        "vatRate": 23,
+        "weightKg": 1,
+        "shopCategoryPath": "Chemia samochodowa › Felgi i opony › Dressingi i czernidła do opon",
+        "shopCategoryWpId": 1078,
+        "shortDescription": "Tire and Rubber Cleaner\n\n Tire and Rubber Cleaner to produkt dedykowany do skutecznego oczyszczania opon, elementów gumowych, dywaników gumowych oraz piór wycieraczek.",
+        "categoryAssignedAt": "2026-08-24T10:26:04.532Z",
+        "categoryAssignedBy": "shop-sku",
+        "baselinkerProductId": "152656235",
+        "baselinkerEnrichedAt": "2026-08-07T12:02:47.817554Z",
+        "categoryAssignmentReason": "dokładne SKU z kenochem.098.pl",
+        "baselinkerDescriptionFull": true,
+        "baselinkerDescriptionChars": 923,
+        "categoryAssignmentConfidence": 100,
+        "baselinkerDescriptionImportedAt": "2026-08-18T10:58:28.233Z"
+      }
+    },
+    {
+      "id": "shop-PAP000028",
+      "sku": "PAP000028",
+      "name": "CLEAN TECH Tire and Rubber Cleaner 1 L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000029",
+      "sku": "PAP000029",
+      "name": "CLEAN TECH Tech Coat 15ml Box",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000030",
+      "sku": "PAP000030",
+      "name": "CLEAN TECH Tech Coat 30ml Box",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000031",
+      "sku": "PAP000031",
+      "name": "CLEAN TECH Wiadro czarne+separator+pokry",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z",
+        "shopCategoryPath": "Sprzęt i akcesoria czyszczące › Mopy i systemy sprzątania › Wiadra i wyciskarki",
+        "shopCategoryWpId": 1160,
+        "categoryAssignedAt": "2026-08-24T10:44:13.901Z",
+        "categoryAssignedBy": "heuristic",
+        "categoryAssignmentReason": "Wiadra i wyciskarki",
+        "categoryAssignmentConfidence": 90
+      }
+    },
+    {
+      "id": "shop-PAP000034",
+      "sku": "PAP000034",
+      "name": "CLEAN TECH Tech Cleaner 1 L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000035",
+      "sku": "PAP000035",
+      "name": "CLEANTLE APC 0,5L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z",
+        "shopCategoryPath": "Chemia profesjonalna › Chemia obiektowa › Mycie powierzchni",
+        "shopCategoryWpId": 1176,
+        "categoryAssignedAt": "2026-08-24T10:44:13.962Z",
+        "categoryAssignedBy": "heuristic",
+        "categoryAssignmentReason": "Mycie powierzchni",
+        "categoryAssignmentConfidence": 74
+      }
+    },
+    {
+      "id": "shop-PAP000036",
+      "sku": "PAP000036",
+      "name": "CLEANTLE APC 5L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z",
+        "shopCategoryPath": "Chemia profesjonalna › Chemia obiektowa › Mycie powierzchni",
+        "shopCategoryWpId": 1176,
+        "categoryAssignedAt": "2026-08-24T10:44:13.995Z",
+        "categoryAssignedBy": "heuristic",
+        "categoryAssignmentReason": "Mycie powierzchni",
+        "categoryAssignmentConfidence": 74
+      }
+    },
+    {
+      "id": "shop-PAP000037",
+      "sku": "PAP000037",
+      "name": "CLEANTLE Deiron Man 1L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z",
+        "shopCategoryPath": "Chemia samochodowa › Felgi i opony › Płyny do felg",
+        "shopCategoryWpId": 1074,
+        "categoryAssignedAt": "2026-08-24T10:44:34.604Z",
+        "categoryAssignedBy": "heuristic",
+        "categoryAssignmentReason": "Płyny do felg",
+        "categoryAssignmentConfidence": 88
+      }
+    },
+    {
+      "id": "shop-PAP000038",
+      "sku": "PAP000038",
+      "name": "CLEANTLE Deiron Man 5L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z",
+        "shopCategoryPath": "Chemia samochodowa › Felgi i opony › Płyny do felg",
+        "shopCategoryWpId": 1074,
+        "categoryAssignedAt": "2026-08-24T10:44:14.025Z",
+        "categoryAssignedBy": "heuristic",
+        "categoryAssignmentReason": "Płyny do felg",
+        "categoryAssignmentConfidence": 88
+      }
+    },
+    {
+      "id": "shop-PAP000039",
+      "sku": "PAP000039",
+      "name": "Cleantle INTERIOR CLEANER + 500ml - płyn uniwersalny",
+      "manufacturer": "CLEANTECH / CLEANTLE",
+      "stock": 0,
+      "product_meta": {
+        "vatRate": 23,
+        "weightKg": 1,
+        "shopCategoryPath": "Chemia samochodowa › Pielęgnacja lakieru › Cleanery, politury i AIO",
+        "shopCategoryWpId": 1093,
+        "shortDescription": "Cleantle Interior Cleaner+\n\n Rewolucyjny produkt czyszczący o niesamowitej mocy działania.",
+        "categoryAssignedAt": "2026-08-24T10:26:10.262Z",
+        "categoryAssignedBy": "shop-sku",
+        "baselinkerProductId": "152656386",
+        "baselinkerEnrichedAt": "2026-08-07T12:02:48.076910Z",
+        "categoryAssignmentReason": "dokładne SKU z kenochem.098.pl",
+        "baselinkerDescriptionFull": true,
+        "baselinkerDescriptionChars": 1077,
+        "categoryAssignmentConfidence": 100,
+        "baselinkerDescriptionImportedAt": "2026-08-18T10:58:28.233Z"
+      }
+    },
+    {
+      "id": "shop-PAP000040",
+      "sku": "PAP000040",
+      "name": "CLEANTLE Interior Cleaner 5L Orange",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000041",
+      "sku": "PAP000041",
+      "name": "CLEANTLE Tire&Wheel Cleaner 1L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000042",
+      "sku": "PAP000042",
+      "name": "CLEANTLE Mikrofibra bezszwowa 40x40",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000043",
+      "sku": "PAP000043",
+      "name": "CLEAN TECH EasyOne Spray Wax  5 L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z",
+        "shopCategoryPath": "Chemia samochodowa › Pielęgnacja lakieru › Woski samochodowe",
+        "shopCategoryWpId": 1095,
+        "categoryAssignedAt": "2026-08-24T10:44:14.084Z",
+        "categoryAssignedBy": "heuristic",
+        "categoryAssignmentReason": "wosk samochodowy",
+        "categoryAssignmentConfidence": 82
+      }
+    },
+    {
+      "id": "shop-PAP000046",
+      "sku": "PAP000046",
+      "name": "CLEANTLE Citrus Foam 25L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000048",
+      "sku": "PAP000048",
+      "name": "CLEANTLE Admire 30ml",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000049",
+      "sku": "PAP000049",
+      "name": "CLEANTLE Inspire 15ml",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000050",
+      "sku": "PAP000050",
+      "name": "Cleante APC 1L APC - uniwersalny produkt czyszczący",
+      "manufacturer": "CLEANTECH / CLEANTLE",
+      "stock": 0,
+      "product_meta": {
+        "vatRate": 23,
+        "weightKg": 1,
+        "shopCategoryPath": "Chemia samochodowa › Mycie samochodu › APC do samochodu",
+        "shopCategoryWpId": 1065,
+        "shortDescription": "CLEANTLE APC uniwersalny produkt czyszczący 1L\n\n  \n\n Mocne strony produktu:\n\n- brak niebezpiecznego duszącego wodorotlenku sodu\n\n- jest bardzo bezpieczny, nie uszkadza czyszczonych materiałów, nawet gdy zaschnie\n\n- mocno skoncentrowany\n\n- przyjemny zapach limonki i mięty\n\n- produkt biodegradowalny\n\n  \n\n  \n\n  \n\n Jest to produkt do mycia wszystkich powierzchni.",
+        "categoryAssignedAt": "2026-08-24T10:25:57.504Z",
+        "categoryAssignedBy": "shop-sku",
+        "baselinkerProductId": "152656585",
+        "baselinkerEnrichedAt": "2026-08-07T12:02:48.471765Z",
+        "categoryAssignmentReason": "dokładne SKU z kenochem.098.pl",
+        "baselinkerDescriptionFull": true,
+        "baselinkerDescriptionChars": 1210,
+        "categoryAssignmentConfidence": 100,
+        "baselinkerDescriptionImportedAt": "2026-08-18T10:58:28.233Z"
+      }
+    },
+    {
+      "id": "shop-PAP000051",
+      "sku": "PAP000051",
+      "name": "CLEANTLE Citrus Foam 1L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000052",
+      "sku": "PAP000052",
+      "name": "CLEANTLE Citrus Foam 5L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000053",
+      "sku": "PAP000053",
+      "name": "CLEANTLE Glass Cleaner 1L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000054",
+      "sku": "PAP000054",
+      "name": "CLEANTLE Glass Cleaner 5L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000055",
+      "sku": "PAP000055",
+      "name": "CLEANTLE Screen Wash 200ml",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000056",
+      "sku": "PAP000056",
+      "name": "CLEANTLE TFR PreWash 1L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000057",
+      "sku": "PAP000057",
+      "name": "CLEANTLE TFR PreWash 0,5 L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000059",
+      "sku": "PAP000059",
+      "name": "CLEANTLE TFR PreWash 5L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z"
+      }
+    },
+    {
+      "id": "shop-PAP000060",
+      "sku": "PAP000060",
+      "name": "CLEANTLE Industrial Degreaser 1L",
+      "manufacturer": "Clean Tech",
+      "stock": 0,
+      "product_meta": {
+        "waproImport": true,
+        "waproSkeleton": true,
+        "waproImportedAt": "2026-08-10T07:57:12.611Z",
+        "shopCategoryPath": "Chemia specjalistyczna › Zmywacze, odtłuszczacze i odrdzewiacze › Odtłuszczacze przemysłowe",
+        "shopCategoryWpId": 1042,
+        "categoryAssignedAt": "2026-08-24T10:44:33.927Z",
+        "categoryAssignedBy": "heuristic",
+        "categoryAssignmentReason": "Odtłuszczacze przemysłowe",
+        "categoryAssignmentConfidence": 84
+      }
+    }
+  ]
+}

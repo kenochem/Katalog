@@ -7,11 +7,12 @@ import {
   CheckCircle2,
   ExternalLink,
   ImageOff,
+  Package,
   PackageX,
   ScanBarcode,
-  Search,
   Sparkles,
   Star,
+  Store,
   TrendingDown,
 } from 'lucide-react';
 import type { CatalogType } from '../types';
@@ -35,9 +36,16 @@ export interface CatalogHomeViewProps {
   quickActions?: CatalogHomeQuickAction[];
   onOpenCatalog: (filter: CatalogType | 'all') => void;
   onOpenMissingImages?: () => void;
-  onFocusSearch?: () => void;
   onOpenScanner?: () => void;
 }
+
+type CatalogEntry = {
+  id: CatalogType | 'all';
+  label: string;
+  description: string;
+  icon: ReactNode;
+  primary?: boolean;
+};
 
 export function CatalogHomeView({
   allProducts,
@@ -47,7 +55,6 @@ export function CatalogHomeView({
   quickActions = [],
   onOpenCatalog,
   onOpenMissingImages,
-  onFocusSearch,
   onOpenScanner,
 }: CatalogHomeViewProps) {
   const stats = useMemo(
@@ -56,57 +63,100 @@ export function CatalogHomeView({
   );
   const lowStock = stats.lowStock;
 
+  const catalogCounts = useMemo(() => {
+    let accessories = 0;
+    let shop = 0;
+    for (const p of allProducts) {
+      if (p.catalog === 'accessories') accessories += 1;
+      else if (p.catalog === 'shop') shop += 1;
+    }
+    return { accessories, shop, all: allProducts.length };
+  }, [allProducts]);
+
+  const catalogEntries: CatalogEntry[] = [
+    {
+      id: 'all',
+      label: 'Cały katalog',
+      description: `${catalogCounts.all.toLocaleString('pl-PL')} pozycji — stany, ceny, filtry`,
+      icon: <Boxes className="h-6 w-6" />,
+      primary: true,
+    },
+    {
+      id: 'accessories',
+      label: 'Akcesoria',
+      description: `${catalogCounts.accessories.toLocaleString('pl-PL')} pozycji myjni i chemii`,
+      icon: <Package className="h-6 w-6" />,
+    },
+    {
+      id: 'shop',
+      label: 'Produkty sklepu',
+      description: `${catalogCounts.shop.toLocaleString('pl-PL')} pozycji ze sklepu Kenochem`,
+      icon: <Store className="h-6 w-6" />,
+    },
+  ];
+
   return (
     <div className="catalog-home-view mx-auto max-w-5xl space-y-8 pb-12 pt-2">
-      {/* Pasek działania: powitanie + wyszukiwanie + wejście do katalogu w jednym miejscu */}
-      <section className="relative rounded-3xl border border-brand-200/70 bg-gradient-to-br from-brand-50 via-white to-white px-5 py-6 shadow-sm shadow-slate-200/60 dark:border-brand-500/20 dark:from-brand-500/10 dark:via-slate-900/60 dark:to-slate-950 dark:shadow-none sm:px-8 sm:py-8">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 overflow-hidden rounded-3xl"
-        >
-          <div className="absolute -right-20 -top-24 h-64 w-64 rounded-full bg-brand-300/20 blur-3xl dark:bg-brand-500/10" />
-        </div>
-        <div className="relative">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600 dark:text-brand-300">
-                Kenochem Katalog
-              </p>
-              <h1 className="mt-1 inline-flex items-center gap-2 text-2xl font-bold tracking-tight text-slate-950 dark:text-slate-100 sm:text-3xl">
-                Witaj w katalogu
-                <ContextHelp id="catalog" side="left" />
-              </h1>
-            </div>
+      <section className="catalog-home-hero rounded-3xl px-5 py-7 sm:px-8 sm:py-9">
+        <div className="space-y-6">
+          <div className="max-w-2xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600 dark:text-brand-300">
+              Kenochem Katalog
+            </p>
+            <h1 className="mt-1 inline-flex items-center gap-2 text-2xl font-bold tracking-tight sm:text-3xl">
+              Przejdź do katalogu
+              <ContextHelp id="catalog" side="left" />
+            </h1>
+            <p className="catalog-home-muted mt-2 text-sm leading-relaxed sm:text-[15px]">
+              Wybierz część asortymentu — stany z WAPRO, zdjęcia, filtry i wyszukiwarka są w widoku
+              katalogu (skrót{' '}
+              <kbd className="catalog-home-kbd rounded px-1.5 py-0.5 text-[10px] font-semibold">
+                Ctrl+K
+              </kbd>{' '}
+              po wejściu).
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            {catalogEntries.map((entry) => (
+              <button
+                key={entry.id}
+                type="button"
+                onClick={() => onOpenCatalog(entry.id)}
+                className={`catalog-home-entry group flex min-h-[8.5rem] flex-col justify-between rounded-2xl p-4 text-left transition hover:-translate-y-0.5 ${
+                  entry.primary ? 'catalog-home-entry--primary' : ''
+                }`}
+              >
+                <span className="catalog-home-entry-icon flex h-11 w-11 items-center justify-center rounded-xl">
+                  {entry.icon}
+                </span>
+                <span>
+                  <span className="flex items-center gap-1.5 text-base font-semibold">
+                    {entry.label}
+                    <ArrowRight className="h-4 w-4 opacity-0 transition group-hover:translate-x-0.5 group-hover:opacity-100" />
+                  </span>
+                  <span className="catalog-home-muted mt-1 block text-xs leading-relaxed">
+                    {entry.description}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
               onClick={() => onOpenCatalog('all')}
-              className="group inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-500 hover:gap-3"
+              className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-500"
             >
-              Wejdź do katalogu
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-            </button>
-          </div>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600 dark:text-slate-400 sm:text-[15px]">
-            Jedno miejsce na stany i ofertę: części do myjni, chemia i produkty sklepowe —{' '}
-            {stats.total.toLocaleString('pl-PL')} pozycji, filtry i kategorie w środku.
-          </p>
-
-          <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-stretch">
-            <button
-              type="button"
-              onClick={onFocusSearch}
-              className="flex flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-left shadow-sm transition hover:border-brand-400 dark:border-slate-700/80 dark:bg-slate-900/70 dark:hover:border-brand-500/40"
-            >
-              <Search className="h-5 w-5 shrink-0 text-brand-500" />
-              <span className="text-sm text-slate-600 dark:text-slate-400">
-                Szukaj SKU, EAN lub nazwy…
-              </span>
+              Otwórz pełny katalog
+              <ArrowRight className="h-4 w-4" />
             </button>
             {onOpenScanner && (
               <button
                 type="button"
                 onClick={onOpenScanner}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-brand-300 bg-white px-5 py-3.5 text-sm font-medium text-brand-800 shadow-sm transition hover:bg-brand-50 dark:border-brand-500/35 dark:bg-slate-900/70 dark:text-brand-200 dark:hover:bg-brand-500/10"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-sm transition hover:border-brand-400 hover:text-brand-700 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200 dark:hover:border-brand-500/35"
               >
                 <ScanBarcode className="h-5 w-5" />
                 Skanuj EAN
@@ -116,7 +166,6 @@ export function CatalogHomeView({
         </div>
       </section>
 
-      {/* Statystyki jako jeden pasek z podziałami — mniej osobnych "boxów" */}
       <section className="grid grid-cols-2 divide-x divide-y divide-slate-200 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900/40 sm:grid-cols-4 sm:divide-y-0">
         <StatCell label="Pozycji" value={stats.total} icon={<Boxes className="h-4 w-4" />} />
         <StatCell
@@ -168,7 +217,6 @@ export function CatalogHomeView({
         </section>
       )}
 
-      {/* Zadania porządkowe — jedna karta, paski postępu zamiast wykresów kołowych */}
       <section className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/35">
         <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-800">
           <div>
@@ -211,7 +259,6 @@ export function CatalogHomeView({
         </div>
       </section>
 
-      {/* W skrócie + Biblioteka wiedzy razem — mniej sekcji na końcu strony */}
       <section className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-5 dark:border-slate-800/80 dark:bg-slate-900/30">
           <h2 className="text-sm font-medium text-slate-900 dark:text-slate-300">W skrócie</h2>
@@ -247,7 +294,8 @@ export function CatalogHomeView({
                   >
                     {missingImagesCount} pozycji bez zdjęcia
                   </button>
-                  {' — warto uzupełnić w widoku „Bez zdjęć”.'}
+                  {' — warto uzupełnić w widoku „Bez zdjęć”.'
+                  }
                 </span>
               </li>
             )}

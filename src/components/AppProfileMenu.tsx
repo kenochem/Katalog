@@ -7,6 +7,7 @@ import {
   Settings2,
   Sun,
   Moon,
+  Palette,
   UserRound,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
@@ -17,7 +18,7 @@ import { useUserAvatar } from '../lib/useUserAvatar';
 import { saveUserAvatarFile } from '../lib/userAvatar';
 import { THEME_LABELS, useTheme } from '../lib/theme';
 
-const THEME_MENU_ICONS = { light: Sun, dark: Moon, cookie: Cookie } as const;
+const THEME_MENU_ICONS = { light: Sun, dark: Moon, gray: Palette, cookie: Cookie } as const;
 import { showToast } from '../lib/toast';
 
 interface AppProfileMenuProps {

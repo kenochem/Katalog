@@ -66,6 +66,7 @@ export type RoleAction =
   | 'manageTalk'
   | 'useCrm'
   | 'viewRoleMatrix'
+  | 'editRoleMatrix'
   | 'viewOps';
 
 export const ROLE_ACTION_LABELS: Record<RoleAction, string> = {
@@ -87,6 +88,7 @@ export const ROLE_ACTION_LABELS: Record<RoleAction, string> = {
   manageTalk: 'Administracja Talk',
   useCrm: 'CRM / panel handlowca',
   viewRoleMatrix: 'Podgląd uprawnień',
+  editRoleMatrix: 'Edycja macierzy uprawnień',
   viewOps: 'Operacje / kalkulatory',
 };
 
@@ -113,6 +115,7 @@ const ALL_FALSE: Record<RoleAction, boolean> = {
   manageTalk: false,
   useCrm: false,
   viewRoleMatrix: false,
+  editRoleMatrix: false,
   viewOps: false,
 };
 
@@ -170,6 +173,7 @@ export const DEFAULT_ROLE_MATRIX: Record<AppRole, Record<RoleAction, boolean>> =
     manageTalk: false,
     useCrm: true,
     viewRoleMatrix: false,
+    editRoleMatrix: false,
     viewOps: true,
   },
   admin: {
@@ -191,6 +195,7 @@ export const DEFAULT_ROLE_MATRIX: Record<AppRole, Record<RoleAction, boolean>> =
     manageTalk: true,
     useCrm: true,
     viewRoleMatrix: true,
+    editRoleMatrix: true,
     viewOps: true,
   },
 };

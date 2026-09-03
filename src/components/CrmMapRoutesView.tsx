@@ -37,6 +37,31 @@ L.Icon.Default.mergeOptions({
 const PL_CENTER: L.LatLngExpression = [52.1, 19.4];
 const PL_ZOOM = 6;
 
+/** Baza Kenochem — punkt wypadowy, skad zbiera sie towar i rusza w trase.
+ * Gen. Wl. Andersa 40, Boks 16, 15-113 Bialystok (wspolrzedne z OpenStreetMap). */
+const KENOCHEM_HQ_ID = 'kenochem-hq';
+const KENOCHEM_HQ = {
+  id: KENOCHEM_HQ_ID,
+  displayName: 'Kenochem — baza',
+  address: 'Gen. Wł. Andersa 40, Boks 16, 15-113 Białystok',
+  lat: 53.155146,
+  lng: 23.165327,
+};
+
+const hqIcon = L.divIcon({
+  className: '',
+  html: '<div style="background:#16a34a;width:1.1rem;height:1.1rem;border-radius:9999px;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.5)"></div>',
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
+});
+
+interface RouteStop {
+  id: string;
+  displayName: string;
+  lat: number;
+  lng: number;
+}
+
 interface CrmMapRoutesViewProps {
   clients: CrmClient[];
   cloudEnabled: boolean;
@@ -125,6 +150,10 @@ export function CrmMapRoutesView({
       if (!id) return;
       void placePinRef.current(id, e.latlng.lat, e.latlng.lng);
     });
+
+    L.marker([KENOCHEM_HQ.lat, KENOCHEM_HQ.lng], { icon: hqIcon, zIndexOffset: 1000 })
+      .addTo(map)
+      .bindPopup(`<strong>${escapeHtml(KENOCHEM_HQ.displayName)}</strong><br/><span style="opacity:.7">${escapeHtml(KENOCHEM_HQ.address)}</span>`);
 
     requestAnimationFrame(() => {
       map.invalidateSize();
@@ -257,12 +286,17 @@ export function CrmMapRoutesView({
     setRouteResult(null);
   }
 
+  function resolveStop(id: string): RouteStop | null {
+    if (id === KENOCHEM_HQ_ID) return KENOCHEM_HQ;
+    const c = clients.find((x) => x.id === id);
+    if (!c || c.lat == null || c.lng == null) return null;
+    return { id: c.id, displayName: c.displayName, lat: c.lat, lng: c.lng };
+  }
+
   async function computeRoute() {
-    const stops = routeIds
-      .map((id) => clients.find((c) => c.id === id))
-      .filter((c): c is CrmClient => Boolean(c?.lat && c?.lng));
+    const stops = routeIds.map(resolveStop).filter((s): s is RouteStop => Boolean(s));
     if (stops.length < 2) {
-      showToast('Dodaj min. 2 klientów z pinezkami do trasy', 'info', 3500);
+      showToast('Dodaj min. 2 przystanki z pinezkami do trasy', 'info', 3500);
       return;
     }
     setBusy(true);
@@ -270,8 +304,8 @@ export function CrmMapRoutesView({
     try {
       const result = await buildDrivingRoute(
         stops.map((c) => ({
-          lat: c.lat!,
-          lng: c.lng!,
+          lat: c.lat,
+          lng: c.lng,
           label: c.displayName,
         }))
       );
@@ -342,8 +376,8 @@ export function CrmMapRoutesView({
             ) : (
               <ul className="max-h-40 space-y-1 overflow-y-auto">
                 {routeIds.map((id, i) => {
-                  const c = clients.find((x) => x.id === id);
-                  if (!c) return null;
+                  const stop = id === KENOCHEM_HQ_ID ? KENOCHEM_HQ : clients.find((x) => x.id === id);
+                  if (!stop) return null;
                   return (
                     <li
                       key={`${id}-${i}`}
@@ -352,8 +386,11 @@ export function CrmMapRoutesView({
                       <span className="w-4 tabular-nums text-slate-500">
                         {i + 1}.
                       </span>
-                      <span className="min-w-0 flex-1 truncate">
-                        {c.displayName}
+                      <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate">
+                        {id === KENOCHEM_HQ_ID && (
+                          <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
+                        )}
+                        {stop.displayName}
                       </span>
                       <button
                         type="button"
@@ -415,13 +452,13 @@ export function CrmMapRoutesView({
               )}
             </div>
             {routeResult && (
-              <div className="mt-2 space-y-1 rounded-xl border border-brand-500/30 bg-brand-500/10 px-3 py-2 text-xs text-brand-100">
+              <div className="mt-2 space-y-1 rounded-xl border border-brand-300 bg-brand-50 px-3 py-2 text-xs text-brand-900 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-100">
                 <p className="font-semibold">
                   {formatDistance(routeResult.distanceM)} ·{' '}
                   {formatDuration(routeResult.durationS)}
                 </p>
                 {routeResult.legs.map((leg, i) => (
-                  <p key={i} className="text-[11px] text-brand-200/80">
+                  <p key={i} className="text-[11px] text-brand-800/80 dark:text-brand-200/80">
                     {i + 1}→{i + 2}: {formatDistance(leg.distanceM)} /{' '}
                     {formatDuration(leg.durationS)}
                   </p>
@@ -431,6 +468,28 @@ export function CrmMapRoutesView({
           </section>
 
           <section className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900/40 p-3">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              Baza
+            </p>
+            <div className="mb-3 flex items-start gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] px-2 py-2">
+              <span className="mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 border-white/60 bg-emerald-500 shadow" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm text-slate-100">{KENOCHEM_HQ.displayName}</p>
+                <p className="truncate text-[11px] text-slate-500">{KENOCHEM_HQ.address}</p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setRouteIds((prev) =>
+                      prev.includes(KENOCHEM_HQ_ID) ? prev : [KENOCHEM_HQ_ID, ...prev],
+                    )
+                  }
+                  className="mt-1 inline-flex items-center gap-0.5 rounded-lg border border-emerald-500/40 px-2 py-0.5 text-[10px] text-emerald-300 hover:bg-emerald-500/10"
+                >
+                  <Plus className="h-3 w-3" /> start trasy
+                </button>
+              </div>
+            </div>
+
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
               Klienci ({clients.length})
             </p>

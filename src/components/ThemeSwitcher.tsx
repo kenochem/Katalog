@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, ChevronDown, Cookie, Moon, Sun } from 'lucide-react';
+import { Check, ChevronDown, Cookie, Moon, Palette, Sun } from 'lucide-react';
 import { THEME_LABELS, useTheme, type ThemeMode } from '../lib/theme';
 
 const THEME_ICONS: Record<ThemeMode, typeof Sun> = {
   light: Sun,
   dark: Moon,
+  gray: Palette,
   cookie: Cookie,
 };
 
-const THEME_OPTIONS: ThemeMode[] = ['light', 'dark', 'cookie'];
+const THEME_OPTIONS: ThemeMode[] = ['light', 'dark', 'gray', 'cookie'];
 
 interface ThemeSwitcherProps {
   className?: string;

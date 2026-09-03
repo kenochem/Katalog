@@ -17,6 +17,22 @@ function cloneMatrix(source: RoleMatrix): RoleMatrix {
   return JSON.parse(JSON.stringify(source)) as RoleMatrix;
 }
 
+/** Uzupełnia brakujące akcje z domyślnej macierzy (np. po dodaniu nowego uprawnienia). */
+export function mergeRoleMatrixWithDefaults(raw: unknown): RoleMatrix {
+  const base = cloneMatrix(DEFAULT_ROLE_MATRIX);
+  if (!raw || typeof raw !== 'object') return base;
+  for (const role of APP_ROLES) {
+    const row = (raw as RoleMatrix)[role];
+    if (!row || typeof row !== 'object') continue;
+    for (const action of ROLE_ACTIONS) {
+      if (typeof row[action] === 'boolean') {
+        base[role][action] = row[action];
+      }
+    }
+  }
+  return base;
+}
+
 export function isValidRoleMatrix(raw: unknown): raw is RoleMatrix {
   if (!raw || typeof raw !== 'object') return false;
   for (const role of APP_ROLES) {
@@ -37,8 +53,7 @@ function loadMatrixFromLocal(): RoleMatrix {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return cloneMatrix(DEFAULT_ROLE_MATRIX);
     const parsed: unknown = JSON.parse(raw);
-    if (!isValidRoleMatrix(parsed)) return cloneMatrix(DEFAULT_ROLE_MATRIX);
-    return parsed;
+    return mergeRoleMatrixWithDefaults(parsed);
   } catch {
     return cloneMatrix(DEFAULT_ROLE_MATRIX);
   }
@@ -112,8 +127,8 @@ export async function hydrateRoleMatrixFromCloud(): Promise<void> {
     return;
   }
   const raw = data?.matrix;
-  if (!isValidRoleMatrix(raw)) return;
-  applyMatrix(raw);
+  if (!raw) return;
+  applyMatrix(mergeRoleMatrixWithDefaults(raw));
 }
 
 export function setRoleMatrixCell(

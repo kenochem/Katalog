@@ -3,7 +3,16 @@ import type { Product } from '../types';
 import { fetchCrmClients, fetchCrmOrders, type CrmClient, type CrmOrder } from '../lib/crm';
 import { CRM_INBOX_ENABLED } from '../lib/crmInboxFeature';
 import { fetchCrmInboxUnreadCount } from '../lib/crmMail';
-import { getOpenLeads, pipelineStats, seedDemoLeads } from '../lib/leadsStore';
+import { getOpenLeads, pipelineStats, seedDemoLeadsIfEmpty } from '../lib/leadsStore';
+import {
+  CRM_SETTINGS_CHANGED,
+  DEFAULT_CRM_COMPANY_CONFIG,
+  loadCommissionPct,
+  loadCrmCompanyConfig,
+  saveCommissionPct,
+  saveCrmCompanyConfig,
+  type CrmCompanyConfig,
+} from '../lib/crmUserSettings';
 import { formatPricePln, marginPercent } from '../lib/format';
 import { getOrderDraft, addToOrderDraft, saveOrderDraft } from '../lib/orderDraft';
 import { getProductImage } from '../lib/products';
@@ -11,16 +20,20 @@ import { showToast } from '../lib/toast';
 import { CrmMapRoutesView } from './CrmMapRoutesView';
 import { CrmClientsPanel } from './CrmClientsPanel';
 import { CrmHistoryPanel } from './CrmHistoryPanel';
-import { CrmSubNav, type CrmTab } from './crm/CrmSubNav';
-import { CrmTaskHome } from './crm/CrmTaskHome';
+import type { CrmTab } from './crm/CrmSubNav';
+import { CrmNotesPanel } from './crm/CrmNotesPanel';
 import { CrmTaskHeader } from './crm/CrmTaskHeader';
 import { CrmCustomerInboxView } from './crm/CrmCustomerInboxView';
 import { CrmInboxPausedView } from './crm/CrmInboxPausedView';
 import { CrmPipelinePanel } from './crm/CrmPipelinePanel';
 import { CrmOrderWorkspace } from './crm/CrmOrderWorkspace';
+import { CrmShellLayout } from './crm/CrmShellLayout';
 import { ClientTimelinePanel } from './crm/ClientTimelinePanel';
+import { CrmTasksPanel } from './crm/CrmTasksPanel';
+import { CalendarKenochemView } from './hub/CalendarKenochemView';
 import {
   ArrowRight,
+  CalendarDays,
   History,
   MapPin,
   Percent,
@@ -29,17 +42,34 @@ import {
   Users,
 } from 'lucide-react';
 
-const COMMISSION_KEY = 'katalog-crm-commission-pct';
-const CRM_COMPANY_CONFIG_KEY = 'kenochem-crm-company-config-v1';
+/** Ile dni bez ruchu w leadzie/ofercie uznajemy za "ciche" — do przypomnien na pulpicie. */
+const STALE_LEAD_DAYS = 7;
+const STALE_QUOTE_DAYS = 5;
+
+function countStaleQuotes(orders: CrmOrder[]): number {
+  const cutoff = Date.now() - STALE_QUOTE_DAYS * 86_400_000;
+  return orders.filter(
+    (o) => o.kind === 'quote' && o.status === 'sent' && new Date(o.createdAt).getTime() < cutoff,
+  ).length;
+}
+
+/** Parsowanie inputow formularza konfiguracji firmy (surowy tekst -> wartosc). */
+function parseConfigNumberInput(raw: string, fallback: number, min: number, max: number): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, Math.round(n)));
+}
+
+function parseRegionsInput(raw: string): string[] {
+  const regions = raw
+    .split(',')
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .slice(0, 12);
+  return regions.length ? regions : DEFAULT_CRM_COMPANY_CONFIG.regions;
+}
 
 type CrmPriorityTone = 'good' | 'warn' | 'info';
-
-interface CrmCompanyConfig {
-  quietDays: number;
-  defaultPaymentDays: number;
-  defaultCreditLimit: number;
-  regions: string[];
-}
 
 interface CrmPriority {
   id: string;
@@ -48,71 +78,6 @@ interface CrmPriority {
   value: string;
   tone: CrmPriorityTone;
   onClick: () => void;
-}
-
-const DEFAULT_CRM_COMPANY_CONFIG: CrmCompanyConfig = {
-  quietDays: 60,
-  defaultPaymentDays: 14,
-  defaultCreditLimit: 5000,
-  regions: ['Polnoc', 'Poludnie', 'Zachod', 'Wschod'],
-};
-
-function loadCommissionPct(): number {
-  try {
-    const n = Number(localStorage.getItem(COMMISSION_KEY));
-    if (Number.isFinite(n) && n >= 0 && n <= 100) return n;
-  } catch {
-    /* ignore */
-  }
-  return 15;
-}
-
-function saveCommissionPct(n: number) {
-  localStorage.setItem(COMMISSION_KEY, String(n));
-}
-
-function loadCrmCompanyConfig(): CrmCompanyConfig {
-  try {
-    const raw = localStorage.getItem(CRM_COMPANY_CONFIG_KEY);
-    if (!raw) return DEFAULT_CRM_COMPANY_CONFIG;
-    const parsed = JSON.parse(raw) as Partial<CrmCompanyConfig>;
-    return {
-      quietDays: normalizeConfigNumber(parsed.quietDays, 60, 7, 365),
-      defaultPaymentDays: normalizeConfigNumber(parsed.defaultPaymentDays, 14, 0, 120),
-      defaultCreditLimit: normalizeConfigNumber(parsed.defaultCreditLimit, 5000, 0, 1000000),
-      regions: normalizeRegions(parsed.regions),
-    };
-  } catch {
-    return DEFAULT_CRM_COMPANY_CONFIG;
-  }
-}
-
-function saveCrmCompanyConfig(config: CrmCompanyConfig) {
-  localStorage.setItem(CRM_COMPANY_CONFIG_KEY, JSON.stringify(config));
-}
-
-function normalizeConfigNumber(
-  value: unknown,
-  fallback: number,
-  min: number,
-  max: number,
-): number {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return fallback;
-  return Math.min(max, Math.max(min, Math.round(n)));
-}
-
-function normalizeRegions(value: unknown): string[] {
-  const raw = Array.isArray(value)
-    ? value
-    : typeof value === 'string'
-      ? value.split(',')
-      : DEFAULT_CRM_COMPANY_CONFIG.regions;
-  const regions = raw
-    .map((x) => String(x).trim())
-    .filter(Boolean)
-    .slice(0, 12);
-  return regions.length ? regions : DEFAULT_CRM_COMPANY_CONFIG.regions;
 }
 
 interface CrmHubViewProps {
@@ -177,8 +142,13 @@ export function CrmHubView({
   }, [cloudEnabled]);
 
   useEffect(() => {
-    saveCrmCompanyConfig(companyConfig);
-  }, [companyConfig]);
+    const onSettings = () => {
+      setCommissionPct(loadCommissionPct());
+      setCompanyConfig(loadCrmCompanyConfig());
+    };
+    window.addEventListener(CRM_SETTINGS_CHANGED, onSettings);
+    return () => window.removeEventListener(CRM_SETTINGS_CHANGED, onSettings);
+  }, []);
 
   useEffect(() => {
     const onTab = (e: Event) => {
@@ -190,7 +160,7 @@ export function CrmHubView({
   }, []);
 
   useEffect(() => {
-    seedDemoLeads();
+    void seedDemoLeadsIfEmpty();
     setPipelineTick((t) => t + 1);
     const onLeads = () => setPipelineTick((t) => t + 1);
     window.addEventListener('katalog-leads-changed', onLeads);
@@ -205,6 +175,10 @@ export function CrmHubView({
     () => pipelineStats().pipelineValue,
     [pipelineTick],
   );
+  const staleLeadsCount = useMemo(() => {
+    const cutoff = Date.now() - STALE_LEAD_DAYS * 86_400_000;
+    return getOpenLeads().filter((l) => new Date(l.updatedAt).getTime() < cutoff).length;
+  }, [pipelineTick]);
 
   const refreshInboxBadge = () => {
     if (!CRM_INBOX_ENABLED || !cloudEnabled) {
@@ -343,72 +317,78 @@ export function CrmHubView({
 
   if (tab === 'routes') {
     return (
-      <CrmMapRoutesView
-        clients={clients}
-        cloudEnabled={cloudEnabled}
-        onBack={goHub}
-        onClientsChange={setClients}
-      />
+      <CrmShellLayout
+        tab={tab}
+        onTabChange={setTab}
+        orderQty={draftQty}
+        inboxUnread={inboxUnread}
+        pipelineOpen={pipelineOpen}
+        displayLabel={displayLabel}
+      >
+        <CrmMapRoutesView
+          clients={clients}
+          cloudEnabled={cloudEnabled}
+          onBack={goHub}
+          onClientsChange={setClients}
+        />
+      </CrmShellLayout>
     );
   }
 
-  return (
-    <div className="w-full space-y-4 pb-24">
-      {tab === 'hub' && (
-        <section className="overflow-hidden rounded-3xl border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-brand-950/40">
-          <div className="flex flex-col gap-4 p-4 sm:p-5 lg:flex-row lg:items-stretch lg:justify-between">
-            <div className="min-w-0 space-y-1">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-400">
-                Panel handlowca
+  const hubHero =
+    tab === 'hub' ? (
+      <section className="overflow-hidden rounded-3xl border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-brand-950/40">
+        <div className="flex flex-col gap-4 p-4 sm:p-5 lg:flex-row lg:items-stretch lg:justify-between">
+          <div className="min-w-0 space-y-1">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-400">
+              Panel handlowca
+            </p>
+            <h2 className="truncate text-xl font-semibold text-slate-50 sm:text-2xl">
+              {displayLabel}
+            </h2>
+            <p className="text-sm text-slate-400">{roleLabel}</p>
+            {!cloudEnabled && (
+              <p className="text-xs text-amber-300/90">
+                Zaloguj się, żeby widzieć klientów i historię z chmury.
               </p>
-              <h2 className="truncate text-xl font-semibold text-slate-50 sm:text-2xl">
-                {displayLabel}
-              </h2>
-              <p className="text-sm text-slate-400">{roleLabel}</p>
-              {!cloudEnabled && (
-                <p className="text-xs text-amber-300/90">
-                  Zaloguj się, żeby widzieć klientów i historię z chmury.
-                </p>
-              )}
-              {loading && (
-                <p className="text-xs text-slate-500">Odświeżanie danych…</p>
-              )}
-            </div>
-            <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-3 lg:max-w-3xl lg:grid-cols-4">
-              <Stat label="Klienci" value={String(stats.clients)} hint="Twoja baza" />
-              <Stat
-                label="W koszyku"
-                value={String(orderCount)}
-                hint="pozycje"
-                accent={orderCount > 0}
-              />
-              <Stat
-                label="Lejek"
-                value={String(pipelineOpen)}
-                hint={formatPricePln(pipelineValue)}
-                accent={pipelineOpen > 0}
-                onClick={() => setTab('pipeline')}
-              />
-              <Stat
-                label="Obrót (mies.)"
-                value={formatPricePln(stats.turnover)}
-                hint={`marża ${stats.marginPct != null ? `${stats.marginPct.toFixed(1)}%` : '—'}`}
-              />
-            </div>
+            )}
+            {loading && <p className="text-xs text-slate-500">Odświeżanie danych…</p>}
           </div>
-        </section>
-      )}
+          <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-3 lg:max-w-3xl lg:grid-cols-4">
+            <Stat label="Klienci" value={String(stats.clients)} hint="Twoja baza" />
+            <Stat
+              label="W koszyku"
+              value={String(orderCount)}
+              hint="pozycje"
+              accent={orderCount > 0}
+            />
+            <Stat
+              label="Lejek"
+              value={String(pipelineOpen)}
+              hint={formatPricePln(pipelineValue)}
+              accent={pipelineOpen > 0}
+              onClick={() => setTab('pipeline')}
+            />
+            <Stat
+              label="Obrót (mies.)"
+              value={formatPricePln(stats.turnover)}
+              hint={`marża ${stats.marginPct != null ? `${stats.marginPct.toFixed(1)}%` : '—'}`}
+            />
+          </div>
+        </div>
+      </section>
+    ) : undefined;
 
-      {tab !== 'hub' && (
-        <CrmSubNav
-          active={tab}
-          onChange={setTab}
-          orderQty={draftQty}
-          inboxUnread={inboxUnread}
-          pipelineOpen={pipelineOpen}
-        />
-      )}
-
+  return (
+    <CrmShellLayout
+      tab={tab}
+      onTabChange={setTab}
+      orderQty={draftQty}
+      inboxUnread={inboxUnread}
+      pipelineOpen={pipelineOpen}
+      displayLabel={displayLabel}
+      hubHero={hubHero}
+    >
       {tab === 'hub' && (
         <div className="space-y-4">
           <CrmOperatingCenter
@@ -420,10 +400,15 @@ export function CrmHubView({
             inboxUnread={inboxUnread}
             pipelineOpen={pipelineOpen}
             pipelineValue={pipelineValue}
+            staleLeadsCount={staleLeadsCount}
             stats={stats}
             companyConfig={companyConfig}
             onCompanyConfigChange={(patch) =>
-              setCompanyConfig((current) => ({ ...current, ...patch }))
+              setCompanyConfig((current) => {
+                const next = { ...current, ...patch };
+                saveCrmCompanyConfig(next);
+                return next;
+              })
             }
             onOrder={() => setTab('order')}
             onPipeline={() => setTab('pipeline')}
@@ -432,21 +417,12 @@ export function CrmHubView({
             onClients={() => setTab('clients')}
             onHistory={() => setTab('history')}
             onCommission={() => setTab('commission')}
+            onCalendar={() => setTab('calendar')}
           />
-          <CrmTaskHome
-            draftQty={draftQty}
-            draftTotal={draftTotal}
-            inboxUnread={inboxUnread}
-            pipelineOpen={pipelineOpen}
-            clientCount={clients.length}
-            onOrder={() => setTab('order')}
-            onPipeline={() => setTab('pipeline')}
-            onInbox={() => setTab('inbox')}
-            onRoutes={() => setTab('routes')}
-            onClients={() => setTab('clients')}
-            onHistory={() => setTab('history')}
-            onCommission={() => setTab('commission')}
-          />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <CrmTasksPanel />
+            <CrmNotesPanel clients={clients} />
+          </div>
         </div>
       )}
 
@@ -459,6 +435,7 @@ export function CrmHubView({
           />
           <CrmPipelinePanel
             clients={clients}
+            authorLabel={authorLabel}
             onOpenOrder={() => setTab('order')}
           />
         </div>
@@ -484,9 +461,10 @@ export function CrmHubView({
           cloudEnabled={cloudEnabled}
           onChanged={onChanged}
           onClientsChange={setClients}
-          onBack={goHub}
           onOpenCatalog={onOpenCatalog}
           clientPickerSignal={clientPickerSignal}
+          onRefreshClients={reload}
+          refreshingClients={loading}
         />
       )}
 
@@ -511,11 +489,28 @@ export function CrmHubView({
             }}
           />
           {timelineClient && (
-            <ClientTimelinePanel
-              clientId={timelineClient.id}
-              clientName={timelineClient.displayName}
-            />
+            <div className="grid gap-4 lg:grid-cols-2">
+              <ClientTimelinePanel
+                clientId={timelineClient.id}
+                clientName={timelineClient.displayName}
+              />
+              <CrmNotesPanel clients={clients} clientId={timelineClient.id} />
+            </div>
           )}
+        </div>
+      )}
+
+      {tab === 'calendar' && (
+        <div className="space-y-4">
+          <CrmTaskHeader
+            title="Kalendarz"
+            subtitle="Wspólny kalendarz zespołu — wizyty, dostawy, zadania. Organizuj swoje dni."
+            onBack={goHub}
+          />
+          <div className="grid gap-4 lg:grid-cols-[1fr_20rem] lg:items-start">
+            <CalendarKenochemView />
+            <CrmTasksPanel />
+          </div>
         </div>
       )}
 
@@ -529,6 +524,8 @@ export function CrmHubView({
           <CrmHistoryPanel
             cloudEnabled={cloudEnabled}
             authorLabel={authorLabel}
+            clients={clients}
+            quietDays={companyConfig.quietDays}
             onReuse={(next) => {
               saveOrderDraft(next);
               onChanged?.();
@@ -590,7 +587,7 @@ export function CrmHubView({
           </button>
         </div>
       )}
-    </div>
+    </CrmShellLayout>
   );
 }
 
@@ -603,6 +600,7 @@ function CrmOperatingCenter({
   inboxUnread,
   pipelineOpen,
   pipelineValue,
+  staleLeadsCount,
   stats,
   companyConfig,
   onCompanyConfigChange,
@@ -613,6 +611,7 @@ function CrmOperatingCenter({
   onClients,
   onHistory,
   onCommission,
+  onCalendar,
 }: {
   cloudEnabled: boolean;
   clients: CrmClient[];
@@ -622,6 +621,7 @@ function CrmOperatingCenter({
   inboxUnread: number;
   pipelineOpen: number;
   pipelineValue: number;
+  staleLeadsCount: number;
   stats: {
     clients: number;
     monthOrders: number;
@@ -639,6 +639,7 @@ function CrmOperatingCenter({
   onClients: () => void;
   onHistory: () => void;
   onCommission: () => void;
+  onCalendar: () => void;
 }) {
   const priorities = useMemo(
     () =>
@@ -650,18 +651,24 @@ function CrmOperatingCenter({
         inboxUnread,
         pipelineOpen,
         pipelineValue,
+        staleLeadsCount,
+        staleQuotesCount: countStaleQuotes(orders),
         onOrder,
         onPipeline,
         onInbox,
         onClients,
+        onHistory,
       }),
     [
       cloudEnabled,
       clients.length,
+      orders,
+      staleLeadsCount,
       draftQty,
       draftTotal,
       inboxUnread,
       onClients,
+      onHistory,
       onInbox,
       onOrder,
       onPipeline,
@@ -729,6 +736,8 @@ function CrmOperatingCenter({
             <CrmQuickAction icon={<ShoppingCart className="h-4 w-4" />} label="Nowa oferta" onClick={onOrder} />
             <CrmQuickAction icon={<Target className="h-4 w-4" />} label="Lejek" onClick={onPipeline} />
             <CrmQuickAction icon={<MapPin className="h-4 w-4" />} label="Trasa wizyt" onClick={onRoutes} />
+            <CrmQuickAction icon={<CalendarDays className="h-4 w-4" />} label="Kalendarz" onClick={onCalendar} />
+            <CrmQuickAction icon={<History className="h-4 w-4" />} label="Historia" onClick={onHistory} />
             <CrmQuickAction icon={<Percent className="h-4 w-4" />} label="Prowizja" onClick={onCommission} />
           </div>
         </div>
@@ -785,11 +794,6 @@ function CrmOperatingCenter({
                 </p>
               </div>
             )}
-          </div>
-
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <CrmQuickAction icon={<Users className="h-4 w-4" />} label="Baza klientow" onClick={onClients} />
-            <CrmQuickAction icon={<History className="h-4 w-4" />} label="Historia" onClick={onHistory} />
           </div>
         </div>
       </section>
@@ -983,7 +987,7 @@ function CrmCompanyLayer({
           </span>
           <input
             value={regionText}
-            onChange={(e) => onConfigChange({ regions: normalizeRegions(e.target.value) })}
+            onChange={(e) => onConfigChange({ regions: parseRegionsInput(e.target.value) })}
             className="mt-2 h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 text-sm font-semibold text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-brand-500"
           />
         </label>
@@ -1024,7 +1028,7 @@ function CrmConfigField({
           min={min}
           max={max}
           value={value}
-          onChange={(e) => onChange(normalizeConfigNumber(e.target.value, value, min, max))}
+          onChange={(e) => onChange(parseConfigNumberInput(e.target.value, value, min, max))}
           className="min-w-0 flex-1 bg-transparent text-sm font-semibold tabular-nums text-slate-100 outline-none"
         />
         <span className="text-xs font-medium text-slate-500">{suffix}</span>
@@ -1135,10 +1139,13 @@ function buildCrmPriorities({
   inboxUnread,
   pipelineOpen,
   pipelineValue,
+  staleLeadsCount,
+  staleQuotesCount,
   onOrder,
   onPipeline,
   onInbox,
   onClients,
+  onHistory,
 }: {
   cloudEnabled: boolean;
   clientCount: number;
@@ -1147,12 +1154,37 @@ function buildCrmPriorities({
   inboxUnread: number;
   pipelineOpen: number;
   pipelineValue: number;
+  staleLeadsCount: number;
+  staleQuotesCount: number;
   onOrder: () => void;
   onPipeline: () => void;
   onInbox: () => void;
   onClients: () => void;
+  onHistory: () => void;
 }): CrmPriority[] {
   const priorities: CrmPriority[] = [];
+
+  if (staleLeadsCount > 0) {
+    priorities.push({
+      id: 'stale-leads',
+      title: 'Leady bez ruchu',
+      detail: `${staleLeadsCount} leadów w lejku bez aktywności od ponad ${STALE_LEAD_DAYS} dni — czas na kontakt.`,
+      value: String(staleLeadsCount),
+      tone: 'warn',
+      onClick: onPipeline,
+    });
+  }
+
+  if (staleQuotesCount > 0) {
+    priorities.push({
+      id: 'stale-quotes',
+      title: 'Oferty bez odpowiedzi',
+      detail: `${staleQuotesCount} wysłanych ofert od ponad ${STALE_QUOTE_DAYS} dni bez nowego zamówienia — warto dopytać.`,
+      value: String(staleQuotesCount),
+      tone: 'warn',
+      onClick: onHistory,
+    });
+  }
 
   if (draftQty > 0) {
     priorities.push({
@@ -1287,9 +1319,9 @@ function CrmQuickAction({
 }
 
 function crmToneClass(tone: CrmPriorityTone): string {
-  if (tone === 'warn') return 'bg-amber-500/15 text-amber-300';
-  if (tone === 'good') return 'bg-emerald-500/15 text-emerald-300';
-  return 'bg-sky-500/15 text-sky-300';
+  if (tone === 'warn') return 'hub-badge-amber';
+  if (tone === 'good') return 'hub-badge-emerald';
+  return 'hub-badge-sky';
 }
 
 function Stat({
@@ -1312,14 +1344,14 @@ function Stat({
       onClick={onClick}
       className={`rounded-2xl border px-3 py-2.5 text-left ${
         accent
-          ? 'border-emerald-500/35 bg-emerald-500/10'
-          : 'border-slate-700/80 bg-slate-950/50'
+          ? 'border-emerald-300 bg-emerald-50 dark:border-emerald-500/35 dark:bg-emerald-500/10'
+          : 'border-slate-200 bg-white dark:border-slate-700/80 dark:bg-slate-950/50'
       } ${onClick ? 'hover:border-emerald-400/50 transition' : ''}`}
     >
       <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
         {label}
       </p>
-      <p className="mt-0.5 truncate text-base font-semibold tabular-nums text-slate-50 sm:text-lg">
+      <p className="crm-heading mt-0.5 truncate text-base font-semibold tabular-nums sm:text-lg">
         {value}
       </p>
       {hint && (

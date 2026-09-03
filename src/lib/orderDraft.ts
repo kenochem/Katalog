@@ -12,6 +12,8 @@ export interface OrderDraftItem {
   /** Snapshot ceny w momencie oferty/zamówienia (jak OfferItem w CRM-Base). */
   unitPriceNet?: number | null;
   unitPriceGross?: number | null;
+  /** Rabat % na pozycję (po indywidualnej cenie netto). */
+  lineDiscountPct?: number;
 }
 
 export type OrderKind = 'order' | 'quote';
@@ -23,8 +25,14 @@ export interface OrderDraft {
   updatedAt: number;
   /** Powiązanie z crm_clients (opcjonalnie). */
   clientId?: string;
-  /** Zamówienie handlowe vs prośba o ofertę. */
+  /** Zamówienie handlowe vs oferta PDF. */
   kind?: OrderKind;
+  /** Rabat globalny oferty (0–100). */
+  discountPct?: number;
+  /** Ważność oferty w dniach (domyślnie 14). */
+  quoteValidDays?: number;
+  /** Koszt transportu doliczany do oferty (PLN netto) — undefined = nie doliczamy. */
+  transportCost?: number;
 }
 
 const KEY = 'katalog-order-draft';
@@ -44,6 +52,18 @@ export function getOrderDraft(): OrderDraft {
       note: String(parsed.note || ''),
       clientId: parsed.clientId || undefined,
       kind: parsed.kind === 'quote' ? 'quote' : 'order',
+      discountPct:
+        parsed.discountPct != null && Number.isFinite(Number(parsed.discountPct))
+          ? Math.min(100, Math.max(0, Number(parsed.discountPct)))
+          : undefined,
+      quoteValidDays:
+        parsed.quoteValidDays != null && Number.isFinite(Number(parsed.quoteValidDays))
+          ? Math.min(90, Math.max(1, Math.round(Number(parsed.quoteValidDays))))
+          : undefined,
+      transportCost:
+        parsed.transportCost != null && Number.isFinite(Number(parsed.transportCost))
+          ? Math.max(0, Number(parsed.transportCost))
+          : undefined,
       items: parsed.items
         .filter((i) => i && typeof i.productId === 'string' && typeof i.sku === 'string')
         .map((i) => ({
@@ -54,6 +74,18 @@ export function getOrderDraft(): OrderDraft {
           quantity: Math.max(1, Number(i.quantity) || 1),
           imageUrl: i.imageUrl || undefined,
           fromKit: i.fromKit || undefined,
+          unitPriceNet:
+            i.unitPriceNet != null && Number.isFinite(Number(i.unitPriceNet))
+              ? Math.max(0, Number(i.unitPriceNet))
+              : undefined,
+          unitPriceGross:
+            i.unitPriceGross != null && Number.isFinite(Number(i.unitPriceGross))
+              ? Math.max(0, Number(i.unitPriceGross))
+              : undefined,
+          lineDiscountPct:
+            i.lineDiscountPct != null && Number.isFinite(Number(i.lineDiscountPct))
+              ? Math.min(100, Math.max(0, Number(i.lineDiscountPct)))
+              : undefined,
         })),
       updatedAt: parsed.updatedAt || Date.now(),
     };

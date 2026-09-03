@@ -72,13 +72,13 @@ export function AppHeaderActions({
         <button
           type="button"
           onClick={onOpenAdmin}
-          className={`hub-header-btn hub-header-btn--text hidden lg:inline-flex ${
+          className={`hub-header-btn hub-header-btn--text inline-flex ${
             adminActive ? 'hub-header-btn--admin-active' : 'hub-header-btn--admin'
           }`}
-          title="Panel administracyjny"
+          title="Panel administracyjny — konta i uprawnienia"
         >
           <Settings2 className="h-4 w-4 shrink-0" />
-          <span className="hidden xl:inline">Admin</span>
+          <span className="hidden sm:inline">Admin</span>
         </button>
       )}
       <AppNotificationCenter

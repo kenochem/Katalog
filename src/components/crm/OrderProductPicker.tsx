@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
-import { Plus, Search } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { Plus, Search, Zap } from 'lucide-react';
 import type { Product } from '../../types';
 import { formatPricePln } from '../../lib/format';
 import { getProductImage } from '../../lib/products';
 import type { OrderDraftItem } from '../../lib/orderDraft';
+import { showToast } from '../../lib/toast';
 
 interface OrderProductPickerProps {
   products: Product[];
@@ -12,6 +13,11 @@ interface OrderProductPickerProps {
   className?: string;
 }
 
+/**
+ * Szybkie dodawanie po dokładnym SKU/nazwie — osobne od przeglądania katalogu
+ * poniżej (CrmCatalogEmbed). Enter dodaje pierwszy wynik od razu, bez klikania —
+ * dla handlowca, który zna kody na pamięć i chce błyskawicznie zbudować koszyk.
+ */
 export function OrderProductPicker({
   products,
   draft,
@@ -19,6 +25,7 @@ export function OrderProductPicker({
   className = '',
 }: OrderProductPickerProps) {
   const [query, setQuery] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
   const draftIds = useMemo(() => new Set(draft.map((d) => d.productId)), [draft]);
 
   const results = useMemo(() => {
@@ -32,15 +39,37 @@ export function OrderProductPicker({
       .slice(0, 10);
   }, [products, query]);
 
+  function addAndKeepTyping(p: Product) {
+    onAdd(p);
+    setQuery('');
+    inputRef.current?.focus();
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    if (results.length === 0) {
+      showToast('Brak wyniku dla tego SKU', 'warn');
+      return;
+    }
+    addAndKeepTyping(results[0]);
+  }
+
   return (
     <div className={`rounded-2xl border border-slate-800 bg-slate-900/60 p-3 ${className}`}>
+      <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-brand-400">
+        <Zap className="h-3.5 w-3.5" />
+        Szybkie dodawanie po SKU
+      </p>
       <label className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/80 px-3 py-2">
         <Search className="h-4 w-4 shrink-0 text-slate-500" />
         <input
+          ref={inputRef}
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Szukaj SKU, nazwy, EAN…"
+          onKeyDown={handleKeyDown}
+          placeholder="Wpisz SKU i Enter, aby dodać od razu…"
           className="min-w-0 flex-1 bg-transparent text-sm text-slate-100 outline-none placeholder:text-slate-600"
         />
       </label>
@@ -57,7 +86,7 @@ export function OrderProductPicker({
                 <li key={p.id}>
                   <button
                     type="button"
-                    onClick={() => onAdd(p)}
+                    onClick={() => addAndKeepTyping(p)}
                     className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left transition hover:bg-brand-500/10"
                   >
                     {img ? (

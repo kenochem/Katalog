@@ -14,6 +14,7 @@ export type NavSectionId =
   | 'assist'
   | 'inbox'
   | 'integrations'
+  | 'admin'
   | 'departments'
   | 'downloads'
   | 'guide';
@@ -41,6 +42,7 @@ const DEFAULT: HubPreferences = {
     'assist',
     'departments',
     'integrations',
+    'admin',
     'downloads',
     'guide',
   ],
@@ -51,7 +53,14 @@ export function loadHubPreferences(_userId: string): HubPreferences {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return { ...DEFAULT };
-    return { ...DEFAULT, ...(JSON.parse(raw) as HubPreferences) };
+    const parsed = JSON.parse(raw) as Partial<HubPreferences>;
+    const navSectionOrder = [
+      ...new Set([
+        ...(Array.isArray(parsed.navSectionOrder) ? parsed.navSectionOrder : DEFAULT.navSectionOrder),
+        ...DEFAULT.navSectionOrder,
+      ]),
+    ] as NavSectionId[];
+    return { ...DEFAULT, ...parsed, navSectionOrder };
   } catch {
     return { ...DEFAULT };
   }

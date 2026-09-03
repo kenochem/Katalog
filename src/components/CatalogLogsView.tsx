@@ -18,6 +18,7 @@ import {
   type CatalogLogLevel,
 } from '../lib/catalogLogs';
 import { getLatestStockSync, type StockSyncRequest } from '../lib/stockSync';
+import { buildSyncLogSummary, type SyncDetailLine } from '../lib/syncLogSummary';
 
 interface CatalogLogsViewProps {
   userId?: string;
@@ -31,13 +32,10 @@ const LEVEL_LABELS: Record<CatalogLogLevel, string> = {
 };
 
 const LEVEL_STYLES: Record<CatalogLogLevel, string> = {
-  info: 'border-sky-200 bg-sky-50 text-sky-950 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-100',
-  success:
-    'border-emerald-200 bg-emerald-50 text-emerald-950 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100',
-  warning:
-    'border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100',
-  error:
-    'border-rose-200 bg-rose-50 text-rose-950 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100',
+  info: 'catalog-log-level catalog-log-level--info',
+  success: 'catalog-log-level catalog-log-level--success',
+  warning: 'catalog-log-level catalog-log-level--warning',
+  error: 'catalog-log-level catalog-log-level--error',
 };
 
 function levelIcon(level: CatalogLogLevel) {
@@ -65,221 +63,64 @@ function latestTone(status: StockSyncRequest['status']): CatalogLogLevel {
   return 'info';
 }
 
-type FriendlyStat = {
-  label: string;
-  value: string | number;
-  help: string;
-  tone?: 'good' | 'warn' | 'neutral';
-};
-
-type FriendlyLog = {
-  title: string;
-  body: string;
-  stats: FriendlyStat[];
-  notes: string[];
-  technical?: string;
-};
-
-function findNumber(raw: string, pattern: RegExp): number | undefined {
-  const match = raw.match(pattern);
-  if (!match?.[1]) return undefined;
-  const value = Number(match[1].replace(/\s/g, ''));
-  return Number.isFinite(value) ? value : undefined;
-}
-
-function humanScope(scope: string | null | undefined) {
-  if (!scope || scope === 'all') return 'oba katalogi';
-  if (scope === 'shop') return 'Produkty';
-  if (scope === 'accessories') return 'Akcesoria';
-  return scope;
-}
-
-function friendlySyncSummary(message: string | null | undefined, details?: CatalogLogEntry['details']): FriendlyLog {
-  const detailRecord = details ?? {};
-  const visibleMessage = (message ?? '').trim();
-  const technicalFromDetails =
-    typeof detailRecord['Raport techniczny'] === 'string'
-      ? String(detailRecord['Raport techniczny']).trim()
-      : '';
-  const raw = technicalFromDetails || visibleMessage;
-  const looksLikeSyncReport =
-    /Tryb WAPRO|Zaktualizowano:|SKU z SQL|nowe SKU z Mag|brak w WAPRO/i.test(raw);
-  const fromDetails = (label: string) => {
-    const v = detailRecord[label];
-    return typeof v === 'number' ? v : undefined;
-  };
-
-  const newSku =
-    findNumber(raw, /nowe SKU z Mag:\s*(\d+)/i) ?? fromDetails('Nowe SKU z Mag');
-  const updated = findNumber(raw, /Zaktualizowano:\s*(\d+)/i);
-  const unchanged = findNumber(raw, /bez zmian:\s*(\d+)/i);
-  const manualStock = findNumber(raw, /reczne stan:\s*(\d+)/i);
-  const missingWapro = findNumber(raw, /brak w WAPRO:\s*(\d+)/i);
-  const filledPrices = findNumber(raw, /uzupelnione pola cen:\s*(\d+)/i);
-  const sqlSku = findNumber(raw, /SKU z SQL:\s*(\d+)/i);
-  const bootstrapped =
-    findNumber(raw, /odkryte[^:]*:\s*(\d+)/i) ?? fromDetails('Odkryte stany/ceny');
-  const warnings = findNumber(raw, /ostrzezenia:\s*(\d+)/i) ?? fromDetails('Ostrzeżenia');
-  const altSku =
-    findNumber(raw, /dopasowane po (?:legacy|alt)[^:]*:\s*(\d+)/i) ??
-    fromDetails('Dopasowane po alt SKU');
-  const scope = raw.match(/Zakres:\s*([^.,]+)/i)?.[1]?.trim();
-  const report = raw.match(/raport brakow:\s*([^.,]+)/i)?.[1]?.trim();
-
-  const stats: FriendlyStat[] = [];
-  if (newSku !== undefined) {
-    stats.push({
-      label: 'Nowe produkty',
-      value: newSku,
-      help: 'Dopisane do katalogu z Mag WAPRO',
-      tone: newSku > 0 ? 'good' : 'neutral',
-    });
-  }
-  if (updated !== undefined) {
-    stats.push({
-      label: 'Odświeżone',
-      value: updated,
-      help: 'Produkty z aktualnym stanem lub ceną',
-      tone: updated > 0 ? 'good' : 'neutral',
-    });
-  }
-  if (filledPrices !== undefined) {
-    stats.push({
-      label: 'Ceny uzupełnione',
-      value: filledPrices,
-      help: 'Puste pola cenowe uzupełnione z WAPRO',
-      tone: filledPrices > 0 ? 'good' : 'neutral',
-    });
-  }
-  if (bootstrapped !== undefined) {
-    stats.push({
-      label: 'Pierwsze dane',
-      value: bootstrapped,
-      help: 'Pozycje, które pierwszy raz dostały stan lub cenę',
-      tone: bootstrapped > 0 ? 'good' : 'neutral',
-    });
-  }
-  if (missingWapro !== undefined) {
-    stats.push({
-      label: 'Do sprawdzenia',
-      value: missingWapro,
-      help: 'Produkty z katalogu bez odpowiednika w WAPRO',
-      tone: missingWapro > 0 ? 'warn' : 'neutral',
-    });
-  }
-  if (warnings !== undefined) {
-    stats.push({
-      label: 'Ostrzeżenia',
-      value: warnings,
-      help: 'Pozycje porządkowe wymagające uwagi',
-      tone: warnings > 0 ? 'warn' : 'neutral',
-    });
-  }
-
-  const notes: string[] = [];
-  if (manualStock && manualStock > 0) {
-    notes.push(`${manualStock} pozycji ma ręcznie ustawiony stan, więc sync go nie nadpisywał.`);
-  }
-  if (altSku && altSku > 0) {
-    notes.push(`${altSku} pozycji dopasowano po alternatywnym lub historycznym SKU.`);
-  }
-  if (report) {
-    notes.push(`Raport pozycji do sprawdzenia: ${report}.`);
-  }
-  if (sqlSku !== undefined) {
-    notes.push(`WAPRO zwróciło ${sqlSku} SKU dla tego przebiegu.`);
-  }
-  if (unchanged !== undefined && unchanged > 0) {
-    notes.push(`${unchanged} pozycji nie wymagało zmian.`);
-  }
-
-  let title = 'Synchronizacja zakończona';
-  let body = `Zakres: ${humanScope(scope)}.`;
-  if ((newSku ?? 0) > 0) {
-    title = 'Dopisano nowe produkty z WAPRO';
-    body = `Do katalogu trafiło ${newSku} nowych indeksów. Teraz warto sprawdzić zdjęcia, opisy i kategorie.`;
-  } else if ((updated ?? 0) > 0 || (filledPrices ?? 0) > 0 || (bootstrapped ?? 0) > 0) {
-    title = 'Odświeżono dane katalogu';
-    body = `Sync zaktualizował stany lub ceny w zakresie: ${humanScope(scope)}.`;
-  } else if ((warnings ?? 0) > 0 || (missingWapro ?? 0) > 0) {
-    title = 'Sync zakończony z pozycjami do sprawdzenia';
-    body = 'Dane zostały przetworzone, ale część pozycji wymaga ręcznej kontroli.';
-  }
-
-  if (!looksLikeSyncReport && stats.length === 0) {
-    const isStart = /zlecenie|zlecono|czekam/i.test(visibleMessage);
-    return {
-      title: isStart ? 'Sync został zlecony' : 'Komunikat katalogu',
-      body: visibleMessage || 'Ten wpis nie zawiera jeszcze technicznego raportu.',
-      stats,
-      notes,
-    };
-  }
-
-  return { title, body, stats, notes, technical: looksLikeSyncReport ? raw : undefined };
-}
-
-function statToneClass(tone: FriendlyStat['tone']) {
-  if (tone === 'good') {
-    return 'border-emerald-200 bg-emerald-50 text-emerald-950 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100';
-  }
-  if (tone === 'warn') {
-    return 'border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100';
-  }
-  return 'border-slate-200 bg-slate-50 text-slate-950 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100';
+function lineToneClass(tone: SyncDetailLine['tone']) {
+  if (tone === 'good') return 'catalog-log-detail catalog-log-detail--good';
+  if (tone === 'warn') return 'catalog-log-detail catalog-log-detail--warn';
+  if (tone === 'info') return 'catalog-log-detail catalog-log-detail--info';
+  return 'catalog-log-detail catalog-log-detail--neutral';
 }
 
 function FriendlySyncBlock({
   message,
   details,
-  compact = false,
 }: {
   message: string | null | undefined;
   details?: CatalogLogEntry['details'];
   compact?: boolean;
 }) {
-  const summary = friendlySyncSummary(message, details);
+  const summary = buildSyncLogSummary(message, details);
   return (
     <div className="mt-2 space-y-3">
       <div>
-        <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">
-          {summary.title}
-        </p>
-        <p className="mt-1 text-sm leading-6 text-slate-700 dark:text-slate-300">
-          {summary.body}
-        </p>
+        <p className="text-sm font-semibold">{summary.title}</p>
+        <p className="catalog-log-detail-desc mt-1 text-sm leading-6">{summary.body}</p>
       </div>
-      {summary.stats.length > 0 && (
-        <dl className={`grid gap-2 ${compact ? 'sm:grid-cols-2' : 'sm:grid-cols-2 lg:grid-cols-3'}`}>
-          {summary.stats.map((stat) => (
-            <div
-              key={stat.label}
-              className={`rounded-xl border px-3 py-2 ${statToneClass(stat.tone)}`}
-            >
-              <dt className="text-[10px] font-semibold uppercase tracking-wide opacity-75">
-                {stat.label}
-              </dt>
-              <dd className="mt-1 text-xl font-bold leading-none">{stat.value}</dd>
-              <p className="mt-1 text-[11px] leading-snug opacity-80">{stat.help}</p>
-            </div>
-          ))}
-        </dl>
+
+      {summary.lines.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wide opacity-60">
+            Szczegóły przebiegu
+          </p>
+          <ul className="space-y-2">
+            {summary.lines.map((line) => (
+              <li key={line.id} className={`rounded-xl px-3 py-2.5 ${lineToneClass(line.tone)}`}>
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                  <span className="text-sm font-semibold">{line.label}</span>
+                  {typeof line.value === 'number' ? (
+                    <span className="text-lg font-bold tabular-nums">{line.value.toLocaleString('pl-PL')}</span>
+                  ) : (
+                    <span className="text-sm font-medium">{line.value}</span>
+                  )}
+                </div>
+                <p className="catalog-log-detail-desc mt-1.5 text-xs leading-relaxed">{line.description}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
+
       {summary.notes.length > 0 && (
-        <ul className="space-y-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+        <ul className="catalog-log-detail catalog-log-detail--neutral space-y-1 rounded-xl px-3 py-2 text-xs leading-5">
           {summary.notes.map((note) => (
             <li key={note}>• {note}</li>
           ))}
         </ul>
       )}
+
       {summary.technical && (
-        <details className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs dark:border-slate-800 dark:bg-slate-950">
-          <summary className="cursor-pointer font-semibold text-slate-700 dark:text-slate-300">
-            Raport techniczny
-          </summary>
-          <p className="mt-2 whitespace-pre-wrap leading-5 text-slate-600 dark:text-slate-400">
-            {summary.technical}
-          </p>
+        <details className="catalog-log-detail catalog-log-detail--neutral rounded-xl px-3 py-2 text-xs">
+          <summary className="cursor-pointer font-semibold">Raport techniczny (surowy)</summary>
+          <p className="catalog-log-detail-desc mt-2 whitespace-pre-wrap leading-5">{summary.technical}</p>
         </details>
       )}
     </div>
@@ -336,8 +177,8 @@ export function CatalogLogsView({ userId }: CatalogLogsViewProps) {
               Logi synchronizacji i powiadomień
             </h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-700 dark:text-slate-300">
-              Tu trafiają najważniejsze komunikaty po synchronizacji WAPRO: nowe produkty,
-              ostrzeżenia, błędy oraz podsumowania, które wcześniej znikały razem z toastem.
+              Każdy wpis pokazuje pełny kontekst: co się zmieniło, ile pozycji wymaga uwagi i gdzie
+              szukać raportów na serwerze. Surowy raport techniczny jest na dole do rozwinięcia.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -401,8 +242,8 @@ export function CatalogLogsView({ userId }: CatalogLogsViewProps) {
                 Lokalne wpisy
               </p>
               <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">
-                {logs.length} zapisanych wpisów na tym urządzeniu. Nowe wpisy pojawiają się
-                po zakończonym syncu z przycisku w katalogu.
+                {logs.length} zapisanych wpisów na tym urządzeniu. Nowe wpisy pojawiają się po
+                zakończonym syncu z przycisku w katalogu.
               </p>
             </div>
           </div>

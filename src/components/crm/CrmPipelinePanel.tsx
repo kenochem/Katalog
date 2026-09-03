@@ -20,11 +20,13 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import {
   CheckCircle2,
+  Download,
   GripVertical,
   Phone,
   Plus,
   Send,
   Settings2,
+  Trash2,
   Trophy,
   UserPlus,
   XCircle,
@@ -34,6 +36,8 @@ import {
 } from 'lucide-react';
 import type { CrmClient } from '../../lib/crm';
 import { formatPricePln } from '../../lib/format';
+import { showToast } from '../../lib/toast';
+import { downloadCsv, stampFile } from '../../lib/exportReport';
 import {
   ACTIVE_STAGES,
   ACTIVITY_LABELS,
@@ -41,6 +45,7 @@ import {
   closeLeadLost,
   closeLeadWon,
   createLead,
+  deleteLead,
   getClosedLeads,
   getOpenLeads,
   applyBoardLayout,
@@ -50,6 +55,7 @@ import {
   moveLeadStage,
   savePipelineConfig,
   stageLabel,
+  updateLead,
   type LeadActivityType,
   type SalesLead,
 } from '../../lib/leadsStore';
@@ -73,9 +79,10 @@ const STAGE_BG: Record<ActiveLeadStage, string> = {
 interface CrmPipelinePanelProps {
   clients: CrmClient[];
   onOpenOrder?: () => void;
+  authorLabel?: string;
 }
 
-export function CrmPipelinePanel({ clients, onOpenOrder }: CrmPipelinePanelProps) {
+export function CrmPipelinePanel({ clients, onOpenOrder, authorLabel }: CrmPipelinePanelProps) {
   const [config, setConfig] = useState(() => loadPipelineConfig());
   const [leads, setLeads] = useState<SalesLead[]>(() => loadLeads());
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -176,15 +183,29 @@ export function CrmPipelinePanel({ clients, onOpenOrder }: CrmPipelinePanelProps
     setDraggingLead(null);
   }
 
+  function handleExportCsv() {
+    downloadCsv(
+      stampFile('lejek_sprzedazy'),
+      ['Tytuł', 'Firma', 'Kontakt', 'Telefon', 'Etap', 'Wartość', 'Źródło', 'Utworzono'],
+      [...openLeads, ...closedLeads].map((l) => [
+        l.title,
+        l.companyName,
+        l.contactName || '',
+        l.phone || '',
+        stageLabel(l.stage, config),
+        l.valueEstimate,
+        l.source || '',
+        new Date(l.createdAt).toLocaleDateString('pl-PL'),
+      ]),
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-100">{config.name}</h2>
-          <p className="text-sm text-slate-500">
-            Przeciągnij karty między kolumnami i zmieniaj kolejność w kolumnie · {openLeads.length} otwartych
-          </p>
-        </div>
+        <p className="text-sm text-slate-500">
+          Przeciągnij karty między kolumnami i zmieniaj kolejność w kolumnie · {openLeads.length} otwartych
+        </p>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -200,6 +221,14 @@ export function CrmPipelinePanel({ clients, onOpenOrder }: CrmPipelinePanelProps
             className="rounded-xl border border-slate-700 px-3 py-2 text-xs text-slate-300"
           >
             {showClosed ? 'Ukryj archiwum' : `Archiwum (${closedLeads.length})`}
+          </button>
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 px-3 py-2 text-xs text-slate-300"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Eksport
           </button>
           <button
             type="button"
@@ -310,34 +339,67 @@ export function CrmPipelinePanel({ clients, onOpenOrder }: CrmPipelinePanelProps
                 {selected.contactName ? ` · ${selected.contactName}` : ''}
               </p>
               {selected.phone && <p className="text-xs text-slate-500">{selected.phone}</p>}
-            </div>
-            {ACTIVE_STAGES.includes(selected.stage) && (
-              <div className="flex flex-wrap gap-2">
-                {ACTIVE_STAGES.filter((s) => s !== selected.stage).map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => handleMove(selected.id, s)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-300"
-                  >
-                    <GripVertical className="h-3 w-3" />
-                    {stageLabel(s, config)}
-                  </button>
-                ))}
+              <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
+                <UserPlus className="h-3 w-3" />
+                {selected.ownerName || 'Nieprzypisany'}
                 <button
                   type="button"
                   onClick={() => {
-                    closeLeadWon(selected.id);
+                    const next = prompt('Przypisz leada do:', selected.ownerName || authorLabel || '');
+                    if (next == null) return;
+                    updateLead(selected.id, { ownerName: next.trim() || undefined });
                     refresh();
-                    onOpenOrder?.();
                   }}
-                  className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white"
+                  className="ml-1 text-brand-400 hover:text-brand-300"
                 >
-                  <Trophy className="h-3.5 w-3.5" />
-                  Dopnij sprzedaż
+                  zmień
                 </button>
-              </div>
-            )}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-start gap-2">
+              {ACTIVE_STAGES.includes(selected.stage) && (
+                <>
+                  {ACTIVE_STAGES.filter((s) => s !== selected.stage).map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => handleMove(selected.id, s)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-300"
+                    >
+                      <GripVertical className="h-3 w-3" />
+                      {stageLabel(s, config)}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closeLeadWon(selected.id);
+                      refresh();
+                      showToast(`Wygrana: ${selected.companyName} 🎉`, 'ok');
+                      onOpenOrder?.();
+                    }}
+                    className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white"
+                  >
+                    <Trophy className="h-3.5 w-3.5" />
+                    Dopnij sprzedaż
+                  </button>
+                </>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  if (!confirm(`Usunąć leada „${selected.title}"? Tej operacji nie można cofnąć.`)) return;
+                  deleteLead(selected.id);
+                  setSelectedId(null);
+                  refresh();
+                  showToast('Usunięto leada', 'info');
+                }}
+                className="inline-flex items-center gap-1 rounded-lg border border-red-900/50 px-2 py-1 text-xs text-red-400 hover:bg-red-950/40"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Usuń
+              </button>
+            </div>
           </div>
 
           {ACTIVE_STAGES.includes(selected.stage) && (
@@ -355,6 +417,7 @@ export function CrmPipelinePanel({ clients, onOpenOrder }: CrmPipelinePanelProps
                   closeLeadLost(selected.id, loseReason);
                   setLoseReason('');
                   refresh();
+                  showToast('Oznaczono jako przegraną', 'info');
                 }}
                 className="rounded-lg border border-rose-500/40 px-3 py-2 text-xs text-rose-300 disabled:opacity-40"
               >
@@ -430,6 +493,7 @@ export function CrmPipelinePanel({ clients, onOpenOrder }: CrmPipelinePanelProps
       {showNew && (
         <NewLeadModal
           clients={clients}
+          authorLabel={authorLabel}
           onClose={() => setShowNew(false)}
           onCreated={(id) => {
             refresh();
@@ -576,21 +640,31 @@ function LeadCardPreview({ lead, elevated = false }: { lead: SalesLead; elevated
     <div className={elevated ? 'crm-pipeline-card-ghost rounded-xl border border-brand-500/40 bg-slate-900 px-3 py-2.5 shadow-2xl shadow-black/40' : ''}>
       <p className="line-clamp-2 text-sm font-medium text-slate-100">{lead.title}</p>
       <p className="mt-0.5 truncate text-xs text-slate-500">{lead.companyName}</p>
-      {lead.valueEstimate > 0 && (
-        <p className="mt-1.5 inline-block rounded-md bg-slate-800/80 px-1.5 py-0.5 text-xs font-semibold tabular-nums text-brand-300">
-          {formatPricePln(lead.valueEstimate)}
-        </p>
-      )}
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+        {lead.valueEstimate > 0 && (
+          <p className="inline-block rounded-md bg-slate-800/80 px-1.5 py-0.5 text-xs font-semibold tabular-nums text-brand-300">
+            {formatPricePln(lead.valueEstimate)}
+          </p>
+        )}
+        {lead.ownerName && (
+          <p className="inline-flex items-center gap-0.5 rounded-md bg-slate-800/60 px-1.5 py-0.5 text-[10px] text-slate-400">
+            <UserPlus className="h-2.5 w-2.5" />
+            {lead.ownerName}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
 
 function NewLeadModal({
   clients,
+  authorLabel,
   onClose,
   onCreated,
 }: {
   clients: CrmClient[];
+  authorLabel?: string;
   onClose: () => void;
   onCreated: (id: string) => void;
 }) {
@@ -600,6 +674,7 @@ function NewLeadModal({
   const [phone, setPhone] = useState('');
   const [value, setValue] = useState('');
   const [clientId, setClientId] = useState('');
+  const [owner, setOwner] = useState(authorLabel || '');
 
   function submit() {
     if (!title.trim() || !company.trim()) return;
@@ -610,7 +685,9 @@ function NewLeadModal({
       phone: phone || undefined,
       clientId: clientId || undefined,
       valueEstimate: Number(value) || 0,
+      ownerName: owner || undefined,
     });
+    showToast('Dodano lead do lejka', 'ok');
     onCreated(lead.id);
   }
 
@@ -628,6 +705,7 @@ function NewLeadModal({
           <Field label="Osoba kontaktowa" value={contact} onChange={setContact} />
           <Field label="Telefon" value={phone} onChange={setPhone} />
           <Field label="Szacowana wartość (PLN netto)" value={value} onChange={setValue} type="number" />
+          <Field label="Przypisany handlowiec" value={owner} onChange={setOwner} />
           <label className="block text-xs text-slate-500">
             Powiąż z klientem
             <select

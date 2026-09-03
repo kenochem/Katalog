@@ -1,6 +1,9 @@
 import { supabase } from './supabase';
 import type { OrderDraft, OrderDraftItem, OrderKind } from './orderDraft';
 
+export const CRM_CLIENT_TAGS = ['VIP', 'Ryzykowny', 'Nowy prospekt', 'Stały'] as const;
+export type CrmClientTag = (typeof CRM_CLIENT_TAGS)[number];
+
 export interface CrmClient {
   id: string;
   userId: string;
@@ -11,6 +14,8 @@ export interface CrmClient {
   note?: string;
   lat?: number;
   lng?: number;
+  tags: string[];
+  icon?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -80,6 +85,8 @@ function mapClient(row: Record<string, unknown>): CrmClient {
     note: row.note ? String(row.note) : undefined,
     lat,
     lng,
+    tags: Array.isArray(row.tags) ? row.tags.map(String) : [],
+    icon: row.icon ? String(row.icon) : undefined,
     createdAt: String(row.created_at || ''),
     updatedAt: String(row.updated_at || ''),
   };
@@ -119,6 +126,8 @@ export async function upsertCrmClient(input: {
   note?: string;
   lat?: number | null;
   lng?: number | null;
+  tags?: string[];
+  icon?: string | null;
 }): Promise<CrmClient> {
   if (!supabase) throw new Error('Brak Supabase');
   const {
@@ -136,6 +145,12 @@ export async function upsertCrmClient(input: {
     note: input.note?.trim() || null,
     updated_at: new Date().toISOString(),
   };
+  if (input.tags !== undefined) {
+    payload.tags = input.tags;
+  }
+  if (input.icon !== undefined) {
+    payload.icon = input.icon;
+  }
 
   if (input.lat !== undefined) {
     payload.lat =
@@ -195,6 +210,18 @@ export async function updateCrmClientGeo(
   return mapClient(data as Record<string, unknown>);
 }
 
+export async function updateCrmClientTags(id: string, tags: string[]): Promise<CrmClient> {
+  if (!supabase) throw new Error('Brak Supabase');
+  const { data, error } = await supabase
+    .from('crm_clients')
+    .update({ tags, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select('*')
+    .single();
+  if (error) throw new Error(error.message);
+  return mapClient(data as Record<string, unknown>);
+}
+
 export async function deleteCrmClient(id: string): Promise<void> {
   if (!supabase) throw new Error('Brak Supabase');
   const { error } = await supabase.from('crm_clients').delete().eq('id', id);
@@ -244,6 +271,15 @@ export async function deleteCrmOrder(id: string): Promise<void> {
   if (!supabase) throw new Error('Brak Supabase');
   const { error } = await supabase.from('crm_orders').delete().eq('id', id);
   if (error) throw new Error(error.message);
+}
+
+/** Kolejny, wspolny numer oferty z sekwencji w bazie — format OF/RRRR/#####. */
+export async function nextQuoteNumber(): Promise<string> {
+  const year = new Date().getFullYear();
+  if (!supabase) return `OF/${year}/${Date.now() % 100000}`;
+  const { data, error } = await supabase.rpc('next_crm_quote_number');
+  if (error || data == null) return `OF/${year}/${Date.now() % 100000}`;
+  return `OF/${year}/${String(data).padStart(5, '0')}`;
 }
 
 export async function lookupNip(nipRaw: string): Promise<NipLookupResult> {

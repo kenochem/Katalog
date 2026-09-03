@@ -74,6 +74,20 @@ flowchart LR
 - `scripts/sync-baselinker-stock.mjs` — szkielet (dry-run); wymaga `.env`:
   - `BASELINKER_TOKEN`
   - `BASELINKER_INVENTORY_ID`
+- `scripts/import-baselinker-images-api.mjs` — **zdjęcia z API** (CDN `upload.cdn.baselinker.com`); CSV eksport nadal ma stare URL-e kenochem.com:
+  - `npm run import:baselinker-images:api` — podgląd
+  - `npm run import:baselinker-images:api:apply` — zapis Supabase + JSON + lite
+  - Wymaga w `.env`: `BASELINKER_TOKEN`, `BASELINKER_INVENTORY_ID=17991` (magazyn „Kenochem główny”)
+  - **Nie** podmienia kenochem.com na losowe URL-e z internetu — tylko gdy w magazynie BL jest już CDN Baselinker
+- `scripts/import-baselinker-images.mjs` — uzupełnienie z CSV (tylko gdy w eksporcie jest już CDN)
+- **kenochem.com:** po migracji WooCommerce nowe zdjęcia są pod `/wp-content/uploads/…`. Stare `/hpeciai/…` zwracają 404.
+  - `npm run import:kenochem-shop-images` — podgląd (publiczne API sklepu)
+  - `npm run import:kenochem-shop-images:apply` — zapis Supabase + JSON (uruchamiaj po migracji sklepu)
+- `scripts/import-baselinker-images-api.mjs` — **tylko CDN Baselinker** z magazynu (nie nadpisuje nowych URL sklepu starymi linkami z BL)
+- `scripts/fix-baselinker-images.mjs` — **naprawa zdjęć w magazynie BL** (martwe `/hpeciai/` → `/wp-content/uploads/` ze sklepu):
+  - `npm run fix:baselinker-images` — podgląd
+  - `npm run fix:baselinker-images:apply` — zapis do BaseLinker przez `addInventoryProduct`
+  - Nie dotyka istniejących URL CDN BaseLinker; backup w `data/baselinker-image-backups/`
 - `.env.example` — dopisz te zmienne gdy wdrożycie.
 
 ---

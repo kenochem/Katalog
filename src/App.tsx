@@ -95,6 +95,7 @@ import { CatalogFilterBar, type ShopCategoryGroup } from './components/CatalogFi
 import { CatalogHomeView, type CatalogHomeQuickAction } from './components/CatalogHomeView';
 import { AppHeaderActions } from './components/AppHeaderActions';
 import { canAccessAdminPanel } from './lib/adminAccess';
+import { openGlobalAdminPanel } from './lib/adminNavigation';
 import { computeCatalogStats } from './lib/catalogExport';
 import { getKenochemCategoryGroupsFor } from './lib/kenochemCategoryTree';
 import {
@@ -538,23 +539,30 @@ export default function App() {
   }, [embeddedInHub, view, mode]);
 
   useEffect(() => {
-    if (!embeddedInHub || !suiteHub) return;
-    const mapped = hubViewToAppView(suiteHub.hubView);
-    if (mapped) setView(mapped);
-  }, [embeddedInHub, suiteHub?.hubView]);
-
-  useEffect(() => {
-    if (!embeddedInHub) return;
     const onAppView = (e: Event) => {
-      const v = (e as CustomEvent<{ view: View }>).detail?.view;
+      const v = (e as CustomEvent<{ view: import('./types').View }>).detail?.view;
       if (v) setView(v);
     };
     window.addEventListener('katalog-app-view', onAppView);
     return () => window.removeEventListener('katalog-app-view', onAppView);
-  }, [embeddedInHub]);
+  }, []);
+
+  useEffect(() => {
+    if (!embeddedInHub || !suiteHub) return;
+    const mapped = hubViewToAppView(suiteHub.hubView);
+    if (mapped) {
+      setView(mapped);
+    } else if (view === 'admin' && suiteHub.hubView !== 'admin') {
+      setView('catalog');
+    }
+  }, [embeddedInHub, suiteHub?.hubView, view]);
 
   const hubNavigateView = useCallback(
     (v: View) => {
+      if (v === 'admin') {
+        openGlobalAdminPanel();
+        return;
+      }
       setView(v);
       if (embeddedInHub && suiteHub) suiteHub.setHubView(appViewToHubView(v));
     },
@@ -866,9 +874,11 @@ export default function App() {
     void fetch('/data/shop-products-lite.json', { cache: 'force-cache' }).catch(() => undefined);
   }, [opsStandalone, shouldUseSupabaseCatalog]);
 
+  /** Po szybkim JSON dociągnij zdjęcia/stany z Supabase (także dla gościa — RLS products SELECT jest otwarte). */
   useEffect(() => {
-    if (opsStandalone || mode !== 'signed_in') return;
+    if (opsStandalone || !isSupabaseConfigured) return;
     if (shouldUseSupabaseCatalog) return;
+    if (mode === 'loading') return;
     if (loading || shopLoading) return;
 
     const filter = catalogListFilter;
@@ -928,6 +938,7 @@ export default function App() {
     mode,
     opsStandalone,
     shopLoading,
+    isSupabaseConfigured,
   ]);
 
   /** Dociągnij brakujący katalog po zmianie filtra (np. Produkty / Wszystkie). */
@@ -1517,9 +1528,8 @@ export default function App() {
               <AppHeaderActions
                 role={role}
                 view={view}
-                onOpenAdmin={() => setView('admin')}
+                onOpenAdmin={openGlobalAdminPanel}
                 onNavigate={setView}
-                showAdminShortcut={false}
               />
             </div>
 
@@ -1656,7 +1666,7 @@ export default function App() {
             <AppHeaderActions
               role={role}
               view={view}
-              onOpenAdmin={() => setView('admin')}
+              onOpenAdmin={openGlobalAdminPanel}
               onNavigate={setView}
             />
           </div>
@@ -1769,10 +1779,6 @@ export default function App() {
             quickActions={catalogHomeQuickActions}
             onOpenCatalog={(filter) => setCatalogFilter(filter)}
             onOpenMissingImages={() => openMissingImages()}
-            onFocusSearch={() => {
-              setView('catalog');
-              setSearch('');
-            }}
             onOpenScanner={() => setShowScanner(true)}
           />
         ) : view === 'catalog' || view === 'favorites' ? (
@@ -1899,7 +1905,7 @@ export default function App() {
               });
             }}
           />
-        ) : view === 'admin' && canAccessAdminPanel(role) ? (
+        ) : view === 'admin' && canAccessAdminPanel(role) && !embeddedInHub ? (
           <Suspense fallback={<ViewFallback />}>
             <AdminHubPanel
               onBack={() => setView(opsStandalone ? 'ops' : 'catalog')}
@@ -2068,7 +2074,7 @@ export default function App() {
         }}
         onToggleEdit={() => setEditMode((v) => !v)}
         onAddProduct={() => setShowAddProduct(true)}
-        onOpenAdmin={() => setView('admin')}
+        onOpenAdmin={openGlobalAdminPanel}
         onInstallApp={triggerInstallApp}
         onToggleTheme={toggleTheme}
         theme={theme}

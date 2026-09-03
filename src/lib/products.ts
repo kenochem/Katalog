@@ -74,7 +74,13 @@ function filterShopProducts(list: Product[], accessorySkus?: Set<string>): Produ
  * co już pokazuje UI (np. po statycznym JSON) — patrz efekt "hydrate" w App.tsx.
  */
 export function productListSignature(list: Product[]): string {
-  return list.map((p) => `${p.id}|${p.stock}|${p.priceSaleGross ?? ''}|${p.hasImage ? 1 : 0}`).join(';');
+  return list
+    .map((p) => {
+      const img = (p.customImageUrl || p.imageUrl || '').split('?')[0];
+      const imgTail = img ? img.slice(-40) : '';
+      return `${p.id}|${p.stock}|${p.priceSaleGross ?? ''}|${p.hasImage ? 1 : 0}|${imgTail}`;
+    })
+    .join(';');
 }
 
 function withoutHiddenProducts(list: Product[]): Product[] {
@@ -239,7 +245,7 @@ async function fetchProductsUncached(
   let from = 0;
 
   const LIST_SELECT =
-    'id,sku,name,display_name,category,manufacturer,ean,image_url,custom_image_url,has_image,stock,stock_manual,price_purchase_net,price_sale_net,price_sale_gross,tags,catalog,variants,is_group,warehouse_location,product_meta';
+    'id,sku,name,display_name,category,manufacturer,ean,image_url,custom_image_url,extra_images,has_image,stock,stock_manual,price_purchase_net,price_sale_net,price_sale_gross,tags,catalog,variants,is_group,warehouse_location,product_meta';
 
   while (true) {
     let pageQuery = supabase.from('products').select(LIST_SELECT).order('sku');
@@ -678,7 +684,52 @@ export async function uploadKitImage(kitId: string, file: File): Promise<string>
 }
 
 export function getProductImage(product: Product): string | null {
-  return product.customImageUrl || product.imageUrl || null;
+  return collectProductImageCandidates(product)[0] ?? null;
+}
+
+export type ProductImageSource = {
+  customImageUrl?: string;
+  imageUrl?: string;
+  extraImageUrls?: string[];
+};
+
+/** Priorytet: Supabase (własne) → Baselinker CDN → inne → kenochem.com (rezerwa). */
+export function catalogImageHostPriority(url: string): number {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    if (host.includes('supabase.co')) return 0;
+    if (host.includes('baselinker.com') || host.includes('baselinker.net')) return 1;
+    if (host.includes('kenochem.com') && url.includes('/wp-content/uploads/')) return 2;
+    if (host.includes('kenochem.com') && url.includes('/hpeciai/')) return 5;
+    if (host.includes('kenochem.com')) return 4;
+    return 3;
+  } catch {
+    return 3;
+  }
+}
+
+export function collectProductImageCandidates(product: ProductImageSource): string[] {
+  const out: string[] = [];
+  const push = (url?: string | null) => {
+    const trimmed = (url || '').trim();
+    if (!trimmed || !/^https?:\/\//i.test(trimmed)) return;
+    if (/kenochem\.com\/hpeciai\//i.test(trimmed)) return;
+    const base = trimmed.split('?')[0];
+    if (!out.some((u) => u.split('?')[0] === base)) out.push(trimmed);
+  };
+  push(product.customImageUrl);
+  push(product.imageUrl);
+  for (const extra of product.extraImageUrls || []) push(extra);
+
+  const customBase = (product.customImageUrl || '').trim().split('?')[0];
+  if (!customBase) {
+    return [...out].sort((a, b) => catalogImageHostPriority(a) - catalogImageHostPriority(b));
+  }
+  const custom = out.filter((u) => u.split('?')[0] === customBase);
+  const rest = out
+    .filter((u) => u.split('?')[0] !== customBase)
+    .sort((a, b) => catalogImageHostPriority(a) - catalogImageHostPriority(b));
+  return [...custom, ...rest];
 }
 
 export function getProductImages(product: Product): string[] {

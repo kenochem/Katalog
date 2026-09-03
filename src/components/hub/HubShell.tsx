@@ -13,6 +13,7 @@ import { CRM_INBOX_ENABLED } from '../../lib/crmInboxFeature';
 import { HubCommandSearch, useHubCommandPaletteHotkey } from './HubCommandSearch';
 import { SuiteHubMobileNav } from './SuiteHubMobileNav';
 import { HubChatDrawer } from './HubChatDrawer';
+import { openGlobalAdminPanel } from '../../lib/adminNavigation';
 import { openHubChat } from '../../lib/hubChatEvents';
 
 export interface HubShellProps {
@@ -100,7 +101,8 @@ export function HubShell({
         showOps: canViewOps,
         showComms,
         showInbox: CRM_INBOX_ENABLED,
-        showIntegrations: canAdmin,
+        showIntegrations: canViewOps,
+        showAdmin: canAdmin,
         showDepartments: false,
         showDownloads: true,
         showGuide: true,
@@ -181,7 +183,7 @@ export function HubShell({
             <AppHeaderActions
               role={effectiveRole}
               view={appView}
-              onOpenAdmin={() => onAppNavigate('admin')}
+              onOpenAdmin={openGlobalAdminPanel}
               onNavigate={onAppNavigate}
               showSignOut={false}
             />
@@ -219,6 +221,7 @@ export function HubShell({
         onOpenChange={setCommandOpen}
         canCrm={canUseCrm}
         canOps={canViewOps}
+        canAdmin={canAdmin}
       />
       <SuiteHubMobileNav
         view={view}

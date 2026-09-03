@@ -121,6 +121,34 @@ def collect_extra_images(row: dict) -> list[str]:
     return extras
 
 
+def is_baselinker_cdn(url: str) -> bool:
+    u = (url or "").lower()
+    return u.startswith("http") and ("baselinker.com" in u or "baselinker.net" in u)
+
+
+def is_kenochem_url(url: str) -> bool:
+    u = (url or "").lower()
+    return u.startswith("http") and "kenochem.com" in u
+
+
+def pick_primary_image(primary: str, extras: list[str]) -> tuple[str, list[str]]:
+    """Baselinker CDN pierwsze; kenochem.com trafia do extra jako rezerwa."""
+    pool: list[str] = []
+    for u in [primary, *extras]:
+        u = (u or "").strip()
+        if u.startswith("http") and u not in pool:
+            pool.append(u)
+    bl = [u for u in pool if is_baselinker_cdn(u)]
+    if bl:
+        main = bl[0]
+    else:
+        non_ken = [u for u in pool if not is_kenochem_url(u)]
+        main = non_ken[0] if non_ken else (pool[0] if pool else "")
+    rest = [u for u in pool if u != main]
+    rest.sort(key=lambda u: (4 if is_kenochem_url(u) else 1 if is_baselinker_cdn(u) else 2))
+    return main, rest
+
+
 def score_product(p: dict) -> tuple:
     """Prefer entries with image, EAN, and higher stock."""
     return (
@@ -185,7 +213,8 @@ def main() -> None:
                 image_url = ""
 
             ean = re.sub(r"\D", "", row.get("produkt_ean") or "")
-            extras = collect_extra_images(row)
+            extras_raw = collect_extra_images(row)
+            image_url, extras = pick_primary_image(image_url, extras_raw)
             category = normalize_category(row.get("kategoria_nazwa") or "")
             manufacturer = (row.get("producent_nazwa") or "").strip()
             description = strip_html(

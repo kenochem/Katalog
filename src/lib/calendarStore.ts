@@ -1,3 +1,5 @@
+import { supabase } from './supabase';
+
 export type CalendarEventType =
   | 'visit'
   | 'delivery'
@@ -20,73 +22,112 @@ export interface CalendarEvent {
   app?: 'crm' | 'ops' | 'talk' | 'logistics' | 'catalog' | 'suite';
 }
 
-const KEY = 'kenochem-calendar-events-v1';
+const CHANGED_EVENT = 'kenochem-calendar-events-changed';
 
-const demoEvents: CalendarEvent[] = [
-  {
-    id: 'demo-visit',
-    title: 'Wizyta u klienta B2B',
-    type: 'visit',
-    date: todayOffset(0),
-    time: '09:30',
-    owner: 'Handlowiec',
-    location: 'Rejon Polnoc',
-    app: 'crm',
-    note: 'Docelowo zaciagane z CRM: klient, trasa, notatki i zamowienie.',
-  },
-  {
-    id: 'demo-finance',
-    title: 'Kontrola platnosci i raport dzienny',
-    type: 'finance',
-    date: todayOffset(0),
-    time: '12:00',
-    owner: 'Biuro',
-    app: 'ops',
-    note: 'Miejsce na cykliczne raporty z Operacji.',
-  },
-  {
-    id: 'demo-delivery',
-    title: 'Okno dostaw magazynowych',
-    type: 'delivery',
-    date: todayOffset(1),
-    time: '08:00',
-    owner: 'Magazyn',
-    location: 'Magazyn Kenochem',
-    app: 'logistics',
-    note: 'Docelowo statusy paczek, trasy i kompletacja.',
-  },
-  {
-    id: 'demo-team',
-    title: 'Odprawa zespolu',
-    type: 'team',
-    date: todayOffset(2),
-    time: '10:00',
-    owner: 'Zespol',
-    app: 'talk',
-    note: 'Powiazanie z Talk: przypomnienie i watek rozmowy.',
-  },
-];
+/**
+ * Kalendarz jest wspolny dla calego zespolu (Supabase, tabela crm_calendar_events) —
+ * nie localStorage. Trzymamy prosty cache w pamieci + odswiezamy go asynchronicznie,
+ * zeby loadCalendarEvents() mogl zostac synchroniczny (uzywany w useState(() => ...))
+ * bez przepisywania wszystkich komponentow na async/await.
+ */
+let cache: CalendarEvent[] = [];
+let cacheReady = false;
+let inFlight: Promise<void> | null = null;
 
-export function loadCalendarEvents(): CalendarEvent[] {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return demoEvents;
-    const parsed = JSON.parse(raw) as CalendarEvent[];
-    return Array.isArray(parsed) ? parsed : demoEvents;
-  } catch {
-    return demoEvents;
-  }
+function mapRow(row: Record<string, unknown>): CalendarEvent {
+  return {
+    id: String(row.id),
+    title: String(row.title || ''),
+    type: (row.type as CalendarEventType) || 'task',
+    date: String(row.date || '').slice(0, 10),
+    time: String(row.time || '09:00'),
+    endTime: row.end_time ? String(row.end_time) : undefined,
+    allDay: Boolean(row.all_day),
+    owner: String(row.owner || ''),
+    location: row.location ? String(row.location) : undefined,
+    note: row.note ? String(row.note) : undefined,
+    app: (row.app as CalendarEvent['app']) || undefined,
+  };
 }
 
-export function saveCalendarEvents(events: CalendarEvent[]) {
-  localStorage.setItem(KEY, JSON.stringify(events.slice(0, 500)));
-  window.dispatchEvent(new CustomEvent('kenochem-calendar-events-changed'));
+async function refreshCache(): Promise<void> {
+  if (!supabase) {
+    cacheReady = true;
+    return;
+  }
+  const { data, error } = await supabase
+    .from('crm_calendar_events')
+    .select('*')
+    .order('date', { ascending: true })
+    .order('time', { ascending: true })
+    .limit(1000);
+  if (!error && data) {
+    cache = data.map((r) => mapRow(r as Record<string, unknown>));
+  }
+  cacheReady = true;
+  window.dispatchEvent(new CustomEvent(CHANGED_EVENT));
+}
+
+/** Wywolaj raz przy starcie widoku kalendarza, zeby wczytac swieze dane z Supabase. */
+export function ensureCalendarLoaded(): void {
+  if (cacheReady || inFlight) return;
+  inFlight = refreshCache().finally(() => {
+    inFlight = null;
+  });
+}
+
+export function loadCalendarEvents(): CalendarEvent[] {
+  ensureCalendarLoaded();
+  return cache;
+}
+
+export async function saveCalendarEvents(events: CalendarEvent[]): Promise<void> {
+  if (!supabase) return;
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData?.user;
+  if (!user) return;
+
+  const prevIds = new Set(cache.map((e) => e.id));
+  const nextIds = new Set(events.map((e) => e.id));
+  const removed = [...prevIds].filter((id) => !nextIds.has(id));
+
+  cache = events;
+  window.dispatchEvent(new CustomEvent(CHANGED_EVENT));
+
+  const ops: PromiseLike<unknown>[] = [];
+  if (removed.length) {
+    ops.push(supabase.from('crm_calendar_events').delete().in('id', removed));
+  }
+  for (const e of events) {
+    const row = {
+      id: e.id,
+      user_id: user.id,
+      title: e.title,
+      type: e.type,
+      date: e.date,
+      time: e.time,
+      end_time: e.endTime || null,
+      all_day: e.allDay ?? false,
+      owner: e.owner,
+      location: e.location || null,
+      note: e.note || null,
+      app: e.app || null,
+      updated_at: new Date().toISOString(),
+    };
+    if (prevIds.has(e.id)) {
+      const { id, ...patch } = row;
+      ops.push(supabase.from('crm_calendar_events').update(patch).eq('id', id));
+    } else {
+      ops.push(supabase.from('crm_calendar_events').insert(row));
+    }
+  }
+  await Promise.all(ops);
 }
 
 export function createCalendarEvent(input: Omit<CalendarEvent, 'id'>): CalendarEvent {
   return {
     ...input,
-    id: `cal-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    id: crypto.randomUUID(),
   };
 }
 

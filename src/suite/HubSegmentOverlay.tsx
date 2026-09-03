@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import type { HubView } from '../app/hubNavigation';
 import type { AppRole } from '../lib/roles';
 import { canAccessAdminPanel } from '../lib/adminAccess';
@@ -13,6 +14,10 @@ import { IntegrationsKenochemView } from '../components/hub/IntegrationsKenochem
 import { HubGuideKenochemView } from '../components/hub/HubGuideKenochemView';
 import { HubDownloadsKenochemView } from '../components/hub/HubDownloadsKenochemView';
 import { HubSegmentPlaceholder } from '../components/hub/HubSegmentPlaceholder';
+
+const AdminHubPanel = lazy(() =>
+  import('../components/AdminHubPanel').then((m) => ({ default: m.AdminHubPanel })),
+);
 
 export interface HubSegmentOverlayProps {
   hubView: HubView;
@@ -125,6 +130,25 @@ export function HubSegmentOverlay({
   }
   if (hv === 'calendar') {
     return <CalendarKenochemView onNavigate={onHubViewChange} />;
+  }
+  if (hv === 'admin' && canAccessAdminPanel(role)) {
+    return (
+      <Suspense
+        fallback={
+          <div className="flex justify-center py-16">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-violet-500 border-t-transparent" />
+          </div>
+        }
+      >
+        <AdminHubPanel
+          onBack={() => onHubViewChange('workspace')}
+          backLabel="Wróć do pulpitu"
+          title="Administracja Kenochem"
+          description="Globalne zarządzanie kontami, rolami i uprawnieniami — wspólne dla całego Suite."
+          product="catalog"
+        />
+      </Suspense>
+    );
   }
   if (hv === 'integrations' && canAccessAdminPanel(role)) {
     return <IntegrationsKenochemView />;

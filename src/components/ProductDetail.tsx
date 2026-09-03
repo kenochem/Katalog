@@ -8,8 +8,8 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import type { Product, ProductVariant } from '../types';
 import { ACCESSORY_CATEGORIES } from '../types';
 import { manufacturerOptions, normalizeManufacturer, effectiveManufacturer } from '../lib/waproManufacturers';
-import {
-  getProductImage, getProductImages, updateProductImage, addProductExtraImage, setProductPrimaryImage,
+import { ProductImage } from './ProductImage';
+import { getProductImage, getProductImages, updateProductImage, addProductExtraImage, setProductPrimaryImage,
   updateProduct, deleteProductImage, deleteProductExtraImage, fetchProductById,
   deleteProduct, isProductSkuTaken,
 } from '../lib/products';
@@ -867,8 +867,12 @@ export function ProductDetail({
                 className="block h-full w-full cursor-zoom-in"
                 title="Powiększ zdjęcie"
               >
-                <img
-                  src={displayImage}
+                <ProductImage
+                  product={{
+                    customImageUrl: displayImage || undefined,
+                    imageUrl: detail.imageUrl,
+                    extraImageUrls: allImages.filter((url) => url !== displayImage),
+                  }}
                   alt={detail.displayName}
                   className="h-full w-full object-contain p-4"
                 />

@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   Package,
   Plug,
+  Settings2,
   ShoppingBag,
   ShoppingCart,
   Sparkles,
@@ -40,6 +41,7 @@ export function buildKenochemHubNavItems(opts: {
   showComms: boolean;
   showInbox: boolean;
   showIntegrations: boolean;
+  showAdmin: boolean;
   showDepartments: boolean;
   showDownloads: boolean;
   showGuide: boolean;
@@ -158,6 +160,14 @@ export function buildKenochemHubNavItems(opts: {
       icon: <Plug className="h-4 w-4 shrink-0" />,
       match: ['integrations'],
       visible: opts.showIntegrations,
+    },
+    {
+      id: 'admin',
+      navSection: 'admin',
+      label: 'Administracja',
+      icon: <Settings2 className="h-4 w-4 shrink-0" />,
+      match: ['admin'],
+      visible: opts.showAdmin,
     },
     {
       id: 'downloads',

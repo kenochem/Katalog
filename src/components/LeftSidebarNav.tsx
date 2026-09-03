@@ -20,6 +20,8 @@ import {
   Star,
 } from 'lucide-react';
 import type { View } from '../types';
+import { canAccessAdminPanel } from '../lib/adminAccess';
+import { openGlobalAdminPanel } from '../lib/adminNavigation';
 import { roleCan, type AppRole } from '../lib/roles';
 import {
   getCachedCatalogPreferences,
@@ -57,6 +59,7 @@ const DEFAULT_ORDER: View[] = [
   'catalog-hidden',
   'missing-images',
   'labels',
+  'admin',
   'warehouse',
 ];
 
@@ -274,6 +277,13 @@ export function LeftSidebarNav({
         highlight: labelQueueCount > 0,
         available: roleCan(role, 'printLabels'),
         onClick: onOpenLabels,
+      },
+      {
+        id: 'admin',
+        icon: <Settings2 className="h-4 w-4" />,
+        label: 'Administracja',
+        available: canAccessAdminPanel(role),
+        onClick: () => openGlobalAdminPanel(),
       },
       {
         id: 'warehouse',

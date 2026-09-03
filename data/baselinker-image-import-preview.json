@@ -1,1 +1,142 @@
-[]
+[
+  {
+    "id": "shop-ADB000031",
+    "sku": "ADB000031",
+    "catalog": "shop",
+    "name": "ADBL ROLLER ONE STEP R 125 pomarańczowy",
+    "baselinkerProductId": "319165228",
+    "fields": [
+      "image_url_changed",
+      "extra_images_merged"
+    ],
+    "before": {
+      "imageUrl": "https://upload.cdn.baselinker.com/products/6011214/8f99cb42bfca3424f2084dd046dcf451.webp",
+      "customImageUrl": "",
+      "extraImages": 1
+    },
+    "after": {
+      "imageUrl": "https://upload.cdn.baselinker.com/products/6011214/d83caffa5669d0cefce8ffb891ca92a4.jpg",
+      "extraImages": 1
+    }
+  },
+  {
+    "id": "shop-ATAS0031",
+    "sku": "ATAS0031",
+    "catalog": "shop",
+    "name": "Letni płyn do spryskiwaczy 5L - o zapachu grejpfriutowym",
+    "baselinkerProductId": "152657253",
+    "fields": [
+      "image_url_changed",
+      "extra_images_merged"
+    ],
+    "before": {
+      "imageUrl": "https://upload.cdn.baselinker.com/products/6011214/31e9915f2850a5a0452b662b480d2812.webp",
+      "customImageUrl": "",
+      "extraImages": 1
+    },
+    "after": {
+      "imageUrl": "https://kenochem.com/hpeciai/18e1579cb315db79cb6d423e55a440ad/pol_pl_Letni-plyn-do-spryskiwaczy-5L-o-zapachu-grejpfriutowym-6104_1.png",
+      "extraImages": 1
+    }
+  },
+  {
+    "id": "shop-CART0197",
+    "sku": "CART0197",
+    "catalog": "shop",
+    "name": "Cartec - wieszak na butelki 0,5L i 1L",
+    "baselinkerProductId": "152655049",
+    "fields": [
+      "image_url_changed",
+      "extra_images_merged"
+    ],
+    "before": {
+      "imageUrl": "https://kenochem.com/hpeciai/841bee7f0bae059585ccfb3cf778c8b6/pol_pl_Cartec-wieszak-na-butelki-0-5L-i-1L-2850_3.png",
+      "customImageUrl": "",
+      "extraImages": 2
+    },
+    "after": {
+      "imageUrl": "https://upload.cdn.baselinker.com/products/6011214/04466a57c16b9fe10dfe29428fd9f5b3.png",
+      "extraImages": 5
+    }
+  },
+  {
+    "id": "shop-HYD000583",
+    "sku": "HYD000583",
+    "catalog": "shop",
+    "name": "Ściągacz silikonowy do zbierania wody z szyb lakieru",
+    "baselinkerProductId": "256428526",
+    "fields": [
+      "image_url_changed",
+      "extra_images_merged"
+    ],
+    "before": {
+      "imageUrl": "https://kenochem.com/hpeciai/556060f407eb7762232b7c5efa384104/pol_pl_Sciagacz-silikonowy-do-zbierania-wody-z-szyb-lakieru-3785_2.png",
+      "customImageUrl": "",
+      "extraImages": 2
+    },
+    "after": {
+      "imageUrl": "https://upload.cdn.baselinker.com/products/6011214/444b294407c82c849a3cd909b2c6863c.jpg",
+      "extraImages": 2
+    }
+  },
+  {
+    "id": "HYD000583",
+    "sku": "HYD000583",
+    "catalog": "accessories",
+    "name": "Ściągacz silikonowy z uchwytem",
+    "baselinkerProductId": "256428526",
+    "fields": [
+      "image_url_changed",
+      "extra_images_merged"
+    ],
+    "before": {
+      "imageUrl": "https://kenochem.com/hpeciai/556060f407eb7762232b7c5efa384104/pol_pl_Sciagacz-silikonowy-do-zbierania-wody-z-szyb-lakieru-3785_2.png",
+      "customImageUrl": "",
+      "extraImages": 2
+    },
+    "after": {
+      "imageUrl": "https://upload.cdn.baselinker.com/products/6011214/444b294407c82c849a3cd909b2c6863c.jpg",
+      "extraImages": 2
+    }
+  },
+  {
+    "id": "shop-SON000002",
+    "sku": "SON000002",
+    "catalog": "shop",
+    "name": "SONAX LETNI PŁYN DO SPRYSKIWACZY 250ML 271.141",
+    "baselinkerProductId": "152655817",
+    "fields": [
+      "image_url_changed",
+      "extra_images_merged"
+    ],
+    "before": {
+      "imageUrl": "https://kenochem.com/hpeciai/1e96d17e4fa73461c56008eecd6cfdd4/pol_pl_SONAX-LETNI-PLYN-DO-SPRYSKIWACZY-250ML-271-141-6519_1.png",
+      "customImageUrl": "",
+      "extraImages": 0
+    },
+    "after": {
+      "imageUrl": "https://upload.cdn.baselinker.com/products/6011214/46cd33dd837909c5d5e2e9db3c3c5232.png",
+      "extraImages": 1
+    }
+  },
+  {
+    "id": "shop-SON000040",
+    "sku": "SON000040",
+    "catalog": "shop",
+    "name": "SONAX Klima Power Cleaner Green Lemon - 323941",
+    "baselinkerProductId": "319166258",
+    "fields": [
+      "image_url_changed",
+      "extra_images_merged"
+    ],
+    "before": {
+      "imageUrl": "https://upload.cdn.baselinker.com/products/6011214/f1a809fb0570d8731171f74dc744a826.png",
+      "customImageUrl": "",
+      "extraImages": 3
+    },
+    "after": {
+      "imageUrl": "https://upload.cdn.baselinker.com/products/6011214/204cbfdb698398742a3bf38e2cc17601.jpg",
+      "extraImages": 3
+    }
+  }
+]

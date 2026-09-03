@@ -11,7 +11,8 @@ import {
 import { memo, useRef, useState, type MouseEvent } from 'react';
 import type { Product } from '../types';
 import { CATALOG_LABELS } from '../types';
-import { getProductImage, updateProductImage } from '../lib/products';
+import { updateProductImage } from '../lib/products';
+import { ProductImage, hasDisplayableProductImage } from './ProductImage';
 import { customerGrossPrice, formatStock, formatPricePln, formatMarginPercent, marginPercent } from '../lib/format';
 import { resolveProductCatalogKind } from '../lib/catalogKind';
 import { isCatalogHiddenProduct } from '../lib/productMeta';
@@ -65,7 +66,7 @@ export const ProductCard = memo(
     collectionUserKey,
     onCollectionsChange,
   }: ProductCardProps) {
-  const imageUrl = hideImages ? null : getProductImage(product);
+  const showImage = !hideImages && hasDisplayableProductImage(product);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -110,10 +111,10 @@ export const ProductCard = memo(
 
   return (
     <article
-      className={`product-card-cv relative flex flex-col overflow-hidden rounded-2xl border bg-slate-900/80 ${
+      className={`product-card-cv group relative flex flex-col overflow-hidden rounded-2xl border bg-slate-900/80 transition-all duration-200 ${
         isFavorite
-          ? 'border-amber-400/60 hover:border-amber-400 hover:bg-slate-800/90'
-          : 'border-slate-800 hover:border-brand-500/45 hover:bg-slate-800/80'
+          ? 'border-amber-400/60 hover:border-amber-400 hover:bg-slate-800/90 hover:shadow-lg hover:shadow-amber-950/20'
+          : 'border-slate-800 hover:border-brand-500/45 hover:bg-slate-800/80 hover:shadow-lg hover:shadow-black/25'
       }`}
     >
       {onToggleFavorite && (
@@ -144,15 +145,15 @@ export const ProductCard = memo(
       <div
             className={`relative overflow-hidden bg-slate-800 aspect-square`}
       >
-        {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt=""
-            className={`pointer-events-none h-full w-full object-contain ${
+        {showImage ? (
+          <ProductImage
+            product={product}
+            alt={product.displayName}
+            className={`pointer-events-none h-full w-full object-contain transition-transform duration-300 group-hover:scale-[1.04] ${
               compact ? 'p-1.5' : cozy ? 'p-4' : 'p-3'
             }`}
+            placeholderClassName={`pointer-events-none flex h-full items-center justify-center text-slate-500`}
             loading="lazy"
-            decoding="async"
             sizes={compact ? '(max-width:640px) 30vw, 120px' : '(max-width:640px) 45vw, 180px'}
           />
         ) : (
@@ -258,7 +259,7 @@ export const ProductCard = memo(
               <button
                 type="button"
                 onClick={() => onOrderDelta(product, 1)}
-                className={`flex items-center justify-center rounded-lg bg-brand-600 text-white shadow-md shadow-brand-900/40 hover:bg-brand-500 ${
+                className={`flex items-center justify-center rounded-lg bg-brand-600 text-white shadow-md shadow-brand-900/40 transition hover:scale-105 hover:bg-brand-500 active:scale-95 ${
                   compact ? 'h-7 w-7' : 'h-8 w-8'
                 }`}
                 title="Dodaj do zamówienia"

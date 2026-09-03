@@ -72,6 +72,15 @@ export function mergeProducts(base: Product[], local: Product[]): Product[] {
             : (p.stock ?? existing.stock),
         stockManual: p.stockManual || existing.stockManual,
         catalog: p.catalog || existing.catalog || 'accessories',
+        customImageUrl: p.customImageUrl?.trim() || existing.customImageUrl,
+        imageUrl: p.imageUrl?.trim() || existing.imageUrl,
+        hasImage: Boolean(
+          p.customImageUrl?.trim() ||
+            p.imageUrl?.trim() ||
+            existing.customImageUrl ||
+            existing.imageUrl ||
+            (p.extraImageUrls?.length ? p.extraImageUrls : existing.extraImageUrls)?.length,
+        ),
         extraImageUrls: p.extraImageUrls?.length
           ? p.extraImageUrls
           : existing.extraImageUrls,

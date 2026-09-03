@@ -1,16 +1,27 @@
-import { Loader2, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import { Download, Loader2, Pencil, Plus, Search, Tag, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
+  CRM_CLIENT_TAGS,
   crmErrorMessage,
   deleteCrmClient,
   fetchCrmClients,
-  isValidNip,
-  lookupNip,
-  normalizeNip,
-  upsertCrmClient,
   type CrmClient,
 } from '../lib/crm';
 import { showToast } from '../lib/toast';
+import { downloadCsv, stampFile } from '../lib/exportReport';
+import { getClientIcon } from './crm/clientIcons';
+import { CrmClientEditModal } from './crm/CrmClientEditModal';
+
+const TAG_TONE: Record<string, string> = {
+  VIP: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+  Ryzykowny: 'bg-red-500/15 text-red-300 border-red-500/30',
+  'Nowy prospekt': 'bg-sky-500/15 text-sky-300 border-sky-500/30',
+  Stały: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+};
+
+function tagTone(tag: string): string {
+  return TAG_TONE[tag] || 'bg-slate-800 text-slate-400 border-slate-700';
+}
 
 interface CrmClientsPanelProps {
   cloudEnabled: boolean;
@@ -21,9 +32,8 @@ export function CrmClientsPanel({ cloudEnabled, onPickClient }: CrmClientsPanelP
   const [clients, setClients] = useState<CrmClient[]>([]);
   const [loading, setLoading] = useState(false);
   const [q, setQ] = useState('');
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
   const [editing, setEditing] = useState<Partial<CrmClient> | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [nipBusy, setNipBusy] = useState(false);
 
   async function reload() {
     if (!cloudEnabled) {
@@ -46,65 +56,31 @@ export function CrmClientsPanel({ cloudEnabled, onPickClient }: CrmClientsPanelP
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
-    if (!s) return clients;
-    return clients.filter(
+    let list = clients;
+    if (tagFilter) list = list.filter((c) => c.tags.includes(tagFilter));
+    if (!s) return list;
+    return list.filter(
       (c) =>
         c.displayName.toLowerCase().includes(s) ||
         (c.legalName || '').toLowerCase().includes(s) ||
         (c.note || '').toLowerCase().includes(s) ||
         (c.nip || '').includes(s.replace(/\D/g, '')),
     );
-  }, [clients, q]);
+  }, [clients, q, tagFilter]);
 
-  async function handleSave() {
-    if (!editing?.displayName?.trim()) {
-      showToast('Podaj nazwę klienta', 'warn');
-      return;
-    }
-    setSaving(true);
-    try {
-      const saved = await upsertCrmClient({
-        id: editing.id,
-        displayName: editing.displayName,
-        legalName: editing.legalName,
-        nip: editing.nip,
-        address: editing.address,
-        note: editing.note,
-      });
-      setEditing(null);
-      await reload();
-      showToast('Klient zapisany', 'ok');
-      return saved;
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Błąd zapisu', 'error');
-      return null;
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleNipLookup() {
-    const nip = normalizeNip(editing?.nip || '');
-    if (!isValidNip(nip)) {
-      showToast('Wpisz poprawny NIP (10 cyfr)', 'warn');
-      return;
-    }
-    setNipBusy(true);
-    try {
-      const res = await lookupNip(nip);
-      setEditing((prev) => ({
-        ...prev,
-        nip: res.nip,
-        legalName: res.legalName,
-        address: res.address,
-        displayName: prev?.displayName?.trim() || res.legalName,
-      }));
-      showToast('Pobrano dane z białej listy VAT', 'ok');
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Błąd NIP', 'error');
-    } finally {
-      setNipBusy(false);
-    }
+  function handleExportCsv() {
+    downloadCsv(
+      stampFile('klienci'),
+      ['Nazwa', 'Nazwa formalna', 'NIP', 'Adres', 'Tagi', 'Notatka'],
+      filtered.map((c) => [
+        c.displayName,
+        c.legalName || '',
+        c.nip || '',
+        c.address || '',
+        c.tags.join(', '),
+        c.note || '',
+      ]),
+    );
   }
 
   if (!cloudEnabled) {
@@ -129,6 +105,15 @@ export function CrmClientsPanel({ cloudEnabled, onPickClient }: CrmClientsPanelP
         </div>
         <button
           type="button"
+          onClick={handleExportCsv}
+          disabled={!filtered.length}
+          className="flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-700 px-3 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+        >
+          <Download className="h-4 w-4" />
+          <span className="hidden sm:inline">Eksport</span>
+        </button>
+        <button
+          type="button"
           onClick={() =>
             setEditing({
               displayName: '',
@@ -136,6 +121,7 @@ export function CrmClientsPanel({ cloudEnabled, onPickClient }: CrmClientsPanelP
               nip: '',
               address: '',
               note: '',
+              tags: [],
             })
           }
           className="flex shrink-0 items-center gap-1.5 rounded-xl bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-500"
@@ -143,6 +129,22 @@ export function CrmClientsPanel({ cloudEnabled, onPickClient }: CrmClientsPanelP
           <Plus className="h-4 w-4" />
           Dodaj
         </button>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        {CRM_CLIENT_TAGS.map((tag) => (
+          <button
+            key={tag}
+            type="button"
+            onClick={() => setTagFilter((t) => (t === tag ? null : tag))}
+            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition ${
+              tagFilter === tag ? tagTone(tag) : 'border-slate-800 bg-slate-900/60 text-slate-500 hover:text-slate-300'
+            }`}
+          >
+            <Tag className="h-3 w-3" />
+            {tag}
+          </button>
+        ))}
       </div>
 
       {loading ? (
@@ -160,6 +162,12 @@ export function CrmClientsPanel({ cloudEnabled, onPickClient }: CrmClientsPanelP
               key={c.id}
               className="flex items-start gap-2 rounded-xl border border-slate-800 bg-slate-900/80 px-3 py-2.5"
             >
+              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-slate-400">
+                {(() => {
+                  const Icon = getClientIcon(c.icon);
+                  return <Icon className="h-4 w-4" />;
+                })()}
+              </span>
               <button
                 type="button"
                 className="min-w-0 flex-1 text-left"
@@ -173,6 +181,18 @@ export function CrmClientsPanel({ cloudEnabled, onPickClient }: CrmClientsPanelP
                 <p className="mt-0.5 font-mono text-[11px] text-brand-400">
                   {c.nip || 'bez NIP'}
                 </p>
+                {c.tags.length > 0 && (
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {c.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${tagTone(tag)}`}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 {c.note?.trim() && (
                   <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-slate-400">
                     {c.note}
@@ -209,110 +229,14 @@ export function CrmClientsPanel({ cloudEnabled, onPickClient }: CrmClientsPanelP
         </ul>
       )}
 
-      {editing && (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center sm:p-4"
-          onClick={() => setEditing(null)}
-        >
-          <div
-            className="animate-fade-in max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-slate-700 bg-slate-900 sm:rounded-3xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="sticky top-0 flex items-center justify-between border-b border-slate-800 bg-slate-900/95 px-4 py-3 backdrop-blur">
-              <h3 className="font-semibold text-slate-100">
-                {editing.id ? 'Edytuj klienta' : 'Nowy klient'}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setEditing(null)}
-                className="rounded-full p-2 text-slate-400 hover:bg-slate-800"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="space-y-3 p-4">
-              <label className="block">
-                <span className="mb-1 text-xs text-slate-500">Nazwa u Ciebie</span>
-                <input
-                  value={editing.displayName || ''}
-                  onChange={(e) =>
-                    setEditing((p) => ({ ...p, displayName: e.target.value }))
-                  }
-                  placeholder="np. Scania / Kowalski"
-                  className="input-field"
-                />
-              </label>
-
-              <div className="flex gap-2">
-                <label className="block min-w-0 flex-1">
-                  <span className="mb-1 text-xs text-slate-500">NIP</span>
-                  <input
-                    value={editing.nip || ''}
-                    onChange={(e) => setEditing((p) => ({ ...p, nip: e.target.value }))}
-                    placeholder="10 cyfr"
-                    className="input-field font-mono"
-                    inputMode="numeric"
-                  />
-                </label>
-                <button
-                  type="button"
-                  disabled={nipBusy}
-                  onClick={() => void handleNipLookup()}
-                  className="mt-5 shrink-0 rounded-xl border border-brand-500/40 bg-brand-500/10 px-3 py-2 text-sm font-medium text-brand-200 disabled:opacity-50"
-                >
-                  {nipBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Po NIP'}
-                </button>
-              </div>
-
-              <label className="block">
-                <span className="mb-1 text-xs text-slate-500">Nazwa formalna (MF)</span>
-                <input
-                  value={editing.legalName || ''}
-                  onChange={(e) =>
-                    setEditing((p) => ({ ...p, legalName: e.target.value }))
-                  }
-                  className="input-field"
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-1 text-xs text-slate-500">Adres</span>
-                <input
-                  value={editing.address || ''}
-                  onChange={(e) =>
-                    setEditing((p) => ({ ...p, address: e.target.value }))
-                  }
-                  className="input-field"
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-1 text-xs text-slate-500">
-                  Notatka (preferencje, płatność, uwagi)
-                </span>
-                <textarea
-                  value={editing.note || ''}
-                  onChange={(e) => setEditing((p) => ({ ...p, note: e.target.value }))}
-                  rows={3}
-                  placeholder="np. przelew 14 dni, woli oferty PDF, nie dzwonić po 16…"
-                  className="input-field resize-none"
-                />
-              </label>
-
-              <button
-                type="button"
-                disabled={saving}
-                onClick={() => void handleSave()}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 py-3 text-sm font-medium text-white disabled:opacity-50"
-              >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                Zapisz klienta
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <CrmClientEditModal
+        initial={editing}
+        onClose={() => setEditing(null)}
+        onSaved={async () => {
+          setEditing(null);
+          await reload();
+        }}
+      />
     </div>
   );
 }
