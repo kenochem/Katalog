@@ -16,13 +16,23 @@ import {
   Printer,
   Search,
   ScrollText,
+  Sparkles,
   Star,
   FolderOpen,
+  TrendingUp,
   X,
 } from 'lucide-react';
 import type { Product, View } from '../types';
 import { getProductSearchIndex, searchIndexedProducts } from '../lib/productSearchIndex';
 import { BaselinkerTag } from './BaselinkerTag';
+
+// Jak dlugo po ostatnim znaku czekamy, zanim wpisywanie faktycznie „zadziala"
+// (przeliczy podpowiedzi i poleci do rodzica). 120ms bylo za krotkie — naturalne
+// przerwy miedzy literami podczas pisania (>120ms) odpalaly ciezkie przeliczenie
+// (przeszukanie calego katalogu) niemal po kazdym znaku, co dawalo wrazenie
+// ciaglego "zacinania sie" w trakcie pisania. 300ms daje czas na dokonczenie
+// slowa/przerwy w myśleniu, zanim komponent faktycznie przeliczy wyniki.
+const COMMIT_DELAY_MS = 300;
 
 export interface CatalogCommandAction {
   id: string;
@@ -76,17 +86,71 @@ export function CatalogCommandPalette({
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [panelPos, setPanelPos] = useState({ top: 0, left: 0, width: 0 });
-  const query = search;
 
-  const trimmedQuery = query.trim();
+  // Wpisywanie trzymane w lokalnym stanie (natychmiastowe, bez lagów na słabszym
+  // sprzęcie), a do rodzica (który re-renderuje cały App i przelicza filtrowanie
+  // katalogu) idzie z opóźnieniem — tak samo jak w SearchBar.tsx. Ważne: commit
+  // jest wywoływany IMPERATYWNIE z pojedynczego setTimeout, nie przez efekt
+  // reagujący na stan pochodny od innego stanu — dwa efekty odwołujące się do
+  // siebie (przez wspólny `search` z rodzica, przy dwóch zamontowanych naraz
+  // instancjach — desktop ukryty + mobilny sticky) potrafiły zapętlić się w
+  // nieskończoność ("Maximum update depth exceeded"), co na telefonie wyglądało
+  // jak crash apki przy wyszukiwaniu.
+  const [draft, setDraft] = useState(search);
+  const [queryForHits, setQueryForHits] = useState(search);
+  const commitTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    setDraft(search);
+    setQueryForHits(search);
+    if (commitTimer.current !== null) {
+      window.clearTimeout(commitTimer.current);
+      commitTimer.current = null;
+    }
+  }, [search]);
+
+  function scheduleCommit(next: string) {
+    if (commitTimer.current !== null) {
+      window.clearTimeout(commitTimer.current);
+      commitTimer.current = null;
+    }
+    if (next.trim().length < 2) {
+      setQueryForHits(next);
+      onSearchChange(next);
+      return;
+    }
+    commitTimer.current = window.setTimeout(() => {
+      commitTimer.current = null;
+      setQueryForHits(next);
+      onSearchChange(next);
+    }, COMMIT_DELAY_MS);
+  }
+
+  function setDraftAndSchedule(next: string) {
+    setDraft(next);
+    scheduleCommit(next);
+  }
+
+  function clearSearch() {
+    if (commitTimer.current !== null) {
+      window.clearTimeout(commitTimer.current);
+      commitTimer.current = null;
+    }
+    setDraft('');
+    setQueryForHits('');
+    onSearchChange('');
+  }
+
+  const query = draft;
 
   const productHits = useMemo(() => {
-    if (trimmedQuery.length < 2) return [];
+    const q = queryForHits.trim();
+    if (q.length < 2) return [];
     const index = getProductSearchIndex(products);
-    return searchIndexedProducts(index, trimmedQuery, {
+    return searchIndexedProducts(index, q, {
       limit: overlaySuggestions ? 8 : 12,
     });
-  }, [products, trimmedQuery, overlaySuggestions]);
+  }, [products, queryForHits, overlaySuggestions]);
 
   const close = () => {
     setOpen(false);
@@ -97,7 +161,7 @@ export function CatalogCommandPalette({
     const wrap = (run: () => void) => () => {
       run();
       close();
-      onSearchChange('');
+      clearSearch();
     };
     const items: CatalogCommandAction[] = [
       {
@@ -111,6 +175,18 @@ export function CatalogCommandPalette({
         label: 'Widok: Logi sync',
         icon: <ScrollText className="h-4 w-4" />,
         run: wrap(() => onNavigate('logs')),
+      },
+      {
+        id: 'nav-history',
+        label: 'Widok: Zmiany w czasie',
+        icon: <TrendingUp className="h-4 w-4" />,
+        run: wrap(() => onNavigate('history')),
+      },
+      {
+        id: 'nav-new-products',
+        label: 'Widok: Nowości',
+        icon: <Sparkles className="h-4 w-4" />,
+        run: wrap(() => onNavigate('new-products')),
       },
     ];
     if (canFavorites) {
@@ -190,7 +266,6 @@ export function CatalogCommandPalette({
     canKits,
     canLabels,
     canProgress,
-    onSearchChange,
   ]);
 
   const filteredActions = useMemo(() => {
@@ -283,7 +358,7 @@ export function CatalogCommandPalette({
     if (row.kind === 'product') {
       onOpenProduct(row.product);
       close();
-      onSearchChange('');
+      clearSearch();
     } else {
       row.action.run();
     }
@@ -327,7 +402,7 @@ export function CatalogCommandPalette({
           type="search"
           value={query}
           onChange={(e) => {
-            onSearchChange(e.target.value);
+            setDraftAndSchedule(e.target.value);
             if (overlaySuggestions) setOpen(true);
           }}
           onFocus={() => {
@@ -343,7 +418,7 @@ export function CatalogCommandPalette({
             type="button"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => {
-              onSearchChange('');
+              clearSearch();
               close();
               inputRef.current?.focus();
             }}

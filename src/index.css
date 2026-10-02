@@ -1097,6 +1097,86 @@ html:not(.dark) .catalog-logs-view input::placeholder {
   color: #6e4a26;
 }
 
+/* Zwarte chipy (tryb compact) — ten sam raport co catalog-log-detail, ale jako
+   pasek małych plakietek zamiast pionowej listy kart z opisami. */
+.catalog-log-chip {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #0f172a;
+}
+
+.catalog-log-chip--good {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #15803d;
+}
+
+.catalog-log-chip--warn {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #b45309;
+}
+
+.catalog-log-chip--info {
+  background: #f0f9ff;
+  border-color: #bae6fd;
+  color: #0369a1;
+}
+
+.catalog-log-chip--neutral {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #475569;
+}
+
+.dark .catalog-log-chip,
+.theme-gray .catalog-log-chip {
+  background: #2e3439;
+  border-color: #3a4248;
+  color: #eef0f2;
+}
+
+.dark .catalog-log-chip--good,
+.theme-gray .catalog-log-chip--good {
+  background: rgba(22, 163, 74, 0.12);
+  border-color: rgba(22, 163, 74, 0.35);
+  color: #4ade80;
+}
+
+.dark .catalog-log-chip--warn,
+.theme-gray .catalog-log-chip--warn {
+  background: rgba(217, 119, 6, 0.14);
+  border-color: rgba(217, 119, 6, 0.35);
+  color: #fbbf24;
+}
+
+.dark .catalog-log-chip--info,
+.theme-gray .catalog-log-chip--info {
+  background: rgba(2, 132, 199, 0.14);
+  border-color: rgba(2, 132, 199, 0.35);
+  color: #38bdf8;
+}
+
+.dark .catalog-log-chip--neutral,
+.theme-gray .catalog-log-chip--neutral {
+  background: #2e3439;
+  border-color: #3a4248;
+  color: #949ea6;
+}
+
+/* Podswietlenie wiersza pod kursorem — przezroczysty naklad zamiast sztywnego
+   koloru, zeby zawsze zachowac kontrast z tekstem niezaleznie od aktywnego
+   motywu (w tym cieplego "cookie"), zamiast np. dark:hover:bg-slate-900,
+   ktory nachodzil na jasny motyw prawie czarnym tlem. */
+.catalog-log-row:hover {
+  background: rgba(15, 23, 42, 0.04);
+}
+
+.dark .catalog-log-row:hover,
+.theme-gray .catalog-log-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
 .catalog-log-level {
   border: 1px solid #e2e8f0;
   background: #f8fafc;
@@ -1658,6 +1738,18 @@ html:not(.dark) .toast-host-item--error {
 .hub-header-btn--icon svg {
   display: block;
   flex-shrink: 0;
+}
+/* Wygodniejsze cele dotyku na telefonie (min. ~40px) — desktop zostaje gęstszy. */
+@media (max-width: 640px) {
+  .hub-header-btn,
+  .hub-header-btn--icon {
+    height: 2.5rem;
+    min-height: 2.5rem;
+  }
+  .hub-header-btn--icon {
+    width: 2.5rem;
+    min-width: 2.5rem;
+  }
 }
 .hub-header-btn--text {
   padding-inline: 0.75rem;
@@ -2476,15 +2568,26 @@ html:not(.dark) .crm-shell .bg-slate-950\/80 {
 
 .wh-layout-resize {
   position: absolute;
-  right: 2px;
-  bottom: 2px;
-  width: 12px;
-  height: 12px;
-  border-radius: 2px;
-  background: rgba(16, 185, 129, 0.85);
+  right: -2px;
+  bottom: -2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px 2px 4px 2px;
+  background: rgba(16, 185, 129, 0.9);
+  box-shadow: 0 0 0 2px rgba(2, 6, 23, 0.35);
   cursor: se-resize;
   border: none;
   padding: 0;
+  touch-action: none;
+  z-index: 5;
+}
+
+.wh-layout-resize::after {
+  content: '';
+  position: absolute;
+  inset: 5px 4px 4px 5px;
+  border-right: 2px solid rgba(255, 255, 255, 0.9);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.9);
 }
 
 .wh-layout-cell--wall {

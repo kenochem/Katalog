@@ -113,6 +113,8 @@ export type View =
   | 'labels'
   | 'warehouse'
   | 'logs'
+  | 'new-products'
+  | 'history'
   | 'admin'
   | 'crm'
   | 'ops'

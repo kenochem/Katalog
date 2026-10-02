@@ -15,7 +15,6 @@ export type FuseProduct = Product & {
   variantNames: string;
   variantEans: string;
   eanNormalized: string;
-  tagsText: string;
   targetCategory: string;
 };
 
@@ -26,7 +25,6 @@ export function createProductSearch(products: Product[]) {
     variantNames: p.variants?.map((v) => v.name).join(' ') || '',
     variantEans: p.variants?.map((v) => v.ean || '').join(' ') || '',
     eanNormalized: normalizeEan(p.ean || ''),
-    tagsText: (p.tags || []).join(' '),
     targetCategory: getProductDisplayCategory(p),
   }));
 
@@ -41,7 +39,6 @@ export function createProductSearch(products: Product[]) {
       { name: 'name', weight: 0.08 },
       { name: 'manufacturer', weight: 0.12 },
       { name: 'variantNames', weight: 0.05 },
-      { name: 'tagsText', weight: 0.02 },
       { name: 'category', weight: 0.01 },
       { name: 'targetCategory', weight: 0.03 },
     ],
@@ -52,20 +49,16 @@ export function createProductSearch(products: Product[]) {
   });
 }
 
-function productEans(product: Product): string[] {
-  const eans: string[] = [];
-  if (product.ean) eans.push(normalizeEan(product.ean));
-  for (const v of product.variants ?? []) {
-    if (v.ean) eans.push(normalizeEan(v.ean));
-  }
-  return eans.filter(Boolean);
-}
-
 export type ProductSearchIndex = {
   list: Product[];
   fuse?: Fuse<FuseProduct>;
   searchBlob: Map<string, string>;
   skuExact: Map<string, Product>;
+  /** Prekalkulowane pod szybkie ścieżki w searchIndexedProducts — liczone raz przy
+   * budowie indeksu, nie przy każdym wyszukiwaniu (klawiszu). */
+  skuLower: Map<string, string>;
+  variantSkuLower: Map<string, string[]>;
+  eans: Map<string, string[]>;
 };
 
 const indexCache = new Map<string, ProductSearchIndex>();
@@ -91,15 +84,36 @@ export function getProductSearchIndex(
   const list = scopeList(products, category);
   const searchBlob = new Map<string, string>();
   const skuExact = new Map<string, Product>();
+  const skuLower = new Map<string, string>();
+  const variantSkuLower = new Map<string, string[]>();
+  const eans = new Map<string, string[]>();
 
   for (const p of list) {
-    skuExact.set(p.sku.toLowerCase(), p);
+    const skuLow = p.sku.toLowerCase();
+    skuLower.set(p.id, skuLow);
+    skuExact.set(skuLow, p);
+
+    const variantSkus: string[] = [];
+    const productEansList: string[] = [];
+    if (p.ean) productEansList.push(normalizeEan(p.ean));
     for (const v of p.variants ?? []) {
-      skuExact.set(v.sku.toLowerCase(), p);
+      const vLow = v.sku.toLowerCase();
+      variantSkus.push(vLow);
+      skuExact.set(vLow, p);
+      if (v.ean) {
+        const normalized = normalizeEan(v.ean);
+        if (normalized) productEansList.push(normalized);
+      }
     }
+    variantSkuLower.set(p.id, variantSkus);
+    eans.set(p.id, productEansList);
+
+    // UWAGA: celowo bez p.tags — część produktów ma doczepione administracyjne
+    // tagi (np. "Sonax" z rekoncyliacji sprzedaży w Ops) niezwiązane z marką
+    // produktu, przez co np. szukanie "sonax" wyciągało ADBL/Cif/Clinex.
     searchBlob.set(
       p.id,
-      [p.displayName, p.name, p.manufacturer, p.category, getProductDisplayCategory(p), ...(p.tags ?? [])]
+      [p.displayName, p.name, p.manufacturer, p.category, getProductDisplayCategory(p)]
         .filter(Boolean)
         .join(' ')
         .toLowerCase(),
@@ -110,6 +124,9 @@ export function getProductSearchIndex(
     list,
     searchBlob,
     skuExact,
+    skuLower,
+    variantSkuLower,
+    eans,
   };
 
   indexCache.set(sig, index);
@@ -125,9 +142,6 @@ export function invalidateProductSearchIndex(): void {
   indexCache.clear();
 }
 
-const MAX_SUBSTRING_HITS = 48;
-const MAX_PREFIX_SKU = 24;
-const MAX_CONTAINS_SKU = 32;
 const FUSE_LIMIT = 100;
 
 /**
@@ -155,10 +169,12 @@ export function searchIndexedProducts(
   const containsSku: Product[] = [];
 
   for (const p of index.list) {
+    const variantSkus = index.variantSkuLower.get(p.id) ?? [];
+
     if (eanQuery.length >= 8) {
-      const eans = productEans(p);
+      const productEansList = index.eans.get(p.id) ?? [];
       if (
-        eans.some(
+        productEansList.some(
           (ean) => ean === eanQuery || ean.endsWith(eanQuery) || eanQuery.endsWith(ean),
         )
       ) {
@@ -167,15 +183,14 @@ export function searchIndexedProducts(
       }
     }
 
-    const skuLow = p.sku.toLowerCase();
+    const skuLow = index.skuLower.get(p.id) ?? p.sku.toLowerCase();
     if (skuLow === lower) {
       exactSku.push(p);
       continue;
     }
 
     let variantHandled = false;
-    for (const v of p.variants ?? []) {
-      const vs = v.sku.toLowerCase();
+    for (const vs of variantSkus) {
       if (vs === lower) {
         exactSku.push(p);
         variantHandled = true;
@@ -195,8 +210,8 @@ export function searchIndexedProducts(
       continue;
     }
 
-    for (const v of p.variants ?? []) {
-      if (v.sku.toLowerCase().startsWith(lower)) {
+    for (const vs of variantSkus) {
+      if (vs.startsWith(lower)) {
         prefixSku.push(p);
         variantHandled = true;
         break;
@@ -209,25 +224,28 @@ export function searchIndexedProducts(
       continue;
     }
 
-    for (const v of p.variants ?? []) {
-      if (v.sku.toLowerCase().includes(lower)) {
+    for (const vs of variantSkus) {
+      if (vs.includes(lower)) {
         containsSku.push(p);
         break;
       }
     }
   }
 
+  // Fuse to ostatnia deska ratunku — tylko gdy zwykłe dopasowanie tekstowe
+  // (substring/prefix/contains) nie znalazło NIC, np. literówka. Wcześniej
+  // każde krótkie, popularne zapytanie (np. "sz" trafia w >1000 produktów)
+  // wpadało w Fuse mimo setek trafień tekstowych — a pełne fuzzy przeszukanie
+  // całego katalogu kosztuje nawet 50-200ms na jedno zapytanie. Zwykłe
+  // sortowanie tych samych trafień jest wielokrotnie tańsze, więc dopóki
+  // cokolwiek pasuje wprost, Fuse w ogóle się nie odpala.
   if (exactSku.length) return exactSku.slice(0, limit);
   if (eanMatches.length) return eanMatches.slice(0, limit);
-  if (textMatches.length > 0 && textMatches.length <= MAX_SUBSTRING_HITS) {
+  if (textMatches.length > 0) {
     return textMatches.sort((a, b) => comparePl(a.displayName, b.displayName)).slice(0, limit);
   }
-  if (prefixSku.length > 0 && prefixSku.length <= MAX_PREFIX_SKU) {
-    return prefixSku.slice(0, limit);
-  }
-  if (containsSku.length > 0 && containsSku.length <= MAX_CONTAINS_SKU) {
-    return containsSku.slice(0, limit);
-  }
+  if (prefixSku.length > 0) return prefixSku.slice(0, limit);
+  if (containsSku.length > 0) return containsSku.slice(0, limit);
 
   index.fuse ??= createProductSearch(index.list);
   return index.fuse.search(q, { limit }).map((r) => r.item);

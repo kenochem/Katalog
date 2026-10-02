@@ -138,7 +138,7 @@ export function RefreshControls({
         type="button"
         onClick={onRefresh}
         disabled={busy}
-        className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-slate-100 disabled:opacity-50"
+        className="rounded-lg p-2.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100 disabled:opacity-50 sm:p-2"
         title="Odśwież katalog (Supabase) — przeładuj listę produktów"
         aria-label="Odśwież katalog"
       >
@@ -153,7 +153,7 @@ export function RefreshControls({
           type="button"
           onClick={() => void onSyncStock()}
           disabled={busy}
-          className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-brand-300 disabled:opacity-50"
+          className="rounded-lg p-2.5 text-slate-400 hover:bg-slate-800 hover:text-brand-300 disabled:opacity-50 sm:p-2"
           title={`Sync WAPRO — stany i ceny: ${scopeLabel} (jak w Mag, w górę i w dół)`}
           aria-label={`Synchronizuj stany WAPRO (${scopeLabel})`}
         >

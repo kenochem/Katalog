@@ -46,6 +46,7 @@ export default defineConfig(({ mode }) => {
           if (id.includes('react-dom') || id.includes('/react/')) return 'react';
           if (id.includes('leaflet')) return 'leaflet';
           if (id.includes('recharts')) return 'recharts';
+          if (id.includes('echarts') || id.includes('zrender')) return 'echarts';
         },
       },
     },

@@ -9,7 +9,7 @@ import { HubSidebar, useHubSidebarPrefs } from './HubSidebar';
 import type { View } from '../../types';
 import type { AppRole } from '../../lib/roles';
 import type { StockSyncScope } from '../../lib/stockSync';
-import { CRM_INBOX_ENABLED } from '../../lib/crmInboxFeature';
+import { useCrmMailEnabled } from '../../lib/crmMailFeatureStore';
 import { HubCommandSearch, useHubCommandPaletteHotkey } from './HubCommandSearch';
 import { SuiteHubMobileNav } from './SuiteHubMobileNav';
 import { HubChatDrawer } from './HubChatDrawer';
@@ -80,6 +80,7 @@ export function HubShell({
   backLabel,
   onBack,
 }: HubShellProps) {
+  const mailEnabled = useCrmMailEnabled();
   const { prefs, setPrefs } = useHubSidebarPrefs(userId);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(prefs.sidebarCollapsed);
   const [commandOpen, setCommandOpen] = useState(false);
@@ -100,7 +101,7 @@ export function HubShell({
         showFinance: canViewOps,
         showOps: canViewOps,
         showComms,
-        showInbox: CRM_INBOX_ENABLED,
+        showInbox: mailEnabled,
         showIntegrations: canViewOps,
         showAdmin: canAdmin,
         showDepartments: false,
@@ -109,7 +110,7 @@ export function HubShell({
         showCalendar: true,
         showAssist: false,
       }),
-    [showCatalog, canUseCrm, canViewOps, canAdmin],
+    [showCatalog, canUseCrm, canViewOps, canAdmin, mailEnabled],
   );
 
   const toggleSidebar = () => {
@@ -200,7 +201,7 @@ export function HubShell({
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 gap-3 p-3 lg:gap-4 lg:p-4">
         <HubSidebar
           view={view}
           onViewChange={onViewChange}

@@ -72,7 +72,7 @@ export function HubSidebar({
 
   return (
     <aside
-      className={`hub-sidebar hidden shrink-0 flex-col border-r border-slate-800/80 bg-slate-950 lg:flex ${
+      className={`hub-sidebar hidden shrink-0 flex-col rounded-2xl border border-slate-800/80 bg-slate-950 lg:flex ${
         collapsed ? 'w-[4.25rem]' : 'w-56 xl:w-60'
       }`}
     >

@@ -1,7 +1,9 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { ChevronDown, RotateCcw, Shield, Users } from 'lucide-react';
+import { ChevronDown, Mail, RotateCcw, Shield, Users } from 'lucide-react';
 import { moduleEnabled } from '../app/moduleRegistry';
 import { useAuth } from '../lib/auth';
+import { setCrmMailEnabled, useCrmMailEnabled } from '../lib/crmMailFeatureStore';
+import { HubToggle } from './HubToggle';
 import {
   APP_ROLES,
   ROLE_LABELS,
@@ -23,7 +25,6 @@ import {
   summarizeRolePermissions,
   type CapabilityGroup,
 } from '../lib/access';
-import { HubToggle } from './HubToggle';
 
 type PermissionsView = 'overview' | 'matrix';
 
@@ -33,6 +34,7 @@ type AdminPermissionsSectionProps = {
 
 export function AdminPermissionsSection({ canEditMatrix }: AdminPermissionsSectionProps) {
   const { roleMatrixRevision, profile } = useAuth();
+  const mailEnabled = useCrmMailEnabled();
   const [view, setView] = useState<PermissionsView>('overview');
   const [expandedGroups, setExpandedGroups] = useState<Set<CapabilityGroup>>(
     () => new Set(GROUP_ORDER.filter((g) => g !== 'modules')),
@@ -54,6 +56,35 @@ export function AdminPermissionsSection({ canEditMatrix }: AdminPermissionsSecti
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-900/40 px-4 py-3.5">
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 rounded-xl bg-sky-500/15 p-2 text-sky-300">
+            <Mail className="h-4 w-4" />
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-slate-100">
+              Skrzynka pocztowa w CRM
+              <span className="ml-2 rounded-full bg-sky-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-300">
+                Beta
+              </span>
+            </p>
+            <p className="mt-0.5 max-w-md text-xs text-slate-500">
+              Zakładka "Obsługa klienta" (podłączanie skrzynki e-mail, odpowiadanie z CRM).
+              Włącz, żeby zespół mógł zacząć podłączać pocztę — automatyczna synchronizacja
+              w tle wymaga osobno zainstalowanego harmonogramu na serwerze.
+            </p>
+          </div>
+        </div>
+        <HubToggle
+          checked={mailEnabled}
+          disabled={!canEditMatrix}
+          label="Skrzynka pocztowa w CRM"
+          onChange={
+            canEditMatrix ? (v) => void setCrmMailEnabled(v, profile?.id) : undefined
+          }
+        />
+      </div>
+
       <div className="flex flex-wrap gap-2">
         <ViewToggle
           active={view === 'overview'}

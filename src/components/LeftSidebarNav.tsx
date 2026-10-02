@@ -17,7 +17,9 @@ import {
   ScrollText,
   Search,
   Settings2,
+  Sparkles,
   Star,
+  TrendingUp,
 } from 'lucide-react';
 import type { View } from '../types';
 import { canAccessAdminPanel } from '../lib/adminAccess';
@@ -51,6 +53,8 @@ const DEFAULT_ORDER: View[] = [
   'catalog',
   'library',
   'logs',
+  'history',
+  'new-products',
   'favorites',
   'collections',
   'kits',
@@ -144,6 +148,7 @@ export interface LeftSidebarNavProps {
   hiddenProductsCount: number;
   missingImagesCount: number;
   labelQueueCount: number;
+  newProductsCount: number;
   onOpenMissingImages: () => void;
   onOpenLabels: () => void;
 }
@@ -164,6 +169,7 @@ export function LeftSidebarNav({
   hiddenProductsCount,
   missingImagesCount,
   labelQueueCount,
+  newProductsCount,
   onOpenMissingImages,
   onOpenLabels,
 }: LeftSidebarNavProps) {
@@ -209,6 +215,22 @@ export function LeftSidebarNav({
         label: 'Logi',
         available: true,
         onClick: () => setView('logs'),
+      },
+      {
+        id: 'history',
+        icon: <TrendingUp className="h-4 w-4" />,
+        label: 'Zmiany w czasie',
+        available: isCatalogProduct,
+        onClick: () => setView('history'),
+      },
+      {
+        id: 'new-products',
+        icon: <Sparkles className="h-4 w-4" />,
+        label: 'Nowości',
+        count: newProductsCount,
+        highlight: newProductsCount > 0,
+        available: isCatalogProduct,
+        onClick: () => setView('new-products'),
       },
       {
         id: 'favorites',
@@ -307,6 +329,7 @@ export function LeftSidebarNav({
       hiddenProductsCount,
       missingImagesCount,
       labelQueueCount,
+      newProductsCount,
       setView,
       onOpenMissingImages,
       onOpenLabels,
@@ -355,8 +378,12 @@ export function LeftSidebarNav({
 
   return (
     <div
-      className="catalog-readable-light fixed bottom-0 left-0 z-30 hidden w-60 flex-col gap-2 overflow-y-auto border-r border-slate-200 bg-white px-3 py-3 shadow-sm dark:border-slate-800/60 dark:bg-slate-950/95 dark:shadow-none lg:flex"
-      style={{ top: 'var(--catalog-sticky-top, 0px)' }}
+      className="catalog-readable-light fixed z-30 hidden w-60 flex-col gap-2 overflow-y-auto rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm dark:border-slate-800/60 dark:bg-slate-950/95 dark:shadow-none lg:flex"
+      style={{
+        top: 'calc(var(--catalog-sticky-top, 0px) + 0.75rem)',
+        left: '0.75rem',
+        bottom: '0.75rem',
+      }}
     >
       <div className="flex items-center justify-between gap-2 px-1">
         <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">

@@ -54,6 +54,21 @@ export const CONTEXT_HELP: Record<string, ContextHelpItem> = {
     body: 'Niebieski B = SKU znalezione w aktualnym eksporcie BaseLinker. Sam katalog shop albo stare reczne pole nie wystarcza, zeby nie oznaczac produktow blednie.',
     guideArticleId: 'catalog-dual',
   },
+  catalogPricing: {
+    id: 'catalogPricing',
+    title: 'Ceny i marza',
+    body: 'Marza liczona jest z cen netto (sprzedaz netto minus zakup netto), nie z brutto. Etykieta "wylicz." przy cenie brutto oznacza, ze nie ma zapisanej wprost ceny brutto — apka doliczyla VAT z ceny netto, wiec to wartosc szacowana, nie ta z systemu ksiegowego.',
+  },
+  catalogStockManual: {
+    id: 'catalogStockManual',
+    title: 'Reczny stan magazynowy',
+    body: 'Zmiana stanu tutaj oznacza go jako "reczny" (znacznik obok pola). Od tej pory synchronizacja z WAPRO nie nadpisze juz tej wartosci automatycznie — trzeba pilnowac jej recznie albo swiadomie cofnac ustawienie recznego stanu.',
+  },
+  catalogRemoveBackground: {
+    id: 'catalogRemoveBackground',
+    title: 'Wytnij bialo tlo',
+    body: 'Podglad usuniecia bialego tla ze zdjecia przed zapisaniem — mozna porownac warianty i wybrac, zanim cokolwiek nadpisze oryginal. Jesli wynik nie podoba sie po zapisie, przycisk "Cofnij" (gdy dostepny) przywraca poprzednie zdjecie.',
+  },
   catalogGrid: {
     id: 'catalogGrid',
     title: 'Siatka produktow',
@@ -83,6 +98,21 @@ export const CONTEXT_HELP: Record<string, ContextHelpItem> = {
     title: 'Trasy i wizyty',
     body: 'Plan pracy handlowca w terenie: klienci w rejonie, wizyty, notatki i zamowienia tworzone na miejscu.',
     guideArticleId: 'crm-visits',
+  },
+  crmClients: {
+    id: 'crmClients',
+    title: 'Klienci',
+    body: 'Kartoteka firm: dane z GUS/NIP, notatki, historia kontaktu i status (aktywny / uspiony / prospekt). Uspiony = brak zamowienia dluzej niz prog ustawiony w "Klient cichnie po" na pulpicie CRM.',
+  },
+  crmHistory: {
+    id: 'crmHistory',
+    title: 'Historia zamowien',
+    body: 'Lista zapisanych ofert i zamowien. Klikniecie wczytuje pozycje z powrotem do koszyka — nie wysyla nic automatycznie, to tylko punkt startu do nowej oferty na bazie starej.',
+  },
+  crmCommission: {
+    id: 'crmCommission',
+    title: 'Prowizja od marzy',
+    body: 'Szacunek, nie ksiegowa wyplata: procent (suwak) x marza z zamowien CRM w tym miesiacu. Liczona od marzy (zysk), nie od obrotu — dwie oferty o tej samej wartosci moga dac rozna prowizje, jesli maja inna marze.',
   },
   ops: {
     id: 'ops',
@@ -282,6 +312,21 @@ export const CONTEXT_HELP: Record<string, ContextHelpItem> = {
     title: 'Powiadomienia push',
     body: 'Wymagaja zgody w przegladarce, subskrypcji urzadzenia i dzialajacej funkcji wysylki. Test push sprawdza kanal, wiadomosci sprawdzaja caly przeplyw czatu.',
     guideArticleId: 'talk-push',
+  },
+  crmOperatingCenter: {
+    id: 'crmOperatingCenter',
+    title: 'Centrum pracy CRM',
+    body: 'Kafelki priorytetow licza sie automatycznie z koszyka, lejka, inboxa i bazy klientow (np. "ciche" leady bez ruchu, oferty czekajace na odpowiedz). To lista rzeczy do zrobienia teraz, nie stale menu — zmienia sie razem z danymi.',
+  },
+  crmCompanyModel: {
+    id: 'crmCompanyModel',
+    title: 'Model Kenochem',
+    body: 'Segmentacja klientow: Aktywni / Uspieni (prog dni z ustawien nizej) / Prospect (bez zadnego zamowienia). "Na mapie" = ilu klientow ma zapisana lokalizacje do planowania tras — reszta nie pojawi sie na mapie tras, dopoki nie doda sie adresu.',
+  },
+  crmCompanySettings: {
+    id: 'crmCompanySettings',
+    title: 'Ustawienia firmowe CRM',
+    body: 'Prog "Klient cichnie po" realnie dzieli klientow na aktywnych/uspionych na tym pulpicie. "Domyslny termin" i "Limit startowy" sa na razie tylko zapisywane — nie blokuja jeszcze zadnego zamowienia ani nie licza automatycznie terminu platnosci. Rejony sluza do opisu tras, nie filtruja jeszcze automatycznie listy klientow.',
   },
   admin: {
     id: 'admin',

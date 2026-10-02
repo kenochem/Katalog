@@ -17,15 +17,16 @@ export function NavTab({
   highlight?: boolean;
   layout?: 'row' | 'sidebar';
 }) {
+  // Highlight = tylko akcent na plakietce z liczbą, nie całe tło przycisku —
+  // liczniki typu "Decyzje"/"Bez zdjęć" prawie zawsze są >0, więc pełne tło
+  // zamieniało menu w stały pomarańczowy szum zamiast realnego sygnału.
   const tone = active
     ? 'bg-brand-600 text-white'
-    : highlight
-      ? 'bg-amber-500 text-amber-950 hover:bg-amber-600'
-      : 'text-slate-700 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50';
+    : 'text-slate-700 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50';
   const badgeTone = active
     ? 'bg-black/20 text-white'
     : highlight
-      ? 'bg-amber-950/15 text-amber-950'
+      ? 'bg-amber-500/15 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400'
       : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-400';
 
   if (layout === 'sidebar') {

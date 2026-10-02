@@ -21,6 +21,7 @@ import {
   Boxes,
   AlertTriangle,
   EyeOff,
+  Camera,
 } from 'lucide-react';
 import type { Product, Kit, View, CatalogType, CatalogListFilter } from './types';
 import { CATALOG_LABELS, deriveCategories } from './types';
@@ -122,9 +123,7 @@ import {
   HubSegmentOverlay,
 } from './suite/hubLoaders';
 import { HubCatalogSubNav } from './components/hub/HubCatalogSubNav';
-import { LibraryView } from './components/LibraryView';
-import { CatalogLogsView } from './components/CatalogLogsView';
-import { CatalogHiddenView } from './components/CatalogHiddenView';
+import { getRecentlyImportedProductsCount } from './lib/newProducts';
 import { LeftSidebarNav } from './components/LeftSidebarNav';
 import {
   CatalogDecisionView,
@@ -161,6 +160,28 @@ const WarehouseHubPanel = lazy(() =>
   import('./components/warehouse/WarehouseHubPanel').then((m) => ({
     default: m.WarehouseHubPanel,
   })),
+);
+const LibraryView = lazy(() =>
+  import('./components/LibraryView').then((m) => ({ default: m.LibraryView })),
+);
+const CatalogLogsView = lazy(() =>
+  import('./components/CatalogLogsView').then((m) => ({ default: m.CatalogLogsView })),
+);
+const CatalogNewsHubView = lazy(() =>
+  import('./components/CatalogNewsHubView').then((m) => ({
+    default: m.CatalogNewsHubView,
+  })),
+);
+const CatalogHiddenView = lazy(() =>
+  import('./components/CatalogHiddenView').then((m) => ({ default: m.CatalogHiddenView })),
+);
+const QuickPhotoCaptureModal = lazy(() =>
+  import('./components/QuickPhotoCaptureModal').then((m) => ({
+    default: m.QuickPhotoCaptureModal,
+  })),
+);
+const CatalogHistoryView = lazy(() =>
+  import('./components/CatalogHistoryView').then((m) => ({ default: m.CatalogHistoryView })),
 );
 
 const CATALOG_STORAGE_KEY = 'katalog-active-catalog';
@@ -282,6 +303,7 @@ export default function App() {
     return Object.fromEntries(items.map((i) => [i.productId, i.quantity]));
   });
   const [labelQueue, setLabelQueue] = useState<LabelQueueItem[]>(() => getLabelQueue());
+  const [newProductsCount, setNewProductsCount] = useState(0);
   const [stockBusyId, setStockBusyId] = useState<string | null>(null);
   const [restoreHiddenBusyId, setRestoreHiddenBusyId] = useState<string | null>(null);
   const [categoryBusyId, setCategoryBusyId] = useState<string | null>(null);
@@ -450,6 +472,7 @@ export default function App() {
               'info',
               9000,
             );
+            refreshNewProductsCount();
           }
           if (parsed.warningHint) {
             showToast(parsed.warningHint, 'info', 10000);
@@ -1162,6 +1185,15 @@ export default function App() {
     setLabelQueue(getLabelQueue());
   }, []);
 
+  const refreshNewProductsCount = useCallback(() => {
+    if (!isCatalogProduct()) return;
+    void getRecentlyImportedProductsCount().then(setNewProductsCount);
+  }, [isCatalogProduct]);
+
+  useEffect(() => {
+    refreshNewProductsCount();
+  }, [refreshNewProductsCount]);
+
   const handleStockDelta = useCallback(
     async (product: Product, delta: number) => {
       const next = Math.max(0, Math.round((product.stock ?? 0) + delta));
@@ -1693,6 +1725,7 @@ export default function App() {
           hiddenProductsCount={hiddenProducts.length}
           missingImagesCount={missingImages.length}
           labelQueueCount={labelQueue.length}
+          newProductsCount={newProductsCount}
           onOpenMissingImages={openMissingImages}
           onOpenLabels={() => {
             refreshLabelQueue();
@@ -1702,7 +1735,9 @@ export default function App() {
       )}
 
       <main
-        className={`px-3 py-3 sm:px-4 sm:py-4 xl:px-6 xl:py-5 ${showSidebar ? 'lg:pl-60 xl:pl-60' : ''} ${
+        className={`px-3 py-3 sm:px-4 sm:py-4 xl:px-6 xl:py-5 ${
+          showSidebar ? 'lg:pl-[17.5rem] xl:pl-[18rem]' : ''
+        } ${
           canUseCrmModule(role) && orderCount > 0 && view !== 'crm'
             ? 'xl:pr-[24rem]'
             : ''
@@ -1757,7 +1792,7 @@ export default function App() {
         {loading && products.length === 0 && !opsStandalone ? (
           <div className="flex flex-col items-center justify-center py-24">
             <Loader2 className="h-10 w-10 animate-spin text-brand-500" />
-            <p className="mt-4 text-slate-400">Ładowanie katalogu...</p>
+            <p className="mt-4 text-slate-400">Ładowanie — {branding.headerTitle}...</p>
           </div>
         ) : error && products.length === 0 && allProducts.length === 0 ? (
           <div className="rounded-2xl border border-red-900/50 bg-red-950/30 p-6 text-center">
@@ -1858,16 +1893,37 @@ export default function App() {
             onOpenHidden={() => setView('catalog-hidden')}
           />
         ) : view === 'catalog-hidden' && isCatalogProduct() ? (
-          <CatalogHiddenView
-            products={hiddenProducts}
-            restoringId={restoreHiddenBusyId}
-            onOpenProduct={setSelectedProduct}
-            onRestoreProduct={handleRestoreHiddenProduct}
-          />
+          <Suspense fallback={<ViewFallback />}>
+            <CatalogHiddenView
+              products={hiddenProducts}
+              restoringId={restoreHiddenBusyId}
+              onOpenProduct={setSelectedProduct}
+              onRestoreProduct={handleRestoreHiddenProduct}
+            />
+          </Suspense>
         ) : view === 'logs' && isCatalogProduct() ? (
-          <CatalogLogsView userId={user?.id} />
+          <Suspense fallback={<ViewFallback />}>
+            <CatalogLogsView userId={user?.id} />
+          </Suspense>
+        ) : view === 'history' && isCatalogProduct() ? (
+          <Suspense fallback={<ViewFallback />}>
+            <CatalogHistoryView products={activeAllProducts} />
+          </Suspense>
+        ) : view === 'new-products' && isCatalogProduct() ? (
+          <Suspense fallback={<ViewFallback />}>
+            <CatalogNewsHubView
+              gridDensity={gridDensity}
+              hideImages={!roleCan(role, 'viewImages')}
+              showPrices={roleCan(role, 'viewPrices')}
+              onProductClick={setSelectedProduct}
+              collectionUserKey={collectionUserKey || undefined}
+              onCollectionsChange={() => setCollectionsRevision((r) => r + 1)}
+            />
+          </Suspense>
         ) : view === 'library' ? (
-          <LibraryView />
+          <Suspense fallback={<ViewFallback />}>
+            <LibraryView />
+          </Suspense>
         ) : view === 'warehouse' && isStockProduct() ? (
           <Suspense fallback={<ViewFallback />}>
             <WarehouseHubPanel
@@ -2067,6 +2123,7 @@ export default function App() {
         kitsCount={catalogKits.length}
         collectionsCount={collectionCount}
         showCollections={isCatalogProduct() && !!collectionUserKey}
+        newProductsCount={newProductsCount}
         onView={(v) => {
           if (v === 'labels') refreshLabelQueue();
           if (v === 'missing-images') openMissingImages();
@@ -2861,6 +2918,7 @@ function MissingImagesView({
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState(initialCategory);
   const [showScanner, setShowScanner] = useState(false);
+  const [quickMode, setQuickMode] = useState(false);
 
   useEffect(() => {
     setCategory(initialCategory);
@@ -2896,21 +2954,33 @@ function MissingImagesView({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-amber-500/40 bg-amber-500/15 px-4 py-3">
-        <p className="text-sm text-amber-950 dark:text-amber-100">
-          <strong>{products.length}</strong> produktów bez zdjęcia.
-          Zrób zdjęcie telefonem lub wgraj plik — od razu trafi do katalogu.
-        </p>
-        {topManufacturers.length > 0 && (
-          <p className="mt-2 text-xs text-amber-900/80 dark:text-amber-200/80">
-            Najwięcej braków wg marki:{' '}
-            {topManufacturers.map(([m, count], i) => (
-              <span key={m}>
-                {i > 0 ? ' · ' : ''}
-                {m} ({count})
-              </span>
-            ))}
+      <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-amber-500/40 bg-amber-500/15 px-4 py-3">
+        <div>
+          <p className="text-sm text-amber-950 dark:text-amber-100">
+            <strong>{products.length}</strong> produktów bez zdjęcia.
+            Zrób zdjęcie telefonem lub wgraj plik — od razu trafi do katalogu.
           </p>
+          {topManufacturers.length > 0 && (
+            <p className="mt-2 text-xs text-amber-900/80 dark:text-amber-200/80">
+              Najwięcej braków wg marki:{' '}
+              {topManufacturers.map(([m, count], i) => (
+                <span key={m}>
+                  {i > 0 ? ' · ' : ''}
+                  {m} ({count})
+                </span>
+              ))}
+            </p>
+          )}
+        </div>
+        {canUpload && filtered.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setQuickMode(true)}
+            className="flex shrink-0 items-center gap-1.5 rounded-xl bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-500"
+          >
+            <Camera className="h-4 w-4" />
+            Szybkie zdjęcia ({filtered.length})
+          </button>
         )}
       </div>
 
@@ -3036,6 +3106,16 @@ function MissingImagesView({
               setShowScanner(false);
             }}
             onClose={() => setShowScanner(false)}
+          />
+        </Suspense>
+      )}
+
+      {quickMode && canUpload && (
+        <Suspense fallback={null}>
+          <QuickPhotoCaptureModal
+            products={filtered}
+            onImageUpdated={onImageUpdated}
+            onClose={() => setQuickMode(false)}
           />
         </Suspense>
       )}

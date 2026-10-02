@@ -1,5 +1,5 @@
-import { AlertTriangle, CheckCircle2, ChevronRight, EyeOff, ImageOff, Tag } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { AlertTriangle, CheckCircle2, CheckSquare, ChevronRight, EyeOff, ImageOff, Loader2, Square, Tag } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Product } from '../types';
 import { getProductImage } from '../lib/products';
 import { assessProductKnowledge } from '../lib/productKnowledge';
@@ -101,11 +101,13 @@ export function CatalogDecisionView({
 }: {
   products: Product[];
   onOpenProduct: (product: Product) => void;
-  onApplyCategory?: (product: Product, category: string) => void;
+  onApplyCategory?: (product: Product, category: string) => void | Promise<void>;
   categoryBusyId?: string | null;
   onOpenHidden?: () => void;
 }) {
   const [filter, setFilter] = useState<'all' | 'category' | 'media' | 'data'>('all');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
   const rows = useMemo(() => buildCatalogDecisionRows(products), [products]);
   const hard = rows.filter((row) => row.score >= 6).length;
   const imageMissing = rows.filter((row) => row.issues.some((i) => i.label === 'brak zdjęcia')).length;
@@ -119,6 +121,50 @@ export function CatalogDecisionView({
     if (filter === 'data') return row.issues.some((i) => !i.label.includes('kategoria') && i.label !== 'brak zdjęcia');
     return true;
   });
+  const visibleSlice = visibleRows.slice(0, 220);
+  const applicableVisible = visibleSlice.filter((row) => onApplyCategory && hasCategoryDecision(row.product));
+  const allApplicableSelected =
+    applicableVisible.length > 0 && applicableVisible.every((row) => selected.has(row.product.id));
+
+  useEffect(() => {
+    setSelected(new Set());
+  }, [filter]);
+
+  function toggleSelected(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAllVisible() {
+    setSelected((prev) => {
+      if (allApplicableSelected) return new Set();
+      const next = new Set(prev);
+      for (const row of applicableVisible) next.add(row.product.id);
+      return next;
+    });
+  }
+
+  async function applySelected() {
+    if (!onApplyCategory) return;
+    const items = visibleSlice.filter((row) => selected.has(row.product.id));
+    if (items.length === 0) return;
+    setBulkProgress({ done: 0, total: items.length });
+    for (const row of items) {
+      const targetCategory = getProductDisplayCategory(row.product);
+      try {
+        await onApplyCategory(row.product, targetCategory);
+      } catch (err) {
+        console.error(err);
+      }
+      setBulkProgress((prev) => (prev ? { done: prev.done + 1, total: prev.total } : prev));
+    }
+    setBulkProgress(null);
+    setSelected(new Set());
+  }
 
   return (
     <div className="catalog-readable-light mx-auto max-w-6xl space-y-4 pb-10">
@@ -168,6 +214,41 @@ export function CatalogDecisionView({
         <DecisionFilterButton active={filter === 'data'} onClick={() => setFilter('data')} label="Dane i opis" />
       </div>
 
+      {onApplyCategory && applicableVisible.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-brand-300 bg-brand-50 px-4 py-3 dark:border-brand-500/30 dark:bg-brand-500/10">
+          <button
+            type="button"
+            onClick={toggleSelectAllVisible}
+            className="flex items-center gap-1.5 text-sm font-semibold text-brand-800 dark:text-brand-200"
+          >
+            {allApplicableSelected ? (
+              <CheckSquare className="h-4 w-4" />
+            ) : (
+              <Square className="h-4 w-4" />
+            )}
+            Zaznacz wszystkie gotowe kategorie na liście ({applicableVisible.length})
+          </button>
+          <button
+            type="button"
+            disabled={selected.size === 0 || bulkProgress !== null}
+            onClick={() => void applySelected()}
+            className="ml-auto inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-500 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {bulkProgress ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Zapisuję {bulkProgress.done}/{bulkProgress.total}
+              </>
+            ) : (
+              <>
+                <Tag className="h-4 w-4" />
+                Zastosuj zaznaczone ({selected.size})
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
       {visibleRows.length === 0 ? (
         <div className="surface-panel flex items-center gap-3 p-5">
           <CheckCircle2 className="h-6 w-6 text-emerald-500" />
@@ -180,13 +261,14 @@ export function CatalogDecisionView({
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950/30 dark:shadow-none">
-          <div className="grid grid-cols-[4.5rem_1fr_auto] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-400">
+          <div className="grid grid-cols-[1.5rem_4.5rem_1fr_auto] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-400">
+            <span />
             <span>Foto</span>
             <span>Produkt</span>
             <span>Akcja</span>
           </div>
           <ul className="divide-y divide-slate-200 dark:divide-slate-800">
-            {visibleRows.slice(0, 220).map((row) => {
+            {visibleSlice.map((row) => {
               const image = getProductImage(row.product);
               const sourceCategory = getProductSourceCategory(row.product);
               const targetCategory = getProductDisplayCategory(row.product);
@@ -195,8 +277,24 @@ export function CatalogDecisionView({
               return (
                 <li
                   key={row.product.id}
-                  className="grid grid-cols-[4.5rem_1fr_auto] items-center gap-3 px-4 py-3 transition hover:bg-slate-50 dark:hover:bg-slate-900/60"
+                  className="grid grid-cols-[1.5rem_4.5rem_1fr_auto] items-center gap-3 px-4 py-3 transition hover:bg-slate-50 dark:hover:bg-slate-900/60"
                 >
+                  {canApply ? (
+                    <button
+                      type="button"
+                      onClick={() => toggleSelected(row.product.id)}
+                      aria-label="Zaznacz"
+                      className="text-brand-600 dark:text-brand-300"
+                    >
+                      {selected.has(row.product.id) ? (
+                        <CheckSquare className="h-4 w-4" />
+                      ) : (
+                        <Square className="h-4 w-4 text-slate-400" />
+                      )}
+                    </button>
+                  ) : (
+                    <span />
+                  )}
                   <button
                     type="button"
                     onClick={() => onOpenProduct(row.product)}

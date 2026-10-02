@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { Loader2, UserPlus } from 'lucide-react';
+import { Check, Loader2, Pencil, UserPlus, X } from 'lucide-react';
 import {
   ACCOUNT_ROLES,
   ROLE_LABELS,
@@ -62,6 +62,8 @@ export function AdminUsersSection() {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [role, setRole] = useState<AccountRole>('handlowiec');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editNameDraft, setEditNameDraft] = useState('');
 
   const token = session?.access_token;
 
@@ -175,6 +177,16 @@ export function AdminUsersSection() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function saveEditName(id: string) {
+    const next = editNameDraft.trim();
+    if (!next) {
+      setEditingId(null);
+      return;
+    }
+    await patchUser(id, { display_name: next });
+    setEditingId(null);
   }
 
   async function resetPassword(id: string, userEmail: string) {
@@ -314,7 +326,55 @@ export function AdminUsersSection() {
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="truncate font-medium text-slate-100">{u.display_name}</p>
+                  {editingId === u.id ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        autoFocus
+                        value={editNameDraft}
+                        onChange={(e) => setEditNameDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') void saveEditName(u.id);
+                          if (e.key === 'Escape') setEditingId(null);
+                        }}
+                        maxLength={60}
+                        disabled={busy}
+                        className="min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-sm font-medium text-slate-100 outline-none focus:border-brand-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void saveEditName(u.id)}
+                        disabled={busy}
+                        title="Zapisz"
+                        className="rounded-md p-1 text-emerald-400 hover:bg-slate-800 disabled:opacity-50"
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingId(null)}
+                        disabled={busy}
+                        title="Anuluj"
+                        className="rounded-md p-1 text-slate-400 hover:bg-slate-800 disabled:opacity-50"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="flex items-center gap-1.5 truncate font-medium text-slate-100">
+                      <span className="truncate">{u.display_name}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingId(u.id);
+                          setEditNameDraft(u.display_name);
+                        }}
+                        title="Zmień nazwę"
+                        className="shrink-0 rounded-md p-0.5 text-slate-500 hover:bg-slate-800 hover:text-slate-300"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                    </p>
+                  )}
                   <p className="truncate text-xs text-slate-500">{u.email}</p>
                   <p className="mt-1 text-[10px] text-slate-600">
                     {ROLE_LABELS[u.role]} · {userSummary.total} uprawnień

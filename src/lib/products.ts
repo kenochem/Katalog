@@ -16,6 +16,12 @@ import type { ProductMeta } from './productMeta';
 let localCache: Product[] | null = null;
 let shopCache: Product[] | null = null;
 let accessorySkuCache: Set<string> | null = null;
+// Blokady na czas trwania zapytania — bez nich kilka równoległych wywołań
+// (np. loadData() + getAccessorySkuSet() + widok startowy) widzi cache jako
+// puste w tym samym momencie i każde odpala swój własny fetch tego samego JSON-a.
+let localCacheInflight: Promise<Product[]> | null = null;
+let shopCacheInflight: Promise<Product[]> | null = null;
+let accessorySkuCacheInflight: Promise<Set<string>> | null = null;
 
 /** Cache w pamięci — unika ponownego pobierania z Supabase przy przełączaniu widoków. */
 const FETCH_TTL_MS = 15 * 60_000;
@@ -40,16 +46,24 @@ export function invalidateProductsCache(catalog?: CatalogType): void {
 /** SKU z katalogu Akcesoria (WAPRO) — nie dublujemy ich w Produktach. */
 async function getAccessorySkuSet(): Promise<Set<string>> {
   if (accessorySkuCache) return accessorySkuCache;
-  const acc = await loadBaseProducts('accessories');
-  const set = new Set<string>();
-  for (const p of acc) {
-    if (p.sku) set.add(String(p.sku).toUpperCase());
-    for (const v of p.variants || []) {
-      if (v.sku) set.add(String(v.sku).toUpperCase());
+  if (accessorySkuCacheInflight) return accessorySkuCacheInflight;
+  accessorySkuCacheInflight = (async () => {
+    const acc = await loadBaseProducts('accessories');
+    const set = new Set<string>();
+    for (const p of acc) {
+      if (p.sku) set.add(String(p.sku).toUpperCase());
+      for (const v of p.variants || []) {
+        if (v.sku) set.add(String(v.sku).toUpperCase());
+      }
     }
+    accessorySkuCache = set;
+    return set;
+  })();
+  try {
+    return await accessorySkuCacheInflight;
+  } finally {
+    accessorySkuCacheInflight = null;
   }
-  accessorySkuCache = set;
-  return set;
 }
 
 /**
@@ -139,32 +153,48 @@ function toListProduct(product: Product): Product {
 async function loadBaseProducts(catalog: CatalogType = 'accessories'): Promise<Product[]> {
   if (catalog === 'shop') {
     if (shopCache) return shopCache;
+    if (shopCacheInflight) return shopCacheInflight;
+    shopCacheInflight = (async () => {
+      try {
+        let res = await fetch('/data/shop-products-lite.json');
+        if (!res.ok) res = await fetch('/data/shop-products.json');
+        if (!res.ok) return [];
+        const accessorySkus = await getAccessorySkuSet();
+        shopCache = filterShopProducts(
+          ((await res.json()) as Product[]).map((p) => ({
+            ...toListProduct(p),
+            catalog: 'shop' as const,
+          })),
+          accessorySkus,
+        );
+        return shopCache;
+      } catch {
+        return [];
+      }
+    })();
     try {
-      let res = await fetch('/data/shop-products-lite.json');
-      if (!res.ok) res = await fetch('/data/shop-products.json');
-      if (!res.ok) return [];
-      const accessorySkus = await getAccessorySkuSet();
-      shopCache = filterShopProducts(
-        ((await res.json()) as Product[]).map((p) => ({
-          ...toListProduct(p),
-          catalog: 'shop' as const,
-        })),
-        accessorySkus,
-      );
-      return shopCache;
-    } catch {
-      return [];
+      return await shopCacheInflight;
+    } finally {
+      shopCacheInflight = null;
     }
   }
 
   if (localCache) return localCache;
-  let res = await fetch('/data/products-lite.json');
-  if (!res.ok) res = await fetch('/data/products.json');
-  localCache = ((await res.json()) as Product[]).map((p) => ({
-    ...toListProduct(p),
-    catalog: p.catalog || 'accessories',
-  }));
-  return localCache;
+  if (localCacheInflight) return localCacheInflight;
+  localCacheInflight = (async () => {
+    let res = await fetch('/data/products-lite.json');
+    if (!res.ok) res = await fetch('/data/products.json');
+    localCache = ((await res.json()) as Product[]).map((p) => ({
+      ...toListProduct(p),
+      catalog: p.catalog || 'accessories',
+    }));
+    return localCache;
+  })();
+  try {
+    return await localCacheInflight;
+  } finally {
+    localCacheInflight = null;
+  }
 }
 
 async function loadFullJsonProducts(catalog: CatalogType): Promise<Product[]> {

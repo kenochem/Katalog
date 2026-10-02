@@ -31,6 +31,7 @@ import {
 } from '../lib/locationStore';
 import { formatLocationCode, parseLocationCode } from '../lib/warehouseLocation';
 import { RemoveBackgroundModal } from './RemoveBackgroundModal';
+import { ContextHelp } from './ContextHelp';
 import {
   WarehouseLocationFields,
 } from './warehouse/WarehouseLocationFields';
@@ -1149,11 +1150,12 @@ export function ProductDetail({
                 />
               </label>
               <label className="block">
-                <span className="mb-1 text-xs text-slate-500">
+                <span className="mb-1 inline-flex items-center gap-1 text-xs text-slate-500">
                   Stan magazynowy
                   {detail.stockManual && (
-                    <span className="ml-1 text-brand-400">(ręczny)</span>
+                    <span className="text-brand-400">(ręczny)</span>
                   )}
+                  <ContextHelp id="catalogStockManual" />
                 </span>
                 <div className="flex items-center gap-2">
                   <button
@@ -1443,11 +1445,12 @@ export function ProductDetail({
                 />
               </label>
               <label className="block">
-                <span className="mb-1 text-xs text-slate-500">
+                <span className="mb-1 inline-flex items-center gap-1 text-xs text-slate-500">
                   Stan magazynowy
                   {detail.stockManual && (
-                    <span className="ml-1 text-brand-400">(ręczny)</span>
+                    <span className="text-brand-400">(ręczny)</span>
                   )}
+                  <ContextHelp id="catalogStockManual" />
                 </span>
                 <div className="flex items-center gap-2">
                   <button
@@ -1553,6 +1556,11 @@ export function ProductDetail({
                 (detail.pricePurchaseNet != null ||
                   detail.priceSaleNet != null ||
                   detail.priceSaleGross != null) && (
+                  <div className="space-y-1.5">
+                  <p className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                    Ceny i marża
+                    <ContextHelp id="catalogPricing" />
+                  </p>
                   <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-800 bg-slate-950/40 p-3 sm:grid-cols-4">
                     <div>
                       <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
@@ -1593,6 +1601,7 @@ export function ProductDetail({
                         )}
                       </p>
                     </div>
+                  </div>
                   </div>
                 )}
 
@@ -1657,15 +1666,18 @@ export function ProductDetail({
             </div>
 
             {displayImage && (
-              <button
-                type="button"
-                disabled={uploading || uploadingExtra || removeBgBusy}
-                onClick={() => setRemoveBgOpen(true)}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-600 bg-slate-800/80 py-3 text-sm font-medium text-slate-200 transition hover:border-brand-500/40 hover:bg-slate-800 disabled:opacity-50"
-              >
-                <Scissors className="h-5 w-5 text-brand-300" />
-                Wytnij białe tło (podgląd)
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={uploading || uploadingExtra || removeBgBusy}
+                  onClick={() => setRemoveBgOpen(true)}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-600 bg-slate-800/80 py-3 text-sm font-medium text-slate-200 transition hover:border-brand-500/40 hover:bg-slate-800 disabled:opacity-50"
+                >
+                  <Scissors className="h-5 w-5 text-brand-300" />
+                  Wytnij białe tło (podgląd)
+                </button>
+                <ContextHelp id="catalogRemoveBackground" />
+              </div>
             )}
 
             {hasImageRevert && isPrimarySelected && (

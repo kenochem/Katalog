@@ -26,6 +26,8 @@ import {
   AlertTriangle,
   BookOpen,
   ScrollText,
+  Sparkles,
+  TrendingUp,
 } from 'lucide-react';
 import type { View } from '../types';
 import type { AppRole } from '../lib/roles';
@@ -61,7 +63,7 @@ export function MobileBottomNav({
   showCatalog = true,
   showCatalogTools = true,
 }: MobileBottomNavProps) {
-  const moreActive = ['kits', 'progress', 'catalog-decisions', 'catalog-hidden', 'missing-images', 'admin', 'library', 'logs', ...(isStockProduct() ? ['warehouse' as const] : [])].includes(view);
+  const moreActive = ['kits', 'progress', 'catalog-decisions', 'catalog-hidden', 'missing-images', 'admin', 'library', 'logs', 'history', 'new-products', ...(isStockProduct() ? ['warehouse' as const] : [])].includes(view);
   return (
     <nav
       className="catalog-readable-light fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/95 dark:shadow-none lg:hidden"
@@ -167,6 +169,7 @@ interface MobileMoreSheetProps {
   kitsCount: number;
   collectionsCount?: number;
   showCollections?: boolean;
+  newProductsCount?: number;
   onView: (v: View) => void;
   onToggleEdit: () => void;
   onAddProduct: () => void;
@@ -198,6 +201,7 @@ export function MobileMoreSheet({
   kitsCount,
   collectionsCount = 0,
   showCollections = false,
+  newProductsCount = 0,
   onView,
   onToggleEdit,
   onAddProduct,
@@ -271,6 +275,22 @@ export function MobileMoreSheet({
                   icon={<ScrollText className="h-4 w-4" />}
                   label="Logi sync"
                   onClick={() => go('logs')}
+                />
+              )}
+              {showCatalogTools && (
+                <SheetAction
+                  active={view === 'history'}
+                  icon={<TrendingUp className="h-4 w-4" />}
+                  label="Zmiany w czasie"
+                  onClick={() => go('history')}
+                />
+              )}
+              {showCatalogTools && (
+                <SheetAction
+                  active={view === 'new-products'}
+                  icon={<Sparkles className="h-4 w-4" />}
+                  label={newProductsCount > 0 ? `Nowości (${newProductsCount})` : 'Nowości'}
+                  onClick={() => go('new-products')}
                 />
               )}
               {showCatalogTools && showCollections && (

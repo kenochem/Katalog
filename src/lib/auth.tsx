@@ -15,6 +15,7 @@ import {
   type AppRole,
 } from './roleDefinitions';
 import { ROLE_MATRIX_CHANGED, hydrateRoleMatrixFromCloud } from './roleMatrixStore';
+import { hydrateCrmMailFeatureFromCloud } from './crmMailFeatureStore';
 import { hydrateUserPreferences } from './userPreferences';
 import { loadUserAvatar } from './userAvatar';
 
@@ -41,6 +42,8 @@ interface AuthContextValue {
   continueAsGuest: () => void;
   exitGuest: () => void;
   refreshProfile: () => Promise<void>;
+  /** Zmienia wyswietlana nazwe wlasnego konta (profiles.display_name). */
+  updateDisplayName: (name: string) => Promise<{ error?: string }>;
   /** Inkrementowane po zmianie macierzy uprawnień (localStorage). */
   roleMatrixRevision: number;
 }
@@ -137,6 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(p);
     setMode('signed_in');
     void hydrateRoleMatrixFromCloud();
+    void hydrateCrmMailFeatureFromCloud();
     void hydrateUserPreferences(next.user.id);
     void loadUserAvatar(p.id);
   }, []);
@@ -219,6 +223,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(p);
   }, [session]);
 
+  const updateDisplayName = useCallback(
+    async (name: string) => {
+      const trimmed = name.trim();
+      if (!trimmed) return { error: 'Nazwa nie może być pusta.' };
+      if (!supabase || !session?.user) return { error: 'Brak sesji.' };
+      const { error } = await supabase
+        .from('profiles')
+        .update({ display_name: trimmed })
+        .eq('id', session.user.id);
+      if (error) {
+        console.warn('updateDisplayName', error);
+        return { error: 'Nie udało się zapisać nazwy.' };
+      }
+      setProfile((p) => (p ? { ...p, displayName: trimmed } : p));
+      return {};
+    },
+    [session],
+  );
+
   const role: AppRole =
     mode === 'guest' ? 'guest' : profile?.role ?? 'guest';
 
@@ -241,6 +264,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       continueAsGuest,
       exitGuest,
       refreshProfile,
+      updateDisplayName,
       roleMatrixRevision,
     }),
     [
@@ -255,6 +279,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       continueAsGuest,
       exitGuest,
       refreshProfile,
+      updateDisplayName,
       roleMatrixRevision,
     ],
   );

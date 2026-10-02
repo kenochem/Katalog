@@ -1,14 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Camera,
+  Check,
   Cookie,
   LogOut,
   MessageCircle,
+  Pencil,
   Settings2,
   Sun,
   Moon,
   Palette,
   UserRound,
+  X,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { ROLE_LABELS } from '../lib/roles';
@@ -39,12 +42,38 @@ export function AppProfileMenu({
     role,
     signOut,
     exitGuest,
+    updateDisplayName,
   } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const ThemeIcon = THEME_MENU_ICONS[theme];
   const [open, setOpen] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+  const [savingName, setSavingName] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  function startEditName() {
+    setNameDraft(displayLabel);
+    setEditingName(true);
+  }
+
+  async function saveName() {
+    const next = nameDraft.trim();
+    if (!next || next === displayLabel) {
+      setEditingName(false);
+      return;
+    }
+    setSavingName(true);
+    const { error } = await updateDisplayName(next);
+    setSavingName(false);
+    if (error) {
+      showToast(error, 'error');
+      return;
+    }
+    showToast('Nazwa zaktualizowana', 'ok');
+    setEditingName(false);
+  }
 
   const userId = profile?.id;
   const avatar = useUserAvatar(userId);
@@ -106,7 +135,54 @@ export function AppProfileMenu({
             <div className="flex items-center gap-2.5">
               <UserAvatar name={displayLabel} src={avatar} size="sm" />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-slate-100">{displayLabel}</p>
+                {editingName ? (
+                  <div className="flex items-center gap-1">
+                    <input
+                      autoFocus
+                      value={nameDraft}
+                      onChange={(e) => setNameDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') void saveName();
+                        if (e.key === 'Escape') setEditingName(false);
+                      }}
+                      maxLength={60}
+                      disabled={savingName}
+                      className="min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-950 px-1.5 py-0.5 text-sm font-semibold text-slate-100 outline-none focus:border-brand-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void saveName()}
+                      disabled={savingName}
+                      title="Zapisz"
+                      className="rounded-md p-1 text-emerald-400 hover:bg-slate-800 disabled:opacity-50"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingName(false)}
+                      disabled={savingName}
+                      title="Anuluj"
+                      className="rounded-md p-1 text-slate-400 hover:bg-slate-800 disabled:opacity-50"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-slate-100">
+                    <span className="truncate">{displayLabel}</span>
+                    {mode === 'signed_in' && (
+                      <button
+                        type="button"
+                        onClick={startEditName}
+                        title="Zmień nazwę"
+                        className="shrink-0 rounded-md p-0.5 text-slate-500 hover:bg-slate-800 hover:text-slate-300"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                    )}
+                  </p>
+                )}
                 <p className="truncate text-[11px] text-slate-500">
                   {profile?.email ?? (mode === 'guest' ? 'Gość' : '—')}
                 </p>

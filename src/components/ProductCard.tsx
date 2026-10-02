@@ -229,12 +229,12 @@ export const ProductCard = memo(
                   type="button"
                   onClick={() => onOrderDelta(product, -1)}
                   className={`flex items-center justify-center rounded-md bg-red-600 text-white hover:bg-red-500 ${
-                    compact ? 'h-6 w-6' : 'h-7 w-7'
+                    compact ? 'h-7 w-7' : 'h-8 w-8'
                   }`}
                   title="Usuń z zamówienia"
                   aria-label="Zmniejsz ilość w zamówieniu"
                 >
-                  <Minus className={compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} strokeWidth={2.5} />
+                  <Minus className={compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} strokeWidth={2.5} />
                 </button>
                 <span
                   className={`min-w-[1.25rem] text-center font-semibold tabular-nums text-white ${
@@ -247,12 +247,12 @@ export const ProductCard = memo(
                   type="button"
                   onClick={() => onOrderDelta(product, 1)}
                   className={`flex items-center justify-center rounded-md bg-brand-600 text-white hover:bg-brand-500 ${
-                    compact ? 'h-6 w-6' : 'h-7 w-7'
+                    compact ? 'h-7 w-7' : 'h-8 w-8'
                   }`}
                   title="Dodaj do zamówienia"
                   aria-label="Zwiększ ilość w zamówieniu"
                 >
-                  <Plus className={compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} strokeWidth={2.5} />
+                  <Plus className={compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} strokeWidth={2.5} />
                 </button>
               </div>
             ) : (

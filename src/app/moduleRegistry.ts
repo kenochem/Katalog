@@ -18,7 +18,10 @@ export type HubModuleId = 'catalog' | 'crm' | 'ops' | 'comms' | 'calendar';
 /** Talk wyłączony tymczasowo — zero pollingu, Realtime i Storage z Supabase. */
 export const TALK_SUSPENDED = true;
 
-const ENV_PRODUCT = import.meta.env.VITE_APP_PRODUCT;
+// Produkt wyznacza tryb buildu (`vite --mode catalog` itd.). VITE_APP_PRODUCT jest
+// opcjonalnym nadpisaniem — pliki `.env.<produkt>` są w .gitignore, więc bez tego
+// fallbacku świeży klon zbudowałby każdy produkt jako Suite.
+const ENV_PRODUCT = import.meta.env.VITE_APP_PRODUCT || import.meta.env.MODE;
 
 function parseAppProduct(): AppProduct {
   switch (ENV_PRODUCT) {

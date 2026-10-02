@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
+  ArrowRight,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Clock3,
   DatabaseZap,
   Info,
+  ListTree,
   RefreshCw,
   Search,
   Trash2,
@@ -19,6 +23,25 @@ import {
 } from '../lib/catalogLogs';
 import { getLatestStockSync, type StockSyncRequest } from '../lib/stockSync';
 import { buildSyncLogSummary, type SyncDetailLine } from '../lib/syncLogSummary';
+import {
+  getRecentProductSyncChanges,
+  groupProductSyncChangesByRun,
+  PRODUCT_SYNC_CHANGE_FIELD_LABELS,
+  type ProductSyncChange,
+  type ProductSyncChangeField,
+} from '../lib/productSyncChanges';
+import { formatPricePln, formatStock } from '../lib/format';
+
+const PRICE_FIELDS = new Set<ProductSyncChangeField>([
+  'price_purchase_net',
+  'price_sale_net',
+  'price_sale_gross',
+]);
+
+function formatChangeValue(field: ProductSyncChangeField, value: number | null): string {
+  if (value == null) return '—';
+  return PRICE_FIELDS.has(field) ? formatPricePln(value) : formatStock(value);
+}
 
 interface CatalogLogsViewProps {
   userId?: string;
@@ -70,15 +93,47 @@ function lineToneClass(tone: SyncDetailLine['tone']) {
   return 'catalog-log-detail catalog-log-detail--neutral';
 }
 
+function chipToneClass(tone: SyncDetailLine['tone']) {
+  if (tone === 'good') return 'catalog-log-chip catalog-log-chip--good';
+  if (tone === 'warn') return 'catalog-log-chip catalog-log-chip--warn';
+  if (tone === 'info') return 'catalog-log-chip catalog-log-chip--info';
+  return 'catalog-log-chip catalog-log-chip--neutral';
+}
+
 function FriendlySyncBlock({
   message,
   details,
+  compact = false,
 }: {
   message: string | null | undefined;
   details?: CatalogLogEntry['details'];
   compact?: boolean;
 }) {
   const summary = buildSyncLogSummary(message, details);
+
+  if (compact) {
+    // Zwarty pasek: tytuł + chipy z liczbami, bez opisów każdej linijki — to
+    // samo co pełny widok, ale bez rozciągania strony na cały ekran. Notatki i
+    // surowy raport zostają w trybie pełnym (np. w "Ostatnie zdarzenia").
+    return (
+      <div className="mt-1.5 space-y-2">
+        <p className="text-sm text-slate-700 dark:text-slate-300">{summary.body}</p>
+        {summary.lines.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {summary.lines.map((line) => (
+              <span key={line.id} className={`${chipToneClass(line.tone)} rounded-full px-2.5 py-1 text-xs font-medium`}>
+                {line.label}:{' '}
+                <strong className="font-bold tabular-nums">
+                  {typeof line.value === 'number' ? line.value.toLocaleString('pl-PL') : line.value}
+                </strong>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="mt-2 space-y-3">
       <div>
@@ -132,6 +187,8 @@ export function CatalogLogsView({ userId }: CatalogLogsViewProps) {
   const [latest, setLatest] = useState<StockSyncRequest | null>(null);
   const [query, setQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [changes, setChanges] = useState<ProductSyncChange[]>([]);
+  const [changesLoading, setChangesLoading] = useState(true);
 
   useEffect(() => {
     const refresh = () => setLogs(listCatalogLogs(userId));
@@ -142,9 +199,15 @@ export function CatalogLogsView({ userId }: CatalogLogsViewProps) {
   async function refreshLatest() {
     setRefreshing(true);
     try {
-      setLatest(await getLatestStockSync());
+      const [latestSync, recentChanges] = await Promise.all([
+        getLatestStockSync(),
+        getRecentProductSyncChanges({ limit: 1500 }),
+      ]);
+      setLatest(latestSync);
+      setChanges(recentChanges);
     } finally {
       setRefreshing(false);
+      setChangesLoading(false);
     }
   }
 
@@ -152,16 +215,59 @@ export function CatalogLogsView({ userId }: CatalogLogsViewProps) {
     void refreshLatest();
   }, []);
 
+  // Ten sam przebieg sync jest już pokazany w karcie "Ostatni wynik sync" wyżej
+  // — nie powielamy go jeszcze raz jako pierwszy wpis na liście poniżej.
+  const latestLocalId = latest ? `sync-done-${latest.id}` : null;
+  const dedupedLogs = useMemo(
+    () => (latestLocalId ? logs.filter((entry) => entry.id !== latestLocalId) : logs),
+    [logs, latestLocalId],
+  );
+
   const filteredLogs = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return logs;
-    return logs.filter((entry) =>
+    if (!q) return dedupedLogs;
+    return dedupedLogs.filter((entry) =>
       [entry.title, entry.message, entry.source, JSON.stringify(entry.details ?? {})]
         .join(' ')
         .toLowerCase()
         .includes(q),
     );
-  }, [logs, query]);
+  }, [dedupedLogs, query]);
+
+  const filteredChanges = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return changes;
+    return changes.filter((c) =>
+      [c.sku, c.display_name ?? '', PRODUCT_SYNC_CHANGE_FIELD_LABELS[c.field]]
+        .join(' ')
+        .toLowerCase()
+        .includes(q),
+    );
+  }, [changes, query]);
+
+  // Każdy przebieg syncu = osobna, zwijalna sekcja — starsze przebiegi nie
+  // znikają pod nowszym, tylko czekają zwinięte niżej na liście.
+  const changeRuns = useMemo(() => groupProductSyncChangesByRun(filteredChanges), [filteredChanges]);
+  const [expandedRuns, setExpandedRuns] = useState<Set<string>>(new Set());
+  const isSearching = query.trim().length > 0;
+
+  // Domyslnie tylko najnowszy przebieg jest rozwiniety — ustawiamy to raz, gdy
+  // dane sie zaladuja (pozniejsze toggle przez usera juz tego nie nadpisuje).
+  const [defaultRunApplied, setDefaultRunApplied] = useState(false);
+  useEffect(() => {
+    if (defaultRunApplied || changeRuns.length === 0) return;
+    setExpandedRuns(new Set([changeRuns[0].changedAt]));
+    setDefaultRunApplied(true);
+  }, [changeRuns, defaultRunApplied]);
+
+  function toggleRun(changedAt: string) {
+    setExpandedRuns((prev) => {
+      const next = new Set(prev);
+      if (next.has(changedAt)) next.delete(changedAt);
+      else next.add(changedAt);
+      return next;
+    });
+  }
 
   const latestLevel = latest ? latestTone(latest.status) : 'info';
 
@@ -252,6 +358,121 @@ export function CatalogLogsView({ userId }: CatalogLogsViewProps) {
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
         <div className="flex flex-col gap-3 border-b border-slate-200 p-4 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+              <ListTree className="h-5 w-5" />
+            </span>
+            <div>
+              <h3 className="text-base font-bold text-slate-950 dark:text-slate-50">
+                Szczegółowe zmiany produktów
+              </h3>
+              <p className="text-sm text-slate-700 dark:text-slate-300">
+                Który SKU, które pole (stan / cena) i jaka była stara i nowa wartość — z
+                ostatnich przebiegów syncu WAPRO. Filtruj wyszukiwarką obok po SKU lub nazwie.
+              </p>
+            </div>
+          </div>
+          <label className="relative block w-full sm:w-80">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Szukaj po SKU, nazwie, treści logu..."
+              className="w-full rounded-xl border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm font-medium text-slate-950 outline-none placeholder:text-slate-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50 dark:placeholder:text-slate-400"
+            />
+          </label>
+        </div>
+
+        <div className="max-h-[32rem] overflow-y-auto">
+          {changesLoading ? (
+            <p className="p-8 text-center text-sm text-slate-600 dark:text-slate-400">
+              Wczytuję zmiany…
+            </p>
+          ) : filteredChanges.length === 0 ? (
+            <div className="p-8 text-center">
+              <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">
+                Brak zarejestrowanych zmian
+              </p>
+              <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                {changes.length === 0
+                  ? 'Jeszcze żaden sync nie zapisał szczegółowego logu (albo migration-product-sync-changes.sql nie została uruchomiona w Supabase).'
+                  : 'Nic nie pasuje do wyszukiwania.'}
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-200 dark:divide-slate-800">
+              {changeRuns.map((run) => {
+                const expanded = isSearching || expandedRuns.has(run.changedAt);
+                return (
+                  <div key={run.changedAt}>
+                    <button
+                      type="button"
+                      onClick={() => toggleRun(run.changedAt)}
+                      className="catalog-log-row flex w-full items-center gap-2 px-4 py-2.5 text-left"
+                    >
+                      {expanded ? (
+                        <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 shrink-0 text-slate-500" />
+                      )}
+                      <span className="text-sm font-semibold text-slate-950 dark:text-slate-50">
+                        Sync {formatDate(run.changedAt)}
+                      </span>
+                      <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                        {run.items.length} {run.items.length === 1 ? 'zmiana' : 'zmian'}
+                      </span>
+                    </button>
+                    {expanded && (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                          <thead className="bg-slate-50 dark:bg-slate-900">
+                            <tr className="text-[11px] uppercase tracking-wide text-slate-600 dark:text-slate-400">
+                              <th className="px-4 py-2 font-semibold">SKU / produkt</th>
+                              <th className="px-4 py-2 font-semibold">Pole</th>
+                              <th className="px-4 py-2 font-semibold text-right">Było → Jest</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                            {run.items.map((c) => (
+                              <tr key={c.id} className="catalog-log-row">
+                                <td className="px-4 py-2.5">
+                                  <p className="font-mono text-xs text-emerald-700 dark:text-emerald-300">
+                                    {c.sku}
+                                  </p>
+                                  {c.display_name && (
+                                    <p className="mt-0.5 max-w-xs truncate text-xs text-slate-600 dark:text-slate-400">
+                                      {c.display_name}
+                                    </p>
+                                  )}
+                                </td>
+                                <td className="px-4 py-2.5 text-xs text-slate-700 dark:text-slate-300">
+                                  {PRODUCT_SYNC_CHANGE_FIELD_LABELS[c.field]}
+                                </td>
+                                <td className="px-4 py-2.5 text-right text-xs tabular-nums">
+                                  <span className="text-slate-500 dark:text-slate-400">
+                                    {formatChangeValue(c.field, c.old_value)}
+                                  </span>
+                                  <ArrowRight className="mx-1.5 inline h-3 w-3 text-slate-400" />
+                                  <span className="font-semibold text-slate-950 dark:text-slate-50">
+                                    {formatChangeValue(c.field, c.new_value)}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
+        <div className="flex flex-col gap-3 border-b border-slate-200 p-4 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="text-base font-bold text-slate-950 dark:text-slate-50">
               Ostatnie zdarzenia
@@ -260,15 +481,6 @@ export function CatalogLogsView({ userId }: CatalogLogsViewProps) {
               Najnowsze komunikaty z katalogu i synchronizacji.
             </p>
           </div>
-          <label className="relative block w-full sm:w-80">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Szukaj w logach..."
-              className="w-full rounded-xl border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm font-medium text-slate-950 outline-none placeholder:text-slate-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50 dark:placeholder:text-slate-400"
-            />
-          </label>
         </div>
 
         <div className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -303,7 +515,7 @@ export function CatalogLogsView({ userId }: CatalogLogsViewProps) {
                       </span>
                     </div>
                     {entry.source === 'sync-wapro' && entry.message ? (
-                      <FriendlySyncBlock message={entry.message} details={entry.details} />
+                      <FriendlySyncBlock message={entry.message} details={entry.details} compact />
                     ) : (
                       <p className="mt-1 text-sm leading-6 text-slate-800 dark:text-slate-200">
                         {entry.message}
