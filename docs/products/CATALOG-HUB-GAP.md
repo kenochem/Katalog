@@ -1,5 +1,7 @@
 # Katalog Kenochem ← luki vs Trade Hub (module-catalog)
 
+> **Dokument archiwalny (lista z 2026-07).** Statusy nie są utrzymywane. Uwaga: „Lens / CLIP" nie jest obecnie podpięty do interfejsu (kod `src/lib/ocrLens.ts` jest w repo, bez użycia). Aktualny stan funkcji: [`../KATALOG-FUNKCJE.md`](../KATALOG-FUNKCJE.md).
+
 > Priorytety przy rozwijaniu **kenochem-katalog.web.app** (produkt `catalog` / `stock`).
 
 ## Już mamy (zgodnie z hub CAT-*)

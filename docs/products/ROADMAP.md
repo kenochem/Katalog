@@ -1,49 +1,42 @@
 # Kenochem — produkty modułowe
 
-> **Cel:** rozwijać segmenty osobno (Katalog, CRM, Operacje…), składać je w **Suite** bez monolitu w jednym UX.
+> Stan: 2026-10-02. **Cel:** rozwijać segmenty (Katalog, CRM, Operacje…) osobno i składać je w **Suite**, bez monolitu w jednym UX.
 
 ## Produkty
 
-| ID | Nazwa | Build (`VITE_APP_PRODUCT`) | Hosting Firebase | Moduły |
-|----|--------|------------------------------|------------------|--------|
-| **catalog** | Kenochem Katalog | `catalog` | target `katalog` → kenochem-katalog.web.app | catalog |
-| **suite** | Kenochem Suite (pełny hub) | `suite` (domyślnie) | target `default` → kenochem-f4a5b.web.app | catalog + crm + ops + comms |
-| **sell** | Handel (plan) | `sell` | (osobny site później) | catalog + crm |
-| **ops** | Operacje (plan) | `ops` | (osobny site później) | ops (+ raporty) |
-| **talk** | Talk (plan) | `talk` | (osobny site później) | comms |
+| ID | Nazwa | Tryb buildu | Hosting | Moduły | Stan |
+|----|-------|-------------|---------|--------|------|
+| `catalog` | Katalog | `catalog` | `kenochem-katalog` | katalog | ✅ produkcja |
+| `suite` | Suite (pełny hub) | `suite` | `kenochem-f4a5b` | katalog + CRM + Ops + kalendarz | ✅ produkcja |
+| `sell` | Handel | `sell` | `kenochem-sell` | katalog + CRM | ✅ produkcja |
+| `stock` | Magazyn | `stock` | `kenochem-stock` | katalog (magazyn) | ✅ produkcja |
+| `ops` | Operacje | `ops` | `kenochem-ops` | Ops | ✅ produkcja |
+| `calendar` | Kalendarz | `calendar` | `kenochem-calendar` | kalendarz | ✅ produkcja |
+| `talk` | Talk | `talk` | `kenochem-talk` | czat | ⏸ wyłączony (`TALK_SUSPENDED`) |
+| `logistics` | Logistyka | `logistics` | `kenochem-logistics` | — | 🔜 placeholder |
 
-**Obecne korzystanie zespołu:** pełna aplikacja = **Suite** (`npm run deploy:suite` / URL `kenochem-f4a5b.web.app`).
-
-> **Kierunek:** Jeden **Suite kompletny** jak hub-platform — segment po segmencie, dostosowany do Kenochem (WAPRO, Supabase). Plan: [HUB-PLATFORM-PORT-PLAN.md](./HUB-PLATFORM-PORT-PLAN.md). Osobne hostingi (sell, katalog…) pozostają; **nie liczą się do etapów** tego wdrożenia.
-
-**Katalog publiczny / czysty produkt:** **Katalog** (`npm run deploy:catalog` / `kenochem-katalog.web.app`).
+Architektura i sposób wyboru aplikacji: [`ARCHITECTURE.md`](./ARCHITECTURE.md). Adresy: [`URLS.md`](./URLS.md).
 
 ## Fazy wdrożenia
 
 | Faza | Stan | Opis |
 |------|------|------|
-| **0** | ✅ | Dokumentacja produktów, konwencje |
-| **1** | ✅ | `VITE_APP_PRODUCT`, osobne `dist-*`, deploy catalog vs suite |
-| **2** | ✅ | `src/modules/*` + rejestr modułów |
-| **3** | ✅ | Szkielet `apps/` + `packages/core` pod monorepo |
-| **4** | ✅ | Skrypty deploy, README, domyślny `deploy` = oba produkty |
-| **5** | 🔄 | **Suite kompletny 1:1 hub-platform** — [HUB-PLATFORM-PORT-PLAN.md](./HUB-PLATFORM-PORT-PLAN.md) (jeden URL, bez etapu „rozdzielenia”) |
+| 0 | ✅ | Dokumentacja produktów, konwencje |
+| 1 | ✅ | Tryb buildu wyznacza produkt, osobne `dist-*`, deploy per produkt |
+| 2 | ✅ | `src/modules/*` + rejestr modułów (`moduleRegistry.ts`) |
+| 3 | 🟡 | Szkielet `apps/` + `packages/core` — jest, ale nieużywany; build nadal z korzenia |
+| 4 | ✅ | Skrypty `build:*` / `deploy:*` dla wszystkich produktów |
+| 5 | 🔄 | Suite jako pełny hub (port hub-platform) — [`HUB-PLATFORM-PORT-PLAN.md`](./HUB-PLATFORM-PORT-PLAN.md) |
 
 ## Zasady kodu
 
-1. Nowe ekrany → `src/modules/{moduł}/`, nie bezpośrednio do `App.tsx`.
-2. UI modułu w Suite **i** w produkcie wąskim: `moduleEnabled('crm') && roleCan(...)`.
-3. Lazy import modułów tylko gdy `BUILD_HAS_*` (tree-shake w buildzie catalog).
-4. Jedna Supabase — brak UI ≠ brak tabeli; RLS bez zmian.
+1. Nowe ekrany modułowe → `src/modules/{moduł}/`, nie bezpośrednio do `App.tsx`.
+2. Widok modułu w Suite **i** w produkcie wąskim: `moduleEnabled('crm') && roleCan(...)`.
+3. Opcjonalne moduły ładujemy `lazy()` tylko gdy `BUILD_HAS_*` (tree-shake w buildach, które ich nie mają).
+4. Teksty w `App.tsx` biorą nazwę produktu z `branding.*` — ten plik obsługuje jednocześnie Katalog, Handel i Operacje.
+5. Jedna baza Supabase: brak UI ≠ brak tabeli; RLS obowiązuje niezależnie od produktu.
+6. Każda zmiana widoczna dla użytkowników dostaje wpis w `src/data/appChangelog.ts` (zakładka *Nowości → Aktualizacje*).
 
-## Komendy
+## Kierunki (backlog)
 
-```bash
-npm run dev              # Suite (domyślnie)
-npm run dev:catalog      # tylko Katalog
-npm run build:suite
-npm run build:catalog
-npm run deploy           # oba buildy + Firebase hosting
-npm run deploy:suite
-npm run deploy:catalog
-```
+Aktualny backlog i dług techniczny: [`docs/ROZWÓJ.md`](../ROZWÓJ.md).

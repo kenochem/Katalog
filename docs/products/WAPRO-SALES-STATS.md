@@ -1,5 +1,7 @@
 # Statystyki sprzedaży WAPRO w katalogu
 
+> **Uwaga (2026-10-02):** harmonogram i rozwiązywanie problemów syncu — patrz [`../WAPRO-SYNC.md`](../WAPRO-SYNC.md). Nocny sync sprzedaży jest **opcjonalny** (`install-katalog-stock-schedule.ps1 -IncludeNightlySales`); domyślnie sprzedaż odświeża się na żądanie przyciskiem **Sync z Mag WAPRO** w Operacjach. Zapytanie `extended_v2` (rozbicie miesięczne) może spadać do `bulk_v1` — komunikat SQL jest w `sync.log`.
+
 Zakładka **Sprzedaż** pokazuje cache zsynchronizowanego zbiorczo z Mag WAPRO (okresy 1 / 3 / 6 / 12 miesięcy).
 
 **Ilość i netto** liczone są **ze znakiem** (`SUM(pd.ILOSC)` bez `ABS`) — korekty faktur z ujemną ilością (np. −1) odejmują od wyniku okresu.

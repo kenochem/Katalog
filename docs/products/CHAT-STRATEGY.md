@@ -1,5 +1,7 @@
 # Strategia czatu (Talk)
 
+> **Stan 2026-10-02:** czat (Talk) jest chwilowo **wyłączony** (`TALK_SUSPENDED = true` w `src/app/moduleRegistry.ts`) — zero pollingu i Realtime. Poniżej strategia na moment ponownego włączenia.
+
 ## Rekomendacja (mały zespół Kenochem)
 
 **Nie** doklejać pełnego czatu do każdego produktu (Katalog, Magazyn, Operacje). Rozprasza UX i duplikuje bundl.

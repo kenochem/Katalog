@@ -1,5 +1,7 @@
 # Suite Kenochem — port hub-platform (1:1, jeden produkt)
 
+> **Dokument planistyczny (archiwalny).** Statusy segmentów w tabelach nie są na bieżąco utrzymywane. Aktualna architektura: [`ARCHITECTURE.md`](./ARCHITECTURE.md), stan produktów: [`ROADMAP.md`](./ROADMAP.md).
+
 ## Efekt końcowy
 
 **Jeden działający Suite** (`VITE_APP_PRODUCT=suite`, `https://kenochem-f4a5b.web.app`): ta sama idea co hub-platform — **jedna aplikacja, wszystkie segmenty**, sidebar/workspace, command palette, mobile nav.

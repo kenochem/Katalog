@@ -1,27 +1,29 @@
 # Adresy produktów Kenochem (Firebase Hosting)
 
-Jeden projekt GCP: `kenochem-f4a5b`. Osobny build SPA (`dist-*`) na każdy URL.
+> Stan: 2026-10-02. Jeden projekt GCP/Firebase: `kenochem-f4a5b`. Osobny build SPA (`dist-*`) na każdy adres.
 
-| Produkt | Site ID | URL (web.app) | Moduły | Status |
-|---------|---------|---------------|--------|--------|
-| **Katalog** | `kenochem-katalog` | https://kenochem-katalog.web.app | catalog | ✅ produkcja |
-| **Suite** | `kenochem-f4a5b` | https://kenochem-f4a5b.web.app | wszystko | ✅ produkcja |
-| **Handel (CRM)** | `kenochem-sell` | https://kenochem-sell.web.app | catalog + crm + czat (bańka) | ✅ deploy |
-| **Magazyn** | `kenochem-stock` | https://kenochem-stock.web.app | catalog (focus magazyn) | ✅ deploy → rozwój osobno |
-| **Operacje** | `kenochem-ops` | https://kenochem-ops.web.app | ops (finanse, marże) | ✅ deploy |
-| **Talk** | `kenochem-talk` | https://kenochem-talk.web.app | comms (pełny ekran) | ✅ deploy |
-| **Logistyka** | `kenochem-logistics` | https://kenochem-logistics.web.app | (placeholder) | 🔜 trasy / dostawy |
+| Produkt | Target (`firebase.json`) | Site ID | URL | Moduły | Status |
+|---------|--------------------------|---------|-----|--------|--------|
+| **Katalog** | `katalog` | `kenochem-katalog` | https://kenochem-katalog.web.app | katalog | ✅ produkcja |
+| **Suite** | `suite` | `kenochem-f4a5b` | https://kenochem-f4a5b.web.app | katalog + CRM + Ops + kalendarz | ✅ produkcja |
+| **Handel** | `sell` | `kenochem-sell` | https://kenochem-sell.web.app | katalog + CRM | ✅ produkcja |
+| **Magazyn** | `stock` | `kenochem-stock` | https://kenochem-stock.web.app | katalog (tryb magazyn) | ✅ produkcja |
+| **Operacje** | `ops` | `kenochem-ops` | https://kenochem-ops.web.app | Ops | ✅ produkcja |
+| **Kalendarz** | `calendar` | `kenochem-calendar` | https://kenochem-calendar.web.app | kalendarz | ✅ produkcja |
+| **Talk** | `talk` | `kenochem-talk` | https://kenochem-talk.web.app | czat | ⏸ wyłączony (`TALK_SUSPENDED = true`) |
+| **Logistyka** | `logistics` | `kenochem-logistics` | https://kenochem-logistics.web.app | — | 🔜 placeholder |
 
-Docelowo własne domeny: `katalog.kenochem.pl`, `sell.…`, itd. — mapowanie w Firebase → Custom domains.
+Mapowanie target → site jest w [`.firebaserc`](../../.firebaserc), target → katalog buildu w [`firebase.json`](../../firebase.json).
 
-## Czat — jak używać
-
-Zobacz [`CHAT-STRATEGY.md`](./CHAT-STRATEGY.md).
+Docelowo własne domeny (`katalog.kenochem.pl`, …) — Firebase → Hosting → Custom domains.
 
 ## Komendy
 
 ```bash
-npm run setup:hosting-sites   # jednorazowo: tworzy site w Firebase
-npm run build:products        # wszystkie buildy
-npm run deploy:products       # build + hosting (wszystkie witryny)
+npm run setup:hosting-sites   # jednorazowo: tworzy witryny w Firebase
+npm run build:<produkt>       # build jednego produktu (catalog|suite|sell|stock|ops|talk|logistics|calendar)
+npm run deploy:<produkt>      # build + deploy jednej witryny
+npm run deploy                # build wszystkich + deploy wszystkich (deploy:products to alias)
 ```
+
+Pełna procedura wydania: [`docs/WDROZENIE.md`](../WDROZENIE.md). Czat — [`CHAT-STRATEGY.md`](./CHAT-STRATEGY.md).

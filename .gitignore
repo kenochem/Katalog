@@ -28,3 +28,7 @@ index.*.html
 # sekrety
 *.env
 katalog-sync.env
+
+# lokalne narzedzia (nie wersjonujemy)
+.claude/
+.cursor/

@@ -1,168 +1,62 @@
-# Katalog Kenochem — notatki rozwojowe
+# Rozwój projektu — stan, dług techniczny, backlog
 
-> Dokument roboczy: przegląd stanu projektu, dług techniczny i propozycje dalszego rozwoju.  
-> Ostatnia aktualizacja: 2026-07-29
+> Dokument roboczy. Ostatnia aktualizacja: **2026-10-02** (przepisany od zera — poprzednia wersja z 07.2026 opisywała stan sprzed logowania i RLS).
 
-## Kontekst
+## Stan obecny (skrót)
 
-**Katalog** to wewnętrzna PWA magazynowo-katalogowa Kenochem — dwa katalogi w jednej aplikacji:
+- 8 aplikacji z jednej bazy kodu ([`products/ARCHITECTURE.md`](./products/ARCHITECTURE.md)), wszystkie poza Talk (wyłączony) i Logistyką (placeholder) działają produkcyjnie.
+- Logowanie Supabase Auth, role z macierzą uprawnień (domyślna w kodzie + nadpisania z bazy), konta zakłada admin.
+- Dane z WAPRO Mag: stany/ceny (codziennie + na żądanie), sprzedaż (na żądanie), log zmian (od 24.09.2026), auto-import nowych SKU ([`WAPRO-SYNC.md`](./WAPRO-SYNC.md)).
+- Funkcje katalogu: wyszukiwanie, Decyzje (z masowym zatwierdzaniem kategorii), Bez zdjęć (z trybem Szybkie zdjęcia), Nowości, Zmiany w czasie, Logi, Biblioteka, etykiety, zestawy, magazyn z układem 3D ([`KATALOG-FUNKCJE.md`](./KATALOG-FUNKCJE.md)).
+- Operacje: analiza sprzedaży, martwy stock (współdzielone wykluczenia), finanse.
+- CRM: koszyk, oferty PDF z numeracją i polami netto/brutto, lejek, klienci, mapa, kalendarz, skrzynka e-mail.
 
-| Katalog | Źródło | Przeznaczenie |
-|---------|--------|----------------|
-| **Akcesoria** | Wapro / części do myjek | Magazyn części, braki zdjęć, zestawy |
-| **Produkty** | Baselinker / sklep | Asortyment handlowy, stany, Lens (EAN + OCR) |
-
-**Stack:** React + Vite + TypeScript + Tailwind, Supabase (baza + storage), Firebase Hosting.  
-**Produkcja:** [kenochem-katalog.web.app](https://kenochem-katalog.web.app)
-
----
-
-## Stan w repozytorium vs. wersja docelowa
-
-W **tym** clone repozytorium (stan z GitHub) role UI działają przez `localStorage` — przełącznik admin / magazynier / robol bez prawdziwego logowania.
-
-W **nowszej wersji** (lokalna / nie wypchnięta) jest już **logowanie (Supabase Auth)**. Po merge tej wersji poniższe punkty dotyczące auth należy traktować jako **do weryfikacji / domknięcia**, a nie jako start od zera:
-
-- [ ] Czy role są mapowane z profilu użytkownika w Supabase (nie tylko z localStorage)?
-- [ ] Czy RLS w bazie odzwierciedla uprawnienia ról (nie tylko front)?
-- [ ] Czy anonimowy dostęp do zapisu jest wyłączony?
-
-Reszta uwag technicznych i roadmapy pozostaje aktualna niezależnie od auth.
-
----
-
-## Co już działa (funkcje)
-
-- Wyszukiwanie Fuse.js: SKU, nazwa, EAN
-- Skaner kodów kreskowych (html5-qrcode)
-- Karty produktów: stan, zdjęcia, warianty / grupy SKU
-- Edycja produktów, dodawanie pozycji (wg roli)
-- Tryb edycji stanów (±1) z zapisem do Supabase
-- Widok „Bez zdjęć” + dashboard postępu fotografowania
-- Zestawy (komplety części) — katalog Akcesoria
-- Ulubione (localStorage)
-- Kolejka i druk etykiet półkowych
-- Motyw jasny / ciemny
-- PWA — instalacja na telefonie i desktopie
-- **Lens** (katalog Produkty): EAN na żywo → OCR Tesseract z bramką marki (bez ciężkiego AI na telefonie)
-- Importy: Wapro, Baselinker → JSON → Supabase (`scripts/`)
-
----
-
-## Dług techniczny — do rozpatrzenia
-
-### Bezpieczeństwo i dane
+## Dług techniczny
 
 | Temat | Opis | Priorytet |
 |-------|------|-----------|
-| **RLS w Supabase** | W `schema.sql` polityki mają `using (true)` — pełny otwarty dostęp. Po wdrożeniu auth: SELECT dla zalogowanych, UPDATE stock/zdjęć dla magazyniera+, pełny CRUD dla admina. | 🔴 |
-| **Service role key** | Tylko w skryptach importu, nigdy w froncie. Audyt `.env` i `.gitignore`. | 🔴 |
-| **Weryfikacja auth w prod** | Upewnić się, że wersja z logowaniem jest wdrożona i stary front bez auth nie jest dostępny publicznie. | 🔴 |
+| **Brak testów automatycznych** | Zero testów (`vitest`/`jest`). Pierwsze kandydatury: `productSearchIndex`, `catalogCategory`, `roleDefinitions`, `quotePdf` (rachunki netto/brutto), mapowania `db.ts` | 🟡 |
+| **Brak CI** | Build i deploy ręcznie z lokalnej maszyny. Minimum: GitHub Actions z `tsc -b` + `build:catalog` na PR | 🟡 |
+| **Monolityczny `App.tsx`** | ~3000 linii, współdzielony przez Katalog/Handel/Operacje; widoki wbudowane w plik (`MissingImagesView`, `LabelsView`…). Wydzielać do `src/modules/*` i osobnych plików (zasada z `ROADMAP.md`) | 🟡 |
+| **Agent WAPRO wdrażany ręcznie** | Kopiowanie `.ps1` na serwer bez wersjonowania. Pomysł: numer wersji w logu startu + prosty skrypt `install-katalog-sync.ps1` jako jedyna ścieżka aktualizacji | 🟡 |
+| **Kruchość PowerShell 5.1** | Brak BOM + polskie znaki w kodzie psuły parser; `@(List[object])` rzuca wyjątek (zasady w [`WAPRO-SYNC.md`](./WAPRO-SYNC.md)). Rozważyć migrację agenta na PowerShell 7 lub zapis z BOM | 🟡 |
+| **`product_sync_changes` bez czyszczenia** | Tabela rośnie bez końca; dodać cykliczne czyszczenie (np. > 18 mc) albo partycjonowanie | 🟢 |
+| **Śmieci w repo** | `scripts/tmp-*`, `scripts/sync-wapro-stock-server.ps1.bak-check`, `docs/future/*`, szkielet `apps/` i `packages/` — sprawdzić i usunąć/zarchiwizować | 🟢 |
+| **Martwy kod Lens/OCR** | `src/lib/ocrLens.ts` + `tesseract.js` + skrypty embeddings nie są podpięte do UI. Albo przywrócić funkcję, albo usunąć zależność | 🟢 |
+| **Dane statyczne w repo** | `public/data/*.json` (~4 MB surowo) są generowane i commitowane; rozważyć generowanie w buildzie | 🟢 |
 
-### Architektura frontu
+## Jakość danych — do posprzątania
 
-| Temat | Opis | Priorytet |
-|-------|------|-----------|
-| **Monolityczny `App.tsx`** | ~1100 linii — rozbić na hooki (`useCatalog`, `useProducts`, `useLabelQueue`) i mniejsze widoki. | 🟡 |
-| **Shop z JSON fallback** | Katalog Produkty ładuje się też z `public/data/shop-products.json` (~2,5 MB). Pełna migracja do Supabase + paginacja / lazy load. | 🟡 |
-| **Brak testów** | Smoke testy dla `search.ts`, `roles.ts`, mapowania DB, importów Python. | 🟡 |
-| **Brak CI/CD** | GitHub Actions: `npm run build` + opcjonalnie deploy Firebase przy pushu na `main`. | 🟢 |
+- ~300 produktów sklepu ma tag „Sonax" (znacznik z rozliczeń Sonax w Ops), także te innych marek. Wyszukiwarka już go ignoruje, ale tag wciąż jest w danych.
+- Kategoria „Do decyzji" / ogólne kategorie źródłowe — duży backlog; pomaga masowe zatwierdzanie w *Decyzjach* oraz skrypt `sync-wp-shop-categories.mjs` (drzewo kategorii w repo pochodzi z 24.08.2026 — odśwież przed użyciem).
+- Braki zdjęć uzupełniane ręcznie (zespół w sklepie).
 
-### Szkielety w kodzie (stan tego clone)
+## Backlog funkcji (pomysły z rozmów, nieuruchomione)
 
-- Widok `admin` w `types/index.ts` — brak UI
-- `roles.ts` — komentarze „logowanie później” (do usunięcia po merge wersji z auth)
-- Skrypty CLIP embeddings (`build-shop-embeddings.mjs`) — Lens ich **nie używa** (świadomy wybór: lekki EAN + OCR na mobile)
+**Szybkie zyski**
+- *Braki EAN* — wąski widok „ma stan, brak EAN" (dziś to tylko jeden z sygnałów w *Decyzjach*).
+- *Czego szukają, a nie znajdują* — log zapytań bez wyników (literówki, luki w katalogu).
+- *Cennik PDF/do druku* per kategoria (obok surowego CSV).
 
-### Wydajność
+**Średnie**
+- *Kategorie* — widok drzewa kategorii sklepu z liczbą produktów i brakami przypisań.
+- *Duplikaty* — wykrywanie tych samych EAN / podobnych nazw po scaleniu BaseLinker + WAPRO.
+- *Marki* — zestawienie per producent (liczba SKU, braki, wartość stanu).
+- *Marża* — przegląd marż z wykrywaniem ujemnych / podejrzanie niskich.
+- *Generowanie opisów AI* — przycisk przy słabo opisanym produkcie. Kontekst jest gotowy (`src/lib/productAiContext.ts` → dziś ręczne wklejanie do czatu); brakuje Edge Function z kluczem po stronie serwera.
 
-- Ładowanie całego katalogu naraz (5k+ rekordów) — przy dalszym wzroście rozważyć paginację, wirtualizację listy, indeksy full-text w Supabase
-- Upload zdjęć bez automatycznej kompresji / miniatur — wolniejsze ładowanie na mobile
+**Większe**
+- *Historia z WAPRO wstecz (do 12–24 mc)*:
+  - **sprzedaż** — da się (dokumenty sprzedaży sięgają 24 mc); zapytanie `extended_v2` (rozbicie miesięczne) obecnie spada do `bulk_v1` — do naprawy po odczytaniu komunikatu SQL z logu,
+  - **stan w czasie** — rekonstrukcja wstecz z dokumentów magazynowych (przyjęcia − wydania),
+  - **ceny w czasie** — nieznane, czy Mag przechowuje historię; sprawdzić `-DiagnosePriceSchema`.
+- *Inwentaryzacja* — tryb „skanuj i porównaj ze stanem" na bazie istniejącego skanera.
+- *Zamówienia do WAPRO (ZO)* — przycisk w CRM tworzy zlecenia; brakuje wdrożonego agenta serwerowego ([`future/wapro-orders`](./future/wapro-orders/README.md)).
+- *Talk* — włączenie czatu (`TALK_SUSPENDED = false`) po ocenie kosztów Realtime/Storage.
+- *Logistyka* — trasy i dostawy (placeholder).
 
----
+## Bezpieczeństwo — pamiętać
 
-## Propozycje rozwoju — co dalej
-
-### Faza 1 — Quick wins (1–2 tygodnie)
-
-| Feature | Opis |
-|---------|------|
-| **Domknięcie auth + RLS** | Po merge logowania: role w profilu użytkownika, polityki Supabase, wyłączenie anon write. |
-| **Historia zmian stanu** | Tabela `stock_log`: kto, kiedy, delta, poprzedni/nowy stan, opcjonalnie powód. Audyt magazynowy. |
-| **Lens dla Akcesoriów** | Dziś Lens tylko w katalogu Produkty — magazyn części też skanuje EAN. |
-| **Panel admin (statystyki)** | Widok `admin`: braki zdjęć, zerowe stany, ostatnie edycje, podsumowanie per kategoria. |
-| **Import różnicowy** | Skrypt: diff Wapro/Baselinker vs Supabase (nowe / zmienione / usunięte) zamiast pełnego uploadu. |
-
-### Faza 2 — Magazyn i operacje (2–4 tygodnie)
-
-| Feature | Opis |
-|---------|------|
-| **Przyjęcie / wydanie towaru** | Skan EAN → ilość → powód (przyjęcie, sprzedaż, korekta). Zamiast samego ±1. |
-| **Inwentaryzacja** | Tryb: lista do policzenia, skan → wpisz stan → raport rozbieżności. |
-| **Lokalizacja regałowa** | Pole `location` (np. A-03-2) + wyszukiwanie + na etykiecie. |
-| **Zestawy w Produkty** | Zestawy dziś tylko Akcesoria — rozszerzenie na chemię / komplety sklepowe. |
-| **Powiadomienia o niskim stanie** | Progi per kategoria / SKU, lista „do zamówienia”. |
-
-### Faza 3 — Wyszukiwanie i zdjęcia (1–2 miesiące)
-
-| Feature | Opis |
-|---------|------|
-| **Wyszukiwanie obrazem (CLIP) — opcjonalnie desktop** | Skrypty embeddings już są (`@xenova/transformers`). Na desktopie / Wi‑Fi: „znajdź podobny produkt ze zdjęcia”. Mobile: zostawić lekki EAN + OCR. |
-| **Batch upload zdjęć** | Widok „Bez zdjęć”: seria zdjęć, auto-przypisanie po EAN (skan / metadane). |
-| **Pełna galeria zdjęć** | `extra_images` jest w schemacie — UI: wiele zdjęć, kolejność, usuwanie. |
-| **Kompresja przy uploadzie** | WebP, max ~1200px — szybsze ładowanie na telefonie. |
-| **OCR marki dla Akcesoriów** | Rozszerzyć słownik producentów części (Kärcher, Nilfisk, itd.) w `ocrLens.ts`. |
-
-### Faza 4 — Integracje i skalowanie
-
-| Feature | Opis |
-|---------|------|
-| **Sync stanów ↔ Baselinker** | Dwukierunkowy sync stock przez API Baselinker. |
-| **Sync Wapro** | Automatyczny cron importu części (jeśli dostępne API / harmonogram eksportu). |
-| **Webhook / proste API** | Endpoint do aktualizacji stanu z innych systemów Kenochem. |
-| **Eksport CSV / PDF** | Raporty magazynowe, lista braków, etykiety hurtowo. |
-| **Własna domena** | np. `katalog.kenochem.com` na Firebase Hosting. |
-| **Offline / cache** | Service Worker: cache katalogu + kolejka zmian do sync po powrocie sieci. |
-| **Monitoring** | Sentry, uptime — observability dla aplikacji produkcyjnej. |
-
----
-
-## Proponowana kolejność prac
-
-```
-Tydzień 1–2:  Merge auth + RLS + weryfikacja ról w prod
-Tydzień 3:    Historia stanów + Lens dla Akcesoriów
-Tydzień 4:    Panel admin + import różnicowy
-Miesiąc 2:    Przyjęcie/wydanie + lokalizacje regałowe
-Miesiąc 3:    Offline cache + inwentaryzacja
-Miesiąc 4+:   Baselinker sync + CLIP na desktopie (opcjonalnie)
-```
-
----
-
-## Struktura projektu (skrót)
-
-```
-src/
-  components/     # UI: katalog, Lens, zestawy, PWA, skaner…
-  lib/            # Supabase, search, visualSearch, ocrLens, role, etykiety
-public/           # PWA, ikony, dane statyczne (JSON fallback)
-scripts/          # import Wapro / Baselinker / upload / embeddings
-supabase/         # schema + migracje SQL
-data/             # eksporty lokalne (JSON)
-docs/             # dokumentacja wewnętrzna (ten plik)
-```
-
----
-
-## Uwagi na spotkanie / backlog
-
-- [ ] Zmergować wersję z logowaniem i zaktualizować ten dokument
-- [ ] Ustalić docelowe uprawnienia per rola (admin / magazynier / robol)
-- [ ] Priorytet biznesowy: co boli magazyn najbardziej? (stany, zdjęcia, lokalizacje, sync ze sklepem?)
-- [ ] Czy CLIP / wyszukiwanie obrazem ma sens, czy wystarczy EAN + OCR?
-- [ ] Harmonogram importów Wapro / Baselinker (ręcznie vs cron)
-
----
-
-*Repozytorium firmowe Kenochem — użycie wewnętrzne.*
+- `SUPABASE_SERVICE_ROLE_KEY` tylko na serwerze WAPRO i w lokalnym `.env`; nigdy w froncie ani repo.
+- Okresowo przejrzeć polityki RLS tabel z danymi wrażliwymi (CRM, ceny zakupu) pod kątem roli `anon`.
+- Hasła skrzynek e-mail CRM trzymane są wyłącznie po stronie Edge Function `crm-mail`.
