@@ -1,4 +1,4 @@
-import { BookOpen, CarFront, Droplet, ExternalLink, SprayCan, Wind, Wrench } from 'lucide-react';
+import { BookOpen, CarFront, Droplet, ExternalLink, Printer, SprayCan, Wind, Wrench } from 'lucide-react';
 
 type LibraryEntry = {
   id: string;
@@ -7,6 +7,14 @@ type LibraryEntry = {
   description: string;
   file: string;
   icon: typeof BookOpen;
+  accent: string;
+};
+
+type BrandCatalogEntry = {
+  id: string;
+  title: string;
+  description: string;
+  file: string;
   accent: string;
 };
 
@@ -60,6 +68,33 @@ const LIBRARY_ENTRIES: LibraryEntry[] = [
     file: '/biblioteka/zeszyt-05-myjnie-samochodowe.html',
     icon: CarFront,
     accent: 'text-teal-600 bg-teal-100 dark:text-teal-300 dark:bg-teal-500/15',
+  },
+];
+
+const BRAND_CATALOGS: BrandCatalogEntry[] = [
+  {
+    id: 'eco-shine',
+    title: 'Eco Shine',
+    description:
+      'Pełny przegląd asortymentu Eco Shine (65 produktów w 8 kategoriach: samochód i myjnia, podłogi, kuchnia i gastronomia, łazienka, szyby, dezynfekcja, zapachy) — ze zdjęciem i opisem zastosowania każdego produktu.',
+    file: '/biblioteka/katalogi-marek/eco-shine.html',
+    accent: 'text-emerald-600 bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-500/15',
+  },
+  {
+    id: 'freshtek',
+    title: 'Freshtek',
+    description:
+      'Zapachy Freshtek (odświeżacze ONE SHOT 250/600 ml, neutralizatory Freshday, linia hotelowa Hotellux 1L) podzielone na rodziny zapachowe — pomaga dobrać zapach dla klienta.',
+    file: '/biblioteka/katalogi-marek/freshtek.html',
+    accent: 'text-violet-600 bg-violet-100 dark:text-violet-300 dark:bg-violet-500/15',
+  },
+  {
+    id: 'sonax',
+    title: 'SONAX',
+    description:
+      'Pełny przegląd asortymentu SONAX (103 produkty w 10 kategoriach: mycie, lakier, polerowanie, wnętrze, szyby, plastiki zewnętrzne, opony i felgi, akcesoria, zapachy, warsztat) — ze zdjęciem i opisem zastosowania każdego produktu.',
+    file: '/biblioteka/katalogi-marek/sonax.html',
+    accent: 'text-blue-600 bg-blue-100 dark:text-blue-300 dark:bg-blue-500/15',
   },
 ];
 
@@ -117,6 +152,50 @@ export function LibraryView() {
         <div className="flex flex-col justify-center gap-1 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/30 dark:text-slate-500">
           <p className="font-medium text-slate-600 dark:text-slate-400">Kolejne zeszyty w przygotowaniu</p>
           <p>Zeszyt 06: chemia profesjonalna do detailingu — pasty polerskie, powłoki, technika nakładania.</p>
+        </div>
+      </section>
+
+      <section className="pt-2">
+        <h2 className="inline-flex items-center gap-2 text-lg font-semibold tracking-tight text-slate-950 dark:text-slate-100">
+          <Printer className="h-5 w-5 text-brand-500" />
+          Katalogi marek (do druku)
+        </h2>
+        <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
+          Przewodnik po produktach danej marki ze zdjęciem i opisem — do pokazania klientowi
+          na miejscu albo wydrukowania. Otwierają się w nowej karcie.
+        </p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          {BRAND_CATALOGS.map((entry) => (
+            <a
+              key={entry.id}
+              href={entry.file}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-brand-400 dark:border-slate-700/80 dark:bg-slate-900/60 dark:hover:border-brand-500/40"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <span className={`rounded-xl p-3 ${entry.accent}`}>
+                  <Printer className="h-5 w-5" />
+                </span>
+                <span className="flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-brand-500 dark:text-slate-500">
+                  Otwórz <ExternalLink className="h-3.5 w-3.5" />
+                </span>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                  {entry.title}
+                </h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+                  {entry.description}
+                </p>
+              </div>
+            </a>
+          ))}
+
+          <div className="flex flex-col justify-center gap-1 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/30 dark:text-slate-500">
+            <p className="font-medium text-slate-600 dark:text-slate-400">Kolejne marki w przygotowaniu</p>
+            <p>Ten sam format przygotujemy stopniowo dla kolejnych marek z katalogu.</p>
+          </div>
         </div>
       </section>
     </div>

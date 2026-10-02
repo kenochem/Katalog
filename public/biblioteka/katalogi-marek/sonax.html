@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<script>(function(){try{var t=localStorage.getItem("katalog-theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Katalog produktowy SONAX do druku — przewodnik po produktach z opisem i zdjęciem, do pokazania i wręczenia klientowi. Biblioteka Kenochem.">
+<title>Katalog SONAX — do druku</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --paper:#E7E6DE; --paper-raised:#F1F0E9; --ink:#1E2220; --ink-soft:#4B4F49;
+    --blueprint:#3B6E8F; --blueprint-soft:#6C93A9;
+    --brass:#8F5E19; --brass-soft:#B98A3D;
+    --steel:#86867C; --steel-line:#C9C8BC;
+    --leaf:#1C5FA8; --leaf-soft:#DCE7F5;
+    --code-bg:#DEDCD1;
+    --shadow: 0 1px 0 rgba(30,34,32,0.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#14181A; --paper-raised:#1B2022; --ink:#E9E7DC; --ink-soft:#B7B6AA;
+      --blueprint:#6FA8C9; --blueprint-soft:#4E7E96;
+      --brass:#D6A056; --brass-soft:#A9793C;
+      --steel:#787A72; --steel-line:#33372F;
+      --leaf:#5B9BE0; --leaf-soft:#1B2C40;
+      --code-bg:#20251F;
+      --shadow: 0 1px 0 rgba(0,0,0,0.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#14181A; --paper-raised:#1B2022; --ink:#E9E7DC; --ink-soft:#B7B6AA;
+    --blueprint:#6FA8C9; --blueprint-soft:#4E7E96;
+    --brass:#D6A056; --brass-soft:#A9793C;
+    --steel:#787A72; --steel-line:#33372F;
+    --leaf:#5B9BE0; --leaf-soft:#1B2C40;
+    --code-bg:#20251F;
+    --shadow: 0 1px 0 rgba(0,0,0,0.4);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:"Source Serif 4", Georgia, "Times New Roman", serif;
+    font-size:16px; line-height:1.5;
+    margin:0; padding:0;
+  }
+  .wrap{max-width:1180px; margin:0 auto; padding:0 clamp(20px,4vw,48px) 60px;}
+
+  h1,h2,h3{font-family:"Big Shoulders Display","Arial Narrow",sans-serif; font-weight:800; text-transform:uppercase; letter-spacing:0.01em; text-wrap:balance; margin:0; color:var(--ink);}
+  .mono{font-family:"IBM Plex Mono", ui-monospace, Menlo, monospace;}
+  a{color:var(--blueprint);}
+
+  /* ---------- toolbar (nie drukuje się) ---------- */
+  .toolbar{position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between; gap:12px;
+    background:var(--paper-raised); border-bottom:1px solid var(--steel-line); padding:10px clamp(20px,4vw,48px);}
+  .toolbar a.back{font-family:"IBM Plex Mono"; font-size:12.5px; color:var(--ink-soft); text-decoration:none; display:flex; align-items:center; gap:6px;}
+  .toolbar a.back:hover{color:var(--ink);}
+  .toolbar .acts{display:flex; gap:8px;}
+  .toolbar button{font-family:"IBM Plex Mono"; font-size:12.5px; cursor:pointer; border:1px solid var(--steel-line);
+    background:var(--paper); color:var(--ink); border-radius:7px; padding:7px 12px; line-height:1;}
+  .toolbar button:hover{background:var(--code-bg);}
+  .toolbar button.primary{background:var(--leaf); color:#fff; border-color:var(--leaf); font-weight:600;}
+
+  /* ---------- hero ---------- */
+  .hero{padding:clamp(28px,5vw,48px) 0 clamp(20px,3vw,28px); border-bottom:2px solid var(--leaf);}
+  .hero .kicker{font-family:"IBM Plex Mono"; font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:8px;}
+  .hero h1{font-size:clamp(32px,5.5vw,54px); line-height:0.95; color:var(--leaf);}
+  .hero h1 span{color:var(--ink);}
+  .hero .lede{font-size:15px; color:var(--ink-soft); max-width:80ch; margin-top:12px;}
+  .hero .meta{display:flex; gap:20px; flex-wrap:wrap; margin-top:16px; font-family:"IBM Plex Mono"; font-size:11.5px; color:var(--ink-soft);}
+  .hero .meta b{color:var(--ink); font-weight:600;}
+  .hero .pricenote{margin-top:10px; font-family:"IBM Plex Mono"; font-size:11px; color:var(--leaf);}
+  .hero .pricenote b{font-weight:700;}
+  .hero .lede-edit-label{display:block; font-family:"IBM Plex Mono"; font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em; color:var(--leaf); margin-bottom:4px;}
+  .hero textarea.lede-edit{display:block; width:100%; border:1px solid var(--steel-line); border-radius:6px; padding:8px 10px; background:#fff; resize:vertical;}
+
+  /* ---------- kategorie i siatka produktów ---------- */
+  .category{padding-top:26px;}
+  .category h2{font-size:19px; color:var(--leaf); display:flex; align-items:baseline; gap:10px; border-bottom:1px solid var(--steel-line); padding-bottom:6px;}
+  .category h2 .count{font-family:"IBM Plex Mono"; font-size:11px; color:var(--ink-soft); text-transform:none; letter-spacing:0; font-weight:400;}
+
+  .grid{display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-top:12px;}
+  .card{background:var(--paper-raised); border:1px solid var(--steel-line); border-radius:8px; padding:8px; display:flex; flex-direction:column; gap:6px; break-inside:avoid;}
+  .card .thumb{width:100%; height:64px; display:flex; align-items:center; justify-content:center; background:#fff; border-radius:5px; overflow:hidden; border:1px solid var(--steel-line);}
+  .card .thumb img{max-width:100%; max-height:100%; object-fit:contain;}
+  .card h3{font-size:11.5px; line-height:1.2; letter-spacing:0; min-height:2.4em;}
+  .card .d{font-family:"Source Serif 4"; font-size:11px; color:var(--ink-soft); line-height:1.3; flex:1;}
+  .card .foot{display:flex; flex-direction:column; gap:3px; margin-top:2px;}
+  .card .sizes{display:flex; flex-direction:column; gap:2px;}
+  .card .sizes .row{display:flex; align-items:baseline; justify-content:space-between; gap:6px; font-family:"IBM Plex Mono"; font-size:9.5px;}
+  .card .sizes .row .v{color:var(--ink-soft); background:var(--code-bg); padding:1px 5px; border-radius:10px;}
+  .card .sizes .row .p{color:var(--leaf); font-weight:600; white-space:nowrap;}
+  .card .sku{font-family:"IBM Plex Mono"; font-size:8.5px; color:var(--steel); text-align:right;}
+
+  /* ---------- tryb edycji ---------- */
+  .card.editing{outline:2px dashed var(--leaf); outline-offset:2px;}
+  .card .d-edit{font-family:"Source Serif 4"; font-size:11px; color:var(--ink); line-height:1.3; flex:1; width:100%; resize:vertical; border:1px solid var(--steel-line); border-radius:4px; padding:3px 5px; background:#fff;}
+  .card .cat-edit{font-family:"IBM Plex Mono"; font-size:9.5px; width:100%; border:1px solid var(--steel-line); border-radius:4px; padding:3px 4px; background:#fff; color:var(--ink);}
+  #editSaveBar button{font-family:"IBM Plex Mono"; font-size:12px; cursor:pointer; border:1px solid var(--steel-line); background:var(--paper); color:var(--ink); border-radius:7px; padding:6px 10px;}
+  #editSaveBar button.primary{background:var(--leaf); border-color:var(--leaf); font-weight:600;}
+
+  @media (max-width:1000px){ .grid{grid-template-columns:repeat(3,1fr);} }
+  @media (max-width:620px){ .grid{grid-template-columns:repeat(2,1fr);} .toolbar{flex-wrap:wrap;} }
+
+  footer{padding:36px 0 12px; color:var(--ink-soft); font-size:12px; border-top:1px solid var(--steel-line); margin-top:32px;}
+
+  /* ---------- druk ---------- */
+  @page{ size:A4; margin:10mm 9mm; }
+  @media print{
+    .no-print{display:none !important;}
+    body{background:#fff; color:#111; font-size:9.5px;}
+    .wrap{max-width:none; padding:0;}
+    .hero{padding:0 0 8px; border-bottom:2px solid #1c5fa8;}
+    .hero h1{font-size:26px; color:#1c5fa8;}
+    .hero .lede{font-size:10.5px;}
+    .hero .pricenote{font-size:8.5px;}
+    .category{padding-top:10px; break-inside:avoid;}
+    .category h2{font-size:13px; color:#1c5fa8;}
+    .grid{grid-template-columns:repeat(6,1fr); gap:5px;}
+    .card{border:1px solid #c9c8bc; background:#fbfaf6; padding:5px; break-inside:avoid;}
+    .card .thumb{height:44px;}
+    .card h3{font-size:8.6px; min-height:2em;}
+    .card .d{font-size:8px;}
+    .card .sizes .row{font-size:7.5px;}
+    .card .sku{font-size:7px;}
+    footer{font-size:8px; padding:10px 0 0;}
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar no-print">
+  <a class="back" href="/">&larr; Wróć do katalogu</a>
+  <div class="acts">
+    <button type="button" id="themeBtn">🌓 Motyw</button>
+    <button type="button" class="primary" onclick="window.print()">🖨️ Drukuj</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <section class="hero">
+    <p class="kicker">Kenochem — Katalog produktowy do druku</p>
+    <h1>SON<span>AX</span></h1>
+    <div id="heroLedeWrap"><p class="lede">Niemiecka marka specjalizująca się w chemii samochodowej — mycie i pielęgnacja lakieru, wnętrza, szyb, opon i felg, a także profesjonalna linia ProfiLine do detailingu (pasty polerskie, powłoki, przygotowanie lakieru). Poniżej pełen przegląd produktów marki dostępnych w Kenochem — ze zdjęciem i krótkim opisem zastosowania, do pokazania klientowi w rozmowie lub do wydrukowania.</p></div>
+    <div class="meta">
+      <span><b>103</b> produkty</span>
+      <span><b>10</b> kategorii</span>
+      <span>Producent: <b>SONAX</b></span>
+    </div>
+    <p class="pricenote">Ceny przy każdej pojemności to <b>cena katalogowa</b> — aktualna cena sprzedaży brutto (bez doliczonej marży).</p>
+  </section>
+
+  <div id="categories"></div>
+
+  <footer>
+    <p class="mono">Kenochem — Biblioteka, katalogi marek do druku. Ceny i stany magazynowe sprawdź w katalogu Kenochem — ten dokument służy do prezentacji asortymentu.</p>
+  </footer>
+
+</div>
+
+<script>
+  var CATALOG_SLUG = "sonax";
+  var CATALOG = {
+    brand: "SONAX",
+    categoryOrder: [
+      { name:"Mycie i pianki aktywne" },
+      { name:"Lakier — połysk i ochrona" },
+      { name:"Polerowanie — pasty i akcesoria" },
+      { name:"Wnętrze i tapicerka" },
+      { name:"Szyby" },
+      { name:"Zewnętrzne plastiki i reflektory" },
+      { name:"Opony, felgi i chrom" },
+      { name:"Akcesoria — ścierki, gąbki, aplikatory" },
+      { name:"Zapachy samochodowe" },
+      { name:"Płyny eksploatacyjne i warsztat" }
+    ],
+    items: [
+{ n:"PIANA AKTYWNA ACTIFOAM ENERGY KONCENTRAT 1L.", cat:"Mycie i pianki aktywne", d:"Środek SONAX do mycia karoserii.", s:[{v:"1L",p:79.99}], sku:"SON000072", img:"https://upload.cdn.baselinker.com/products/6011214/2987e8f4949aadf5f11703a31a0945e6.png" },
+      { n:"PROFILINE Pianka do czyszczenia powierzchni APC 400ML", cat:"Mycie i pianki aktywne", d:"SONAX Foamsprayer 250 ml to pianowniczka do wnętrza auta, która tworzy gęstą, stabilną pianę ograniczającą przemakanie.", s:[{v:"400ml",p:34.99}], sku:"SON000077", img:"https://kenochem.com/wp-content/uploads/2026/05/pol_pl_SONAX-PROFILINE-Pianka-do-czyszczenia-powierzchni-APC-400ML-274300-6497_1.png" },
+      { n:"Szampon samochodowy Havana Love 2L - zabezpiecza lakier", cat:"Mycie i pianki aktywne", d:"Szampon samochodowy koncentrat o słodkim, owocowym zapachu inspirowanym Karaibami Havana Love .", s:[{v:"2L",p:34.99}], sku:"SON000132", img:"https://upload.cdn.baselinker.com/products/6011214/ec2d913ae7ca06255e1f6bc6e6962600.png" },
+      { n:"XTREME AKTYWNY SZAMPON CERAMICZNY 500ML", cat:"Mycie i pianki aktywne", d:"Środek SONAX do mycia karoserii.", s:[{v:"500ml",p:65.21}], sku:"SON000010", img:"https://kenochem.com/wp-content/uploads/2026/05/pol_pl_SONAX-XTREME-AKTYWNY-SZAMPON-CERAMICZNY-500ML-259-200-6505_1.png" },
+      
+
+      { n:"Politura polerska typu All In One Sonax Profiline OS 02/06, 1l", cat:"Lakier — połysk i ochrona", d:"Uniwersalna Politura One Step – Wysoki Połysk i Ochrona Lakieru.", s:[{v:"1L",p:134.99}], sku:"SON000066", img:"https://kenochem.com/wp-content/uploads/2026/05/pol_pl_SONAX-247-300-Politura-polerska-typu-All-In-One-Sonax-Profiline-OS-02-06-1l-6528_1.png" },
+      { n:"Auto Politura 250 ml - połysk i odświeżenie koloru", cat:"Lakier — połysk i ochrona", d:"SONAX Mleczko Auto Politura 250 ml skutecznie usuwa drobne rysy i zmatowienia lakieru . Czyści, ożywia kolor i nadaje…", s:[{v:"250ml",p:24.99}], sku:"SON000026", img:"https://upload.cdn.baselinker.com/products/6011214/82edeac20cfb688870af2a4d1d82e13c.png" },
+      { n:"Do regeneracji lakieru 250 ml - przywraca połysk", cat:"Lakier — połysk i ochrona", d:"SONAX Preparat do regeneracji lakieru 250 ml usuwa zmatowienia, utlenienia oraz drobne rysy z lakierów zwykłych i…", s:[{v:"250ml",p:29.99}], sku:"SON000028", img:"https://upload.cdn.baselinker.com/products/6011214/d8936a578908afd60c956c328d0800cc.png" },
+      { n:"Do usuwania nalotów rdzy 500 ml - usuwa rdzę i osady, pyły", cat:"Lakier — połysk i ochrona", d:"Preparat SONAX do pielęgnacji i ochrony lakieru samochodowego.", s:[{v:"500ml",p:65.99}], sku:"SON000073", img:"https://upload.cdn.baselinker.com/products/6011214/3df804e2afe9952be30115f726cdbb79.png" },
+      { n:"Gąbka do nakładania wosku", cat:"Lakier — połysk i ochrona", d:"SONAX gąbka aplikacyjna przeznaczona do nanoszenia past polerskich, wosków oraz preparatów do pielęgnacji tworzyw…", s:[{v:"szt.",p:16.99}], sku:"SON000111", img:"https://upload.cdn.baselinker.com/products/6011214/dcd1d935a1d85c1ac6a03c49d162a081.png" },
+      { n:"Mleczko do czyszczenia skóry 250 ml - z woskiem pszczelim", cat:"Lakier — połysk i ochrona", d:"Wysokogatunkowe mleczko do łagodnego czyszczenia i pielęgnowania skórzanych elementów we wnętrzu pojazdu, osłon na koła…", s:[{v:"250ml",p:34.99}], sku:"SON000083", img:"https://upload.cdn.baselinker.com/products/6011214/3d64629cf47c5cb3bc182e27afed82f3.png" },
+      { n:"Polish&Wax Color - niebieski 500 ml", cat:"Lakier — połysk i ochrona", d:"SONAX Wosk Koloryzujący do lakierów zwykłych i metalizowanych przywraca głębię koloru oraz nadaje lakierowi brylantowy…", s:[{v:"500ml",p:43.99}], sku:"SON000086", img:"https://upload.cdn.baselinker.com/products/6011214/dc1f994559cc88cd635ac68a99863c94.png" },
+      { n:"Polish&Wax Color BIAŁY 500 ml", cat:"Lakier — połysk i ochrona", d:"Wosk koloryzujący przeznaczony do wszystkich lakierów zwykłych i.", s:[{v:"500ml",p:44.99}], sku:"SON000084", img:"https://upload.cdn.baselinker.com/products/6011214/aa30150bf525eb26de192879c29b38c7.jpg" },
+      { n:"Preparat do usuwania smoły 300 ml", cat:"Lakier — połysk i ochrona", d:"Działa łagodnie i jednocześnie dokładnie usuwa plamy ze smoły i oleju oraz innego typu uporczywe zabrudzenia. Doskonały do…", s:[{v:"300ml",p:29.99}], sku:"SON000041", img:"https://upload.cdn.baselinker.com/products/6011214/4ba7b040cb886efb3baa3a39309c184d.png" },
+      { n:"PROFILINE COATING 1L - Impregnat do tkanin", cat:"Lakier — połysk i ochrona", d:"Impregnat do tekstyliów – ochrona dachów kabrioletów, namiotów i tkanin outdoorowych.", s:[{v:"1L",p:199.99}], sku:"SON000034", img:"https://kenochem.com/wp-content/uploads/2026/05/pol_pl_SONAX-PROFILINE-COATING-1L-310300-Impregnat-do-tkanin-6523_1.png" },
+      { n:"PROFILINE Lack Prepare 400 ml - przygotowanie powierzchni", cat:"Lakier — połysk i ochrona", d:"SONAX ProfiLine Lack Prepare to preparat do odtłuszczania lakieru , który usuwa tłuste i olejowe pozostałości,.", s:[{v:"400ml",p:54.99}], sku:"SON000058", img:"https://upload.cdn.baselinker.com/products/6011214/65e59330c9ba2eb4197da17cffcaf71c.png" },
+      { n:"PROFILINE PERFECT FINISH 1 L 4/6 - politura wysoki połysk", cat:"Lakier — połysk i ochrona", d:"Innowacyjna, bezpyłowa politura wykończeniowa przeznaczona do jednostopniowego polerowania miejscowych uszkodzeń lakieru,…", s:[{v:"1L",p:274.99}], sku:"SON000096", img:"https://upload.cdn.baselinker.com/products/6011214/a6a6c3e074a561bd6e071f918668e60f.png" },
+      { n:"PROFILINE PERFECT FINISH 250ml 4/6- Politura wykończeniowa", cat:"Lakier — połysk i ochrona", d:"SONAX Politura Wykończeniowa Perfect Finish (224.141). Innowacyjna, bezpyłowa politura wykończeniowa przeznaczona.", s:[{v:"250ml",p:99.99}], sku:"SON000056", img:"https://upload.cdn.baselinker.com/products/6011214/6437b96e76e0b9d96ac40aad72db76d8.webp" },
+      { n:"ProfiLine Polymer Netschield 340 ml - konserwacja lakierowanych powierzchni", cat:"Lakier — połysk i ochrona", d:"SONAX ProfiLine Polymer NetShield to powłoka ochronna do lakieru, która podbija głębię koloru , nadaje.", s:[{v:"340ml",p:114.99}], sku:"SON000055", img:"https://upload.cdn.baselinker.com/products/6011214/8daf367e5371c7d6d2e19b2b79ec4c20.png" },
+      { n:"PROFILINE Waterspot Remover usuwanie śladów po twardej wodzie 1L", cat:"Lakier — połysk i ochrona", d:"SONAX preparat do usuwania śladów po twardej wodzie skutecznie usuwa osady mineralne pozostawione przez wapń i magnez.…", s:[{v:"1L",p:88.99}], sku:"SON000078", img:"https://upload.cdn.baselinker.com/products/6011214/9b26bce8454f4b83619e642004657a1b.png" },
+      { n:"Szampon z woskiem 500 ml - Koncentrat", cat:"Lakier — połysk i ochrona", d:"Sonax Szampon z woskiem – koncentrat 500 ml to wydajny preparat do ręcznego mycia, który skutecznie usuwa zabrudzenia,.", s:[{v:"500ml",p:33.99}], sku:"SON000035", img:"https://upload.cdn.baselinker.com/products/6011214/0297841ce839d28a90e44d1bf03ddc82.png" },
+      { n:"Twardy wosk w płynie 250 ml - Ochrona lakieru", cat:"Lakier — połysk i ochrona", d:"Preparat SONAX do pielęgnacji i ochrony lakieru samochodowego.", s:[{v:"250ml",p:25.99}], sku:"SON000027", img:"https://upload.cdn.baselinker.com/products/6011214/2d1781eeac5752b165715ba7c62e3fba.png" },
+      { n:"Wosk do lakierów metalizowanych 250 ml - Lustrzany połysk", cat:"Lakier — połysk i ochrona", d:"Wosk do polerowania lakierów metalizowanych . Czyści ,.", s:[{v:"250ml",p:34.99}], sku:"SON000036", img:"https://upload.cdn.baselinker.com/products/6011214/f1701b8d98c22879422f812c8a631f2f.png" },
+      { n:"Wosk koloryzujący BIAŁY 250 ml", cat:"Lakier — połysk i ochrona", d:"Preparat SONAX do pielęgnacji i ochrony lakieru samochodowego.", s:[{v:"250ml",p:25.99}], sku:"SON000085", img:"https://upload.cdn.baselinker.com/products/6011214/378e1989b4b39ed2ce5999a73848f513.png" },
+      { n:"Wosk koloryzujący CZARNY 250 ml", cat:"Lakier — połysk i ochrona", d:"SONAX Wosk Koloryzujący do lakierów zwykłych i metalizowanych przywraca głębię koloru i nadaje lakierowi brylantowy połysk…", s:[{v:"250ml",p:25.99}], sku:"SON000071", img:"https://upload.cdn.baselinker.com/products/6011214/36500977321159b08f457c917adf6c88.png" },
+      { n:"Wosk koloryzujący CZERWONY 250 ml", cat:"Lakier — połysk i ochrona", d:"SONAX Wosk Koloryzujący przeznaczony do lakierów zwykłych i metalizowanych. Zawiera naturalne woski Carnauba , które…", s:[{v:"250ml",p:29.99}], sku:"SON000024", img:"https://upload.cdn.baselinker.com/products/6011214/6cce42de0277d67d8ccd9e101bc36b09.png" },
+      { n:"Wosk koloryzujący CZERWONY 500 ml", cat:"Lakier — połysk i ochrona", d:"SONAX Wosk Koloryzujący przeznaczony do lakierów zwykłych i metalizowanych. Zawiera naturalne woski Carnauba , które…", s:[{v:"500ml",p:49.99}], sku:"SON000023", img:"https://upload.cdn.baselinker.com/products/6011214/3e0c56492adb6a70f5ff26293335d799.png" },
+      { n:"Wosk koloryzujący NIEBIESKI 250 ml", cat:"Lakier — połysk i ochrona", d:"SONAX Wosk Koloryzujący przeznaczony do lakierów zwykłych i metalizowanych. Zawiera naturalne woski Carnauba , które…", s:[{v:"250ml",p:25.99}], sku:"SON000087", img:"https://upload.cdn.baselinker.com/products/6011214/28915b5573903918afb2db4936219e00.png" },
+      { n:"Wosk Koloryzujący SREBRNY 250 ml", cat:"Lakier — połysk i ochrona", d:"SONAX Wosk Koloryzujący przeznaczony do lakierów zwykłych i metalizowanych. Zawiera naturalne woski Carnauba , które…", s:[{v:"250ml",p:29.99}], sku:"SON000022", img:"https://upload.cdn.baselinker.com/products/6011214/65776ef8a41d256cc034de13ac900a7e.png" },
+      { n:"Wosk Koloryzujący SREBRNY 500 ml", cat:"Lakier — połysk i ochrona", d:"SONAX Wosk Koloryzujący przeznaczony do lakierów zwykłych i metalizowanych. Zawiera naturalne woski Carnauba , które nadają…", s:[{v:"500ml",p:51.99}], sku:"SON000088", img:"https://upload.cdn.baselinker.com/products/6011214/9b178f22ebb20cf12c6e40e3839f72b8.png" },
+      { n:"Xtreme Brilliant Shine Detailer 750 ml - zabezpiecza lakier", cat:"Lakier — połysk i ochrona", d:"SONAX XTREME Brillant Shine Detailer 750 ml to szybki detailer, który delikatnie czyści lekko zabrudzony lakier,.", s:[{v:"750ml",p:34.99}], sku:"SON000097", img:"https://upload.cdn.baselinker.com/products/6011214/e3e4ef71dea635787d772f3d313a542c.png" },
+      { n:"XTREME CERAMIC PLASTIC SEALING 750ML", cat:"Lakier — połysk i ochrona", d:"Preparat SONAX do pielęgnacji i ochrony lakieru samochodowego.", s:[{v:"750ml",p:104.46}], sku:"SON000011", img:"https://kenochem.com/wp-content/uploads/2026/05/pol_pl_SONAX-XTREME-CERAMIC-PLASTIC-SEALING-750ML-226-400-6506_1.png" },
+      { n:"XTREME Polish&Wax 2 Hybrid NPT 250 ml", cat:"Lakier — połysk i ochrona", d:"SONAX XTREME Polish&Wax przeznaczony.", s:[{v:"250ml",p:47.99}], sku:"SON000018", img:"https://upload.cdn.baselinker.com/products/6011214/bbcfd1c911af87caa577b2d2045d1fdb.png" },
+      { n:"XTREME POLITURA Z WOSKIEM POLISH + WAX 3 HYBRID NPT 250ML", cat:"Lakier — połysk i ochrona", d:"SONAX Xtreme Brillant Wax 1. Regenerujący wosk o wysokiej sile ściernej.", s:[{v:"250ml",p:49.99}], sku:"SON000016", img:"https://kenochem.com/wp-content/uploads/2026/05/pol_pl_SONAX-XTREME-POLITURA-Z-WOSKIEM-POLISH-WAX-3-HYBRID-NPT-250ML-202100-6511_1.png" },
+      { n:"Xtreme PPF + Vinyl Cleaner 750ML do czyszczenia folii", cat:"Lakier — połysk i ochrona", d:"Specjalny środek czyszczący do intensywnego czyszczenia zewnętrznego pojazdów częściowo lub całkowicie pokrytych folią.", s:[{v:"750ml",p:50.34}], sku:"SON000008", img:"https://upload.cdn.baselinker.com/products/6011214/fb6ec842fcee9be086fed7d547ff6356.png" },
+      { n:"XTREME PPF + VINYL DETAILER 500 ML POWŁOKA DO FOLII", cat:"Lakier — połysk i ochrona", d:"Silny preparat do czyszczenia folii samochodowych – zarówno matowych, jak i z połyskiem. Skutecznie usuwa nawet ciężkie i…", s:[{v:"500ml",p:64.99}], sku:"SON000121", img:"https://kenochem.com/wp-content/uploads/2026/05/pol_pl_SONAX-XTREME-PPF-VINYL-DETAILER-500-ML-POWLOKA-DO-FOLII-6503_1.png" },
+      { n:"Xtreme Spray & Seal 750 ml - powłoka zabezpieczająca na mokro", cat:"Lakier — połysk i ochrona", d:"Powłoka zabezpieczająca do stosowania na mokrą karoserię.", s:[{v:"750ml",p:79.99}], sku:"SON000102", img:"https://upload.cdn.baselinker.com/products/6011214/27dbad8734580dc96e372a504d890a76.jpg" },
+      
+
+      { n:"Gąbka polerska czerwona twarda 80mm", cat:"Polerowanie — pasty i akcesoria", d:"Gąbka polerska SONAX twarda o średnicy 80 mm została zaprojektowana do intensywnej korekty lakieru przy użyciu…", s:[{v:"szt.",p:34.99}], sku:"SON000092", img:"https://kenochem.com/wp-content/uploads/2026/05/pol_pl_SONAX-Gabka-polerska-czerwona-twarda-80mm-493700-6525_1.png" },
+      { n:"Gąbka polerska zielona średnio twarda 80mm", cat:"Polerowanie — pasty i akcesoria", d:"Pad o średnicy 80 mm idealnie sprawdza się podczas precyzyjnych prac polerskich oraz przy obróbce mniejszych elementów…", s:[{v:"szt.",p:34.99}], sku:"SON000090", img:"https://kenochem.com/wp-content/uploads/2026/05/pol_pl_SONAX-Gabka-polerska-zielona-srednio-twarda-80mm-493541-6524_1.webp" },
+      { n:"Pasta lekkościerna 75 ml - Bez silikonu", cat:"Polerowanie — pasty i akcesoria", d:"Pasta / akcesorium SONAX do polerowania lakieru.", s:[{v:"75ml",p:24.99}], sku:"SON000039", img:"https://upload.cdn.baselinker.com/products/6011214/8eb6fde981014830fbc8f14c21cbdb57.png" },
+      { n:"PROFILINE NP 03-06 1L - Pasta polerska, antyhologramowa", cat:"Polerowanie — pasty i akcesoria", d:"Antyhologramowa politura wykończeniowa, zapewnia dokonałą głębię koloru. Przeznaczona do polerowania lekko utlenionych…", s:[{v:"1L",p:179.99}], sku:"SON000019", img:"https://upload.cdn.baselinker.com/products/6011214/eb1d6258d3a7a9863b3536e3332a6eb7.webp" },
+      { n:"PROFILINE ULTIMATE CUT 06+/03 1l. pasta polerska", cat:"Polerowanie — pasty i akcesoria", d:"Pasta / akcesorium SONAX do polerowania lakieru.", s:[{v:"1L",p:279.99}], sku:"SON000061", img:"https://kenochem.com/wp-content/uploads/2026/05/pol_pl_SONAX-PROFILINE-ULTIMATE-CUT-06-03-1l-239300-pasta-polerska-6518_1.png" },
+      { n:"PROFILINE ULTIMATE CUT 6+/3 250ML - Pasta polerska", cat:"Polerowanie — pasty i akcesoria", d:"Innowacyjna, ekstremalnie szybka pasta polerska przeznaczona do usuwania głębokich zarysowań i zmatowień. Zawiera niezwykle…", s:[{v:"250ml",p:96.99}], sku:"SON000060", img:"https://kenochem.com/wp-content/uploads/2026/05/pol_pl_SONAX-PROFILINE-ULTIMATE-CUT-6-3-250ML-239141-Pasta-polerska-6526_1.png" },
+      { n:"PROFILINE XP 02/06 Express Polish 1L - do drobnych zarysowań", cat:"Polerowanie — pasty i akcesoria", d:"Profesjonalna jednoetapowa pasta polerska z woskiem Carnauba, która łączy korektę lakieru z jego zabezpieczeniem w jednym…", s:[{v:"1L",p:149.99}], sku:"SON000025", img:"https://kenochem.com/wp-content/uploads/2026/05/pol_pl_SONAX-PROFILINE-XP-02-06-Express-Polish-1L-297300-do-drobnych-zarysowan-6510_1.png" },
+      { n:"Xtreme PPF+ Vinyl 250ml- pasta lekkościerna do folii PPF", cat:"Polerowanie — pasty i akcesoria", d:"Skuteczny wosk o wysokim stopniu ścieralności przeznaczony do usuwania zniszczonych i zmatowiałych warstw lakieru. Idealny…", s:[{v:"250ml",p:68.99}], sku:"SON000119", img:"https://upload.cdn.baselinker.com/products/6011214/fabce363dc767745a664e789789718aa.png" },
+      { n:"Zestaw do Usuwania Zarysowań 2x25ml", cat:"Polerowanie — pasty i akcesoria", d:"SONAX Zestaw do usuwania rys z lakieru umożliwia ręczne usunięcie drobnych rys i zadrapań z lakierów bezbarwnych. System…", s:[{v:"25ml",p:68.99}], sku:"SON000030", img:"https://upload.cdn.baselinker.com/products/6011214/aa7ccf83a233e1afd6ce50caba68a90b.png" },
+      
+
+      { n:"Preparat do czyszczenia wnętrza samochodu", cat:"Wnętrze i tapicerka", d:"Preparat opracowany specjalnie do utrzymania czystości we wnętrzu samochodu oraz w domu .", s:[{v:"500ml",p:19.99}], sku:"SON000101", img:"https://upload.cdn.baselinker.com/products/6011214/d17ebf154635d50ed976e0b09385bdad.jpg" },
+      { n:"Cleanstar 750ml - do czyszczenia wnętrza", cat:"Wnętrze i tapicerka", d:"SONAX Cleanstar to uniwersalny spray przeznaczony do czyszczenia wnętrza samochodu. Skutecznie usuwa zabrudzenia ze szkła,…", s:[{v:"750ml",p:39.99}], sku:"SON000120", img:"https://kenochem.com/wp-content/uploads/2026/05/pol_pl_SONAX-Cleanstar-750ml-do-czyszczenia-wnetrza-6504_1.png" },
+      { n:"Do renowacji przezroczystych plastików 75 ml", cat:"Wnętrze i tapicerka", d:"Preparat SONAX do czyszczenia wnętrza i tapicerki samochodu.", s:[{v:"75ml",p:36.99}], sku:"SON000029", img:"https://upload.cdn.baselinker.com/products/6011214/b6a3eace675e336a5e368e0812b8466c.png" },
+      { n:"Gąbka do plastików", cat:"Wnętrze i tapicerka", d:"Okrągła gąbka SONAX obszyta mikrofibrą przeznaczona do nanoszenia preparatów do pielęgnacji tworzyw sztucznych we wnętrzu…", s:[{v:"szt.",p:17.99}], sku:"SON000109", img:"https://upload.cdn.baselinker.com/products/6011214/3c206f9e7b5f1c0e799247a830016df7.png" },
+      { n:"Mikrofibra do tkanin i skóry", cat:"Wnętrze i tapicerka", d:"Profesjonalna ściereczka z mikrofibry SONAX o wysokiej chłonności skutecznie usuwa brud i nadmiar środków czystości,…", s:[{v:"szt.",p:26.99}], sku:"SON000114", img:"https://upload.cdn.baselinker.com/products/6011214/12ded627b1c497c52bd559f977798581.png" },
+      { n:"ODPLAMIACZ DO TAPICERKI I ALCANTARY 300ML", cat:"Wnętrze i tapicerka", d:"Silny odplamiacz do punktowego usuwania uporczywych i zaschniętych plam (kremy, smary, makijaż, pasta do butów, tusz) z.", s:[{v:"300ml",p:31.99}], sku:"SON000068", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Sonax-ODPLAMIACZ-DO-TAPICERKI-I-ALCANTARY-300ML-252200-6444_1.png" },
+      { n:"Pianka do Tapicerki 400 ml - do domu i samochodu", cat:"Wnętrze i tapicerka", d:"SONAX Pianka do czyszczenia tapicerki i dywanów 400 ml to silnie pieniący preparat, który usuwa uporczywe zabrudzenia z.", s:[{v:"400ml",p:30.99}], sku:"SON000031", img:"https://upload.cdn.baselinker.com/products/6011214/0633a2bac04a731dc40647bf1160b7d9.png" },
+      { n:"Sonax Xtreme Cockpit Matowy 500ml - kokpit spray matowy", cat:"Wnętrze i tapicerka", d:"SONAX XTREME Cockpit Matowy to wyjątkowy preparat przeznaczony do czyszczenia i konserwacji plastików wewnętrznych…", s:[{v:"500ml",p:27.66}], sku:"SON000080", img:"https://kenochem.com/wp-content/uploads/2026/05/pol_pl_Sonax-Sonax-Xtreme-Cockpit-Matowy-500ml-kokpit-spray-matowy-6513_1.png" },
+      { n:"Szczotka Do usuwania sierści", cat:"Wnętrze i tapicerka", d:"SONAX gumowa szczotka do tapicerki przeznaczona do czyszczenia powierzchni tekstylnych, takich jak fotele, kanapy czy…", s:[{v:"szt.",p:68.99}], sku:"SON000110", img:"https://upload.cdn.baselinker.com/products/6011214/6e4fbfc247de144613b60079def23793.png" },
+      { n:"XTREME detailer do plastików 500ML", cat:"Wnętrze i tapicerka", d:"Szybki w użyciu uniwersalny środek do wszystkich wewnętrznych i zewnętrznych elementów plastikowych w samochodzie.…", s:[{v:"500ml",p:36.99}], sku:"SON000069", img:"https://kenochem.com/wp-content/uploads/2026/05/pol_pl_SONAX-XTREME-detailer-do-plastikow-500ML-255-241-6517_1.png" },
+      { n:"Xtreme Interior Detailer 750 ml - pielęgnacja wnętrza samochodu", cat:"Wnętrze i tapicerka", d:"Łagodnie, szybko i łatwo usuwa zanieczyszczenia z kokpitu, detali ozdobnych, tapicerki, podsufitki oraz pozostałych…", s:[{v:"750ml",p:34.99}], sku:"SON000074", img:"https://upload.cdn.baselinker.com/products/6011214/c9af1a257625afe112b20841d3a92675.png" },
+      { n:"Xtreme Pianka do Tapicerki 400 ml", cat:"Wnętrze i tapicerka", d:"SONAX XTREME Pianka do tapicerki 400 ml szybko czyści tkaniny we wnętrzu auta (siedzenia, wykładzina, boczki, podsufitka),.", s:[{v:"400ml",p:43.99}], sku:"SON000017", img:"https://upload.cdn.baselinker.com/products/6011214/1c701254a344ecbd6a1183553be6c140.png" },
+      
+
+      { n:"ANTYROSZENIOWY PREPARAT DO SZYB ANTYPARA", cat:"Szyby", d:"Preparat antyroszeniowy Sonax (Antypara) skutecznie zapobiega osadzaniu się pary na szybach samochodowych. Tworzy…", s:[{v:"szt.",p:39.99}], sku:"SON000125", img:"https://kenochem.com/wp-content/uploads/2026/05/pol_pl_SONAX-ANTYROSZENIOWY-PREPARAT-DO-SZYB-ANTYPARA-355241-6512_1.png" },
+      { n:"CERAMIC ULTRA SLICK DETAILER 750ML - Szybki detailer", cat:"Szyby", d:"SONAX Xtreme Ceramic Ultra Slick Detailer dzięki technologi ceramicznej ułatwia super szybką pielęgnację i idealnie…", s:[{v:"750ml",p:79.99}], sku:"SON000012", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_SONAX-CERAMIC-ULTRA-SLICK-DETAILER-750ML-268400-Szybki-detailer-6443_1.png" },
+      { n:"Do intensywnego czyszczenia szyb 250ml - usuwa powłoki ochronne", cat:"Szyby", d:"Preparat do gruntownego czyszczenia szyb samochodowych. Usuwa uporczywe zabrudzenia i eliminuje refleksy.", s:[{v:"250ml",p:36.99}], sku:"SON000042", img:"https://kenochem.com/wp-content/uploads/2026/05/pol_pl_SONAX-Do-intensywnego-czyszczenia-szyb-250ml-337100-usuwa-powloki-ochronne-6501_1.png" },
+      { n:"Do usuwania owadów 500ml - do szyb i lakieru", cat:"Szyby", d:"SONAX Do Usuwania Owadów 500 ml to skuteczny preparat stworzony z myślą o szybkim i bezpiecznym usuwaniu owadów oraz ich…", s:[{v:"500ml",p:29.99}], sku:"SON000134", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_SONAX-Do-usuwania-owadow-500ml-533200-do-szyb-i-lakieru-6533_1.png" },
+      { n:"PROFILINE Glass Polish 250 ml- Preparat do polerowania szyb", cat:"Szyby", d:"Preparat SONAX do pielęgnacji i czyszczenia szyb samochodowych.", s:[{v:"250ml",p:129.99}], sku:"SON000076", img:"https://www.sonax.sklep.pl/wp-content/uploads/2017/09/org_86_1496319203.jpg" },
+      { n:"PROFILINE SPEED PROTECT 1L szybkie zabezpieczenie lakieru", cat:"Szyby", d:"Wysokiej jakości preparat do szybkiej pielęgnacji lakieru.", s:[{v:"1L",p:71.99}], sku:"SON000081", img:"https://upload.cdn.baselinker.com/products/6011214/99a9e95c5e0412be8592b9eeab57851c.png" },
+      { n:"Płyn do mycia szyb 500 ml - do tłustych zabrudzeń, niktoyny", cat:"Szyby", d:"Dzięki wyjątkowo silnej formule błyskawicznie usuwa najcięższe zabrudzenia drogowe oraz ślady po owadach z szyb,…", s:[{v:"500ml",p:17.99}], sku:"SON000043", img:"https://upload.cdn.baselinker.com/products/6011214/bad78defdd605139f42ae12ebfc9332e.png" },
+      { n:"XTREME Płyn do mycia szyb Pure Water 500 ml", cat:"Szyby", d:"Preparat SONAX do pielęgnacji i czyszczenia szyb samochodowych.", s:[{v:"500ml",p:32.99}], sku:"SON000059", img:"https://upload.cdn.baselinker.com/products/6011214/9346cec4ae1a3cafb5e5e166624486e0.png" },
+      { n:"Ściereczka antyroszeniowa", cat:"Szyby", d:"Preparat SONAX do pielęgnacji i czyszczenia szyb samochodowych.", s:[{v:"szt.",p:11.99}], sku:"SON000104", img:"https://upload.cdn.baselinker.com/products/6011214/1b7debf189828cfb3e8ec33d8f2e15c3.webp" },
+      { n:"Ściereczki do Szyb 25 szt.", cat:"Szyby", d:"Ściereczki SONAX w łatwy, szybki i dokładny sposób pomagają usuwać zabrudzenia z powierzchni szklanych wewnątrz i na…", s:[{v:"szt.",p:29.99}], sku:"SON000050", img:"https://upload.cdn.baselinker.com/products/6011214/979b833a4e410d2fcb4f184621b6bcc9.png" },
+      
+
+      { n:"Do czyszczenia dachów w kabrioletach 500 ml", cat:"Zewnętrzne plastiki i reflektory", d:"SONAX Do czyszczenia dachów w kabrioletach - Wysokiej jakości środek do gruntowne.", s:[{v:"500ml",p:52.99}], sku:"SON000118", img:"https://upload.cdn.baselinker.com/products/6011214/23d89480c50304cec63732c72d2fbe1e.png" },
+      { n:"Odnawia czarne plastiki zewnętrzne 100 ml", cat:"Zewnętrzne plastiki i reflektory", d:"SONAX Preparat do odnawiania czarnych plastików skutecznie regeneruje wyblakłe elementy z tworzywa sztucznego na zewnątrz…", s:[{v:"100ml",p:34.99}], sku:"SON000049", img:"https://upload.cdn.baselinker.com/products/6011214/3054998995389feb64ad17d1480e62a7.png" },
+      { n:"PROFILINE HEADLIGHT COATING 50ml- zabezpieczenie reflektorów", cat:"Zewnętrzne plastiki i reflektory", d:"SONAX PROFILINE Headlight Coating to ceramiczna powłoka krzemowo-węglowa do zabezpieczania reflektorów samochodowych.…", s:[{v:"50ml",p:113.99}], sku:"SON000141", img:"https://upload.cdn.baselinker.com/products/6011214/fd76b3002aa7afe0e63e4d8813afb6ef.png" },
+      { n:"XTREME Żel do plastików zewnętrznych 250 ml", cat:"Zewnętrzne plastiki i reflektory", d:"SONAX XTREME Żel do plastików zewnętrznych NanoPro chroni i odnawia elementy z tworzyw sztucznych na zewnątrz pojazdu.…", s:[{v:"250ml",p:45.99}], sku:"SON000020", img:"https://upload.cdn.baselinker.com/products/6011214/870823cfaf3a56c70661c9b8a075f0c8.png" },
+      { n:"Zestaw do odnawiania reflektorów Sonax", cat:"Zewnętrzne plastiki i reflektory", d:"Zestaw do ręcznej renowacji reflektorów przeznaczony jest do usuwania zmatowień, zażółceń oraz drobnych rys z powierzchni…", s:[{v:"szt.",p:89.99}], sku:"SON000048", img:"https://upload.cdn.baselinker.com/products/6011214/ac323ab6cc889e8df2ac5772aeb486a5.png" },
+      
+
+      { n:"Pasta do chromu i aluminium 75 ml - czyści i konserwuje", cat:"Opony, felgi i chrom", d:"Pasta do polerownia aluminium i metali kolorowych jak miedź mosiądz, chrom. Szybko i dokładnie usuwa rdzę i patynę…", s:[{v:"75ml",p:19.99}], sku:"SON000032", img:"https://upload.cdn.baselinker.com/products/6011214/5c2078ac8d4aeeb7fdab523a1b1ddc64.png" },
+      { n:"Pianka do opon 400 ml - czyści i pielęgnuje", cat:"Opony, felgi i chrom", d:"Preparat SONAX do pielęgnacji opon, felg i elementów metalowych.", s:[{v:"400ml",p:41.99}], sku:"SON000053", img:"https://upload.cdn.baselinker.com/products/6011214/5f22259b1650135a5f6fb3bb197c8af8.png" },
+      { n:"Powłoka zabezpieczająca do felg 250ml", cat:"Opony, felgi i chrom", d:"Nowoczesna powłoka ochronna do felg, która skutecznie zabezpiecza powierzchnię przed pyłem z klocków hamulcowych, solą…", s:[{v:"250ml",p:39.99}], sku:"SON000067", img:"https://kenochem.com/wp-content/uploads/2026/05/pol_pl_SONAX-powloka-zabezpieczajaca-do-felg-250ml-250100-6509_1.png" },
+      { n:"SZCZOTKA DO CZYSZCZENIA FELG - do trudno dostępnych miejsc", cat:"Opony, felgi i chrom", d:"Szczotka do felg SONAX umożliwia skuteczne czyszczenie felg stalowych i aluminiowych. Miękkie włosie oraz powłoka ochronna…", s:[{v:"szt.",p:49.99}], sku:"SON000108", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_SONAX-SZCZOTKA-DO-CZYSZCZENIA-FELG-417900-do-trudno-dostepnych-miejsc-6516_1.png" },
+      { n:"Szczotka z mikrofibry do czyszczenia felg", cat:"Opony, felgi i chrom", d:"SONAX Szczotka do Felg z Mikrofibry. Nowa szczotka do felg z mikrofibry SONAX została zaprojektowana z myślą.", s:[{v:"szt.",p:84.99}], sku:"SON000107", img:"https://kenochem.com/wp-content/uploads/2026/05/pol_pl_Sonax-szczotka-z-mikrofibry-do-czyszczenia-felg-417941-6527_1.png" },
+      { n:"Xtreme nabłyszczanie opon Wet Look 400ml", cat:"Opony, felgi i chrom", d:"Znasz to uczucie, kiedy auto lśni po myciu, ale opony wciąż wyglądają na matowe i zaniedbane? To właśnie one często psują…", s:[{v:"400ml",p:45.99}], sku:"SON000057", img:"https://upload.cdn.baselinker.com/products/6011214/589018d8e78fccf49c7973a244463f77.png" },
+      { n:"Xtreme Środek do Konserwacji Opon Matowy 500ml", cat:"Opony, felgi i chrom", d:"Sonax Xtreme Środek do Konserwacji Opon Matowy to wysokiej klasy środek ochronny, przeznaczony do konserwacji opon…", s:[{v:"500ml",p:49.99}], sku:"SON000123", img:"https://upload.cdn.baselinker.com/products/6011214/c632b5df1bba2d19ca61dbcb7bd555a3.png" },
+      { n:"Żel do mycia felg 500 ml.", cat:"Opony, felgi i chrom", d:"Skuteczny preparat w postaci żelu do czyszczenia wszystkich rodzajów felg stalowych i aluminiowych.", s:[{v:"500ml",p:29.99}], sku:"SON000122", img:"https://upload.cdn.baselinker.com/products/6011214/2c49e64e33157efeb707b7b60c4359a8.jpg" },
+      
+
+      { n:"Gąbka Czyszcząca 2 szt.", cat:"Akcesoria — ścierki, gąbki, aplikatory", d:"SONAX gąbka z mikroporami skutecznie usuwa uporczywe zabrudzenia z elementów plastikowych we wnętrzu samochodu. Doskonale…", s:[{v:"szt.",p:14.99}], sku:"SON000112", img:"https://upload.cdn.baselinker.com/products/6011214/73c644d0406ddb5ca9ab44144b64b74d.jpg" },
+      { n:"Gąbka do mycia samochodu", cat:"Akcesoria — ścierki, gąbki, aplikatory", d:"Sonax gąbka do mycia samochodu – wyjątkowo chłonna gąbka samochodowa z dwiema strukturami powierzchni do skutecznego i…", s:[{v:"szt.",p:17.4}], sku:"SON000133", img:"https://upload.cdn.baselinker.com/products/6011214/95a03f926eacc9747f8f25aa88abb2fc.png" },
+      { n:"Gąbka Wymienna do P-Ball", cat:"Akcesoria — ścierki, gąbki, aplikatory", d:"Akcesorium SONAX do mycia i pielęgnacji samochodu.", s:[{v:"szt.",p:12.99}], sku:"SON000052", img:"https://www.sonax.sklep.pl/wp-content/uploads/2017/09/org_117_1497359225.jpg" },
+      { n:"Gąbka z mikrofibry", cat:"Akcesoria — ścierki, gąbki, aplikatory", d:"SONAX Gąbka do Mycia Samochodu z mikrofibry posiada dwie powierzchnie czyszczące. Strona z frędzlami delikatnie myje lakier…", s:[{v:"szt.",p:27.99}], sku:"SON000100", img:"https://upload.cdn.baselinker.com/products/6011214/0c2eeb30d2475fb7d1b6d54ff65968ef.jpg" },
+      { n:"Lejek do kanistrów 20 L.", cat:"Akcesoria — ścierki, gąbki, aplikatory", d:"Akcesorium SONAX do mycia i pielęgnacji samochodu.", s:[{v:"20L",p:19.99}], sku:"SON000130", img:"https://www.sonax.sklep.pl/wp-content/uploads/2017/09/org_647_1499942644.jpg" },
+      { n:"MIKROFIBRA DO OSUSZANIA 80x50cm", cat:"Akcesoria — ścierki, gąbki, aplikatory", d:"Mikrofibra do osuszania SONAX (80 × 50 cm). Wysokiej jakości, duży ręcznik do szybkiego i łatwego osuszania lakieru po myciu.", s:[{v:"szt.",p:79.9}], sku:"SON000142", img:"https://upload.cdn.baselinker.com/products/6011214/65f28ad84ab977e9883e6123da91082c.png" },
+      { n:"Rękawica z mikrofibry - do czyszcenia nadwozia", cat:"Akcesoria — ścierki, gąbki, aplikatory", d:"SONAX Rękawica do Mycia Auta z mikrofibry umożliwia bezpieczne i skuteczne mycie samochodu. Miękka mikrofibra nie rysuje…", s:[{v:"szt.",p:33.99}], sku:"SON000099", img:"https://upload.cdn.baselinker.com/products/6011214/eb01e433fb1c431395f76a01a4470d9f.jpg" },
+      { n:"Ściereczka do polerowania 15 szt. - delikatna", cat:"Akcesoria — ścierki, gąbki, aplikatory", d:"Ściereczki do polerowania SONAX z fizeliny przeznaczone są do delikatnych powierzchni lakierowanych. Miękki materiał nie…", s:[{v:"szt.",p:22.99}], sku:"SON000015", img:"https://upload.cdn.baselinker.com/products/6011214/30ac6223cb3b92e4e79c43e0a10911d5.png" },
+      { n:"Ściereczka z mikrofibry 2szt", cat:"Akcesoria — ścierki, gąbki, aplikatory", d:"Ściereczka z aktywnej mikrofibry SONAX przeznaczona do usuwania pozostałości po wosku i preparatach polerskich. Skutecznie…", s:[{v:"szt.",p:22.99}], sku:"SON000103", img:"https://www.sonax.sklep.pl/wp-content/uploads/2017/09/org_97_1497356585.jpg" },
+      
+
+      { n:"AIR FRESHENER Zapach samochodowy 14,5g - ALPEJSKIE LATO", cat:"Zapachy samochodowe", d:"SONAX Zapach Samochodowy Alpejskie Lato to dyskretny odświeżacz powietrza montowany w kratce nawiewu. Zapewnia świeży…", s:[{v:"14.5g",p:21.99}], sku:"SON000105", img:"https://upload.cdn.baselinker.com/products/6011214/289caa25d5b797341d25d01ccb4e36e0.png" },
+      { n:"AIR FRESHENER Zapach samochodowy 14,5g - SWEET FLAMINGO", cat:"Zapachy samochodowe", d:"SONAX Sweet Flamingo to odświeżacz powietrza montowany w kratce wentylacyjnej samochodu. Dzięki wysokiej jakości olejkom…", s:[{v:"14.5g",p:21.99}], sku:"SON000106", img:"https://upload.cdn.baselinker.com/products/6011214/5cb9f4457e3061e1eb85dedd1764296f.png" },
+      { n:"Smoke Ex 500 ml - Neutralizuje zapachy", cat:"Zapachy samochodowe", d:"Skutecznie usuwa nieprzyjemne zapachy pochodzenia zwierzęcego ,.", s:[{v:"500ml",p:21.99}], sku:"SON000098", img:"https://upload.cdn.baselinker.com/products/6011214/d03d058911da27bec0e7ffe05492b654.png" },
+      
+
+      { n:"Klima Power Cleaner Green Lemon", cat:"Płyny eksploatacyjne i warsztat", d:"Preparat eksploatacyjny / warsztatowy SONAX.", s:[{v:"szt.",p:39.99}], sku:"SON000040", img:"https://upload.cdn.baselinker.com/products/6011214/204cbfdb698398742a3bf38e2cc17601.jpg" },
+      { n:"LETNI PŁYN DO SPRYSKIWACZY 250ML", cat:"Płyny eksploatacyjne i warsztat", d:"Wysoce skuteczny koncentrat płynu do spryskiwaczy szyb i reflektorów o świeżym zapachu, opracowany w oparciu o…", s:[{v:"250ml",p:26.99}], sku:"SON000002", img:"https://upload.cdn.baselinker.com/products/6011214/46cd33dd837909c5d5e2e9db3c3c5232.png" },
+      { n:"Letni Płyn do spryskiwaczy NanoPro 4L", cat:"Płyny eksploatacyjne i warsztat", d:"Preparat eksploatacyjny / warsztatowy SONAX.", s:[{v:"4L",p:15.99}], sku:"SON000003", img:"https://kenochem.com/hpeciai/de1a22bccafd1dc94ca3072e7842b195/pol_pl_SONAX-Letni-Plyn-do-spryskiwaczy-NanoPro-4L-272405-317_1.png" },
+      { n:"Olej MoS2 400 ml - uniwersalny olej", cat:"Płyny eksploatacyjne i warsztat", d:"Uniwersalny olej smarujący z dodatkiem dwusiarczku molibdenu. Doskonale nadaje się do poluzowywania silnie zapieczonych i…", s:[{v:"400ml",p:29.99}], sku:"SON000044", img:"https://upload.cdn.baselinker.com/products/6011214/9f6301b00ec17e2cf4c455b97674b746.png" },
+      { n:"Pasta naprawcza do tłumików 200g", cat:"Płyny eksploatacyjne i warsztat", d:"Błyskawicznie i trwale zasklepia małe pęknięcia, dziury i nieszczelności w układzie wydechowym zapewniając absolutną…", s:[{v:"200g",p:19.99}], sku:"SON000093", img:"https://upload.cdn.baselinker.com/products/6011214/1f56689b4a9bbe4493e0ec4804ff48dd.png" },
+      { n:"Professional Preparat do usuwania etykiet i kleju 400ml", cat:"Płyny eksploatacyjne i warsztat", d:"Specjalny rozpuszczalnik do szybkiego i całkowitego usuwania resztek kleju (np. folli samoprzylepnych, naklejek itp.) oraz…", s:[{v:"400ml",p:46.99}], sku:"SON000014", img:"https://kenochem.com/wp-content/uploads/2026/05/pol_pl_SONAX-Professional-Preparat-do-usuwania-etykiet-i-kleju-400ml-477400-6529_1.png" },
+      { n:"PROFESSIONAL SX90 ODRDZEWIACZ W SPRAYU 400ml", cat:"Płyny eksploatacyjne i warsztat", d:"SONAX SX90 PLUS to uniwersalny, wielofunkcyjny olej przeznaczony do stosowania w samochodzie, warsztacie i domu. Doskonale…", s:[{v:"400ml",p:33.99}], sku:"SON000143", img:"https://upload.cdn.baselinker.com/products/6011214/5cf5a3275dd86d82c625f2518dc159f0.png" },
+      { n:"Silikon do Uszczelek 100 ml - pielęgnuje elementy gumowe", cat:"Płyny eksploatacyjne i warsztat", d:"SONAX Preparat do pielęgnacji gumy czyści i konserwuje wszystkie gumowe elementy samochodu, przywracając im świeży wygląd i…", s:[{v:"100ml",p:24.99}], sku:"SON000045", img:"https://upload.cdn.baselinker.com/products/6011214/03437926edd8ed5ed019bec9d2a20f8e.png" },
+      { n:"SX90 Olej Wielofunkcyjny 100 ml", cat:"Płyny eksploatacyjne i warsztat", d:"SONAX Uniwersalny Olej Wielofunkcyjny to wszechstronny preparat do smarowania, konserwacji i ochrony elementów…", s:[{v:"100ml",p:12.99}], sku:"SON000054", img:"https://upload.cdn.baselinker.com/products/6011214/677d49b99c4a4b151c379e4569210cd6.png" },
+      { n:"Zestaw naprawczy do tłumików", cat:"Płyny eksploatacyjne i warsztat", d:"SONAX Zestaw Naprawczy do Tłumika 200 g umożliwia szybką i trwałą naprawę pęknięć, dziur oraz nieszczelności w układzie…", s:[{v:"szt.",p:35.99}], sku:"SON000094", img:"https://upload.cdn.baselinker.com/products/6011214/b7e18cc878f0522fb9b543c2003344cc.png" },
+      { n:"Zimowy płyn do spryskiwaczy 1L koncentrat", cat:"Płyny eksploatacyjne i warsztat", d:"SONAX Xtreme Koncentrat Zimowego Płynu do Spryskiwaczy – Smart Dynamics Technology.", s:[{v:"1L",p:20.99}], sku:"SON000007", img:"https://upload.cdn.baselinker.com/products/6011214/475c67065e577d0f6581ef667479eb20.webp" },
+    ]
+  };
+</script>
+<script type="module" src="/biblioteka/katalogi-marek/catalog-edit.js"></script>
+</body>
+</html>

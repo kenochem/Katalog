@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<script>(function(){try{var t=localStorage.getItem("katalog-theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Katalog produktowy Freshtek do druku — wykaz zapachów z podziałem na rodziny zapachowe, ze zdjęciem i ceną. Biblioteka Kenochem.">
+<title>Katalog Freshtek — do druku</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --paper:#E7E6DE; --paper-raised:#F1F0E9; --ink:#1E2220; --ink-soft:#4B4F49;
+    --blueprint:#3B6E8F; --blueprint-soft:#6C93A9;
+    --brass:#8F5E19; --brass-soft:#B98A3D;
+    --steel:#86867C; --steel-line:#C9C8BC;
+    --leaf:#8A5FB0; --leaf-soft:#EEE3F5;
+    --code-bg:#DEDCD1;
+    --shadow: 0 1px 0 rgba(30,34,32,0.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#14181A; --paper-raised:#1B2022; --ink:#E9E7DC; --ink-soft:#B7B6AA;
+      --blueprint:#6FA8C9; --blueprint-soft:#4E7E96;
+      --brass:#D6A056; --brass-soft:#A9793C;
+      --steel:#787A72; --steel-line:#33372F;
+      --leaf:#C9A6E8; --leaf-soft:#2A2030;
+      --code-bg:#20251F;
+      --shadow: 0 1px 0 rgba(0,0,0,0.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#14181A; --paper-raised:#1B2022; --ink:#E9E7DC; --ink-soft:#B7B6AA;
+    --blueprint:#6FA8C9; --blueprint-soft:#4E7E96;
+    --brass:#D6A056; --brass-soft:#A9793C;
+    --steel:#787A72; --steel-line:#33372F;
+    --leaf:#C9A6E8; --leaf-soft:#2A2030;
+    --code-bg:#20251F;
+    --shadow: 0 1px 0 rgba(0,0,0,0.4);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:"Source Serif 4", Georgia, "Times New Roman", serif;
+    font-size:16px; line-height:1.5;
+    margin:0; padding:0;
+  }
+  .wrap{max-width:1180px; margin:0 auto; padding:0 clamp(20px,4vw,48px) 60px;}
+
+  h1,h2,h3{font-family:"Big Shoulders Display","Arial Narrow",sans-serif; font-weight:800; text-transform:uppercase; letter-spacing:0.01em; text-wrap:balance; margin:0; color:var(--ink);}
+  .mono{font-family:"IBM Plex Mono", ui-monospace, Menlo, monospace;}
+  a{color:var(--blueprint);}
+
+  /* ---------- toolbar (nie drukuje się) ---------- */
+  .toolbar{position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between; gap:12px;
+    background:var(--paper-raised); border-bottom:1px solid var(--steel-line); padding:10px clamp(20px,4vw,48px);}
+  .toolbar a.back{font-family:"IBM Plex Mono"; font-size:12.5px; color:var(--ink-soft); text-decoration:none; display:flex; align-items:center; gap:6px;}
+  .toolbar a.back:hover{color:var(--ink);}
+  .toolbar .acts{display:flex; gap:8px;}
+  .toolbar button{font-family:"IBM Plex Mono"; font-size:12.5px; cursor:pointer; border:1px solid var(--steel-line);
+    background:var(--paper); color:var(--ink); border-radius:7px; padding:7px 12px; line-height:1;}
+  .toolbar button:hover{background:var(--code-bg);}
+  .toolbar button.primary{background:var(--leaf); color:#241a2e; border-color:var(--leaf); font-weight:600;}
+
+  /* ---------- hero ---------- */
+  .hero{padding:clamp(28px,5vw,48px) 0 clamp(20px,3vw,28px); border-bottom:2px solid var(--leaf);}
+  .hero .kicker{font-family:"IBM Plex Mono"; font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:8px;}
+  .hero h1{font-size:clamp(32px,5.5vw,54px); line-height:0.95; color:var(--leaf);}
+  .hero h1 span{color:var(--ink);}
+  .hero .lede{font-size:15px; color:var(--ink-soft); max-width:80ch; margin-top:12px;}
+  .hero .meta{display:flex; gap:20px; flex-wrap:wrap; margin-top:16px; font-family:"IBM Plex Mono"; font-size:11.5px; color:var(--ink-soft);}
+  .hero .meta b{color:var(--ink); font-weight:600;}
+  .hero .pricenote{margin-top:10px; font-family:"IBM Plex Mono"; font-size:11px; color:var(--leaf);}
+  .hero .pricenote b{font-weight:700;}
+  .hero .lede-edit-label{display:block; font-family:"IBM Plex Mono"; font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em; color:var(--leaf); margin-bottom:4px;}
+  .hero textarea.lede-edit{display:block; width:100%; border:1px solid var(--steel-line); border-radius:6px; padding:8px 10px; background:#fff; resize:vertical;}
+
+  /* ---------- kategorie i siatka produktów ---------- */
+  .category{padding-top:26px;}
+  .category h2{font-size:19px; color:var(--leaf); display:flex; align-items:baseline; gap:10px; border-bottom:1px solid var(--steel-line); padding-bottom:6px;}
+  .category h2 .count{font-family:"IBM Plex Mono"; font-size:11px; color:var(--ink-soft); text-transform:none; letter-spacing:0; font-weight:400;}
+  .category .subnote{font-family:"Source Serif 4"; font-style:italic; font-size:12.5px; color:var(--ink-soft); margin-top:4px;}
+
+  .grid{display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-top:12px;}
+  .card{background:var(--paper-raised); border:1px solid var(--steel-line); border-radius:8px; padding:8px; display:flex; flex-direction:column; gap:6px; break-inside:avoid;}
+  .card .thumb{width:100%; height:64px; display:flex; align-items:center; justify-content:center; background:#fff; border-radius:5px; overflow:hidden; border:1px solid var(--steel-line);}
+  .card .thumb img{max-width:100%; max-height:100%; object-fit:contain;}
+  .card h3{font-size:11.5px; line-height:1.2; letter-spacing:0; min-height:2.4em;}
+  .card .d{font-family:"Source Serif 4"; font-size:11px; color:var(--ink-soft); line-height:1.3; flex:1;}
+  .card .foot{display:flex; flex-direction:column; gap:3px; margin-top:2px;}
+  .card .sizes{display:flex; flex-direction:column; gap:2px;}
+  .card .sizes .row{display:flex; align-items:baseline; justify-content:space-between; gap:6px; font-family:"IBM Plex Mono"; font-size:9.5px;}
+  .card .sizes .row .v{color:var(--ink-soft); background:var(--code-bg); padding:1px 5px; border-radius:10px;}
+  .card .sizes .row .p{color:var(--leaf); font-weight:600; white-space:nowrap;}
+  .card .sku{font-family:"IBM Plex Mono"; font-size:8.5px; color:var(--steel); text-align:right;}
+
+  /* ---------- tryb edycji ---------- */
+  .card.editing{outline:2px dashed var(--leaf); outline-offset:2px;}
+  .card .d-edit{font-family:"Source Serif 4"; font-size:11px; color:var(--ink); line-height:1.3; flex:1; width:100%; resize:vertical; border:1px solid var(--steel-line); border-radius:4px; padding:3px 5px; background:#fff;}
+  .card .cat-edit{font-family:"IBM Plex Mono"; font-size:9.5px; width:100%; border:1px solid var(--steel-line); border-radius:4px; padding:3px 4px; background:#fff; color:var(--ink);}
+  #editSaveBar button{font-family:"IBM Plex Mono"; font-size:12px; cursor:pointer; border:1px solid var(--steel-line); background:var(--paper); color:var(--ink); border-radius:7px; padding:6px 10px;}
+  #editSaveBar button.primary{background:var(--leaf); border-color:var(--leaf); font-weight:600;}
+
+  @media (max-width:1000px){ .grid{grid-template-columns:repeat(3,1fr);} }
+  @media (max-width:620px){ .grid{grid-template-columns:repeat(2,1fr);} .toolbar{flex-wrap:wrap;} }
+
+  footer{padding:36px 0 12px; color:var(--ink-soft); font-size:12px; border-top:1px solid var(--steel-line); margin-top:32px;}
+
+  /* ---------- druk ---------- */
+  @page{ size:A4; margin:10mm 9mm; }
+  @media print{
+    .no-print{display:none !important;}
+    body{background:#fff; color:#111; font-size:9.5px;}
+    .wrap{max-width:none; padding:0;}
+    .hero{padding:0 0 8px; border-bottom:2px solid #6d3f8f;}
+    .hero h1{font-size:26px; color:#6d3f8f;}
+    .hero .lede{font-size:10.5px;}
+    .hero .pricenote{font-size:8.5px;}
+    .category{padding-top:10px; break-inside:avoid;}
+    .category h2{font-size:13px; color:#6d3f8f;}
+    .category .subnote{font-size:8.5px;}
+    .grid{grid-template-columns:repeat(6,1fr); gap:5px;}
+    .card{border:1px solid #c9c8bc; background:#fbfaf6; padding:5px; break-inside:avoid;}
+    .card .thumb{height:44px;}
+    .card h3{font-size:8.6px; min-height:2em;}
+    .card .d{font-size:8px;}
+    .card .sizes .row{font-size:7.5px;}
+    .card .sku{font-size:7px;}
+    footer{font-size:8px; padding:10px 0 0;}
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar no-print">
+  <a class="back" href="/">&larr; Wróć do katalogu</a>
+  <div class="acts">
+    <button type="button" id="themeBtn">🌓 Motyw</button>
+    <button type="button" class="primary" onclick="window.print()">🖨️ Drukuj</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <section class="hero">
+    <p class="kicker">Kenochem — Katalog produktowy do druku</p>
+    <h1>FRESH<span>TEK</span></h1>
+    <div id="heroLedeWrap"><p class="lede">Odświeżacze powietrza ONE SHOT (250 ml i 600 ml), neutralizatory zapachów Freshday oraz profesjonalna linia hotelowa Hotellux 1L. Zapachy pogrupowane wg charakteru, żeby łatwiej dobrać coś dla klienta — ze zdjęciem i ceną każdej pojemności.</p></div>
+    <div class="meta">
+      <span><b>29</b> produktów</span>
+      <span><b>23</b> zapachy ONE SHOT</span>
+      <span>Producent: <b>Freshtek</b></span>
+    </div>
+    <p class="pricenote">Ceny przy każdej pojemności to <b>cena katalogowa</b> — aktualna cena sprzedaży brutto (bez doliczonej marży).</p>
+  </section>
+
+  <div id="categories"></div>
+
+  <footer>
+    <p class="mono">Kenochem — Biblioteka, katalogi marek do druku. Podział zapachów wg charakteru jest orientacyjny (nie oficjalna klasyfikacja producenta) — ma pomóc w rozmowie z klientem. Ceny i stany magazynowe sprawdź w katalogu Kenochem.</p>
+  </footer>
+
+</div>
+
+<script>
+  var CATALOG_SLUG = "freshtek";
+  var CATALOG = {
+    brand: "Freshtek",
+    categoryOrder: [
+      { name:"Kwiatowe i pudrowe", note:"Delikatne, eleganckie — do salonów, recepcji, sypialni" },
+      { name:"Świeże i cytrusowe", note:"Lekkie, orzeźwiające — do biur, łazienek, samochodu" },
+      { name:"Słodkie (gourmand)", note:"Ciepłe, przytulne — do domu i wypoczynku" },
+      { name:"Drzewno-korzenne", note:"Głębokie, eleganckie — do gabinetów, salonów, na prezent" },
+      { name:"Męskie i intensywne", note:"Mocne, wyraziste — do gabinetów, aut, siłowni, warsztatów" },
+      { name:"Neutralizacja dymu i zapachów", note:"Nie maskują — usuwają źródło przykrego zapachu" },
+      { name:"Format profesjonalny — Hotellux 1L", note:"Skoncentrowane, długo działające — hotele, restauracje, biura" }
+    ],
+    items: [
+      { n:"Kwitnący Sad", cat:"Kwiatowe i pudrowe", d:"Świeży, kwiatowo-owocowy, jak wiosenny sad", s:[{v:"250ml",p:21.99},{v:"600ml",p:27.99}], sku:"FRE000045", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Freshtek-ONE-SHOT-600ml-odswiezacz-powietrza-Kwitnacy-Sad-4679_5.png" },
+      { n:"Hiacynt", cat:"Kwiatowe i pudrowe", d:"Intensywny, kwiatowy, wyrazisty", s:[{v:"600ml",p:27.99}], sku:"FRE000052", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Freshtek-ONE-SHOT-600ml-odswiezacz-powietrza-Hiacynt-5658_4.png" },
+      { n:"Bawełna", cat:"Kwiatowe i pudrowe", d:"Czysty, delikatny zapach świeżo wypranej bawełny", s:[{v:"250ml",p:21.99},{v:"600ml",p:27.99}], sku:"FRE000003", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Freshtek-ONE-SHOT-600ml-odswiezacz-powietrza-Bawelna-2105_5.png" },
+      { n:"Beauty", cat:"Kwiatowe i pudrowe", d:"Delikatny, pudrowo-kwiatowy, kosmetyczny", s:[{v:"600ml",p:27.99}], sku:"FRE000033", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Freshtek-ONE-SHOT-600ml-odswiezacz-powietrza-Beauty-3806_4.png" },
+
+      { n:"Bergamo", cat:"Świeże i cytrusowe", d:"Cytrusowo-ziołowy, orzeźwiający", s:[{v:"250ml",p:21.99},{v:"600ml",p:27.99}], sku:"FRE000050", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Freshtek-ONE-SHOT-600-ml-odswiezacz-powietrza-Bergamo-5339_5.png" },
+      { n:"Zielona Herbata", cat:"Świeże i cytrusowe", d:"Lekki, ziołowo-zielony, uspokajający", s:[{v:"250ml",p:21.99},{v:"600ml",p:27.99}], sku:"FRE000011", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Freshtek-ONE-SHOT-600ml-odswiezacz-Zielona-Herbata-2531_6.png" },
+      { n:"Mięta", cat:"Świeże i cytrusowe", d:"Chłodny, mentolowy, orzeźwiający", s:[{v:"600ml",p:27.99}], sku:"FRE000049", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Freshtek-ONE-SHOT-600ml-odswiezacz-powietrza-Mieta-5155_6.png" },
+      { n:"Błękitna Laguna", cat:"Świeże i cytrusowe", d:"Wodno-morski, świeży, ozonowy", s:[{v:"600ml",p:27.99}], sku:"FRE000059", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Freshtek-ONE-SHOT-600ml-odswiezacz-Blekitna-Laguna-5641_5.png" },
+      { n:"Good", cat:"Świeże i cytrusowe", d:"Uniwersalny, czysty zapach na każdą okazję", s:[{v:"250ml",p:21.99},{v:"600ml",p:27.99}], sku:"FRE000023", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Freshtek-ONE-SHOT-600ml-odswiezacz-powietrza-Good-3538_6.png" },
+
+      { n:"Słodki Rumianek", cat:"Słodkie (gourmand)", d:"Łagodny, słodko-ziołowy", s:[{v:"250ml",p:21.99},{v:"600ml",p:27.99}], sku:"FRE000009", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Freshtek-ONE-SHOT-600ml-odswiezacz-Slodki-Rumianek-2928_5.png" },
+      { n:"Wanilia", cat:"Słodkie (gourmand)", d:"Ciepły, słodki, waniliowy", s:[{v:"600ml",p:27.99}], sku:"FRE000010", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Freshtek-ONE-SHOT-600ml-odswiezacz-powietrza-Wanilia-1935_5.png" },
+      { n:"Kawa", cat:"Słodkie (gourmand)", d:"Intensywny, prażony zapach kawy", s:[{v:"600ml",p:27.99}], sku:"FRE000006", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Freshtek-ONE-SHOT-600ml-odswiezacz-powietrza-Kawa-1932_6.png" },
+
+      { n:"Paczuli", cat:"Drzewno-korzenne", d:"Ziemisty, korzenny, głęboki", s:[{v:"250ml",p:21.99},{v:"600ml",p:27.99}], sku:"FRE000008", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Freshtek-ONE-SHOT-600ml-odswiezacz-powietrza-Paczuli-2302_6.png" },
+      { n:"Kaszmir", cat:"Drzewno-korzenne", d:"Miękki, pudrowo-piżmowy, elegancki", s:[{v:"250ml",p:21.99},{v:"600ml",p:27.99}], sku:"FRE000013", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Freshtek-ONE-SHOT-600ml-odswiezacz-powietrza-Kaszmir-3435_3.png" },
+      { n:"Agarwood", cat:"Drzewno-korzenne", d:"Drzewny, orientalny, luksusowy (oud)", s:[{v:"600ml",p:27.99}], sku:"FRE000060", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Freshtek-ONE-SHOT-600ml-odswiezacz-powietrza-Agarwood-6000_3.png" },
+      { n:"Bambus", cat:"Drzewno-korzenne", d:"Zielony, łagodny, drzewny", s:[{v:"600ml",p:27.99}], sku:"FRE000073", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Freshtek-ONE-SHOT-600ml-odswiezacz-powietrza-Bambus-6343_3.png" },
+      { n:"Jarzębina", cat:"Drzewno-korzenne", d:"Owocowo-jesienny, lekko cierpki", s:[{v:"600ml",p:27.99}], sku:"FRE000043", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Freshtek-ONE-SHOT-600ml-odswiezacz-powietrza-Jarzebina-4285_6.png" },
+
+      { n:"Bad Man", cat:"Męskie i intensywne", d:"Mocny, buntowniczy, wyrazisty", s:[{v:"250ml",p:21.99},{v:"600ml",p:27.99}], sku:"FRE000042", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Freshtek-ONE-SHOT-600ml-odswiezacz-powietrza-Bad-Man-4120_4.png" },
+      { n:"Man in Black", cat:"Męskie i intensywne", d:"Ciemny, korzenno-drzewny, elegancki", s:[{v:"600ml",p:27.99}], sku:"FRE000001", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Freshtek-ONE-SHOT-600ml-odswiezacz-powietrza-Man-in-Black-3078_4.png" },
+      { n:"Liberty", cat:"Męskie i intensywne", d:"Świeży, przestrzenny, męski", s:[{v:"600ml",p:27.99}], sku:"FRE000061", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Freshtek-ONE-SHOT-600ml-odswiezacz-powietrza-Liberty-6057_3.png" },
+      { n:"Joy", cat:"Męskie i intensywne", d:"Radosny, lekki, uniwersalny", s:[{v:"600ml",p:27.99}], sku:"FRE000066", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Freshtek-ONE-SHOT-600ml-odswiezacz-powietrza-Joy-6140_2.png" },
+      { n:"Invicto", cat:"Męskie i intensywne", d:"Silny, dominujący, sportowy", s:[{v:"600ml",p:27.99}], sku:"FRE000005", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Freshtek-ONE-SHOT-600ml-odswiezacz-powietrza-Invicto-3121_4.png" },
+
+      { n:"Smoke Killer", cat:"Neutralizacja dymu i zapachów", d:"Neutralizuje dym papierosowy, zostawia świeży zapach", s:[{v:"250ml",p:21.99},{v:"600ml",p:27.99}], sku:"FRE000024", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Freshtek-ONE-SHOT-600ml-odswiezacz-powietrza-Smoke-Killer-3539_4.png" },
+      { n:"Freshday S.O.S", cat:"Neutralizacja dymu i zapachów", d:"Neutralizator zapachów smażenia i papierosów", s:[{v:"500ml",p:20.99}], sku:"FRE000040", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Freshday-NEUTRALIZATOR-500ml-S-O-S-smazenie-papierosy-4110_3.png" },
+      { n:"Freshday STRONG", cat:"Neutralizacja dymu i zapachów", d:"Mocny neutralizator — toalety, kuwety, kosze na śmieci", s:[{v:"500ml",p:17.99}], sku:"FRE000039", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Freshday-NEUTRALIZATOR-zapachow-500ml-STRONG-4111_3.png" },
+      { n:"Freshday Świeże Pranie", cat:"Neutralizacja dymu i zapachów", d:"Neutralizuje zapachy z tkanin — zasłony, dywany, kanapy", s:[{v:"500ml",p:17.99}], sku:"FRE000038", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Freshday-NEUTRALIZATOR-zapachow-500ml-Swieze-Pranie-4112_3.png" },
+
+      { n:"Hotellux Biały Miś", cat:"Format profesjonalny — Hotellux 1L", d:"Puderowo-słodki, kojarzony z pluszakiem", s:[{v:"1L",p:49.99}], sku:"FRE000016", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Hotellux-odswiezacz-powietrza-1L-Bialy-Mis-3007_2.png" },
+      { n:"Hotellux Camilia", cat:"Format profesjonalny — Hotellux 1L", d:"Kwiatowy, kameliowy, elegancki", s:[{v:"1L",p:53.99}], sku:"FRE000012", img:"https://upload.cdn.baselinker.com/products/6011214/aef95692a6aff36086e2e0a0b279a4ca.png" },
+      { n:"Hotellux J-23", cat:"Format profesjonalny — Hotellux 1L", d:"Uniwersalny zapach hotelowy, świeży i czysty", s:[{v:"1L",p:49.99}], sku:"FRE000017", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Hotellux-odswiezacz-powietrza-1L-J-23-zapach-do-hotelu-3008_3.png" }
+    ]
+  };
+</script>
+<script type="module" src="/biblioteka/katalogi-marek/catalog-edit.js"></script>
+</body>
+</html>

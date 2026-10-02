@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<script>(function(){try{var t=localStorage.getItem("katalog-theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Katalog produktowy Eco Shine do druku — przewodnik po produktach z opisem i zdjęciem, do pokazania i wręczenia klientowi. Biblioteka Kenochem.">
+<title>Katalog Eco Shine — do druku</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --paper:#E7E6DE; --paper-raised:#F1F0E9; --ink:#1E2220; --ink-soft:#4B4F49;
+    --blueprint:#3B6E8F; --blueprint-soft:#6C93A9;
+    --brass:#8F5E19; --brass-soft:#B98A3D;
+    --steel:#86867C; --steel-line:#C9C8BC;
+    --leaf:#3F7D4A; --leaf-soft:#DCEBDD;
+    --code-bg:#DEDCD1;
+    --shadow: 0 1px 0 rgba(30,34,32,0.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#14181A; --paper-raised:#1B2022; --ink:#E9E7DC; --ink-soft:#B7B6AA;
+      --blueprint:#6FA8C9; --blueprint-soft:#4E7E96;
+      --brass:#D6A056; --brass-soft:#A9793C;
+      --steel:#787A72; --steel-line:#33372F;
+      --leaf:#7DBF8C; --leaf-soft:#1E2E20;
+      --code-bg:#20251F;
+      --shadow: 0 1px 0 rgba(0,0,0,0.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#14181A; --paper-raised:#1B2022; --ink:#E9E7DC; --ink-soft:#B7B6AA;
+    --blueprint:#6FA8C9; --blueprint-soft:#4E7E96;
+    --brass:#D6A056; --brass-soft:#A9793C;
+    --steel:#787A72; --steel-line:#33372F;
+    --leaf:#7DBF8C; --leaf-soft:#1E2E20;
+    --code-bg:#20251F;
+    --shadow: 0 1px 0 rgba(0,0,0,0.4);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:"Source Serif 4", Georgia, "Times New Roman", serif;
+    font-size:16px; line-height:1.5;
+    margin:0; padding:0;
+  }
+  .wrap{max-width:1180px; margin:0 auto; padding:0 clamp(20px,4vw,48px) 60px;}
+
+  h1,h2,h3{font-family:"Big Shoulders Display","Arial Narrow",sans-serif; font-weight:800; text-transform:uppercase; letter-spacing:0.01em; text-wrap:balance; margin:0; color:var(--ink);}
+  .mono{font-family:"IBM Plex Mono", ui-monospace, Menlo, monospace;}
+  a{color:var(--blueprint);}
+
+  /* ---------- toolbar (nie drukuje się) ---------- */
+  .toolbar{position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between; gap:12px;
+    background:var(--paper-raised); border-bottom:1px solid var(--steel-line); padding:10px clamp(20px,4vw,48px);}
+  .toolbar a.back{font-family:"IBM Plex Mono"; font-size:12.5px; color:var(--ink-soft); text-decoration:none; display:flex; align-items:center; gap:6px;}
+  .toolbar a.back:hover{color:var(--ink);}
+  .toolbar .acts{display:flex; gap:8px;}
+  .toolbar button{font-family:"IBM Plex Mono"; font-size:12.5px; cursor:pointer; border:1px solid var(--steel-line);
+    background:var(--paper); color:var(--ink); border-radius:7px; padding:7px 12px; line-height:1;}
+  .toolbar button:hover{background:var(--code-bg);}
+  .toolbar button.primary{background:var(--leaf); color:#0e1a10; border-color:var(--leaf); font-weight:600;}
+
+  /* ---------- hero ---------- */
+  .hero{padding:clamp(28px,5vw,48px) 0 clamp(20px,3vw,28px); border-bottom:2px solid var(--leaf);}
+  .hero .kicker{font-family:"IBM Plex Mono"; font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:8px;}
+  .hero h1{font-size:clamp(32px,5.5vw,54px); line-height:0.95; color:var(--leaf);}
+  .hero h1 span{color:var(--ink);}
+  .hero .lede{font-size:15px; color:var(--ink-soft); max-width:80ch; margin-top:12px;}
+  .hero .meta{display:flex; gap:20px; flex-wrap:wrap; margin-top:16px; font-family:"IBM Plex Mono"; font-size:11.5px; color:var(--ink-soft);}
+  .hero .meta b{color:var(--ink); font-weight:600;}
+  .hero .pricenote{margin-top:10px; font-family:"IBM Plex Mono"; font-size:11px; color:var(--leaf);}
+  .hero .pricenote b{font-weight:700;}
+  .hero .lede-edit-label{display:block; font-family:"IBM Plex Mono"; font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em; color:var(--leaf); margin-bottom:4px;}
+  .hero textarea.lede-edit{display:block; width:100%; border:1px solid var(--steel-line); border-radius:6px; padding:8px 10px; background:#fff; resize:vertical;}
+
+  /* ---------- kategorie i siatka produktów ---------- */
+  .category{padding-top:26px;}
+  .category h2{font-size:19px; color:var(--leaf); display:flex; align-items:baseline; gap:10px; border-bottom:1px solid var(--steel-line); padding-bottom:6px;}
+  .category h2 .count{font-family:"IBM Plex Mono"; font-size:11px; color:var(--ink-soft); text-transform:none; letter-spacing:0; font-weight:400;}
+
+  .grid{display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-top:12px;}
+  .card{background:var(--paper-raised); border:1px solid var(--steel-line); border-radius:8px; padding:8px; display:flex; flex-direction:column; gap:6px; break-inside:avoid;}
+  .card .thumb{width:100%; height:64px; display:flex; align-items:center; justify-content:center; background:#fff; border-radius:5px; overflow:hidden; border:1px solid var(--steel-line);}
+  .card .thumb img{max-width:100%; max-height:100%; object-fit:contain;}
+  .card h3{font-size:11.5px; line-height:1.2; letter-spacing:0; min-height:2.4em;}
+  .card .d{font-family:"Source Serif 4"; font-size:11px; color:var(--ink-soft); line-height:1.3; flex:1;}
+  .card .foot{display:flex; flex-direction:column; gap:3px; margin-top:2px;}
+  .card .sizes{display:flex; flex-direction:column; gap:2px;}
+  .card .sizes .row{display:flex; align-items:baseline; justify-content:space-between; gap:6px; font-family:"IBM Plex Mono"; font-size:9.5px;}
+  .card .sizes .row .v{color:var(--ink-soft); background:var(--code-bg); padding:1px 5px; border-radius:10px;}
+  .card .sizes .row .p{color:var(--leaf); font-weight:600; white-space:nowrap;}
+  .card .sku{font-family:"IBM Plex Mono"; font-size:8.5px; color:var(--steel); text-align:right;}
+
+  /* ---------- tryb edycji ---------- */
+  .card.editing{outline:2px dashed var(--leaf); outline-offset:2px;}
+  .card .d-edit{font-family:"Source Serif 4"; font-size:11px; color:var(--ink); line-height:1.3; flex:1; width:100%; resize:vertical; border:1px solid var(--steel-line); border-radius:4px; padding:3px 5px; background:#fff;}
+  .card .cat-edit{font-family:"IBM Plex Mono"; font-size:9.5px; width:100%; border:1px solid var(--steel-line); border-radius:4px; padding:3px 4px; background:#fff; color:var(--ink);}
+  #editSaveBar button{font-family:"IBM Plex Mono"; font-size:12px; cursor:pointer; border:1px solid var(--steel-line); background:var(--paper); color:var(--ink); border-radius:7px; padding:6px 10px;}
+  #editSaveBar button.primary{background:var(--leaf); border-color:var(--leaf); font-weight:600;}
+
+  @media (max-width:1000px){ .grid{grid-template-columns:repeat(3,1fr);} }
+  @media (max-width:620px){ .grid{grid-template-columns:repeat(2,1fr);} .toolbar{flex-wrap:wrap;} }
+
+  footer{padding:36px 0 12px; color:var(--ink-soft); font-size:12px; border-top:1px solid var(--steel-line); margin-top:32px;}
+
+  /* ---------- druk ---------- */
+  @page{ size:A4; margin:10mm 9mm; }
+  @media print{
+    .no-print{display:none !important;}
+    body{background:#fff; color:#111; font-size:9.5px;}
+    .wrap{max-width:none; padding:0;}
+    .hero{padding:0 0 8px; border-bottom:2px solid #2f6d3a;}
+    .hero h1{font-size:26px; color:#2f6d3a;}
+    .hero .lede{font-size:10.5px;}
+    .hero .pricenote{font-size:8.5px;}
+    .category{padding-top:10px; break-inside:avoid;}
+    .category h2{font-size:13px; color:#2f6d3a;}
+    .grid{grid-template-columns:repeat(6,1fr); gap:5px;}
+    .card{border:1px solid #c9c8bc; background:#fbfaf6; padding:5px; break-inside:avoid;}
+    .card .thumb{height:44px;}
+    .card h3{font-size:8.6px; min-height:2em;}
+    .card .d{font-size:8px;}
+    .card .sizes .row{font-size:7.5px;}
+    .card .sku{font-size:7px;}
+    footer{font-size:8px; padding:10px 0 0;}
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar no-print">
+  <a class="back" href="/">&larr; Wróć do katalogu</a>
+  <div class="acts">
+    <button type="button" id="themeBtn">🌓 Motyw</button>
+    <button type="button" class="primary" onclick="window.print()">🖨️ Drukuj</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <section class="hero">
+    <p class="kicker">Kenochem — Katalog produktowy do druku</p>
+    <h1>ECO <span>SHINE</span></h1>
+    <div id="heroLedeWrap"><p class="lede">Szeroka linia chemii czyszczącej i higienicznej — samochód i myjnia, podłogi, kuchnia i gastronomia, łazienka, szyby, dezynfekcja oraz zapachy. Poniżej pełen przegląd produktów marki dostępnych w Kenochem — ze zdjęciem i krótkim opisem zastosowania, do pokazania klientowi w rozmowie lub do wydrukowania.</p></div>
+    <div class="meta">
+      <span><b>65</b> produktów</span>
+      <span><b>8</b> kategorii</span>
+      <span>Producent: <b>Eco Shine</b></span>
+    </div>
+    <p class="pricenote">Ceny przy każdej pojemności to <b>cena katalogowa</b> — aktualna cena sprzedaży brutto (bez doliczonej marży).</p>
+  </section>
+
+  <div id="categories"></div>
+
+  <footer>
+    <p class="mono">Kenochem — Biblioteka, katalogi marek do druku. Ceny i stany magazynowe sprawdź w katalogu Kenochem — ten dokument służy do prezentacji asortymentu.</p>
+  </footer>
+
+</div>
+
+<script>
+  var CATALOG_SLUG = "eco-shine";
+  var CATALOG = {
+    brand: "Eco Shine",
+    categoryOrder: [
+      { name:"Samochód i myjnia" },
+      { name:"Podłogi" },
+      { name:"Kuchnia i gastronomia" },
+      { name:"Łazienka i sanitariaty" },
+      { name:"Szyby" },
+      { name:"Dezynfekcja i higiena rąk" },
+      { name:"Zapachy i odświeżacze" },
+      { name:"Uniwersalne" }
+    ],
+    items: [
+      { n:"ALUSONIC 400", cat:"Samochód i myjnia", d:"Koncentrat do myjek ultradźwiękowych — czyści elementy aluminiowe", s:[{v:"1L",p:37.99},{v:"5L",p:166.99},{v:"10L",p:317.99}], sku:"ECO000161", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-ALUSONIC-400-10L-plyn-do-myjek-ultradzwiekowych-6028_1.png" },
+      { n:"SUPERSONIC K4", cat:"Samochód i myjnia", d:"Koncentrat do myjek ultradźwiękowych", s:[{v:"1L",p:36.99},{v:"5L",p:161.99},{v:"10L",p:309.99}], sku:"ECO000154", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-SUPERSONIC-K4-10L-plyn-do-myjek-ultradzwiekowych-5342_2.png" },
+      { n:"APC MAX", cat:"Samochód i myjnia", d:"Uniwersalny koncentrat czyszczący — wnętrze i zewnętrze auta", s:[{v:"750ml",p:17.99},{v:"5L",p:94.99}], sku:"ECO000168", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-APC-MAX-5L-uniwersalny-koncentrat-czyszczacy-6076_1.png" },
+      { n:"AQUA PROTECT PRO SPRAY", cat:"Samochód i myjnia", d:"Ochrona i nabłyszczenie lakieru — efekt hydrofobowy", s:[{v:"750ml",p:29.99},{v:"5L",p:145.99}], sku:"ECO000167", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-AQUA-PROTECT-Pro-Spray-5L-ochrona-lakieru-polysk-6077_1.png" },
+      { n:"AQUA PROTECT PRO MAX", cat:"Samochód i myjnia", d:"Hydropowłoka do myjni samochodowych — silny efekt spływania wody", s:[{v:"5L",p:199.99}], sku:"ECO 000191", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-AQUA-PROTECT-PRO-MAX-5L-tworzy-hydro-powloke-Dom-Myjnia-6557_1-1.png" },
+
+      { n:"ECO FLOOR", cat:"Podłogi", d:"Ekologiczny płyn do ręcznego mycia podłóg", s:[{v:"1L",p:21.99}], sku:"ECO000170", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-ECO-FLOOR-1L-ekologiczny-plyn-do-mycia-podlog-6073_1.png" },
+      { n:"FLOOR ALCO", cat:"Podłogi", d:"Płyn do mycia podłóg z alkoholem — szybkoschnący", s:[{v:"1L",p:20.99},{v:"5L",p:89.99},{v:"10L",p:167.99}], sku:"ECO000107", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-FLOOR-ALCO-10L-plyn-do-mycia-podlog-z-alkoholem-1983_6.png" },
+      { n:"FLOOR HOME&OFFICE", cat:"Podłogi", d:"Uniwersalny płyn do mycia podłóg — dom i biuro", s:[{v:"1L",p:21.99},{v:"5L",p:94.99},{v:"10L",p:169.99}], sku:"ECO000123", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-FLOOR-HOME-OFFICE-10L-plyn-do-mycia-podlog-2981_2.png" },
+      { n:"FLOOR ORANGE", cat:"Podłogi", d:"Płyn do podłóg z alkoholem — zapach pomarańczowy", s:[{v:"1L",p:20.99},{v:"5L",p:89.99},{v:"10L",p:165.99}], sku:"ECO000176", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-FLOOR-ORANGE-10L-plyn-do-podlog-z-alkoholem-6141_1.png" },
+      { n:"FLOOR SHINE", cat:"Podłogi", d:"Zapachowy płyn do mycia podłóg z połyskiem", s:[{v:"1L",p:19.99},{v:"5L",p:84.99},{v:"10L",p:155.99}], sku:"ECO000041", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-FLOOR-SHINE-10L-zapachowy-plyn-do-mycia-podlog-3619_1.png" },
+      { n:"FLOOR CARE", cat:"Podłogi", d:"Zapachowy płyn do mycia podłóg", s:[{v:"1L",p:21.99},{v:"5L",p:91.99}], sku:"ECO000120", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-FLOOR-CARE-1L-plyn-do-podlog-zapachowy-2631_1.png" },
+      { n:"FLOOR SEPT", cat:"Podłogi", d:"Płyn do mycia podłóg z chlorem — dezynfekuje", s:[{v:"1L",p:21.99},{v:"5L",p:94.99}], sku:"ECO000087", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-FLOOR-SEPT-1L-plyn-do-mycia-podlog-z-chlorem-1550_3.png" },
+      { n:"FLOOR WOOD", cat:"Podłogi", d:"Płyn do mycia podłóg drewnianych i paneli", s:[{v:"1L",p:19.99},{v:"5L",p:86.99}], sku:"ECO000077", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-FLOOR-WOOD-1L-plyn-do-mycia-podlog-drewnianych-1544_4.png" },
+      { n:"HARD FLOOR", cat:"Podłogi", d:"Do mocno zatłuszczonych podłóg — hale, warsztaty", s:[{v:"1L",p:20.99},{v:"5L",p:89.99}], sku:"ECO000091", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-HARD-FLOOR-1L-plyn-do-zatluszczonych-podlog-1548_3.png" },
+      { n:"GRESS ACID", cat:"Podłogi", d:"Kwasowy płyn do mycia gresu — usuwa osady wapienne", s:[{v:"1L",p:23.99},{v:"5L",p:100.99}], sku:"ECO000046", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-GRESS-ACID-1L-plyn-do-mycia-gresu-1554_3.png" },
+      { n:"GRESS CLEAN", cat:"Podłogi", d:"Płyn do maszynowego mycia gresu i podłóg przemysłowych", s:[{v:"1L",p:23.99},{v:"5L",p:100.99}], sku:"ECO000089", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-GRESS-CLEAN-1L-plyn-do-maszynowego-mycia-podlog-1552_3.png" },
+      { n:"FLOMATIC +", cat:"Podłogi", d:"Płyn do maszynowego mycia podłóg (szorowarki)", s:[{v:"5L",p:102.99},{v:"10L",p:176.99}], sku:"ECO000051", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-FLOMATIC-10L-plyn-do-maszynowego-mycia-podlog-1559_2.png" },
+      { n:"FLOMATIC ALKA", cat:"Podłogi", d:"Silnie alkaliczny płyn do maszynowego mycia podłóg", s:[{v:"5L",p:105.99},{v:"10L",p:175.99}], sku:"ECO000053", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-FLOMATIC-ALKA-10L-do-maszynowego-mycia-podlog-1561_6.png" },
+      { n:"FLOMATIC SHINE 5", cat:"Podłogi", d:"Płyn do maszynowego mycia podłóg z połyskiem", s:[{v:"5L",p:93.99}], sku:"KAT00146", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-FLOMATIC-SHINE-5-maszynowe-mycie-podlog-4113_4.png" },
+      { n:"FLOOR AUTOMATIC", cat:"Podłogi", d:"Do maszynowego mycia podłóg", s:[{v:"5L",p:89.99}], sku:"ECO000094", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-FLOOR-AUTOMATIC-5L-do-maszynowego-mycia-podlog-1657_2.png" },
+      { n:"FLOOR AUTOMATIC ALCO", cat:"Podłogi", d:"Do maszynowego mycia podłóg — wersja z alkoholem", s:[{v:"5L",p:93.99}], sku:"ECO000129", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-FLOOR-AUTOMATIC-ALCO-5L-maszynowe-mycie-podlog-4114_5.png" },
+      { n:"POLYMER SHINE", cat:"Podłogi", d:"Antypoślizgowy płyn nabłyszczający do podłóg", s:[{v:"1L",p:63.99}], sku:"ECO000117", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-POLYMER-SHINE-1L-antyposlizgowy-plyn-do-podlog-2628_3.png" },
+      { n:"ROBO SHINE", cat:"Podłogi", d:"Płyn do odkurzaczy mopujących (roboty sprzątające)", s:[{v:"1L",p:40.99}], sku:"ECO000173", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-ROBO-SHINE-1L-plyn-do-odkurzaczy-mopujacych-6071_3.png" },
+
+      { n:"CLEAN PUR", cat:"Kuchnia i gastronomia", d:"Do mycia tosterów, gofrownic, naleśnikarek, kebabów", s:[{v:"1L",p:24.99}], sku:"ECO000108", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-CLEAN-PUR-1l-mycie-tosterow-nalesnikarek-kebabow-3805_3.png" },
+      { n:"CLEANING MILK", cat:"Kuchnia i gastronomia", d:"Mleczko do czyszczenia — gotowe do użycia", s:[{v:"0,5L",p:10.99}], sku:"ECO000142", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-CLEANING-MILK-0-5L-mleczko-do-czyszczenia-5174_2.png" },
+      { n:"DIAMOND SHINE", cat:"Kuchnia i gastronomia", d:"Płyn nabłyszczający do zmywarki — do twardej wody", s:[{v:"1L",p:29.99}], sku:"ECO000174", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-DIAMOND-SHINE-1L-plyn-nablyszczajacy-do-zmywarki-6081_2.png" },
+      { n:"DIAMOND SPECIAL", cat:"Kuchnia i gastronomia", d:"Koncentrat do nabłyszczania naczyń w zmywarce", s:[{v:"5kg",p:136.99},{v:"10kg",p:231.99}], sku:"ECO000027", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-DIAMOND-SPECIAL-10kg-nablyszczasz-do-naczyn-1525_1.png" },
+      { n:"DISFATOIL", cat:"Kuchnia i gastronomia", d:"Silny odtłuszczacz do urządzeń i powierzchni — niskopieniący", s:[{v:"1L",p:23.99}], sku:"ECO000109", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-DISFATOIL1L-odtluszczanie-powierzchni-6150_4.png" },
+      { n:"DISH CLEANER", cat:"Kuchnia i gastronomia", d:"Zapachowy koncentrat do ręcznego mycia naczyń", s:[{v:"1L",p:12.99},{v:"5L",p:52.99}], sku:"ECO000028", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-DISH-CLEANER-1L-plyn-do-recznego-mycia-naczyn-1526_3.png" },
+      { n:"DISHER HARD", cat:"Kuchnia i gastronomia", d:"Do maszynowego mycia naczyń — zalecany do twardej wody", s:[{v:"6kg",p:135.99},{v:"12kg",p:241.99}], sku:"ECO000024", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-DISHER-HARD-12kg-plyn-do-mycia-naczyn-w-zmywarce-1519_5.png" },
+      { n:"ECO DEGREASER", cat:"Kuchnia i gastronomia", d:"Ekologiczny płyn do odtłuszczania mebli i blatów", s:[{v:"1L",p:22.99}], sku:"ECO000148", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-ECO-DEGREASER-1L-plyn-do-odtluszczania-5029_3.png" },
+      { n:"ECO DISH CLEANER", cat:"Kuchnia i gastronomia", d:"Ekologiczny płyn do ręcznego mycia naczyń", s:[{v:"1L",p:15.99}], sku:"ECO000182", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-ECO-DISH-CLEANER-1L-ekologiczny-plyn-do-mycia-naczyn-6396_1.jpg" },
+      { n:"ECO KITCHEN", cat:"Kuchnia i gastronomia", d:"Płyn do odtłuszczania kuchni", s:[{v:"1L",p:21.99}], sku:"ECO000147", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-ECO-KITCHEN-1L-plyn-do-odtluszczania-5032_6.png" },
+      { n:"ECO OVEN", cat:"Kuchnia i gastronomia", d:"Pianka do mycia przypaleń w piekarniku", s:[{v:"1L",p:26.99}], sku:"ECO000149", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-ECO-OVEN-1-L-pianka-do-mycia-przypalen-5033_3.png" },
+      { n:"OVEN CLEANER", cat:"Kuchnia i gastronomia", d:"Pianka do mycia piekarnika i pieca", s:[{v:"1L",p:24.99},{v:"5L",p:98.99}], sku:"ECO000029", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-OVEN-CLEANER-1L-pianka-do-mycia-piekarnika-pieca-1527_6.png" },
+      { n:"FAT CLEANER", cat:"Kuchnia i gastronomia", d:"Skuteczny odtłuszczacz do powierzchni kuchennych", s:[{v:"1L",p:20.99}], sku:"ECO000035", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-FAT-CLEANER-1L-skuteczny-odtluszczacz-do-mycia-3040_6.png" },
+      { n:"FRIDGE SHINE", cat:"Kuchnia i gastronomia", d:"Płyn do mycia lodówek i chłodni", s:[{v:"1L",p:21.99}], sku:"ECO000060", img:"https://upload.cdn.baselinker.com/products/6011214/85630221f148781116721bc1339fd10a.jpg" },
+      { n:"INOX SHINE", cat:"Kuchnia i gastronomia", d:"Do mycia stali nierdzewnej — blaty, okapy, sprzęt gastro", s:[{v:"1L",p:41.99}], sku:"ECO000061", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-INOX-SHINE-1L-plyn-do-mycia-stali-nierdzewnej-1569_3.png" },
+      { n:"KONVECT CLEAN ALKA", cat:"Kuchnia i gastronomia", d:"Do automatycznego mycia pieców konwekcyjnych", s:[{v:"6kg",p:142.99}], sku:"ECO000036", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-KONVECT-CLEAN-ALKA-6kg-automatyczne-mycie-piecow-3041_5.png" },
+      { n:"KONVECT SHINE", cat:"Kuchnia i gastronomia", d:"Do płukania pieców konwekcyjnych", s:[{v:"5L",p:141.99}], sku:"ECO000141", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-KONVECT-SHINE-5L-plukanie-piecow-konwekcyjnych-5175_3.png" },
+      { n:"MYDŁO HACCP", cat:"Kuchnia i gastronomia", d:"Mydło do rąk zgodne z HACCP — restauracje, gastronomia", s:[{v:"5L",p:49.99}], sku:"ECO000134", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-MYDLO-HACCP-5L-mydlo-do-restauracji-gastronomii-5176_3.png" },
+      { n:"SEPTAL 200", cat:"Kuchnia i gastronomia", d:"Mycie i dezynfekcja automatów do lodów", s:[{v:"5L",p:221.99}], sku:"ECO000162", img:"https://upload.cdn.baselinker.com/products/6011214/db35f240aaa0cb82726e4e7f0bde5b32.png" },
+
+      { n:"ECO SANIT", cat:"Łazienka i sanitariaty", d:"Pianka do mycia łazienki", s:[{v:"1L",p:22.99}], sku:"ECO000146", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-ECO-SANIT-1-L-Pianka-do-mycia-lazienki-5034_6.png" },
+      { n:"ECO TOILET", cat:"Łazienka i sanitariaty", d:"Żel do WC", s:[{v:"750ml",p:16.99}], sku:"ECO000145", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-ECO-TOILET-750ml-zel-do-WC-5035_7.png" },
+      { n:"SANIT MAX", cat:"Łazienka i sanitariaty", d:"Koncentrat odkamieniający do toalet", s:[{v:"1L",p:28.99},{v:"5L",p:124.99}], sku:"ECO000080", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-SANIT-MAX-1L-odkamieniacz-toalet-koncentrat-1616_2.png" },
+      { n:"SANIT SHINE", cat:"Łazienka i sanitariaty", d:"Mycie i odkamienianie toalet", s:[{v:"1L",p:19.99},{v:"5L",p:85.99}], sku:"ECO000075", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-SANIT-SHINE-1L-mycie-i-odkamienianie-toalet-1578_3.png" },
+      { n:"TOILET SEPT", cat:"Łazienka i sanitariaty", d:"Żel wybielający do łazienki", s:[{v:"750ml",p:14.49},{v:"5L",p:86.99}], sku:"ECO000055", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-TOILET-SEPT-5L-zel-wybielajacy-do-lazienki-1563_2.png" },
+      { n:"TOILET DESTONER", cat:"Łazienka i sanitariaty", d:"Mocny odrdzewiacz do sanitariatów", s:[{v:"750ml",p:19.99}], sku:"ECO000056", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-TOILET-DESTONER-750ml-mocny-odrdzewiacz-1564_2.png" },
+      { n:"DESTONE SHINE", cat:"Łazienka i sanitariaty", d:"Odkamieniacz do ekspresów i czajników", s:[{v:"1L",p:25.99},{v:"5L",p:100.99}], sku:"ECO000032", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-DESTONE-SHINE-1L-odkamieniacz-do-ekspresow-1529_1.png" },
+      { n:"DESTONE SPECIAL", cat:"Łazienka i sanitariaty", d:"Mocny odkamieniacz do trwałych osadów kamiennych", s:[{v:"1L",p:47.99}], sku:"ECO000071", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-DESTONE-SPECIAL-1L-Mocny-Odkamieniacz-3482_6.png" },
+
+      { n:"ECO GLASS", cat:"Szyby", d:"Płyn do mycia szyb z alkoholem", s:[{v:"1L",p:18.99}], sku:"ECO000144", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-ECO-GLASS-1L-plyn-do-mycia-szyb-z-alkoholem-5031_6.png" },
+      { n:"GLASS SHINE", cat:"Szyby", d:"Profesjonalny płyn do mycia szyb", s:[{v:"1L",p:15.99},{v:"5L",p:56.99},{v:"10L",p:104.99}], sku:"ECO000101", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-GLASS-SHINE-10L-profesjonalny-plyn-do-mycia-szyb-1833_2.png" },
+      { n:"GLASS SPECIAL", cat:"Szyby", d:"Płyn do mycia szyb z alkoholem — wersja profesjonalna", s:[{v:"5L",p:116.99}], sku:"ECO000066", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-GLASS-SPECIAL-5L-plyn-do-mycia-szyb-z-alkoholem-1574_2.png" },
+
+      { n:"SEPTAL 100", cat:"Dezynfekcja i higiena rąk", d:"Płyn do mycia i dezynfekcji powierzchni", s:[{v:"1L",p:29.99}], sku:"ECO000076", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-SEPTAL-100-1L-plyn-do-mycia-i-dezynfekcji-1579_2.png" },
+      { n:"SEPTAL EXPRESS", cat:"Dezynfekcja i higiena rąk", d:"Szybki płyn do dezynfekcji", s:[{v:"1L",p:21.99}], sku:"ECO000096", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-SEPTAL-EXPRESS-1L-Plyn-do-Dezynfekcji-3500_5.png" },
+      { n:"SEPTAL HANDS", cat:"Dezynfekcja i higiena rąk", d:"Dezynfekcja rąk bez alkoholu", s:[{v:"1L",p:22.99}], sku:"ECO000115", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-SEPTAL-HANDS-1L-do-dezynfekcji-rak-bez-alkoholu-2621_2.png" },
+      { n:"SOFT & CARE", cat:"Dezynfekcja i higiena rąk", d:"Delikatna pianka do mycia rąk", s:[{v:"5L",p:45.99}], sku:"ECO000128", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-SOFT-CARE-5L-delikatna-pianka-do-mycia-rak-4115_5.png" },
+
+      { n:"FRESH AIR GENTLEMAN", cat:"Zapachy i odświeżacze", d:"Odświeżacz powietrza — zapach Gentleman", s:[{v:"500ml",p:26.99}], sku:"ECO000171", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-FRESH-AIR-GENTLEMAN-500-ml-odswiezacz-powietrza-6072_1.png" },
+      { n:"FRESH AIR KWIATOWY", cat:"Zapachy i odświeżacze", d:"Odświeżacz powietrza — zapach kwiatowy", s:[{v:"500ml",p:26.99}], sku:"ECO000187", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_ECO-SHINE-Fresh-Air-Kwiatowy-500ml-odswiezacz-powietrza-6425_1.png" },
+      { n:"FRESH AIR OTULAJĄCY KASZMIR", cat:"Zapachy i odświeżacze", d:"Odświeżacz powietrza — zapach kaszmirowy", s:[{v:"500ml",p:24.54}], sku:"ECO000185", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_ECO-SHINE-Fresh-Air-Otulajacy-kaszmir-500ml-odswiezacz-powietrza-6426_1.png" },
+      { n:"ODOR GONE BIO", cat:"Zapachy i odświeżacze", d:"Neutralizator zapachów z naturalnymi bakteriami", s:[{v:"0,5L",p:38.99}], sku:"ECO000183", img:"https://upload.cdn.baselinker.com/products/6011214/1042284d2a86199cb3f67ca62fa6d61a.png" },
+
+      { n:"MULTI MAX", cat:"Uniwersalne", d:"Uniwersalny płyn czyszczący", s:[{v:"1L",p:21.99}], sku:"ECO000042", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-MULTI-MAX-1L-uniwersalny-plyn-czyszczacy-3276_6.png" },
+      { n:"MULTISHINE", cat:"Uniwersalne", d:"Uniwersalny płyn czyszczący do wielu powierzchni", s:[{v:"1L",p:14.99},{v:"5L",p:67.99},{v:"10L",p:122.99}], sku:"ECO000097", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-MULTISHINE-10L-uniwersalny-plyn-czyszczacy-3618_5.png" },
+      { n:"MULTISHINE ALCO", cat:"Uniwersalne", d:"Alkoholowy preparat myjący — szybkoschnący", s:[{v:"1L",p:17.99},{v:"5L",p:79.99},{v:"10L",p:132.99}], sku:"ECO000099", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-MULTISHINE-ALCO-10L-alkoholowy-preparat-myjacy-3617_5.png" },
+      { n:"SMART FOAM", cat:"Uniwersalne", d:"Pianka odtłuszczająca APC — do myjek pieniących", s:[{v:"1L",p:21.99},{v:"5L",p:91.99},{v:"10L",p:169.99}], sku:"ECO000095", img:"https://kenochem.com/wp-content/uploads/2026/06/pol_pl_Eco-Shine-SMART-FOAM-10L-pianka-odtluszczajaca-APC-1670_2.png" }
+    ]
+  };
+</script>
+<script type="module" src="/biblioteka/katalogi-marek/catalog-edit.js"></script>
+</body>
+</html>
