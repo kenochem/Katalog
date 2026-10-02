@@ -1,0 +1,197 @@
+{
+  "ids": {
+    "HYD000448": "152656522",
+    "HYD000241": "152657312",
+    "HYD000847": "152657304",
+    "HYD000057": "152656788",
+    "HYD000573": "152656648",
+    "HYD000199": "152656559",
+    "HYD000823": "152656519",
+    "HYD000626": "152656371",
+    "HYD000605": "152655714",
+    "HYD001111": "152657306",
+    "HYD000205": "152657164",
+    "HYD000186": "152656801",
+    "HYD000178": "152656650",
+    "HYD000181": "152656548",
+    "HYD000184": "152656455"
+  },
+  "catalog": {
+    "HYD000057": {
+      "name": "SZYBKOZŁĄCZE KEW MĘSKIE GW1/4",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    },
+    "HYD000205": {
+      "name": "REDUKCJA Z NAKRĘTKĄ GWM22-GW3/8",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    },
+    "HYD000605": {
+      "name": "REDUKCJA BAYONET LAVOR/PARKSIDE - 1/4 plastik",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    },
+    "HYD001111": {
+      "name": "Podstawa-nakrętka + dysza zbiornika chemii Inox",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    },
+    "HYD000626": {
+      "name": "Obudowa lancy LS10, poz 12",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    },
+    "HYD000241": {
+      "name": "OBROTÓWKA D/WĘŻA ODKURZACZA DN38/38",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    },
+    "HYD000186": {
+      "name": "NYPEL STAL GW3/8 - końcówka do zakucia",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    },
+    "HYD000847": {
+      "name": "NYPEL STAL 1/2m - 1/4ż",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    },
+    "HYD000184": {
+      "name": "NYPEL MOSIĄDZ GZ22 - GZ22 Łącznik",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    },
+    "HYD000181": {
+      "name": "NYPEL MOSIĄDZ GZ22 - GZ1/4",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    },
+    "HYD000178": {
+      "name": "NYPEL MOSIĄDZ GZ22 - GW3/8",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    },
+    "HYD000448": {
+      "name": "NYPEL MOSIĄDZ GZ22 - 1/4gz",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    },
+    "HYD000199": {
+      "name": "NYPEL MOSIĄDZ GZ1/4 - GZ1/4",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    },
+    "HYD000573": {
+      "name": "NYPEL MOSIĄDZ GZ1/4 - GW3/8",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    }
+  },
+  "shop": {
+    "HYD000186": {
+      "name": "Nypel GW3/8 - stalowa końcówka do zakucia",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    },
+    "HYD000199": {
+      "name": "NYPEL MOSIĄDZ GZ1/4 - GZ1/4",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    },
+    "HYD000448": {
+      "name": "NYPEL MOSIĄDZ GZ22 - 1/4",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    },
+    "HYD000178": {
+      "name": "NYPEL MOSIĄDZ GZ22 - GW3/8",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    },
+    "HYD000181": {
+      "name": "NYPEL MOSIĄDZ GZ22 - GZ1/4",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    },
+    "HYD000184": {
+      "name": "NYPEL MOSIĄDZ GZ22 - GZ22 Łącznik",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    },
+    "HYD000847": {
+      "name": "Nypel stal 1/2m - 1/4m",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    },
+    "HYD000241": {
+      "name": "OBROTÓWKA D/WĘŻA ODKURZACZA DN38/38",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    },
+    "HYD000626": {
+      "name": "Obudowa LANCY LS12 LS 12 niebieska",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    },
+    "HYD001111": {
+      "name": "Podstawowa nakrętka + dysza zbiornika chemii inox",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    },
+    "HYD000605": {
+      "name": "Redukcja BAYONET LAVOR 1/4 - adapter do pistoletów Karcher",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    },
+    "HYD000205": {
+      "name": "Redukcja z nakrętką GWM22-GW3/8",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    },
+    "HYD000823": {
+      "name": "Rurka kontrolna do płynu 50L do zbiornika chemii",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    },
+    "HYD000573": {
+      "name": "Szybkozłącze do sprężarki",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    },
+    "HYD000057": {
+      "name": "Szybkozłącze KEW męskie GW1/4",
+      "imageUrl": "",
+      "extra": [],
+      "hasImage": false
+    }
+  }
+}

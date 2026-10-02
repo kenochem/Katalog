@@ -218,6 +218,23 @@ function Test-WaproArchivedProduct([string]$sku, [string]$name) {
   return $false
 }
 
+<#
+  Puste "szkice" artykulow zakladane w WAPRO Mag (np. przez zeskanowanie
+  nieznanego kodu) i nigdy nie uzupelnione - domyslna nazwa "nowy artykul (ID)"
+  i indeks w nawiasie zamiast realnego SKU. To nie sa prawdziwe produkty, wiec
+  nie maja wchodzic do katalogu / zakladki "Nowosci".
+  UWAGA: zero polskich znakow (a,c,e,l,n,o,s,z,z) w tym pliku - bez BOM,
+  Windows PowerShell 5.1 czyta go w ANSI i psuje je, co kiedys wywalilo caly
+  parser skryptu przez jeden znak "l" w wyrazeniu regularnym ponizej.
+#>
+function Test-WaproPlaceholderProduct([string]$sku, [string]$name) {
+  $n = ([string]$name).Trim()
+  if ($n -and $n -match '^nowy\s*artykul\b') { return $true }
+  $s = ([string]$sku).Trim()
+  if ($s -and $s -match '^\(\d+\)$') { return $true }
+  return $false
+}
+
 function Get-ExistingProductSkuSet {
   param(
     [string]$SupabaseUrl,
@@ -331,11 +348,11 @@ function Invoke-WaproMagAutoImport {
     if ($rows.Count -eq 0) { return @{ inserted = 0; candidates = 0; note = 'pusty katalog Mag' } }
 
     $existing = Get-ExistingProductSkuSet -SupabaseUrl $SupabaseUrl -Headers $headers
-    $candidates = New-Object System.Collections.Generic.List[object]
+    $candidates = [System.Collections.Generic.List[object]]::new()
     foreach ($row in $rows) {
       $sku = (Get-JsonTextValue $row 'sku').ToUpperInvariant()
       $name = Get-JsonTextValue $row 'name' $sku
-      if (-not $sku -or (Test-WaproArchivedProduct $sku $name)) { continue }
+      if (-not $sku -or (Test-WaproArchivedProduct $sku $name) -or (Test-WaproPlaceholderProduct $sku $name)) { continue }
       if ($existing.ContainsKey($sku) -or $existing.ContainsKey((Get-NormSkuKey $sku))) { continue }
       $p = New-WaproSkeletonProduct $row
       [void]$candidates.Add($p)
@@ -503,13 +520,13 @@ function Parse-WaproCatalogInfoFile([string]$path) {
 }
 
 function Write-WaproMagCatalogJson([hashtable]$stockBySku, [hashtable]$catalogInfo, [string]$path) {
-  $rows = New-Object System.Collections.Generic.List[object]
+  $rows = [System.Collections.Generic.List[object]]::new()
   foreach ($sku in ($stockBySku.Keys | Sort-Object)) {
     if (-not $sku) { continue }
     $stockRow = $stockBySku[$sku]
     $info = if ($catalogInfo.ContainsKey($sku)) { $catalogInfo[$sku] } else { $null }
     $name = if ($info -and $info.name) { $info.name } else { $sku }
-    if (Test-WaproArchivedProduct $sku $name) { continue }
+    if ((Test-WaproArchivedProduct $sku $name) -or (Test-WaproPlaceholderProduct $sku $name)) { continue }
     $manufacturer = if ($info -and $info.manufacturer) { $info.manufacturer } else { '' }
     $catalog = Get-WaproCatalogKind $sku $name $manufacturer
     $category = Get-WaproCatalogCategory $catalog $sku $name $manufacturer
@@ -547,7 +564,7 @@ function Write-UnmatchedWaproReport([System.Collections.Generic.List[object]]$ro
   $payload = [ordered]@{
     generatedAt = (Get-Date).ToUniversalTime().ToString('o')
     count = $rows.Count
-    rows = @($rows)
+    rows = $rows.ToArray()
   }
   Write-JsonUtf8NoBom $jsonPath $payload 5
   $lines = New-Object System.Collections.Generic.List[string]
@@ -1325,8 +1342,13 @@ function Invoke-WaproSalesBulkQuery {
     $raw = Read-SqlCmdOutput $tmp
     $rawText = if ($raw.Count -gt 0) { ($raw -join "`n") } else { '' }
     if (Test-SqlExportError $code $rawText) {
-      $lastErr = ('bulk sqlcmd exit={0}: {1}' -f $code, ($rawText.Substring(0, [Math]::Min(200, $rawText.Length))))
-      Write-Log ('Bulk sprzedaz wariant {0}: blad sqlcmd' -f $variantName)
+      $snippet = $rawText.Substring(0, [Math]::Min(300, $rawText.Length)) -replace '\r?\n', ' | '
+      $lastErr = ('bulk sqlcmd exit={0}: {1}' -f $code, $snippet)
+      # Pelny tekst bledu SQL (np. "Invalid column name..." / "Msg 8115...") jest
+      # kluczowy do diagnozy, ktory wariant zapytania czego oczekuje od schematu -
+      # bez tego "blad sqlcmd" nic nie mowi, a jesli kolejny wariant sie uda, ten
+      # blad ginie bezpowrotnie (funkcja zwraca sukces, throw nigdy sie nie odpala).
+      Write-Log ('Bulk sprzedaz wariant {0}: blad sqlcmd exit={1}: {2}' -f $variantName, $code, $snippet)
       continue
     }
     $parsed = Parse-WaproSalesBulkExportFile $tmp
@@ -1350,7 +1372,7 @@ function Invoke-WaproSalesBulkQuery {
 function Add-WaproSalesMonthlyToJson {
   param([hashtable]$Agg)
   $monthKeys = Get-WaproSalesMonthKeys
-  $monthly = New-Object System.Collections.Generic.List[object]
+  $monthly = [System.Collections.Generic.List[object]]::new()
   for ($m = 1; $m -le 12; $m++) {
     $tag = '{0:D2}' -f $m
     $qKey = "qty_cal_m$tag"
@@ -1364,7 +1386,7 @@ function Add-WaproSalesMonthlyToJson {
         netValue = [Math]::Round($n, 2)
       })
   }
-  return @($monthly)
+  return $monthly.ToArray()
 }
 
 function Build-WaproSalesStatsJson {
@@ -1474,7 +1496,7 @@ function Invoke-SyncWaproSalesBulk {
     $salesBySku = $bulk.Map
     Write-Log ('Bulk sprzedaz: {0} SKU z Mag (linie raw: {1})' -f $salesBySku.Count, $bulk.Lines)
 
-    $products = New-Object System.Collections.Generic.List[object]
+    $products = [System.Collections.Generic.List[object]]::new()
     $from = 0
     $page = 1000
     do {
@@ -1496,32 +1518,47 @@ function Invoke-SyncWaproSalesBulk {
     $updated = 0
     $unchanged = 0
     $cleared = 0
+    $failed = 0
+    $failedSkus = New-Object System.Collections.Generic.List[string]
     $syncedAt = (Get-Date).ToUniversalTime().ToString('o')
 
     foreach ($p in $products) {
-      $skus = Get-ProductSalesSkus $p
-      if ($skus.Count -eq 0) { continue }
-      $agg = Aggregate-SalesRowsForSkus -Skus $skus -SalesBySku $salesBySku
-      $payload = @{ wapro_sales_synced_at = $syncedAt }
-      if ($agg) {
-        $payload.wapro_sales_stats = Build-WaproSalesStatsJson -Skus $skus -Agg $agg
-      } else {
-        $payload.wapro_sales_stats = $null
-        $cleared++
+      # Jeden zepsuty produkt (dziwny typ danych z SQL, brakujace pole itp.) nie
+      # moze wywalac calego bulk syncu - izolujemy blad per-produkt i lecimy dalej.
+      try {
+        $skus = Get-ProductSalesSkus $p
+        if ($skus.Count -eq 0) { continue }
+        $agg = Aggregate-SalesRowsForSkus -Skus $skus -SalesBySku $salesBySku
+        $payload = @{ wapro_sales_synced_at = $syncedAt }
+        if ($agg) {
+          $payload.wapro_sales_stats = Build-WaproSalesStatsJson -Skus $skus -Agg $agg
+        } else {
+          $payload.wapro_sales_stats = $null
+          $cleared++
+        }
+        $body = $payload | ConvertTo-Json -Compress -Depth 8
+        $existingJson = if ($p.wapro_sales_stats) { ($p.wapro_sales_stats | ConvertTo-Json -Compress -Depth 8) } else { '' }
+        $newJson = if ($payload.wapro_sales_stats) { ($payload.wapro_sales_stats | ConvertTo-Json -Compress -Depth 8) } else { '' }
+        if ($existingJson -eq $newJson -and [string]$p.wapro_sales_synced_at) {
+          $unchanged++
+          continue
+        }
+        $patchUri = '{0}/rest/v1/products?id=eq.{1}' -f $SupabaseUrl, $p.id
+        Invoke-RestMethod -Uri $patchUri -Headers $patchHeaders -Method Patch -Body $body | Out-Null
+        $updated++
+      } catch {
+        $failed++
+        $skuLabel = if ($p.sku) { [string]$p.sku } else { [string]$p.id }
+        [void]$failedSkus.Add($skuLabel)
+        Write-Log ('Bulk sprzedaz: pominieto produkt {0} ({1}) - {2}' -f $skuLabel, $p.id, $_.Exception.Message)
       }
-      $body = $payload | ConvertTo-Json -Compress -Depth 8
-      $existingJson = if ($p.wapro_sales_stats) { ($p.wapro_sales_stats | ConvertTo-Json -Compress -Depth 8) } else { '' }
-      $newJson = if ($payload.wapro_sales_stats) { ($payload.wapro_sales_stats | ConvertTo-Json -Compress -Depth 8) } else { '' }
-      if ($existingJson -eq $newJson -and [string]$p.wapro_sales_synced_at) {
-        $unchanged++
-        continue
-      }
-      $patchUri = '{0}/rest/v1/products?id=eq.{1}' -f $SupabaseUrl, $p.id
-      Invoke-RestMethod -Uri $patchUri -Headers $patchHeaders -Method Patch -Body $body | Out-Null
-      $updated++
+    }
+    if ($failed -gt 0) {
+      $sample = ($failedSkus | Select-Object -First 15) -join ', '
+      Write-Log ('Bulk sprzedaz: {0} produktow pominietych z bledem. Przyklady SKU: {1}' -f $failed, $sample)
     }
 
-    $msg = 'Bulk sprzedaz OK: zaktualizowano {0}, bez zmian {1}, wyczyszczono {2}, SKU z Mag {3}' -f $updated, $unchanged, $cleared, $salesBySku.Count
+    $msg = 'Bulk sprzedaz OK: zaktualizowano {0}, bez zmian {1}, wyczyszczono {2}, pominieto {3}, SKU z Mag {4}' -f $updated, $unchanged, $cleared, $failed, $salesBySku.Count
     Write-Log $msg
 
     if ($PendingIds.Count -gt 0) {
@@ -1795,6 +1832,7 @@ SELECT LTRIM(RTRIM(INDEKS_KATALOGOWY)) AS sku,
 FROM dbo.ARTYKUL
 WHERE INDEKS_KATALOGOWY IS NOT NULL
   AND LTRIM(RTRIM(INDEKS_KATALOGOWY)) <> ''
+  AND ID_MAGAZYNU = 1
 GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
 '@
 
@@ -1809,6 +1847,7 @@ LEFT JOIN dbo.KATEGORIA_ARTYKULU k WITH (NOLOCK)
   ON k.ID_KATEGORII = a.ID_KATEGORII
 WHERE a.INDEKS_KATALOGOWY IS NOT NULL
   AND LTRIM(RTRIM(a.INDEKS_KATALOGOWY)) <> ''
+  AND a.ID_MAGAZYNU = 1
 GROUP BY LTRIM(RTRIM(a.INDEKS_KATALOGOWY));
 '@
 
@@ -1824,6 +1863,7 @@ LEFT JOIN dbo.WIDOK_ARTYKUL wa WITH (NOLOCK)
   ON wa.IdArtykulu = a.ID_ARTYKULU
 WHERE a.INDEKS_KATALOGOWY IS NOT NULL
   AND LTRIM(RTRIM(a.INDEKS_KATALOGOWY)) <> ''
+  AND a.ID_MAGAZYNU = 1
 GROUP BY LTRIM(RTRIM(a.INDEKS_KATALOGOWY));
 '@
     @'
@@ -1840,6 +1880,7 @@ LEFT JOIN dbo.A4BVIEW_CENA_ARTYKULU_MIN cm WITH (NOLOCK)
   ON cm.ID_ARTYKULU = a.ID_ARTYKULU
 WHERE a.INDEKS_KATALOGOWY IS NOT NULL
   AND LTRIM(RTRIM(a.INDEKS_KATALOGOWY)) <> ''
+  AND a.ID_MAGAZYNU = 1
 GROUP BY LTRIM(RTRIM(a.INDEKS_KATALOGOWY));
 '@
     @'
@@ -1853,6 +1894,7 @@ LEFT JOIN dbo.A4BVIEW_CENA_ARTYKULU_MIN cm WITH (NOLOCK)
   ON cm.ID_ARTYKULU = a.ID_ARTYKULU
 WHERE a.INDEKS_KATALOGOWY IS NOT NULL
   AND LTRIM(RTRIM(a.INDEKS_KATALOGOWY)) <> ''
+  AND a.ID_MAGAZYNU = 1
 GROUP BY LTRIM(RTRIM(a.INDEKS_KATALOGOWY));
 '@
     @'
@@ -1864,6 +1906,7 @@ SELECT LTRIM(RTRIM(INDEKS_KATALOGOWY)) AS sku,
 FROM dbo.ARTYKUL
 WHERE INDEKS_KATALOGOWY IS NOT NULL
   AND LTRIM(RTRIM(INDEKS_KATALOGOWY)) <> ''
+  AND ID_MAGAZYNU = 1
 GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
 '@
     @'
@@ -1875,6 +1918,7 @@ SELECT LTRIM(RTRIM(INDEKS_KATALOGOWY)) AS sku,
 FROM dbo.ARTYKUL
 WHERE INDEKS_KATALOGOWY IS NOT NULL
   AND LTRIM(RTRIM(INDEKS_KATALOGOWY)) <> ''
+  AND ID_MAGAZYNU = 1
 GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
 '@
     @'
@@ -1886,6 +1930,7 @@ SELECT LTRIM(RTRIM(INDEKS_KATALOGOWY)) AS sku,
 FROM dbo.ARTYKUL
 WHERE INDEKS_KATALOGOWY IS NOT NULL
   AND LTRIM(RTRIM(INDEKS_KATALOGOWY)) <> ''
+  AND ID_MAGAZYNU = 1
 GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
 '@
   )
@@ -2010,7 +2055,7 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
   $sample = ($stockBySku.Keys | Select-Object -First 3) -join ', '
   Write-Log ('Przyklad SKU: {0}' -f $sample)
 
-  $products = New-Object System.Collections.Generic.List[object]
+  $products = [System.Collections.Generic.List[object]]::new()
   $from = 0
   $page = 1000
   do {
@@ -2038,10 +2083,32 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
   $linkedViaAlt = 0
   $bootstrapped = 0
   $warnings = 0
-  $unmatchedProducts = New-Object System.Collections.Generic.List[object]
+  $unmatchedProducts = [System.Collections.Generic.List[object]]::new()
+  # Szczegolowy log zmian per produkt/pole (product_sync_changes) — do zakladki
+  # Logi w apce: ktory SKU, ktore pole, stara -> nowa wartosc.
+  $changeRows = [System.Collections.Generic.List[object]]::new()
   $patchHeaders = $headers + @{
     'Content-Type' = 'application/json'
     Prefer         = 'return=minimal'
+  }
+
+  function Add-ChangeRow {
+    param($Product, [string]$Field, $OldValue, $NewValue)
+    # Warunki wywolania (bootstrap / Test-PriceShouldSet) traktuja "pusta stara
+    # wartosc" jako powod do ustawienia nowej, nawet gdy nowa tez wynosi 0 —
+    # to nie jest realna zmiana, wiec nie zaśmiecamy nia logu.
+    $oldNum = if ($null -eq $OldValue) { 0.0 } else { [double]$OldValue }
+    $newNum = if ($null -eq $NewValue) { 0.0 } else { [double]$NewValue }
+    if ([Math]::Abs($oldNum - $newNum) -le 0.0005) { return }
+    $name = if ($Product.display_name) { [string]$Product.display_name } else { [string]$Product.name }
+    [void]$changeRows.Add([ordered]@{
+      product_id   = [string]$Product.id
+      sku          = [string]$Product.sku
+      display_name = $name
+      field        = $Field
+      old_value    = $OldValue
+      new_value    = $NewValue
+    })
   }
 
   foreach ($p in $products) {
@@ -2084,21 +2151,29 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
       } else {
         $sum = 0.0
         foreach ($v in $next) { $sum += [double]$v.stock }
+        $oldSum = 0.0
+        [void][double]::TryParse(([string]$p.stock).Replace(',', '.'), [ref]$oldSum)
+        if ([Math]::Abs($oldSum - $sum) -gt 0.0005) {
+          Add-ChangeRow -Product $p -Field 'stock' -OldValue $oldSum -NewValue $sum
+        }
         $payload.stock = $sum
         $payload.variants = @($next)
         $changed = $true
       }
       if (Test-PriceShouldSet $p.price_purchase_net $priceBuy) {
+        Add-ChangeRow -Product $p -Field 'price_purchase_net' -OldValue $p.price_purchase_net -NewValue $priceBuy
         $payload.price_purchase_net = $priceBuy
         $changed = $true
         $pricesFilled++
       }
       if (Test-PriceShouldSet $p.price_sale_net $priceSale) {
+        Add-ChangeRow -Product $p -Field 'price_sale_net' -OldValue $p.price_sale_net -NewValue $priceSale
         $payload.price_sale_net = $priceSale
         $changed = $true
         $pricesFilled++
       }
       if (Test-PriceShouldSet $p.price_sale_gross $priceGross) {
+        Add-ChangeRow -Product $p -Field 'price_sale_gross' -OldValue $p.price_sale_gross -NewValue $priceGross
         $payload.price_sale_gross = $priceGross
         $changed = $true
         $pricesFilled++
@@ -2142,6 +2217,7 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
         [ref]$oldStock
       )
       if ($bootstrap -or [Math]::Abs($oldStock - [double]$row.stock) -gt 0.0005) {
+        Add-ChangeRow -Product $p -Field 'stock' -OldValue $oldStock -NewValue $row.stock
         $payload.stock = $row.stock
         $changed = $true
       }
@@ -2149,6 +2225,7 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
 
     if ($null -ne $row.price_purchase_net) {
       if (Test-PriceShouldSet $p.price_purchase_net $row.price_purchase_net) {
+        Add-ChangeRow -Product $p -Field 'price_purchase_net' -OldValue $p.price_purchase_net -NewValue $row.price_purchase_net
         $payload.price_purchase_net = $row.price_purchase_net
         $changed = $true
         $pricesFilled++
@@ -2156,6 +2233,7 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
     }
     if ($null -ne $row.price_sale_net) {
       if (Test-PriceShouldSet $p.price_sale_net $row.price_sale_net) {
+        Add-ChangeRow -Product $p -Field 'price_sale_net' -OldValue $p.price_sale_net -NewValue $row.price_sale_net
         $payload.price_sale_net = $row.price_sale_net
         $changed = $true
         $pricesFilled++
@@ -2163,6 +2241,7 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
     }
     if ($null -ne $row.price_sale_gross) {
       if (Test-PriceShouldSet $p.price_sale_gross $row.price_sale_gross) {
+        Add-ChangeRow -Product $p -Field 'price_sale_gross' -OldValue $p.price_sale_gross -NewValue $row.price_sale_gross
         $payload.price_sale_gross = $row.price_sale_gross
         $changed = $true
         $pricesFilled++
@@ -2182,6 +2261,42 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
     $unmatchedReport = Write-UnmatchedWaproReport $unmatchedProducts $SyncDir
     Write-Log ('Raport brakow WAPRO: {0} pozycji -> {1}' -f $unmatchedProducts.Count, $unmatchedReport.csv)
     $unmatchedNote = ', raport brakow: sync-unmatched-products.csv'
+  }
+
+  if ($changeRows.Count -gt 0) {
+    $changeRequestId = if ($pendingIds.Count -gt 0) { $pendingIds[0] } else { $null }
+    # Jeden wspolny znacznik czasu dla calego przebiegu (zamiast domyslnego
+    # now() per wiersz) — apka grupuje po tym polu, zeby kazdy sync zostal
+    # osobna, zwijalna sekcja zamiast plaskiej listy, ktora nowszy przebieg
+    # wypycha poza limit.
+    $syncRunAt = (Get-Date).ToUniversalTime().ToString('o')
+    foreach ($row in $changeRows) {
+      $row.request_id = $changeRequestId
+      $row.changed_at = $syncRunAt
+    }
+    $changeUri = '{0}/rest/v1/product_sync_changes' -f $SupabaseUrl
+    $changePostHeaders = $headers + @{
+      'Content-Type' = 'application/json'
+      Prefer         = 'return=minimal'
+    }
+    $changeBatchSize = 300
+    $changeErrors = 0
+    for ($i = 0; $i -lt $changeRows.Count; $i += $changeBatchSize) {
+      $take = [Math]::Min($changeBatchSize, $changeRows.Count - $i)
+      $chunk = @($changeRows | Select-Object -Skip $i -First $take)
+      $body = ConvertTo-JsonText $chunk 6 -Compress
+      $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($body)
+      try {
+        Invoke-RestMethod -Uri $changeUri -Headers $changePostHeaders -Method Post -Body $bodyBytes -ContentType 'application/json; charset=utf-8' | Out-Null
+      } catch {
+        $changeErrors++
+      }
+    }
+    if ($changeErrors -gt 0) {
+      Write-Log ('Log zmian produktow: {0} wpisow, {1} nieudanych paczek (sprawdz czy uruchomiono migration-product-sync-changes.sql)' -f $changeRows.Count, $changeErrors)
+    } else {
+      Write-Log ('Log zmian produktow: zapisano {0} wpisow (product_sync_changes)' -f $changeRows.Count)
+    }
   }
 
   $msg = 'Tryb WAPRO: {0}. Zakres: {1}. Zaktualizowano: {2}, bez zmian: {3}, reczne stan: {4}, brak w WAPRO: {5}, uzupelnione pola cen: {6}, SKU z SQL: {7}, dopasowane po legacy/alt SKU: {8}, odkryte (pierwsze stany/ceny): {9}, ostrzezenia: {10}{11}' -f `
