@@ -1,15 +1,18 @@
 import { financeKosztyData as financeKosztyDataRaw } from '../data/financeKosztyData';
 import type {
   FinanceChannel,
+  FinanceChannelGroup,
+  FinanceChannelGroupId,
+  FinanceCostArea,
   FinanceKosztyData,
   FinanceMonth,
   FinanceSource,
 } from './financeTypes';
 
-const financeKosztyData: FinanceKosztyData = financeKosztyDataRaw;
-const STORAGE_KEY = 'katalog-finance-overlay-v1';
+export type { FinanceCostArea };
 
-export type FinanceCostArea = 'Marketplace' | 'Dostawa' | 'Operacyjne';
+const financeKosztyData: FinanceKosztyData = financeKosztyDataRaw;
+const STORAGE_KEY = 'katalog-finance-overlay-v2';
 
 export type FinanceSourceRow = FinanceSource & {
   id: string;
@@ -83,6 +86,7 @@ function seedSources(month: string): FinanceSourceRow[] {
     id: `seed-${month}-${i}-${s.name}`,
     name: s.name,
     amount: s.amount,
+    area: s.area,
   }));
 }
 
@@ -103,7 +107,11 @@ export function getMergedFinanceData(): FinanceKosztyData {
     ...financeKosztyData.sourcesByMonth,
   };
   for (const [k, rows] of Object.entries(overlay.sourcesByMonth)) {
-    sourcesByMonth[k] = rows.map(({ name, amount }) => ({ name, amount }));
+    sourcesByMonth[k] = rows.map(({ name, amount, area }) => ({
+      name,
+      amount,
+      ...(area ? { area } : {}),
+    }));
   }
 
   const defaultMonth =
@@ -251,6 +259,43 @@ export function removeFinanceExpense(month: string, id: string): void {
 
 export function getChannels(month: string): FinanceChannel[] {
   return financeKosztyData.channelsByMonth[month] ?? [];
+}
+
+export function channelGroup(name: string): FinanceChannelGroupId {
+  const n = name.toLowerCase();
+  if (n.includes('allegro')) return 'Allegro';
+  if (
+    n.includes('kenochem.com') ||
+    n.includes('czystomania') ||
+    n.includes('sonax.sklep')
+  ) {
+    return 'Sklepy własne';
+  }
+  if (n.includes('telefonicz') || n.includes('ręczne') || n.includes('mail')) {
+    return 'Zamówienia ręczne';
+  }
+  return 'Inne marketplace';
+}
+
+export function groupChannels(channels: FinanceChannel[]): FinanceChannelGroup[] {
+  const bag = new Map<FinanceChannelGroupId, number>();
+  for (const c of channels) {
+    const g = channelGroup(c.channel);
+    bag.set(g, (bag.get(g) ?? 0) + c.amount);
+  }
+  const order: FinanceChannelGroupId[] = [
+    'Allegro',
+    'Sklepy własne',
+    'Inne marketplace',
+    'Zamówienia ręczne',
+  ];
+  return order
+    .filter((g) => (bag.get(g) ?? 0) > 0)
+    .map((g) => ({ group: g, amount: Math.round((bag.get(g) ?? 0) * 100) / 100 }));
+}
+
+export function isMonthLikelyIncomplete(month: FinanceMonth): boolean {
+  return month.sprzedaz > 0 && month.dostawa <= 0;
 }
 
 export function suggestNextMonth(existing: string[]): string {

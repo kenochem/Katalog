@@ -1099,111 +1099,123 @@ function FinanceOperationsHome({
         <div className="space-y-3">
           <SectionTitle
             title="Narzedzia operacji"
-            subtitle="Kazdy kafelek otwiera roboczy widok z tabelami i miejscem na dokladne wyliczenia."
+            subtitle="17 widokow, pogrupowane wg tematu — zeby nie szukac po calej scianie kafelkow."
           />
-          <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
-            <ToolCard
-              icon={<TrendingUp className="h-5 w-5" />}
-              title="Analiza sprzedazy produktow"
-              subtitle="Rankingi Mag WAPRO: najlepiej, najgorzej, netto, wolumen"
-              onClick={() => onOpenTool('product-sales')}
-            />
-            <ToolCard
-              icon={<PackageX className="h-5 w-5" />}
-              title="Analiza martwego stocku"
-              subtitle="Towar bez sprzedazy w wybranym okresie i suma zamrozonych pieniedzy"
-              onClick={() => onOpenTool('dead-stock-analysis')}
-            />
-            <ToolCard
-              icon={<Building2 className="h-5 w-5" />}
-              title="Baza klientow WAPRO"
-              subtitle="Kontrahenci, NIP, adresy, miejscowosci, limity i warunki platnosci"
-              onClick={() => onOpenTool('customers')}
-            />
-            <ToolCard
-              icon={<BarChart3 className="h-5 w-5" />}
-              title="Kreator statystyk"
-              subtitle="Budowanie wlasnych wykresow, metryk i porownan"
-              onClick={() => onOpenTool('stat-builder')}
-            />
-            <ToolCard
-              icon={<Database className="h-5 w-5" />}
-              title="Laboratorium danych"
-              subtitle="DuckDB, Perspective, ECharts, TanStack i statystyka"
-              onClick={() => onOpenTool('analytics-lab')}
-            />
-            <ToolCard
-              icon={<FileSpreadsheet className="h-5 w-5" />}
-              title="Wlasne zbiory"
-              subtitle="Faktury, wyciagi i raporty jako wlasne plansze analityczne"
-              onClick={() => onOpenTool('workspace-builder')}
-            />
-            <ToolCard
-              icon={<LineChart className="h-5 w-5" />}
-              title="Dashboard finansowy"
-              subtitle="KPI, miesiace, wykresy, struktura kosztow"
-              onClick={() => onOpenTool('finance')}
-            />
-            <ToolCard
-              icon={<Upload className="h-5 w-5" />}
-              title="Dostawa danych"
-              subtitle="Raporty z BaseLinker, Allegro, banku, WAPRO i handlowcow"
-              onClick={() => onOpenTool('data-inbox')}
-            />
-            <ToolCard
-              icon={<Wallet className="h-5 w-5" />}
-              title="Cashflow"
-              subtitle="Przeplywy, saldo, zobowiazania i prognoza"
-              onClick={() => onOpenTool('cashflow')}
-            />
-            <ToolCard
-              icon={<ReceiptText className="h-5 w-5" />}
-              title="Faktury i platnosci"
-              subtitle="Wystawione, zaplacone, otwarte i po terminie"
-              onClick={() => onOpenTool('invoices')}
-            />
-            <ToolCard
-              icon={<AlertTriangle className="h-5 w-5" />}
-              title="Windykacja"
-              subtitle="Naleznosci po terminie, priorytety i etapy kontaktu"
-              onClick={() => onOpenTool('collections')}
-            />
-            <ToolCard
-              icon={<Calculator className="h-5 w-5" />}
-              title="Rozliczenia handlowcow"
-              subtitle="Sprzedaz, prowizje, korekty i wynik kanalow"
-              onClick={() => onOpenTool('sales-reps')}
-            />
-            <ToolCard
-              icon={<Database className="h-5 w-5" />}
-              title="Kategorie kosztow"
-              subtitle="Wlasne typy kosztow, budzety i progi alarmowe"
-              onClick={() => onOpenTool('cost-model')}
-            />
-            <ToolCard
-              icon={<Store className="h-5 w-5" />}
-              title="Marketplace"
-              subtitle="Prowizje, dostawy, zwroty i wynik platform"
-              onClick={() => onOpenTool('marketplace')}
-            />
-            <ToolCard
-              icon={<FileSpreadsheet className="h-5 w-5" />}
-              title="Raporty zarzadcze"
-              subtitle="Eksport i kontrola miesiecznych tabel"
-              onClick={() => onOpenTool('reports')}
-            />
-            <ToolCard
-              icon={<ShieldCheck className="h-5 w-5" />}
-              title="Reguly i alerty"
-              subtitle="Limity kosztow, progi marzy, platnosci"
-              onClick={() => onOpenTool('rules')}
-            />
-            <ToolCard
-              icon={<ClipboardList className="h-5 w-5" />}
-              title="Akceptacje kosztow"
-              subtitle="Zakupy firmowe, budzety, decyzje"
-              onClick={() => onOpenTool('approvals')}
-            />
+
+          <div className="space-y-4">
+            <OpsToolGroup title="Sprzedaz i klienci" subtitle="Co i komu sie sprzedaje.">
+              <ToolCard
+                icon={<TrendingUp className="h-5 w-5" />}
+                title="Analiza sprzedazy produktow"
+                subtitle="Rankingi Mag WAPRO: najlepiej, najgorzej, netto, wolumen"
+                onClick={() => onOpenTool('product-sales')}
+              />
+              <ToolCard
+                icon={<PackageX className="h-5 w-5" />}
+                title="Analiza martwego stocku"
+                subtitle="Towar bez sprzedazy w wybranym okresie i suma zamrozonych pieniedzy"
+                onClick={() => onOpenTool('dead-stock-analysis')}
+              />
+              <ToolCard
+                icon={<Building2 className="h-5 w-5" />}
+                title="Baza klientow WAPRO"
+                subtitle="Kontrahenci, NIP, adresy, miejscowosci, limity i warunki platnosci"
+                onClick={() => onOpenTool('customers')}
+              />
+              <ToolCard
+                icon={<Store className="h-5 w-5" />}
+                title="Marketplace"
+                subtitle="Prowizje, dostawy, zwroty i wynik platform"
+                onClick={() => onOpenTool('marketplace')}
+              />
+            </OpsToolGroup>
+
+            <OpsToolGroup title="Platnosci i naleznosci" subtitle="Co wplywa, co wychodzi, co jest po terminie.">
+              <ToolCard
+                icon={<Wallet className="h-5 w-5" />}
+                title="Cashflow"
+                subtitle="Przeplywy, saldo, zobowiazania i prognoza"
+                onClick={() => onOpenTool('cashflow')}
+              />
+              <ToolCard
+                icon={<ReceiptText className="h-5 w-5" />}
+                title="Faktury i platnosci"
+                subtitle="Wystawione, zaplacone, otwarte i po terminie"
+                onClick={() => onOpenTool('invoices')}
+              />
+              <ToolCard
+                icon={<AlertTriangle className="h-5 w-5" />}
+                title="Windykacja"
+                subtitle="Naleznosci po terminie, priorytety i etapy kontaktu"
+                onClick={() => onOpenTool('collections')}
+              />
+            </OpsToolGroup>
+
+            <OpsToolGroup title="Koszty i rozliczenia" subtitle="Kontrola wydawania i wyniku handlowcow.">
+              <ToolCard
+                icon={<Database className="h-5 w-5" />}
+                title="Kategorie kosztow"
+                subtitle="Wlasne typy kosztow, budzety i progi alarmowe"
+                onClick={() => onOpenTool('cost-model')}
+              />
+              <ToolCard
+                icon={<ClipboardList className="h-5 w-5" />}
+                title="Akceptacje kosztow"
+                subtitle="Zakupy firmowe, budzety, decyzje"
+                onClick={() => onOpenTool('approvals')}
+              />
+              <ToolCard
+                icon={<ShieldCheck className="h-5 w-5" />}
+                title="Reguly i alerty"
+                subtitle="Limity kosztow, progi marzy, platnosci"
+                onClick={() => onOpenTool('rules')}
+              />
+              <ToolCard
+                icon={<Calculator className="h-5 w-5" />}
+                title="Rozliczenia handlowcow"
+                subtitle="Sprzedaz, prowizje, korekty i wynik kanalow"
+                onClick={() => onOpenTool('sales-reps')}
+              />
+              <ToolCard
+                icon={<FileSpreadsheet className="h-5 w-5" />}
+                title="Raporty zarzadcze"
+                subtitle="Eksport i kontrola miesiecznych tabel"
+                onClick={() => onOpenTool('reports')}
+              />
+            </OpsToolGroup>
+
+            <OpsToolGroup title="Dane i wlasna analiza" subtitle="Import danych i budowanie wlasnych wykresow.">
+              <ToolCard
+                icon={<LineChart className="h-5 w-5" />}
+                title="Dashboard finansowy"
+                subtitle="KPI, miesiace, wykresy, struktura kosztow"
+                onClick={() => onOpenTool('finance')}
+              />
+              <ToolCard
+                icon={<Upload className="h-5 w-5" />}
+                title="Dostawa danych"
+                subtitle="Raporty z BaseLinker, Allegro, banku, WAPRO i handlowcow"
+                onClick={() => onOpenTool('data-inbox')}
+              />
+              <ToolCard
+                icon={<BarChart3 className="h-5 w-5" />}
+                title="Kreator statystyk"
+                subtitle="Budowanie wlasnych wykresow, metryk i porownan"
+                onClick={() => onOpenTool('stat-builder')}
+              />
+              <ToolCard
+                icon={<FileSpreadsheet className="h-5 w-5" />}
+                title="Wlasne zbiory"
+                subtitle="Faktury, wyciagi i raporty jako wlasne plansze analityczne"
+                onClick={() => onOpenTool('workspace-builder')}
+              />
+              <ToolCard
+                icon={<Database className="h-5 w-5" />}
+                title="Laboratorium danych"
+                subtitle="DuckDB, Perspective, ECharts, TanStack i statystyka"
+                onClick={() => onOpenTool('analytics-lab')}
+              />
+            </OpsToolGroup>
           </div>
         </div>
 
@@ -3604,6 +3616,26 @@ function rule(
 
 const INPUT_CLS =
   'w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-600 focus:border-brand-500 focus:outline-none';
+
+function OpsToolGroup({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-3">
+      <div className="mb-2.5 flex items-baseline gap-2">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-400">{title}</p>
+        {subtitle && <p className="truncate text-[11px] text-slate-500">{subtitle}</p>}
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">{children}</div>
+    </div>
+  );
+}
 
 function SectionTitle({
   title,

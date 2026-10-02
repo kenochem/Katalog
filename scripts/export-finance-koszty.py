@@ -2,16 +2,19 @@
 """Eksport arkusza Internet_Koszty → JSON + TS pod widok Operacje → Finanse."""
 from __future__ import annotations
 
+import argparse
 import json
 import re
+import sys
 from collections import defaultdict
 from pathlib import Path
 
 import openpyxl
 
-SRC = Path(r"d:\Users\Biuro\Downloads\Internet_Koszty_v8_kaniec (2).xlsx")
-OUT_PUBLIC = Path(r"C:\Users\Biuro\Projects\katalog\public\data\finance-koszty.json")
-OUT_TS = Path(r"C:\Users\Biuro\Projects\katalog\src\data\financeKosztyData.ts")
+ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_SRC = Path.home() / "Downloads" / "Internet_Koszty_v8_kaniec.xlsx"
+OUT_PUBLIC = ROOT / "public" / "data" / "finance-koszty.json"
+OUT_TS = ROOT / "src" / "data" / "financeKosztyData.ts"
 
 CHANNEL_COLS = [
     "Allegro kenochemcom",
@@ -25,6 +28,8 @@ CHANNEL_COLS = [
     "Kaufland",
     "Zamówienia telefoniczne/ręczne/mail",
 ]
+
+AREAS = {"Marketplace", "Dostawa", "Operacyjne"}
 
 
 def num(v):
@@ -50,14 +55,36 @@ def month_key(v) -> str | None:
     return None
 
 
+def area_of(v) -> str | None:
+    s = str(v or "").strip()
+    return s if s in AREAS else None
+
+
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(description="Eksport Internet_Koszty do dashboardu Ops")
+    p.add_argument(
+        "src",
+        nargs="?",
+        default=str(DEFAULT_SRC),
+        help="Ścieżka do Internet_Koszty_v8_kaniec.xlsx",
+    )
+    return p.parse_args()
+
+
 def main():
-    wb = openpyxl.load_workbook(SRC, data_only=True)
+    args = parse_args()
+    src = Path(args.src)
+    if not src.exists():
+        print(f"Nie znaleziono pliku: {src}", file=sys.stderr)
+        sys.exit(1)
+
+    wb = openpyxl.load_workbook(src, data_only=True)
     dash = wb["Dashboard"]
     pod = wb["Podsumowanie_mies."]
     spr = wb["Sprzedaż_Baselinker"]
     rej = wb["Rejestr_kosztów"]
 
-    selected = month_key(dash.cell(2, 2).value) or "2026-05"
+    selected = month_key(dash.cell(2, 2).value) or "2026-08"
 
     months = []
     for r in range(5, 200):
@@ -98,7 +125,7 @@ def main():
         if items:
             channels_by_month[mk] = items
 
-    sources_by_month: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+    sources_by_month: dict[str, dict[str, dict]] = defaultdict(dict)
     for r in range(5, rej.max_row + 1):
         mk = month_key(rej.cell(r, 1).value) or month_key(rej.cell(r, 2).value)
         if not mk:
@@ -107,17 +134,26 @@ def main():
         amt = num(rej.cell(r, 5).value)
         if not source or not amt:
             continue
-        sources_by_month[mk][source] += amt
+        bag = sources_by_month[mk]
+        if source not in bag:
+            bag[source] = {"amount": 0.0, "area": area_of(rej.cell(r, 3).value)}
+        bag[source]["amount"] += amt
+        area = area_of(rej.cell(r, 3).value)
+        if area:
+            bag[source]["area"] = area
 
-    sources_out = {
-        mk: [
-            {"name": k, "amount": round(v, 2)}
-            for k, v in sorted(bag.items(), key=lambda x: -x[1])
-        ]
-        for mk, bag in sources_by_month.items()
-    }
+    sources_out = {}
+    for mk, bag in sources_by_month.items():
+        rows = []
+        for name, info in sorted(bag.items(), key=lambda x: -x[1]["amount"]):
+            row = {"name": name, "amount": round(info["amount"], 2)}
+            if info.get("area"):
+                row["area"] = info["area"]
+            rows.append(row)
+        sources_out[mk] = rows
 
-    if selected not in {m["month"] for m in months} and months:
+    month_keys = {m["month"] for m in months}
+    if selected not in month_keys and months:
         selected = months[-1]["month"]
 
     payload = {
@@ -125,7 +161,7 @@ def main():
             "title": "Finanse sklepu Kenochem",
             "note": "Wynik netto ≈ sprzedaż − koszt towaru − koszty biznesu. Przybliżenie operacyjne z arkusza kosztów — nie pełna księgowość.",
             "currency": "PLN",
-            "sourceFile": SRC.name,
+            "sourceFile": src.name,
             "defaultMonth": selected,
         },
         "months": months,
@@ -140,17 +176,14 @@ def main():
     ts = (
         "/* Wygenerowane przez scripts/export-finance-koszty.py — nie edytuj ręcznie. */\n"
         "import type { FinanceKosztyData } from '../lib/financeTypes';\n\n"
-        f"export const financeKosztyData: FinanceKosztyData = {text} as const;\n"
-    )
-    # `as const` may conflict with typed annotation - use without as const
-    ts = (
-        "/* Wygenerowane przez scripts/export-finance-koszty.py — nie edytuj ręcznie. */\n"
-        "import type { FinanceKosztyData } from '../lib/financeTypes';\n\n"
         f"export const financeKosztyData = {text} satisfies FinanceKosztyData;\n"
     )
     OUT_TS.parent.mkdir(parents=True, exist_ok=True)
     OUT_TS.write_text(ts, encoding="utf-8")
-    print(f"OK months={len(months)} selected={selected} -> {OUT_PUBLIC.name}, {OUT_TS.name}")
+    print(
+        f"OK months={len(months)} selected={selected} "
+        f"-> {OUT_PUBLIC.relative_to(ROOT)}, {OUT_TS.relative_to(ROOT)}"
+    )
 
 
 if __name__ == "__main__":

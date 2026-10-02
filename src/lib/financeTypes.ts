@@ -1,3 +1,5 @@
+export type FinanceCostArea = 'Marketplace' | 'Dostawa' | 'Operacyjne';
+
 export type FinanceMonth = {
   month: string;
   sprzedaz: number;
@@ -14,7 +16,11 @@ export type FinanceMonth = {
 };
 
 export type FinanceChannel = { channel: string; amount: number };
-export type FinanceSource = { name: string; amount: number };
+export type FinanceSource = {
+  name: string;
+  amount: number;
+  area?: FinanceCostArea;
+};
 
 export type FinanceKosztyData = {
   meta: {
@@ -27,4 +33,15 @@ export type FinanceKosztyData = {
   months: FinanceMonth[];
   channelsByMonth: Record<string, FinanceChannel[]>;
   sourcesByMonth: Record<string, FinanceSource[]>;
+};
+
+export type FinanceChannelGroupId =
+  | 'Allegro'
+  | 'Sklepy własne'
+  | 'Inne marketplace'
+  | 'Zamówienia ręczne';
+
+export type FinanceChannelGroup = {
+  group: FinanceChannelGroupId;
+  amount: number;
 };

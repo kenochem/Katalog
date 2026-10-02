@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
+  CloudDownload,
   Download,
   ExternalLink,
   Loader2,
@@ -12,20 +13,18 @@ import { formatPricePln } from '../../lib/format';
 import { downloadCsv, stampFile } from '../../lib/exportReport';
 import { useAuth } from '../../lib/auth';
 import { roleCan } from '../../lib/roles';
-import { getProductImage } from '../../lib/products';
+import { getProductImage, updateProduct } from '../../lib/products';
+import { mergeProductMeta } from '../../lib/productMeta';
 import {
   buildProductSalesMetrics,
   CATALOG_PRODUCT_URL,
   fetchProductsForSalesAnalytics,
   invalidateSalesAnalyticsCache,
-  normalizeSkuToken,
   type SalesPeriodMonths,
 } from '../../lib/waproSalesAnalytics';
-import {
-  isDeadStockExcluded,
-  loadSalesExcludedSkus,
-  saveSalesExcludedSkus,
-} from '../../lib/salesExclusions';
+import { isDeadStockExcluded, isSalesMarkedExcluded } from '../../lib/salesExclusions';
+import { requestWaproSalesSync, waitForSalesSync } from '../../lib/salesSync';
+import { showToast } from '../../lib/toast';
 import type { CatalogType, Product } from '../../types';
 
 const PERIOD_OPTIONS: { months: SalesPeriodMonths; label: string }[] = [
@@ -50,7 +49,7 @@ interface DeadStockRow {
   excluded: boolean;
 }
 
-function buildRow(product: Product, months: SalesPeriodMonths, userExcluded: Set<string>): DeadStockRow {
+function buildRow(product: Product, months: SalesPeriodMonths): DeadStockRow {
   const metrics = buildProductSalesMetrics(product, months);
   const stock = product.stock ?? 0;
   const purchaseNet = metrics.purchaseNet;
@@ -67,7 +66,7 @@ function buildRow(product: Product, months: SalesPeriodMonths, userExcluded: Set
     lastSaleDate,
     daysSinceLastSale,
     hasStats: metrics.hasStats,
-    excluded: isDeadStockExcluded(product, userExcluded),
+    excluded: isDeadStockExcluded(product),
   };
 }
 
@@ -107,7 +106,7 @@ export function OpsDeadStockAnalysis({ onBack }: { onBack: () => void }) {
   const [pageSize, setPageSize] = useState(100);
   const [page, setPage] = useState(1);
   const [showExcluded, setShowExcluded] = useState(false);
-  const [userExcludedList, setUserExcludedList] = useState<string[]>(() => loadSalesExcludedSkus());
+  const [excludeBusyId, setExcludeBusyId] = useState<string | null>(null);
 
   const loadData = useCallback(
     async (opts?: { force?: boolean }) => {
@@ -136,6 +135,7 @@ export function OpsDeadStockAnalysis({ onBack }: { onBack: () => void }) {
     };
   }, [loadData]);
 
+  /** Re-czyta to, co już jest w Supabase (szybkie, ale bez nowych danych z WAPRO). */
   async function handleRefresh() {
     setRefreshing(true);
     invalidateSalesAnalyticsCache();
@@ -143,30 +143,56 @@ export function OpsDeadStockAnalysis({ onBack }: { onBack: () => void }) {
     setRefreshing(false);
   }
 
-  const userExcludedSet = useMemo(
-    () => new Set(userExcludedList.map(normalizeSkuToken)),
-    [userExcludedList],
-  );
+  /** Zleca realny sync sprzedaży z Mag WAPRO (może potrwać), potem przeładowuje widok. */
+  async function handleSyncFromMag() {
+    setRefreshing(true);
+    try {
+      const req = await requestWaproSalesSync();
+      if (!req.ok || !req.id) {
+        showToast(req.error ?? 'Nie udało się zlecić sync sprzedaży.', 'error');
+        return;
+      }
+      showToast('Sync sprzedaży w kolejce — czekam na Mag WAPRO…', 'info');
+      const done = await waitForSalesSync(req.id);
+      if (!done || done.status === 'error') {
+        showToast(done?.message ?? 'Błąd sync sprzedaży na serwerze WAPRO.', 'error');
+        return;
+      }
+      invalidateSalesAnalyticsCache();
+      await loadData({ force: true });
+      showToast('Dane sprzedaży zaktualizowane do dziś.', 'ok');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Błąd odświeżania', 'error');
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
-  function toggleUserExclude(sku: string) {
-    const key = normalizeSkuToken(sku);
-    if (!key) return;
-    setUserExcludedList((prev) => {
-      const set = new Set(prev.map(normalizeSkuToken));
-      const next = set.has(key)
-        ? prev.filter((s) => normalizeSkuToken(s) !== key)
-        : [...prev, sku];
-      saveSalesExcludedSkus(next);
-      return next;
-    });
+  /** Wykluczenie zapisane na produkcie (product_meta.salesExcludeFromSum) — widoczne
+   * i odwracalne dla każdego z dostępem do Ops, nie tylko na tym urządzeniu. */
+  async function toggleProductExclude(product: Product) {
+    const next = !isSalesMarkedExcluded(product);
+    setExcludeBusyId(product.id);
+    try {
+      const nextMeta = mergeProductMeta(product.meta, { salesExcludeFromSum: next });
+      await updateProduct(product.id, { meta: nextMeta });
+      setProducts((prev) =>
+        prev.map((p) => (p.id === product.id ? { ...p, meta: nextMeta } : p)),
+      );
+      showToast(next ? 'Wykluczono z sum martwego stocku' : 'Cofnięto wykluczenie', 'ok');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Nie udało się zapisać', 'error');
+    } finally {
+      setExcludeBusyId(null);
+    }
   }
 
   const allRows = useMemo(
     () =>
       products
-        .map((p) => buildRow(p, period, userExcludedSet))
+        .map((p) => buildRow(p, period))
         .filter((row) => row.stock > 0 && row.qty === 0),
-    [products, period, userExcludedSet],
+    [products, period],
   );
 
   const categories = useMemo(() => {
@@ -224,6 +250,24 @@ export function OpsDeadStockAnalysis({ onBack }: { onBack: () => void }) {
     };
   }, [sorted, filtered.length]);
 
+  const lastSyncInfo = useMemo(() => {
+    let newest: string | null = null;
+    for (const p of products) {
+      if (p.waproSalesSyncedAt && (!newest || p.waproSalesSyncedAt > newest)) {
+        newest = p.waproSalesSyncedAt;
+      }
+    }
+    if (!newest) return null;
+    const ageDays = Math.floor((Date.now() - new Date(newest).getTime()) / 86_400_000);
+    const label =
+      ageDays <= 0
+        ? 'dziś'
+        : ageDays === 1
+          ? 'wczoraj'
+          : `${ageDays} dni temu (${new Date(newest).toLocaleDateString('pl-PL')})`;
+    return { label, stale: ageDays > 7 };
+  }, [products]);
+
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
   const safePage = Math.min(Math.max(1, page), totalPages);
   const pageRows = useMemo(() => {
@@ -279,13 +323,38 @@ export function OpsDeadStockAnalysis({ onBack }: { onBack: () => void }) {
             type="button"
             onClick={() => void handleRefresh()}
             disabled={refreshing}
-            className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-500 disabled:opacity-50"
+            title="Wczytaj ponownie to, co już jest zapisane w bazie — bez pytania WAPRO o nowe dane"
+            className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800 disabled:opacity-50"
           >
             {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            Odśwież
+            Odśwież widok
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleSyncFromMag()}
+            disabled={refreshing}
+            title="Zleć pobranie aktualnej sprzedaży z WAPRO Mag — może potrwać kilkadziesiąt sekund"
+            className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-500 disabled:opacity-50"
+          >
+            {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CloudDownload className="h-4 w-4" />}
+            Sync z Mag WAPRO
           </button>
         </div>
       </div>
+
+      {lastSyncInfo && (
+        <div
+          className={`rounded-xl border px-4 py-2.5 text-xs ${
+            lastSyncInfo.stale
+              ? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+              : 'border-slate-800 bg-slate-900/40 text-slate-500'
+          }`}
+        >
+          Dane sprzedaży zsynchronizowane: <strong>{lastSyncInfo.label}</strong>
+          {lastSyncInfo.stale &&
+            ' — to dawno, lista może pokazywać towar, który w międzyczasie się sprzedał. Kliknij „Sync z Mag WAPRO”, żeby odświeżyć.'}
+        </div>
+      )}
 
       <section className="surface-panel p-5">
         <p className="text-xs font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
@@ -295,7 +364,8 @@ export function OpsDeadStockAnalysis({ onBack }: { onBack: () => void }) {
         <p className="mt-1 max-w-2xl text-sm text-slate-400">
           Towar na stanie, dla którego nie odnotowano ani jednej sprzedaży w wybranym okresie.
           Palety, obudowy serwisowe, komplety naprawcze i zgłoszone błędne wpisy są automatycznie
-          pomijane w sumie (można je podejrzeć przełącznikiem niżej).
+          pomijane w sumie (można je podejrzeć przełącznikiem niżej). Ręczne „Wyklucz” zapisuje się
+          na produkcie — widoczne i do cofnięcia dla każdego z dostępem do Ops, nie tylko na Twoim urządzeniu.
         </p>
       </section>
 
@@ -436,7 +506,8 @@ export function OpsDeadStockAnalysis({ onBack }: { onBack: () => void }) {
             {pageRows.map((row) => {
               const p = row.product;
               const image = getProductImage(p);
-              const isUserExcluded = userExcludedSet.has(normalizeSkuToken(p.sku));
+              const isManuallyExcluded = isSalesMarkedExcluded(p);
+              const busy = excludeBusyId === p.id;
               return (
                 <li
                   key={p.id}
@@ -477,11 +548,17 @@ export function OpsDeadStockAnalysis({ onBack }: { onBack: () => void }) {
                   <div className="flex justify-end">
                     <button
                       type="button"
-                      onClick={() => toggleUserExclude(p.sku)}
-                      className="rounded-lg border border-slate-700 px-2 py-1 text-[11px] font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-                      title={isUserExcluded ? 'Cofnij ręczne wykluczenie' : 'Wyklucz ręcznie z sum'}
+                      onClick={() => void toggleProductExclude(p)}
+                      disabled={busy}
+                      className="flex items-center gap-1 rounded-lg border border-slate-700 px-2 py-1 text-[11px] font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-100 disabled:opacity-50"
+                      title={
+                        isManuallyExcluded
+                          ? 'Cofnij wykluczenie — widoczne dla wszystkich w Ops'
+                          : 'Wyklucz z sum — widoczne i odwracalne dla wszystkich w Ops'
+                      }
                     >
-                      {isUserExcluded ? 'Cofnij' : 'Wyklucz'}
+                      {busy && <Loader2 className="h-3 w-3 animate-spin" />}
+                      {isManuallyExcluded ? 'Cofnij' : 'Wyklucz'}
                     </button>
                   </div>
                 </li>

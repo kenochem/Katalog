@@ -23,6 +23,8 @@ import {
   getChannels,
   getMergedFinanceData,
   getMonthSources,
+  groupChannels,
+  isMonthLikelyIncomplete,
   listKnownSourceNames,
   removeFinanceExpense,
   suggestNextMonth,
@@ -109,7 +111,33 @@ export function FinanceDashboard({ onBack }: FinanceDashboardProps) {
 
   const channels = current ? getChannels(current.month) : [];
   const channelTotal = channels.reduce((s, c) => s + c.amount, 0);
+  const channelGroups = useMemo(() => groupChannels(channels), [channels]);
   const sourceTotal = sources.reduce((s, c) => s + c.amount, 0);
+  const incomplete = current ? isMonthLikelyIncomplete(current) : false;
+  const ytd = useMemo(() => {
+    if (!current) return null;
+    const year = current.month.slice(0, 4);
+    const slice = data.months.filter(
+      (m) =>
+        m.month.startsWith(year) &&
+        m.month <= current.month &&
+        !isMonthLikelyIncomplete(m),
+    );
+    const sprzedaz = slice.reduce((s, m) => s + m.sprzedaz, 0);
+    const wynik = slice.reduce((s, m) => s + m.wynikNetto, 0);
+    const marza = slice.reduce((s, m) => s + m.marzaNetto, 0);
+    const koszty = slice.reduce((s, m) => s + m.kosztyRazem, 0);
+    return {
+      year,
+      count: slice.length,
+      sprzedaz,
+      wynik,
+      marza,
+      koszty,
+      marzaPct: sprzedaz > 0 ? marza / sprzedaz : 0,
+      wynikPct: sprzedaz > 0 ? wynik / sprzedaz : 0,
+    };
+  }, [current, data.months]);
   const knownSources = useMemo(() => {
     void tick;
     return listKnownSourceNames();
@@ -133,6 +161,7 @@ export function FinanceDashboard({ onBack }: FinanceDashboardProps) {
         label: labelMonth(m.month).split(' ')[0],
         fullLabel: labelMonth(m.month),
         sprzedaz: Math.round(m.sprzedaz),
+        wynik: Math.round(m.wynikNetto),
         // Linia porównawcza = sprzedaż poprzedniego miesiąca (jak „previous period” w BL)
         poprzedni: i > 0 ? Math.round(data.months[i - 1].sprzedaz) : null,
         active: m.month === current?.month,
@@ -202,6 +231,10 @@ export function FinanceDashboard({ onBack }: FinanceDashboardProps) {
             {data.meta.note} Edycje miesięcy i wydatków zapisują się lokalnie w
             tej przeglądarce.
           </p>
+          <p className="text-[11px] text-slate-600">
+            Źródło: {data.meta.sourceFile} · {data.months.length} miesięcy z
+            danymi
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <label className="text-xs text-slate-500">Miesiąc</label>
@@ -229,6 +262,44 @@ export function FinanceDashboard({ onBack }: FinanceDashboardProps) {
           </span>
         </div>
       </div>
+
+      {incomplete && (
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          <p className="font-medium text-amber-100">
+            {labelMonth(current.month)} wygląda na niekompletny
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-amber-200/80">
+            W arkuszu nie ma jeszcze kosztów dostawy (np. InPost „oczekuje”).
+            Wynik netto jest przez to zawyżony — wróć tu po uzupełnieniu FV.
+          </p>
+        </div>
+      )}
+
+      {ytd && (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <YtdStat
+            label={`Narastająco ${ytd.year} (${ytd.count} mies.)`}
+            value={formatPricePln(ytd.sprzedaz)}
+            hint="Sprzedaż netto"
+          />
+          <YtdStat
+            label="Marża narastająco"
+            value={formatPricePln(ytd.marza)}
+            hint={formatRatioPct(ytd.marzaPct)}
+          />
+          <YtdStat
+            label="Koszty narastająco"
+            value={formatPricePln(ytd.koszty)}
+            hint="Towar + biznes"
+          />
+          <YtdStat
+            label="Wynik narastająco"
+            value={formatPricePln(ytd.wynik)}
+            hint={formatRatioPct(ytd.wynikPct)}
+            accent
+          />
+        </div>
+      )}
 
       <div className="flex flex-col gap-2 rounded-2xl border border-slate-800 bg-slate-900/40 px-3 py-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
         <div>
@@ -397,23 +468,26 @@ export function FinanceDashboard({ onBack }: FinanceDashboardProps) {
       </div>
 
       <div className="grid gap-3 xl:grid-cols-12">
-        <section className="rounded-2xl border border-slate-800 bg-slate-900/50 p-4 xl:col-span-5">
+        <section className="rounded-2xl border border-slate-800 bg-slate-900/50 p-4 xl:col-span-12">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
               <h3 className="text-sm font-semibold text-slate-100">
-                Sprzedaż netto w czasie
+                Sprzedaż i wynik w czasie
               </h3>
               <p className="text-[10px] text-slate-500">
-                Linia ciągła = miesiąc · przerywana = poprzedni miesiąc
+                Sprzedaż netto, wynik miesiąca i sprzedaż poprzedniego okresu
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500">
+            <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-500">
               <span className="inline-flex items-center gap-1">
-                <span className="h-0.5 w-4 rounded bg-slate-100" /> bieżący
+                <span className="h-0.5 w-4 rounded bg-slate-100" /> sprzedaż
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="h-0.5 w-4 rounded bg-emerald-400" /> wynik
               </span>
               <span className="inline-flex items-center gap-1">
                 <span className="h-0.5 w-4 rounded border border-dashed border-slate-400" />{' '}
-                poprzedni
+                poprz. sprzedaż
               </span>
             </div>
           </div>
@@ -423,12 +497,6 @@ export function FinanceDashboard({ onBack }: FinanceDashboardProps) {
                 data={chartData}
                 margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
               >
-                <defs>
-                  <linearGradient id="salesFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.25} />
-                    <stop offset="100%" stopColor="#38bdf8" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
                 <CartesianGrid
                   strokeDasharray="3 3"
                   stroke="#1e293b"
@@ -461,13 +529,19 @@ export function FinanceDashboard({ onBack }: FinanceDashboardProps) {
                     formatPricePln(value),
                     name === 'sprzedaz'
                       ? 'Sprzedaż netto'
-                      : 'Poprzedni miesiąc',
+                      : name === 'wynik'
+                        ? 'Wynik netto'
+                        : 'Poprzedni miesiąc',
                   ]}
                 />
                 <Legend
                   wrapperStyle={{ fontSize: 11, color: '#94a3b8' }}
                   formatter={(v) =>
-                    v === 'sprzedaz' ? 'Sprzedaż netto' : 'Poprzedni miesiąc'
+                    v === 'sprzedaz'
+                      ? 'Sprzedaż netto'
+                      : v === 'wynik'
+                        ? 'Wynik netto'
+                        : 'Poprzedni miesiąc'
                   }
                 />
                 <Line
@@ -488,6 +562,14 @@ export function FinanceDashboard({ onBack }: FinanceDashboardProps) {
                   strokeWidth={2.75}
                   dot={{ r: 3.5, fill: '#38bdf8', strokeWidth: 0 }}
                   activeDot={{ r: 6, fill: '#38bdf8' }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="wynik"
+                  name="wynik"
+                  stroke="#34d399"
+                  strokeWidth={2.25}
+                  dot={{ r: 3, fill: '#34d399', strokeWidth: 0 }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -513,7 +595,26 @@ export function FinanceDashboard({ onBack }: FinanceDashboardProps) {
           />
         </section>
 
-        <section className="rounded-2xl border border-slate-800 bg-slate-900/50 p-4 xl:col-span-3">
+        <section className="rounded-2xl border border-slate-800 bg-slate-900/50 p-4 xl:col-span-4">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold text-slate-100">
+              Kanały zbiorczo
+            </h3>
+            <span className="text-[10px] text-slate-500">
+              Allegro / sklepy / reszta
+            </span>
+          </div>
+          <HBarList
+            items={channelGroups.map((c) => ({
+              label: c.group,
+              value: c.amount,
+              share: channelTotal > 0 ? c.amount / channelTotal : 0,
+            }))}
+            barClass="bg-violet-500"
+          />
+        </section>
+
+        <section className="rounded-2xl border border-slate-800 bg-slate-900/50 p-4 xl:col-span-4">
           <div className="mb-3 flex items-center justify-between gap-2">
             <h3 className="text-sm font-semibold text-slate-100">
               Struktura kosztów
@@ -582,8 +683,8 @@ export function FinanceDashboard({ onBack }: FinanceDashboardProps) {
                     <td className="px-4 py-2.5 font-medium text-slate-200">
                       {s.name}
                     </td>
-                    <td className="hidden px-4 py-2.5 text-xs text-slate-500 sm:table-cell">
-                      {s.area || '—'}
+                    <td className="hidden px-4 py-2.5 text-xs sm:table-cell">
+                      <AreaBadge area={s.area} />
                     </td>
                     <td className="px-4 py-2.5 text-right tabular-nums text-slate-100">
                       {formatPricePln(s.amount)}
@@ -953,6 +1054,51 @@ function Field({
       </span>
       {children}
     </label>
+  );
+}
+
+function YtdStat({
+  label,
+  value,
+  hint,
+  accent,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  accent?: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-2xl border px-3 py-3 ${
+        accent
+          ? 'border-emerald-500/30 bg-emerald-500/10'
+          : 'border-slate-800 bg-slate-900/60'
+      }`}
+    >
+      <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
+        {label}
+      </p>
+      <p className="mt-1 text-lg font-semibold tabular-nums text-slate-50">
+        {value}
+      </p>
+      <p className="mt-0.5 text-[11px] text-slate-500">{hint}</p>
+    </div>
+  );
+}
+
+function AreaBadge({ area }: { area?: FinanceCostArea }) {
+  if (!area) return <span className="text-slate-500">—</span>;
+  const cls =
+    area === 'Marketplace'
+      ? 'bg-sky-500/15 text-sky-300'
+      : area === 'Dostawa'
+        ? 'bg-amber-500/15 text-amber-300'
+        : 'bg-violet-500/15 text-violet-300';
+  return (
+    <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-medium ${cls}`}>
+      {area}
+    </span>
   );
 }
 
