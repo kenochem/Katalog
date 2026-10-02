@@ -8,26 +8,28 @@ import {
   Send,
   StickyNote,
   Trash2,
-} from 'lucide-react';
-import { downloadCsv, stampFile } from '../lib/exportReport';
-import { useEffect, useMemo, useState } from 'react';
+} from "lucide-react";
+import { downloadCsv, stampFile } from "../lib/exportReport";
+import { useEffect, useMemo, useState } from "react";
 import {
   crmErrorMessage,
   deleteCrmOrder,
   fetchCrmOrders,
+  fetchCrmQuoteHtml,
   orderToDraft,
   saveCrmOrder,
   type CrmClient,
   type CrmOrder,
-} from '../lib/crm';
+} from "../lib/crm";
 import {
   printOrderDraftPdf,
   sendOrderDraftToDiscord,
   type OrderDraft,
-} from '../lib/orderDraft';
-import { showToast } from '../lib/toast';
-import { createNote } from '../lib/crmNotes';
-import { getClientIcon } from './crm/clientIcons';
+} from "../lib/orderDraft";
+import { openQuoteDocument } from "../lib/quotePdf";
+import { showToast } from "../lib/toast";
+import { createNote } from "../lib/crmNotes";
+import { getClientIcon } from "./crm/clientIcons";
 
 interface CrmHistoryPanelProps {
   cloudEnabled: boolean;
@@ -54,8 +56,12 @@ export function CrmHistoryPanel({
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<CrmOrder | null>(null);
   const [sending, setSending] = useState(false);
+  const [kindFilter, setKindFilter] = useState<"all" | "order" | "quote">(
+    "all",
+  );
+  const [openingQuote, setOpeningQuote] = useState(false);
   const [noteDraftFor, setNoteDraftFor] = useState<string | null>(null);
-  const [noteText, setNoteText] = useState('');
+  const [noteText, setNoteText] = useState("");
   const hasWebhook = Boolean(import.meta.env.VITE_DISCORD_ORDERS_WEBHOOK);
 
   async function reload() {
@@ -67,7 +73,7 @@ export function CrmHistoryPanel({
     try {
       setOrders(await fetchCrmOrders(500));
     } catch (err) {
-      showToast(crmErrorMessage(err), 'error', 5000);
+      showToast(crmErrorMessage(err), "error", 5000);
     } finally {
       setLoading(false);
     }
@@ -80,7 +86,9 @@ export function CrmHistoryPanel({
   const quietClients = useMemo<QuietClientRow[]>(() => {
     const lastOrderByClient = new Map<string, number>();
     for (const o of orders) {
-      const key = o.clientId || (o.clientName ? `name:${o.clientName.toLowerCase()}` : '');
+      const key =
+        o.clientId ||
+        (o.clientName ? `name:${o.clientName.toLowerCase()}` : "");
       if (!key) continue;
       const at = new Date(o.createdAt).getTime();
       if (!Number.isFinite(at)) continue;
@@ -103,40 +111,80 @@ export function CrmHistoryPanel({
     return rows.sort((a, b) => b.daysSince - a.daysSince);
   }, [orders, clients, quietDays]);
 
+  const visibleOrders = useMemo(
+    () =>
+      kindFilter === "all"
+        ? orders
+        : orders.filter((o) => o.kind === kindFilter),
+    [orders, kindFilter],
+  );
+  const quoteCount = useMemo(
+    () => orders.filter((o) => o.kind === "quote").length,
+    [orders],
+  );
+
+  async function openSavedQuote(order: CrmOrder, print: boolean) {
+    setOpeningQuote(true);
+    try {
+      const html = await fetchCrmQuoteHtml(order.id);
+      if (!html) {
+        showToast(
+          "Brak zapisanego dokumentu oferty (starszy wpis) — użyj „Ponów”",
+          "warn",
+          5000,
+        );
+        return;
+      }
+      openQuoteDocument(html, print);
+    } catch (err) {
+      showToast(crmErrorMessage(err), "error", 5000);
+    } finally {
+      setOpeningQuote(false);
+    }
+  }
+
   function saveContactNote(clientId: string) {
     if (!noteText.trim()) return;
-    createNote({ title: 'Kontakt z klientem', body: noteText.trim(), clientId });
-    setNoteText('');
+    createNote({
+      title: "Kontakt z klientem",
+      body: noteText.trim(),
+      clientId,
+    });
+    setNoteText("");
     setNoteDraftFor(null);
-    showToast('Zapisano notatkę', 'ok');
+    showToast("Zapisano notatkę", "ok");
   }
 
   async function resendDiscord(order: CrmOrder) {
     const draft = orderToDraft(order);
     if (!draft.items.length) {
-      showToast('Brak pozycji', 'warn');
+      showToast("Brak pozycji", "warn");
       return;
     }
     setSending(true);
     try {
       if (!hasWebhook) {
-        showToast('Brak webhooka Discord', 'warn');
+        showToast("Brak webhooka Discord", "warn");
         return;
       }
       const res = await sendOrderDraftToDiscord(draft, authorLabel);
       if (!res.ok) {
-        showToast(res.error || 'Wysyłka nieudana', 'error');
+        showToast(res.error || "Wysyłka nieudana", "error");
         return;
       }
       if (cloudEnabled) {
         try {
-          await saveCrmOrder({ draft, clientId: order.clientId, status: 'sent' });
+          await saveCrmOrder({
+            draft,
+            clientId: order.clientId,
+            status: "sent",
+          });
           await reload();
         } catch {
           /* historia już istnieje — nie blokuj */
         }
       }
-      showToast('Wysłano ponownie na Discord', 'ok');
+      showToast("Wysłano ponownie na Discord", "ok");
     } finally {
       setSending(false);
     }
@@ -163,7 +211,8 @@ export function CrmHistoryPanel({
       <div className="rounded-2xl border border-dashed border-slate-700 py-10 text-center">
         <History className="mx-auto h-10 w-10 text-slate-600" />
         <p className="mt-3 text-sm text-slate-500">
-          Brak zapisanych zamówień — pojawią się po Discord / Zapisz
+          Brak zapisanych zamówień i ofert — pojawią się po Discord / Zapisz /
+          wygenerowaniu oferty PDF
         </p>
       </div>
     );
@@ -171,16 +220,16 @@ export function CrmHistoryPanel({
 
   function handleExportCsv() {
     downloadCsv(
-      stampFile('historia_zamowien'),
-      ['Data', 'Klient', 'Typ', 'Status', 'Pozycji', 'Sztuk', 'Notatka'],
+      stampFile("historia_zamowien"),
+      ["Data", "Klient", "Typ", "Status", "Pozycji", "Sztuk", "Notatka"],
       orders.map((o) => [
-        new Date(o.createdAt).toLocaleString('pl-PL'),
-        o.clientName || '',
-        o.kind === 'quote' ? 'Oferta' : 'Zamówienie',
-        o.status === 'sent' ? 'Wysłane' : 'Zapisane',
+        new Date(o.createdAt).toLocaleString("pl-PL"),
+        o.clientName || "",
+        o.kind === "quote" ? "Oferta" : "Zamówienie",
+        o.status === "sent" ? "Wysłane" : "Zapisane",
         o.items.length,
         o.items.reduce((s, i) => s + (i.quantity || 0), 0),
-        o.note || '',
+        o.note || "",
       ]),
     );
   }
@@ -219,7 +268,9 @@ export function CrmHistoryPanel({
                     <button
                       type="button"
                       onClick={() =>
-                        setNoteDraftFor((id) => (id === client.id ? null : client.id))
+                        setNoteDraftFor((id) =>
+                          id === client.id ? null : client.id,
+                        )
                       }
                       className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs text-slate-300 hover:bg-slate-800"
                     >
@@ -254,7 +305,32 @@ export function CrmHistoryPanel({
         </div>
       )}
 
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex gap-1 rounded-xl border border-slate-800 bg-slate-900/60 p-1">
+          {(
+            [
+              ["all", `Wszystko (${orders.length})`],
+              ["order", `Zamówienia (${orders.length - quoteCount})`],
+              ["quote", `Oferty (${quoteCount})`],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => {
+                setKindFilter(key);
+                setSelected(null);
+              }}
+              className={`rounded-lg px-2.5 py-1.5 text-xs font-medium ${
+                kindFilter === key
+                  ? "bg-brand-600 text-white"
+                  : "text-slate-400 hover:bg-slate-800"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <button
           type="button"
           onClick={handleExportCsv}
@@ -265,14 +341,14 @@ export function CrmHistoryPanel({
         </button>
       </div>
       <ul className="space-y-2">
-        {orders.map((o) => {
+        {visibleOrders.map((o) => {
           const qty = o.items.reduce((s, i) => s + (i.quantity || 0), 0);
-          const when = new Date(o.createdAt).toLocaleString('pl-PL', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
+          const when = new Date(o.createdAt).toLocaleString("pl-PL", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
           });
           return (
             <li key={o.id}>
@@ -281,32 +357,38 @@ export function CrmHistoryPanel({
                 onClick={() => setSelected(selected?.id === o.id ? null : o)}
                 className={`w-full rounded-xl border px-3 py-2.5 text-left transition ${
                   selected?.id === o.id
-                    ? 'border-brand-500/50 bg-brand-500/10'
-                    : 'border-slate-800 bg-slate-900/80 hover:border-slate-700'
+                    ? "border-brand-500/50 bg-brand-500/10"
+                    : "border-slate-800 bg-slate-900/80 hover:border-slate-700"
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
                   <p className="truncate text-sm font-medium text-slate-100">
-                    {o.clientName || '(bez klienta)'}
+                    {o.kind === "quote" && o.quoteNumber
+                      ? `${o.quoteNumber} · `
+                      : ""}
+                    {o.clientName || "(bez klienta)"}
                   </p>
                   <span
                     className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                      o.kind === 'quote'
-                        ? 'bg-amber-500/20 text-amber-200'
-                        : o.status === 'sent'
-                          ? 'bg-brand-500/20 text-brand-300'
-                          : 'bg-slate-800 text-slate-400'
+                      o.kind === "quote"
+                        ? "bg-amber-500/20 text-amber-200"
+                        : o.status === "sent"
+                          ? "bg-brand-500/20 text-brand-300"
+                          : "bg-slate-800 text-slate-400"
                     }`}
                   >
-                    {o.kind === 'quote'
-                      ? 'Oferta'
-                      : o.status === 'sent'
-                        ? 'Discord'
-                        : 'Zapis'}
+                    {o.kind === "quote"
+                      ? "Oferta"
+                      : o.status === "sent"
+                        ? "Discord"
+                        : "Zapis"}
                   </span>
                 </div>
                 <p className="mt-0.5 text-xs text-slate-500">
                   {when} · {o.items.length} poz. · {qty} szt.
+                  {o.kind === "quote" && o.quoteTotalNet != null
+                    ? ` · ${o.quoteTotalNet.toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} zł netto`
+                    : ""}
                 </p>
               </button>
             </li>
@@ -318,7 +400,8 @@ export function CrmHistoryPanel({
         <div className="space-y-3 rounded-2xl border border-slate-700 bg-slate-950/60 p-3">
           <div>
             <p className="text-sm font-medium text-slate-100">
-              {selected.clientName || '(bez klienta)'}
+              {selected.quoteNumber ? `${selected.quoteNumber} · ` : ""}
+              {selected.clientName || "(bez klienta)"}
             </p>
             {selected.note && (
               <p className="mt-1 text-xs text-slate-400">{selected.note}</p>
@@ -351,48 +434,81 @@ export function CrmHistoryPanel({
               type="button"
               onClick={() => {
                 onReuse(orderToDraft(selected));
-                showToast('Wczytano do aktualnego zamówienia', 'ok');
+                showToast("Wczytano do aktualnego zamówienia", "ok");
               }}
               className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-700 py-2 text-sm font-medium text-slate-200"
             >
               <RotateCcw className="h-4 w-4" />
               Ponów
             </button>
-            <button
-              type="button"
-              disabled={sending || !hasWebhook}
-              onClick={() => void resendDiscord(selected)}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-brand-600 py-2 text-sm font-medium text-white disabled:opacity-50"
-            >
-              {sending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-              Discord
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                printOrderDraftPdf(orderToDraft(selected), authorLabel);
-                showToast('Otwarto podgląd PDF / druku', 'info');
-              }}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-700 py-2 text-sm font-medium text-slate-200"
-            >
-              <FileDown className="h-4 w-4" />
-              PDF
-            </button>
+            {selected.kind === "quote" && (
+              <>
+                <button
+                  type="button"
+                  disabled={openingQuote}
+                  onClick={() => void openSavedQuote(selected, false)}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-brand-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+                >
+                  {openingQuote ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileDown className="h-4 w-4" />
+                  )}
+                  Otwórz ofertę
+                </button>
+                <button
+                  type="button"
+                  disabled={openingQuote}
+                  onClick={() => void openSavedQuote(selected, true)}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-700 py-2 text-sm font-medium text-slate-200 disabled:opacity-50"
+                >
+                  <Download className="h-4 w-4" />
+                  Pobierz PDF
+                </button>
+              </>
+            )}
+            {selected.kind !== "quote" && (
+              <button
+                type="button"
+                disabled={sending || !hasWebhook}
+                onClick={() => void resendDiscord(selected)}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-brand-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+              >
+                {sending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+                Discord
+              </button>
+            )}
+            {selected.kind !== "quote" && (
+              <button
+                type="button"
+                onClick={() => {
+                  printOrderDraftPdf(orderToDraft(selected), authorLabel);
+                  showToast("Otwarto podgląd PDF / druku", "info");
+                }}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-700 py-2 text-sm font-medium text-slate-200"
+              >
+                <FileDown className="h-4 w-4" />
+                PDF
+              </button>
+            )}
             <button
               type="button"
               onClick={async () => {
-                if (!confirm('Usunąć to zamówienie z historii?')) return;
+                if (!confirm("Usunąć ten wpis z historii?")) return;
                 try {
                   await deleteCrmOrder(selected.id);
                   setSelected(null);
                   await reload();
-                  showToast('Usunięto z historii', 'info');
+                  showToast("Usunięto z historii", "info");
                 } catch (err) {
-                  showToast(err instanceof Error ? err.message : 'Błąd', 'error');
+                  showToast(
+                    err instanceof Error ? err.message : "Błąd",
+                    "error",
+                  );
                 }
               }}
               className="rounded-xl border border-red-900/50 px-3 py-2 text-red-400"

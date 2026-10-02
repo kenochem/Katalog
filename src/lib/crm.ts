@@ -30,6 +30,12 @@ export interface CrmOrder {
   status: 'sent' | 'saved';
   kind: OrderKind;
   createdAt: string;
+  /** Tylko oferty: numer, migawka HTML dokumentu, sumy i parametry z edytora. */
+  quoteNumber?: string;
+  quoteHtml?: string;
+  quoteTotalNet?: number;
+  quoteTotalGross?: number;
+  quoteMeta?: { discountPct?: number; quoteValidDays?: number; transportCost?: number };
 }
 
 export interface NipLookupResult {
@@ -104,6 +110,14 @@ function mapOrder(row: Record<string, unknown>): CrmOrder {
     status: row.status === 'sent' ? 'sent' : 'saved',
     kind: row.kind === 'quote' ? 'quote' : 'order',
     createdAt: String(row.created_at || ''),
+    quoteNumber: row.quote_number ? String(row.quote_number) : undefined,
+    quoteHtml: row.quote_html ? String(row.quote_html) : undefined,
+    quoteTotalNet: row.quote_total_net != null ? Number(row.quote_total_net) : undefined,
+    quoteTotalGross: row.quote_total_gross != null ? Number(row.quote_total_gross) : undefined,
+    quoteMeta:
+      row.quote_meta && typeof row.quote_meta === 'object'
+        ? (row.quote_meta as CrmOrder['quoteMeta'])
+        : undefined,
   };
 }
 
@@ -228,11 +242,26 @@ export async function deleteCrmClient(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+/** Bez quote_html (ciezkie) — HTML oferty doczytujemy dopiero na zadanie. */
+const ORDER_LIST_COLUMNS =
+  'id,user_id,client_id,client_name,note,items,status,kind,created_at,quote_number,quote_total_net,quote_total_gross,quote_meta';
+
+export async function fetchCrmQuoteHtml(id: string): Promise<string | null> {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('crm_orders')
+    .select('quote_html')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.quote_html ? String(data.quote_html) : null;
+}
+
 export async function fetchCrmOrders(limit = 50): Promise<CrmOrder[]> {
   if (!supabase) return [];
   const { data, error } = await supabase
     .from('crm_orders')
-    .select('*')
+    .select(ORDER_LIST_COLUMNS)
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) throw new Error(error.message);
@@ -243,6 +272,7 @@ export async function saveCrmOrder(input: {
   draft: OrderDraft;
   clientId?: string | null;
   status: 'sent' | 'saved';
+  quote?: { number: string; html: string; totalNet: number; totalGross: number };
 }): Promise<CrmOrder> {
   if (!supabase) throw new Error('Brak Supabase');
   const {
@@ -260,8 +290,21 @@ export async function saveCrmOrder(input: {
       items: input.draft.items,
       status: input.status,
       kind: input.draft.kind === 'quote' ? 'quote' : 'order',
+      ...(input.quote
+        ? {
+            quote_number: input.quote.number,
+            quote_html: input.quote.html,
+            quote_total_net: input.quote.totalNet,
+            quote_total_gross: input.quote.totalGross,
+            quote_meta: {
+              discountPct: input.draft.discountPct,
+              quoteValidDays: input.draft.quoteValidDays,
+              transportCost: input.draft.transportCost,
+            },
+          }
+        : {}),
     })
-    .select('*')
+    .select(ORDER_LIST_COLUMNS)
     .single();
   if (error) throw new Error(error.message);
   return mapOrder(data as Record<string, unknown>);
@@ -310,5 +353,8 @@ export function orderToDraft(order: CrmOrder): OrderDraft {
     updatedAt: Date.now(),
     clientId: order.clientId,
     kind: order.kind,
+    discountPct: order.quoteMeta?.discountPct,
+    quoteValidDays: order.quoteMeta?.quoteValidDays,
+    transportCost: order.quoteMeta?.transportCost,
   };
 }

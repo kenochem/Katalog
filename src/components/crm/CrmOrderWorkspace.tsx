@@ -15,7 +15,7 @@ import {
   setDraftItemQty,
   type OrderDraft,
 } from '../../lib/orderDraft';
-import { buildQuoteHtml, openQuoteDocument } from '../../lib/quotePdf';
+import { buildQuoteHtml, computeQuoteTotals, openQuoteDocument } from '../../lib/quotePdf';
 import { getProductImage } from '../../lib/products';
 import { formatPricePln } from '../../lib/format';
 import { showToast } from '../../lib/toast';
@@ -212,7 +212,7 @@ export function CrmOrderWorkspace({
     }
   }
 
-  /** Historia CRM tylko dla zamówień — oferty PDF nie zapisujemy. */
+  /** Historia zamówień; oferty PDF zapisują się osobno przy generowaniu (generateQuotePdf). */
   async function persistOrderHistory(status: 'sent' | 'saved'): Promise<boolean> {
     if (!cloudEnabled || !draft.items.length || draft.kind === 'quote') return false;
     try {
@@ -303,6 +303,32 @@ export function CrmOrderWorkspace({
       setGeneratedQuote({ html, number });
       openQuoteDocument(html);
       showToast(`Oferta ${number} wygenerowana`, 'ok');
+      if (cloudEnabled) {
+        // Historia ofert: migawka dokumentu zapisana per uzytkownik (nie blokuje PDF przy bledzie).
+        try {
+          const clientId = await ensureClientId();
+          const current = getOrderDraft();
+          const totals = computeQuoteTotals(
+            current.items,
+            catalogNetBySku,
+            0,
+            current.transportCost,
+          );
+          await saveCrmOrder({
+            draft: { ...current, kind: 'quote' },
+            clientId,
+            status: 'saved',
+            quote: {
+              number,
+              html,
+              totalNet: totals.totalNet,
+              totalGross: totals.totalGross,
+            },
+          });
+        } catch (err) {
+          showToast(`Oferta nie zapisała się w historii: ${crmErrorMessage(err)}`, 'warn', 6000);
+        }
+      }
     } finally {
       setGeneratingQuote(false);
     }

@@ -12,6 +12,13 @@ export interface AppChangelogEntry {
  */
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
+    date: '2026-10-02',
+    title: 'CRM: historia wygenerowanych ofert',
+    description:
+      'Każda oferta PDF zapisuje się teraz w Historii CRM (osobno dla każdego użytkownika): numer oferty, klient, kwota netto, data. Można ją otworzyć lub pobrać ponownie w niezmienionej formie, wczytać do edycji („Ponów”) oraz filtrować listę: Wszystko / Zamówienia / Oferty.',
+    tag: 'nowość',
+  },
+  {
     date: '2026-09-29',
     title: 'Nowa zakładka „Zmiany w czasie”',
     description:
