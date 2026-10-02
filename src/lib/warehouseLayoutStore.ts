@@ -16,6 +16,8 @@ export type LayoutElementType =
   | 'rack'
   | 'rack_pallet'
   | 'rack_shelf'
+  | 'rack_shelf_5'
+  | 'rack_shelf_6'
   | 'packing'
   | 'receiving'
   | 'shipping'
@@ -28,6 +30,13 @@ export type LayoutElementType =
   | 'stairs'
   | 'door'
   | 'zone'
+  | 'checkout'
+  | 'hanger'
+  | 'display'
+  | 'promo'
+  | 'desk'
+  | 'workstation_row'
+  | 'custom'
   /** @deprecated Stare plany — wyświetlane jako strefa */
   | 'cold';
 
@@ -40,7 +49,7 @@ export interface LayoutElementDef {
   color: string;
   description: string;
   /** Paleta „Dodaj” — grupa regałów osobno */
-  paletteGroup?: 'racks' | 'facility' | 'logistics' | 'structure';
+  paletteGroup?: 'racks' | 'facility' | 'logistics' | 'structure' | 'shop';
 }
 
 export const LAYOUT_GRID_LIMITS = {
@@ -74,6 +83,26 @@ export const LAYOUT_ELEMENT_DEFS: LayoutElementDef[] = [
     defaultH: 4,
     color: '#059669',
     description: 'Niski regał półkowy — ok. 4 poziomy',
+    paletteGroup: 'racks',
+  },
+  {
+    type: 'rack_shelf_5',
+    label: 'Regał 5-półk.',
+    emoji: '🗂️',
+    defaultW: 2,
+    defaultH: 5,
+    color: '#0d9488',
+    description: 'Wysoki regał półkowy — ok. 5 poziomów',
+    paletteGroup: 'racks',
+  },
+  {
+    type: 'rack_shelf_6',
+    label: 'Regał 6-półk.',
+    emoji: '📚',
+    defaultW: 2,
+    defaultH: 6,
+    color: '#065f46',
+    description: 'Bardzo wysoki regał półkowy — ok. 6 poziomów',
     paletteGroup: 'racks',
   },
   {
@@ -127,6 +156,46 @@ export const LAYOUT_ELEMENT_DEFS: LayoutElementDef[] = [
     paletteGroup: 'logistics',
   },
   {
+    type: 'checkout',
+    label: 'Kasa',
+    emoji: '💳',
+    defaultW: 3,
+    defaultH: 2,
+    color: '#db2777',
+    description: 'Lada / stanowisko kasowe na sali sprzedaży',
+    paletteGroup: 'shop',
+  },
+  {
+    type: 'hanger',
+    label: 'Wieszak',
+    emoji: '🪝',
+    defaultW: 3,
+    defaultH: 1,
+    color: '#ca8a04',
+    description: 'Wieszak / ekspozytor ścienny na drobny towar',
+    paletteGroup: 'shop',
+  },
+  {
+    type: 'display',
+    label: 'Wystawa',
+    emoji: '🖼️',
+    defaultW: 3,
+    defaultH: 2,
+    color: '#0891b2',
+    description: 'Ekspozycja / gablota produktowa',
+    paletteGroup: 'shop',
+  },
+  {
+    type: 'promo',
+    label: 'Strefa promocji',
+    emoji: '🏷️',
+    defaultW: 3,
+    defaultH: 2,
+    color: '#e11d48',
+    description: 'Stojak / stół z promocjami i wyprzedażą',
+    paletteGroup: 'shop',
+  },
+  {
     type: 'aisle',
     label: 'Alejka',
     emoji: '↔️',
@@ -177,6 +246,26 @@ export const LAYOUT_ELEMENT_DEFS: LayoutElementDef[] = [
     paletteGroup: 'facility',
   },
   {
+    type: 'desk',
+    label: 'Biurko',
+    emoji: '🖥️',
+    defaultW: 2,
+    defaultH: 1,
+    color: '#8b5cf6',
+    description: 'Pojedyncze biurko / stanowisko pracy',
+    paletteGroup: 'facility',
+  },
+  {
+    type: 'workstation_row',
+    label: 'Stanowiska komp.',
+    emoji: '💻',
+    defaultW: 6,
+    defaultH: 1,
+    color: '#7c3aed',
+    description: 'Długie biurko z kilkoma stanowiskami komputerowymi',
+    paletteGroup: 'facility',
+  },
+  {
     type: 'social',
     label: 'Socjal',
     emoji: '☕',
@@ -208,6 +297,20 @@ export const LAYOUT_ELEMENT_DEFS: LayoutElementDef[] = [
   },
 ];
 
+// Fallback dla elementow wlasnych (custom) — kazdy wlasny element niesie wlasny
+// label/emoji/color na instancji (patrz warehouseCustomElementsStore.ts), wiec ten
+// wpis to tylko awaryjny domyslny wyglad, gdy z jakiegos powodu instancja go nie ma.
+// Celowo poza LAYOUT_ELEMENT_DEFS, zeby nie pojawial sie jako oddzielny przycisk w palecie.
+const CUSTOM_ELEMENT_FALLBACK_DEF: LayoutElementDef = {
+  type: 'custom',
+  label: 'Własny element',
+  emoji: '🔲',
+  defaultW: 2,
+  defaultH: 2,
+  color: '#64748b',
+  description: 'Własny, zdefiniowany przez użytkownika element planu',
+};
+
 const LEGACY_COLD_DEF: LayoutElementDef = {
   type: 'zone',
   label: 'Strefa (dawn. chłodnia)',
@@ -230,6 +333,10 @@ export interface LayoutElement {
   w: number;
   h: number;
   color?: string;
+  /** Emoji na kafelku — dla elementów typu 'custom' (własne elementy). */
+  emoji?: string;
+  /** Id definicji z warehouseCustomElementsStore, gdy type === 'custom'. */
+  customTypeId?: string;
   sections?: RackSection[];
 }
 
@@ -253,6 +360,46 @@ export const LAYOUT_DEFAULT_ROWS = LAYOUT_GRID_LIMITS.rows.default;
 export { resolveCellDisplayPx, resolveMetersPerCell } from './warehouseLayoutMetrics';
 
 export const WAREHOUSE_LAYOUT_SCOPE = 'kenochem';
+/** Osobny plan — część sklepu, do której wszedł magazyn (nowa, rosnąca powierzchnia). */
+export const WAREHOUSE_LAYOUT_SCOPE_SHOP = 'kenochem-shop';
+
+export interface WarehouseLayoutScopeDef {
+  id: string;
+  label: string;
+  shortLabel: string;
+  defaultName: string;
+  description: string;
+}
+
+/** Rejestr dostępnych planów — dodanie kolejnego (np. drugi magazyn) to jeden wpis tutaj. */
+export const WAREHOUSE_LAYOUT_SCOPES: WarehouseLayoutScopeDef[] = [
+  {
+    id: WAREHOUSE_LAYOUT_SCOPE,
+    label: 'Plan magazynu',
+    shortLabel: 'Magazyn',
+    defaultName: 'Hala główna',
+    description: 'Układ hali — regały, alejki, pakowanie, wysyłka.',
+  },
+  {
+    id: WAREHOUSE_LAYOUT_SCOPE_SHOP,
+    label: 'Plan sklepu',
+    shortLabel: 'Sklep',
+    defaultName: 'Sklep',
+    description: 'Rozkład półek i towaru na sali sprzedaży.',
+  },
+];
+
+export function warehouseLayoutScopeDef(scopeId: string): WarehouseLayoutScopeDef {
+  return (
+    WAREHOUSE_LAYOUT_SCOPES.find((s) => s.id === scopeId) ?? {
+      id: scopeId,
+      label: 'Plan',
+      shortLabel: 'Plan',
+      defaultName: 'Plan',
+      description: '',
+    }
+  );
+}
 
 const KEY_PREFIX = 'katalog-wh-layout:';
 const SEED_PREFIX = 'katalog-wh-layout-seed:';
@@ -262,11 +409,31 @@ function layoutKey(scopeId: string) {
 }
 
 export function isRackElementType(type: LayoutElementType): boolean {
-  return type === 'rack' || type === 'rack_pallet' || type === 'rack_shelf';
+  return (
+    type === 'rack' ||
+    type === 'rack_pallet' ||
+    type === 'rack_shelf' ||
+    type === 'rack_shelf_5' ||
+    type === 'rack_shelf_6'
+  );
 }
 
-export function elementDef(type: LayoutElementType): LayoutElementDef {
+/** `el` opcjonalny — dla type === 'custom' czyta label/emoji/color/rozmiar
+ * zapisane na samej instancji (patrz warehouseCustomElementsStore.ts). */
+export function elementDef(type: LayoutElementType, el?: LayoutElement): LayoutElementDef {
   if (type === 'cold') return LEGACY_COLD_DEF;
+  if (type === 'custom') {
+    if (!el) return CUSTOM_ELEMENT_FALLBACK_DEF;
+    return {
+      type: 'custom',
+      label: el.label || CUSTOM_ELEMENT_FALLBACK_DEF.label,
+      emoji: el.emoji || CUSTOM_ELEMENT_FALLBACK_DEF.emoji,
+      defaultW: el.w,
+      defaultH: el.h,
+      color: el.color || CUSTOM_ELEMENT_FALLBACK_DEF.color,
+      description: CUSTOM_ELEMENT_FALLBACK_DEF.description,
+    };
+  }
   return LAYOUT_ELEMENT_DEFS.find((d) => d.type === type) ?? LAYOUT_ELEMENT_DEFS[0];
 }
 
@@ -325,7 +492,7 @@ export function loadWarehouseLayout(scopeId: string = WAREHOUSE_LAYOUT_SCOPE): W
   }
   return applyLayoutScaleDefaults({
     id: `map-${scopeId}`,
-    name: 'Hala główna',
+    name: warehouseLayoutScopeDef(scopeId).defaultName,
     cols: LAYOUT_DEFAULT_COLS,
     rows: LAYOUT_DEFAULT_ROWS,
     metersPerCell: 1,
@@ -357,6 +524,13 @@ export function createLayoutElement(
     isRackElementType(type) ?
       { zone: 'DRO' as const, aisle: 'A', rack: 'R1' }
     : {};
+  const sections =
+    isRackElementType(type) && !overrides?.sections ? defaultSectionsForRackType(type) : undefined;
+  // Każda sekcja = 1 poziom = 1 komórka wysokości (poza regałem paletowym, gdzie
+  // 2 sekcje ≠ 2 komórki) — bez tego np. „Regał std.” startował z h=2, mimo że
+  // jego domyślny szablon sekcji ma 3 półki, i od razu nie zgadzał się z planem.
+  const h =
+    sections && type !== 'rack_pallet' ? Math.max(1, sections.length) : def.defaultH;
   return {
     id: uid('el'),
     type,
@@ -365,16 +539,18 @@ export function createLayoutElement(
     x,
     y,
     w: def.defaultW,
-    h: def.defaultH,
+    h,
     color: def.color,
-    ...(isRackElementType(type) && !overrides?.sections ?
-      { sections: defaultSectionsForRackType(type) }
-    : {}),
+    ...(sections ? { sections } : {}),
     ...overrides,
   };
 }
 
 export function seedKenochemWarehouseLayout(scopeId: string = WAREHOUSE_LAYOUT_SCOPE): WarehouseLayoutMap {
+  // Gotowy przykladowy uklad hali dotyczy tylko domyslnego magazynu — inne plany
+  // (np. sklep) maja zaczynac od pustej siatki, gotowej do rysowania od zera.
+  if (scopeId !== WAREHOUSE_LAYOUT_SCOPE) return loadWarehouseLayout(scopeId);
+
   const seedKey = `${SEED_PREFIX}${scopeId}`;
   const existing = loadWarehouseLayout(scopeId);
   if (localStorage.getItem(seedKey) && existing.elements.length > 0) return existing;
@@ -546,9 +722,11 @@ export function resolveLocationLayoutHighlight(
   return null;
 }
 
+export type RackElementType = 'rack_pallet' | 'rack_shelf' | 'rack_shelf_5' | 'rack_shelf_6' | 'rack';
+
 export function applyRackTemplate(
   el: LayoutElement,
-  template: 'rack_pallet' | 'rack_shelf' | 'rack',
+  template: RackElementType,
 ): Partial<LayoutElement> {
   const def = elementDef(template);
   return {

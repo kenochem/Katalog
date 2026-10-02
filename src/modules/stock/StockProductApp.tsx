@@ -601,7 +601,11 @@ export function StockProductApp() {
         </nav>
       </header>
 
-      <main className="mx-auto w-full max-w-7xl px-3 py-5 sm:px-5 sm:py-7">
+      <main
+        className={`mx-auto w-full px-3 py-5 sm:px-5 sm:py-7 ${
+          tab === 'locations' ? 'max-w-[1900px]' : 'max-w-7xl'
+        }`}
+      >
         {loading && products.length === 0 ? (
           <div className="flex justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-brand-400" />

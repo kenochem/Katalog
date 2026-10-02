@@ -5,6 +5,7 @@ import {
   Grid3x3,
   Layers,
   MousePointer2,
+  Plus,
   Settings2,
   Trash2,
   Sun,
@@ -12,6 +13,14 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
+import {
+  addCustomElementDef,
+  deleteCustomElementDef,
+  getCustomElementDef,
+  loadCustomElementDefs,
+  WAREHOUSE_CUSTOM_ELEMENTS_CHANGED,
+  type CustomElementDef,
+} from '../../lib/warehouseCustomElementsStore';
 import { showToast } from '../../lib/toast';
 import {
   LAYOUT_CELL_PX,
@@ -30,6 +39,7 @@ import {
   resizeLayoutGrid,
   saveWarehouseLayout,
   seedKenochemWarehouseLayout,
+  warehouseLayoutScopeDef,
   loadWarehouseCanvasTheme,
   saveWarehouseCanvasTheme,
   type WarehouseCanvasTheme,
@@ -62,10 +72,11 @@ interface WarehouseLayoutEditorProps {
 
 type DragMode = 'move' | 'resize' | null;
 
-type PaletteGroupId = 'racks' | 'facility' | 'logistics' | 'structure';
+type PaletteGroupId = 'racks' | 'facility' | 'logistics' | 'structure' | 'shop';
 
 const PALETTE_GROUPS: { id: PaletteGroupId; title: string }[] = [
   { id: 'racks', title: 'Regały' },
+  { id: 'shop', title: 'Sklep' },
   { id: 'logistics', title: 'Operacje' },
   { id: 'structure', title: 'Układ hali' },
   { id: 'facility', title: 'Pomieszczenia' },
@@ -79,6 +90,16 @@ export function WarehouseLayoutEditor({
   const [layout, setLayout] = useState<WarehouseLayoutMap>(() => loadWarehouseLayout(scopeId));
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [paintType, setPaintType] = useState<LayoutElementType | null>(null);
+  const [selectedCustomDefId, setSelectedCustomDefId] = useState<string | null>(null);
+  const [customDefs, setCustomDefs] = useState<CustomElementDef[]>(() => loadCustomElementDefs());
+  const [customFormOpen, setCustomFormOpen] = useState(false);
+  const [customDraft, setCustomDraft] = useState({
+    label: '',
+    emoji: '🪑',
+    color: '#0ea5e9',
+    w: 2,
+    h: 2,
+  });
   const [zoom, setZoom] = useState(1);
   const [showGrid, setShowGrid] = useState(true);
   const [gridDraft, setGridDraft] = useState({ cols: layout.cols, rows: layout.rows });
@@ -107,6 +128,14 @@ export function WarehouseLayoutEditor({
   }, [layout.cols, layout.rows]);
 
   useEffect(() => {
+    function onCustomChanged() {
+      setCustomDefs(loadCustomElementDefs());
+    }
+    window.addEventListener(WAREHOUSE_CUSTOM_ELEMENTS_CHANGED, onCustomChanged);
+    return () => window.removeEventListener(WAREHOUSE_CUSTOM_ELEMENTS_CHANGED, onCustomChanged);
+  }, []);
+
+  useEffect(() => {
     function onChanged(e: Event) {
       const detail = (e as CustomEvent).detail as { scopeId?: string } | undefined;
       if (detail?.scopeId && detail.scopeId !== scopeId) return;
@@ -123,6 +152,7 @@ export function WarehouseLayoutEditor({
     [scopeId],
   );
 
+  const scopeDef = warehouseLayoutScopeDef(scopeId);
   const selected = layout.elements.find((e) => e.id === selectedId) ?? null;
   const metersPerCell = resolveMetersPerCell(layout.metersPerCell);
   const baseCellPx = resolveCellDisplayPx(layout.cellDisplayPx, LAYOUT_CELL_PX);
@@ -161,6 +191,8 @@ export function WarehouseLayoutEditor({
       w: el.w,
       h: el.h,
       color: el.color,
+      emoji: el.emoji,
+      customTypeId: el.customTypeId,
       sections: el.sections?.map((s) => ({ ...s, id: `sec-${Date.now()}-${Math.random().toString(36).slice(2, 5)}` })),
     });
     persist({
@@ -173,11 +205,26 @@ export function WarehouseLayoutEditor({
 
   function placeAt(gridX: number, gridY: number) {
     if (!paintType) return;
-    const el = createLayoutElement(paintType, gridX, gridY);
+    let el: LayoutElement;
+    if (paintType === 'custom') {
+      const cd = selectedCustomDefId ? getCustomElementDef(selectedCustomDefId) : null;
+      if (!cd) return;
+      el = createLayoutElement('custom', gridX, gridY, {
+        label: cd.label,
+        emoji: cd.emoji,
+        color: cd.color,
+        w: cd.defaultW,
+        h: cd.defaultH,
+        customTypeId: cd.id,
+      });
+    } else {
+      el = createLayoutElement(paintType, gridX, gridY);
+    }
     const clamped = clampLayoutElement(el, layout.cols, layout.rows);
     persist({ ...layout, elements: [...layout.elements, clamped] });
     setSelectedId(clamped.id);
     setPaintType(null);
+    setSelectedCustomDefId(null);
     showToast('Dodano element planu magazynu', 'ok');
   }
 
@@ -285,7 +332,7 @@ export function WarehouseLayoutEditor({
 
   return (
     <div
-      className={`wh-layout-editor wh-layout-theme-${canvasTheme} mx-auto flex max-w-[1600px] flex-col gap-3 pb-10 lg:flex-row lg:items-start`}
+      className={`wh-layout-editor wh-layout-theme-${canvasTheme} mx-auto flex max-w-[1900px] flex-col gap-3 pb-10 lg:flex-row lg:items-start`}
     >
       <div className="min-w-0 flex-1 space-y-3">
         <div className="flex flex-wrap items-center gap-2">
@@ -298,9 +345,11 @@ export function WarehouseLayoutEditor({
             Magazyn
           </button>
           <div className="min-w-0 flex-1">
-            <h2 className="text-lg font-semibold text-slate-950 dark:text-slate-100">Plan magazynu</h2>
+            <h2 className="text-lg font-semibold text-slate-950 dark:text-slate-100">
+              {scopeDef.label}
+            </h2>
             <p className="text-xs text-slate-600 dark:text-slate-500">
-              Siatka {layout.cols}×{layout.rows} · dopasuj rozmiar hali i typ regałów (paletowe / półkowe).
+              Siatka {layout.cols}×{layout.rows} · {scopeDef.description}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
@@ -388,10 +437,168 @@ export function WarehouseLayoutEditor({
               </div>
             );
           })}
-          {paintType && (
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="w-full text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:w-auto sm:pr-1">
+              Własne
+            </span>
+            {customDefs.map((cd) => (
+              <span key={cd.id} className="inline-flex items-center">
+                <button
+                  type="button"
+                  title={`${cd.label} · domyślnie ${formatElementFootprintMeters(cd.defaultW, cd.defaultH, metersPerCell)}`}
+                  onClick={() => {
+                    if (paintType === 'custom' && selectedCustomDefId === cd.id) {
+                      setPaintType(null);
+                      setSelectedCustomDefId(null);
+                    } else {
+                      setPaintType('custom');
+                      setSelectedCustomDefId(cd.id);
+                    }
+                    setSelectedId(null);
+                  }}
+                  className={`inline-flex items-center gap-1.5 rounded-l-lg border px-2.5 py-1.5 text-xs font-medium transition ${
+                    paintType === 'custom' && selectedCustomDefId === cd.id ?
+                      'border-emerald-500/50 bg-emerald-50 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200'
+                    : 'border-slate-300 text-slate-700 hover:border-slate-400 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <span>{cd.emoji}</span>
+                  {cd.label}
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Usuń własny element ${cd.label}`}
+                  onClick={() => {
+                    if (!confirm(`Usunąć własny element „${cd.label}" z palety? (rozstawione już elementy zostaną na planie)`)) return;
+                    deleteCustomElementDef(cd.id);
+                    if (selectedCustomDefId === cd.id) {
+                      setPaintType(null);
+                      setSelectedCustomDefId(null);
+                    }
+                  }}
+                  className="rounded-r-lg border border-l-0 border-slate-300 px-1.5 py-1.5 text-slate-400 hover:border-red-400 hover:text-red-500 dark:border-slate-700 dark:hover:border-red-500/60 dark:hover:text-red-400"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+            <button
+              type="button"
+              onClick={() => setCustomFormOpen((v) => !v)}
+              className={`inline-flex items-center gap-1.5 rounded-lg border border-dashed px-2.5 py-1.5 text-xs font-medium transition ${
+                customFormOpen ?
+                  'border-emerald-500/50 bg-emerald-50 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200'
+                : 'border-slate-400 text-slate-600 hover:border-slate-500 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-400 dark:hover:bg-slate-800'
+              }`}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Nowy własny element
+            </button>
+          </div>
+
+          {customFormOpen && (
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-50/50 p-3 dark:bg-emerald-500/5">
+              <p className="mb-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Dodaj własny element (np. mebel, strefa) — pojawi się w palecie do wielokrotnego użycia.
+              </p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                <label className="col-span-2 block text-[10px] text-slate-500 sm:col-span-2">
+                  Nazwa
+                  <input
+                    className="input-field mt-0.5 w-full py-1 text-xs"
+                    value={customDraft.label}
+                    onChange={(e) => setCustomDraft((d) => ({ ...d, label: e.target.value }))}
+                    placeholder="np. Biurko L, Lodówka…"
+                  />
+                </label>
+                <label className="block text-[10px] text-slate-500">
+                  Emoji
+                  <input
+                    className="input-field mt-0.5 w-full py-1 text-center text-sm"
+                    value={customDraft.emoji}
+                    maxLength={4}
+                    onChange={(e) => setCustomDraft((d) => ({ ...d, emoji: e.target.value }))}
+                  />
+                </label>
+                <label className="block text-[10px] text-slate-500">
+                  Kolor
+                  <input
+                    type="color"
+                    className="mt-0.5 h-7 w-full cursor-pointer rounded border border-slate-300 dark:border-slate-700"
+                    value={customDraft.color}
+                    onChange={(e) => setCustomDraft((d) => ({ ...d, color: e.target.value }))}
+                  />
+                </label>
+                <label className="block text-[10px] text-slate-500">
+                  Szer. (kom.)
+                  <input
+                    type="number"
+                    min={1}
+                    max={30}
+                    className="input-field mt-0.5 w-full py-1 text-xs tabular-nums"
+                    value={customDraft.w}
+                    onChange={(e) => setCustomDraft((d) => ({ ...d, w: Math.max(1, Number(e.target.value) || 1) }))}
+                  />
+                </label>
+                <label className="block text-[10px] text-slate-500">
+                  Wys. (kom.)
+                  <input
+                    type="number"
+                    min={1}
+                    max={30}
+                    className="input-field mt-0.5 w-full py-1 text-xs tabular-nums"
+                    value={customDraft.h}
+                    onChange={(e) => setCustomDraft((d) => ({ ...d, h: Math.max(1, Number(e.target.value) || 1) }))}
+                  />
+                </label>
+              </div>
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!customDraft.label.trim()) {
+                      showToast('Podaj nazwę elementu', 'warn');
+                      return;
+                    }
+                    const created = addCustomElementDef({
+                      label: customDraft.label,
+                      emoji: customDraft.emoji,
+                      color: customDraft.color,
+                      defaultW: customDraft.w,
+                      defaultH: customDraft.h,
+                    });
+                    setCustomDraft({ label: '', emoji: '🪑', color: '#0ea5e9', w: 2, h: 2 });
+                    setCustomFormOpen(false);
+                    setPaintType('custom');
+                    setSelectedCustomDefId(created.id);
+                    showToast(`Dodano "${created.label}" do palety`, 'ok');
+                  }}
+                  className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500"
+                >
+                  Zapisz element
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCustomFormOpen(false)}
+                  className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
+                >
+                  Anuluj
+                </button>
+              </div>
+            </div>
+          )}
+
+          {paintType && paintType !== 'custom' && (
             <p className="flex items-center gap-1 px-1 text-xs text-emerald-400">
               <MousePointer2 className="h-3.5 w-3.5" />
               Kliknij na planie — {elementDef(paintType).description}
+            </p>
+          )}
+          {paintType === 'custom' && selectedCustomDefId && (
+            <p className="flex items-center gap-1 px-1 text-xs text-emerald-400">
+              <MousePointer2 className="h-3.5 w-3.5" />
+              Kliknij na planie, żeby postawić „{getCustomElementDef(selectedCustomDefId)?.label}"
             </p>
           )}
         </div>
@@ -417,7 +624,7 @@ export function WarehouseLayoutEditor({
             onPointerLeave={endDrag}
           >
             {layout.elements.map((el) => {
-              const def = elementDef(el.type);
+              const def = elementDef(el.type, el);
               const isSelected = selectedId === el.id;
               const cssType = layoutCellCssType(el.type);
               const rackSections = isRackElementType(el.type) ? ensureRackSections(el) : [];
@@ -662,7 +869,7 @@ export function WarehouseLayoutEditor({
                       : 'text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
                     }`}
                   >
-                    <span>{elementDef(el.type).emoji}</span>
+                    <span>{elementDef(el.type, el).emoji}</span>
                     <span className="min-w-0 truncate">{el.label}</span>
                   </button>
                 </li>
@@ -676,13 +883,13 @@ export function WarehouseLayoutEditor({
             {isRackElementType(selected.type) && (
               <WarehouseRackConfigurator
                 element={selected}
-                accent={selected.color ?? elementDef(selected.type).color}
+                accent={selected.color ?? elementDef(selected.type, selected).color}
                 onUpdate={(patch) => updateElement(selected.id, patch)}
               />
             )}
           <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
             <p className="text-sm font-semibold text-slate-950 dark:text-slate-100">
-              {elementDef(selected.type).emoji} {selected.label}
+              {elementDef(selected.type, selected).emoji} {selected.label}
             </p>
             <label className="block text-xs text-slate-500">
               Nazwa
@@ -699,17 +906,28 @@ export function WarehouseLayoutEditor({
                 <select
                   className="input-field mt-1 w-full text-sm"
                   value={
-                    selected.type === 'rack' || selected.type === 'rack_pallet' || selected.type === 'rack_shelf' ?
+                    selected.type === 'rack' ||
+                    selected.type === 'rack_pallet' ||
+                    selected.type === 'rack_shelf' ||
+                    selected.type === 'rack_shelf_5' ||
+                    selected.type === 'rack_shelf_6' ?
                       selected.type
                     : 'rack'
                   }
                   onChange={(e) => {
-                    const t = e.target.value as 'rack_pallet' | 'rack_shelf' | 'rack';
+                    const t = e.target.value as
+                      | 'rack_pallet'
+                      | 'rack_shelf'
+                      | 'rack_shelf_5'
+                      | 'rack_shelf_6'
+                      | 'rack';
                     updateElement(selected.id, applyRackTemplate(selected, t));
                   }}
                 >
                   <option value="rack_pallet">2-paletowy (5×3 kom.)</option>
                   <option value="rack_shelf">4-półkowy mały (2×4 kom.)</option>
+                  <option value="rack_shelf_5">5-półkowy wysoki (2×5 kom.)</option>
+                  <option value="rack_shelf_6">6-półkowy bardzo wysoki (2×6 kom.)</option>
                   <option value="rack">Standard — własny rozmiar</option>
                 </select>
               </label>
@@ -793,7 +1011,7 @@ export function WarehouseLayoutEditor({
               <input
                 type="color"
                 className="mt-1 h-9 w-full cursor-pointer rounded-lg border border-slate-700 bg-transparent"
-                value={selected.color ?? elementDef(selected.type).color}
+                value={selected.color ?? elementDef(selected.type, selected).color}
                 onChange={(e) => updateElement(selected.id, { color: e.target.value })}
               />
             </label>

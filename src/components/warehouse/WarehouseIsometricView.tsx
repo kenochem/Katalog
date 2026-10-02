@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Box, Camera, Grid3x3, Layers3, MapPin, Minus, Pencil, Plus, RotateCcw, Tags } from 'lucide-react';
 import type { Product } from '../../types';
 import { formatLocationCode } from '../../lib/warehouseLocation';
@@ -12,6 +12,7 @@ import {
   loadWarehouseLayout,
   resolveLocationLayoutHighlight,
   seedKenochemWarehouseLayout,
+  WAREHOUSE_LAYOUT_SCOPE,
   type LayoutElement,
   type WarehouseLayoutMap,
 } from '../../lib/warehouseLayoutStore';
@@ -20,6 +21,7 @@ interface WarehouseIsometricViewProps {
   products?: Product[];
   onOpenLocations?: () => void;
   onOpenLayout?: () => void;
+  scopeId?: string;
 }
 
 interface IsoPoint {
@@ -59,6 +61,8 @@ const CAMERA_OPTIONS: { id: IsoCamera; label: string }[] = [
 const HEIGHTS: Partial<Record<LayoutElement['type'], number>> = {
   rack_pallet: 42,
   rack_shelf: 34,
+  rack_shelf_5: 40,
+  rack_shelf_6: 46,
   rack: 30,
   packing: 16,
   receiving: 14,
@@ -73,6 +77,10 @@ const HEIGHTS: Partial<Record<LayoutElement['type'], number>> = {
   zone: 4,
   aisle: 0,
   cold: 10,
+  checkout: 18,
+  hanger: 20,
+  display: 20,
+  promo: 12,
 };
 
 const FLAT_ELEMENT_TYPES = new Set<LayoutElement['type']>(['aisle', 'zone', 'door']);
@@ -103,6 +111,7 @@ export function WarehouseIsometricView({
   products = [],
   onOpenLocations,
   onOpenLayout,
+  scopeId = WAREHOUSE_LAYOUT_SCOPE,
 }: WarehouseIsometricViewProps) {
   const { isDark } = useTheme();
   const [zoom, setZoom] = useState(1);
@@ -111,10 +120,25 @@ export function WarehouseIsometricView({
   const [labelMode, setLabelMode] = useState<IsoLabelMode>('clean');
   const [camera, setCamera] = useState<IsoCamera>('iso_ne');
   const [heightScale, setHeightScale] = useState(0.9);
-  const layout = useMemo(() => {
-    seedKenochemWarehouseLayout();
-    return loadWarehouseLayout();
-  }, []);
+  const [layout, setLayout] = useState<WarehouseLayoutMap>(() => {
+    seedKenochemWarehouseLayout(scopeId);
+    return loadWarehouseLayout(scopeId);
+  });
+
+  useEffect(() => {
+    seedKenochemWarehouseLayout(scopeId);
+    setLayout(loadWarehouseLayout(scopeId));
+  }, [scopeId]);
+
+  useEffect(() => {
+    function onChanged(e: Event) {
+      const detail = (e as CustomEvent).detail as { scopeId?: string } | undefined;
+      if (detail?.scopeId && detail.scopeId !== scopeId) return;
+      setLayout(loadWarehouseLayout(scopeId));
+    }
+    window.addEventListener('katalog-wh-layout-changed', onChanged);
+    return () => window.removeEventListener('katalog-wh-layout-changed', onChanged);
+  }, [scopeId]);
 
   const productsWithLocations = useMemo(() => mergeLocationIntoProducts(products), [products]);
 
@@ -411,7 +435,7 @@ function buildIsoScene(
   const visibleElements = layout.elements.filter((el) => options.showWalls || !['wall', 'door'].includes(el.type));
   const rawShapes: IsoElementShape[] = visibleElements
     .map((el) => {
-      const def = elementDef(el.type);
+      const def = elementDef(el.type, el);
       const color = el.color ?? def.color;
       const baseHeight = FLAT_ELEMENT_TYPES.has(el.type) ? 0 : (HEIGHTS[el.type] ?? 16);
       const height = baseHeight * heightScale;

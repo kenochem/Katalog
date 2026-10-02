@@ -1,7 +1,13 @@
 import type { LayoutElement, LayoutElementType } from './warehouseLayoutStore';
 
 function isRackType(type: LayoutElementType): boolean {
-  return type === 'rack' || type === 'rack_pallet' || type === 'rack_shelf';
+  return (
+    type === 'rack' ||
+    type === 'rack_pallet' ||
+    type === 'rack_shelf' ||
+    type === 'rack_shelf_5' ||
+    type === 'rack_shelf_6'
+  );
 }
 import type { WarehouseLocation } from './warehouseLocation';
 import { formatLocationCode } from './warehouseLocation';
@@ -21,6 +27,7 @@ export type RackSectionTemplateId =
   | 'pallet_2'
   | 'shelf_4'
   | 'shelf_5'
+  | 'shelf_6'
   | 'shelf_3'
   | 'dense_bins';
 
@@ -52,6 +59,12 @@ export const RACK_SECTION_TEMPLATES: {
     build: () => [1, 2, 3, 4, 5].map((n) => sectionDraft(`Półka ${n}`, `P0${n}`, 3)),
   },
   {
+    id: 'shelf_6',
+    label: '6 półek',
+    description: 'Bardzo wysoki regał',
+    build: () => [1, 2, 3, 4, 5, 6].map((n) => sectionDraft(`Półka ${n}`, `P0${n}`, 3)),
+  },
+  {
     id: 'shelf_3',
     label: '3 półki',
     description: 'Kompakt',
@@ -76,6 +89,8 @@ export function sectionDraft(label: string, shelfCode: string, bins: number): Ra
 export function defaultSectionsForRackType(type: LayoutElementType): RackSection[] {
   if (type === 'rack_pallet') return RACK_SECTION_TEMPLATES.find((t) => t.id === 'pallet_2')!.build();
   if (type === 'rack_shelf') return RACK_SECTION_TEMPLATES.find((t) => t.id === 'shelf_4')!.build();
+  if (type === 'rack_shelf_5') return RACK_SECTION_TEMPLATES.find((t) => t.id === 'shelf_5')!.build();
+  if (type === 'rack_shelf_6') return RACK_SECTION_TEMPLATES.find((t) => t.id === 'shelf_6')!.build();
   return RACK_SECTION_TEMPLATES.find((t) => t.id === 'shelf_3')!.build();
 }
 

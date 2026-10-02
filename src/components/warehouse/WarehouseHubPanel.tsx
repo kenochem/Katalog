@@ -6,11 +6,16 @@ import {
   Map,
   MapPin,
   Printer,
+  Store,
 } from 'lucide-react';
 import type { Product } from '../../types';
 import { formatLocationCode } from '../../lib/warehouseLocation';
 import { mergeLocationIntoProducts } from '../../lib/locationStore';
-import { seedKenochemWarehouseLayout } from '../../lib/warehouseLayoutStore';
+import {
+  seedKenochemWarehouseLayout,
+  WAREHOUSE_LAYOUT_SCOPE,
+  WAREHOUSE_LAYOUT_SCOPE_SHOP,
+} from '../../lib/warehouseLayoutStore';
 import { WarehouseLayoutEditor } from './WarehouseLayoutEditor';
 import { WarehouseLocationsPanel } from './WarehouseLocationsPanel';
 import { WarehouseIsometricView } from './WarehouseIsometricView';
@@ -68,10 +73,21 @@ export function WarehouseHubPanel({
   onLocationSaved,
 }: WarehouseHubPanelProps) {
   const [tool, setTool] = useState<WhTool>('hub');
+  const [layoutScope, setLayoutScope] = useState<string>(WAREHOUSE_LAYOUT_SCOPE);
 
   useEffect(() => {
     seedKenochemWarehouseLayout();
   }, []);
+
+  function openLayout(scopeId: string) {
+    setLayoutScope(scopeId);
+    setTool('layout');
+  }
+
+  function openIsometric(scopeId: string) {
+    setLayoutScope(scopeId);
+    setTool('isometric');
+  }
 
   const withLocations = useMemo(() => mergeLocationIntoProducts(products), [products]);
   const assignedCount = useMemo(
@@ -85,6 +101,7 @@ export function WarehouseHubPanel({
       <WarehouseLayoutEditor
         onBack={() => setTool('hub')}
         onOpenLocations={() => setTool('locations')}
+        scopeId={layoutScope}
       />
     );
   }
@@ -115,6 +132,7 @@ export function WarehouseHubPanel({
           products={withLocations}
           onOpenLocations={() => setTool('locations')}
           onOpenLayout={() => setTool('layout')}
+          scopeId={layoutScope}
         />
       </div>
     );
@@ -150,18 +168,39 @@ export function WarehouseHubPanel({
       </header>
 
       <div className="flex flex-col gap-2">
+        <p className="mt-1 px-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-500">
+          Magazyn
+        </p>
         <ToolRow
           title="Plan magazynu"
           desc="Układ hali — regały, alejki, pakowanie, wysyłka (Baselinker-style)"
           icon={<LayoutGrid className="h-5 w-5" />}
-          onClick={() => setTool('layout')}
+          onClick={() => openLayout(WAREHOUSE_LAYOUT_SCOPE)}
         />
         <ToolRow
-          title="Mapa 2.5D"
+          title="Mapa 2.5D — magazyn"
           desc="Izometryczny podglad regalow i stref, docelowo jak wskazanie produktu na sali"
           icon={<Map className="h-5 w-5" />}
-          onClick={() => setTool('isometric')}
+          onClick={() => openIsometric(WAREHOUSE_LAYOUT_SCOPE)}
         />
+        <p className="mt-3 px-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-500">
+          Sklep
+        </p>
+        <ToolRow
+          title="Plan sklepu"
+          desc="Rozkład półek, regałów i kasy na sali sprzedaży — czesc magazynu, ktora wchodzi do sklepu"
+          icon={<Store className="h-5 w-5" />}
+          onClick={() => openLayout(WAREHOUSE_LAYOUT_SCOPE_SHOP)}
+        />
+        <ToolRow
+          title="Mapa 2.5D — sklep"
+          desc="Izometryczny podglad ulozenia polek w sklepie"
+          icon={<Map className="h-5 w-5" />}
+          onClick={() => openIsometric(WAREHOUSE_LAYOUT_SCOPE_SHOP)}
+        />
+        <p className="mt-3 px-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-500">
+          Wspólne
+        </p>
         <ToolRow
           title="Regały i lokalizacje SKU"
           desc="Przypisz strefę, półkę i pojemnik do produktów"

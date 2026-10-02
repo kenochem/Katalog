@@ -76,7 +76,7 @@ export function WarehouseLayoutMiniPreview({
           }}
         >
           {layout.elements.map((el) => {
-            const def = elementDef(el.type);
+            const def = elementDef(el.type, el);
             const cssType = layoutCellCssType(el.type);
             const isTarget = highlight?.elementId === el.id;
             const dimOthers = hasHighlight && !isTarget;

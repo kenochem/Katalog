@@ -26,7 +26,16 @@ export function WarehouseRackConfigurator({
   const def = elementDef(element.type);
 
   function setSections(next: RackSection[]) {
-    onUpdate({ sections: next });
+    // Każda sekcja = 1 poziom = 1 komórka wysokości na planie (tak jak w presetach
+    // 4/5/6-półkowych). Bez tego dodanie/usunięcie półki zmieniało tylko listę
+    // sekcji, a pudełko na mapie zostawało w starym rozmiarze — półki wizualnie
+    // nie mieściły się w regale i plan przestawał zgadzać się z realnym układem.
+    // Regał paletowy ma inną logikę (2 sekcje ≠ 2 komórki wysokości), więc go pomijamy.
+    const patch: Partial<LayoutElement> =
+      element.type === 'rack_pallet'
+        ? { sections: next }
+        : { sections: next, h: Math.max(1, next.length) };
+    onUpdate(patch);
   }
 
   function applyTemplate(id: RackSectionTemplateId) {
