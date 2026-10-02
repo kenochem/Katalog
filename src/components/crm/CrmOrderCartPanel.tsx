@@ -31,8 +31,10 @@ export interface CrmOrderCartPanelProps {
   onSaveHistory: () => void;
   onSendDiscord: () => void;
   onGoToQuote: () => void;
+  onSendWapro?: () => void;
   saving?: boolean;
   sending?: boolean;
+  sendingWapro?: boolean;
   onClose?: () => void;
   className?: string;
 }
@@ -49,8 +51,10 @@ export function CrmOrderCartPanel({
   onSaveHistory,
   onSendDiscord,
   onGoToQuote,
+  onSendWapro,
   saving,
   sending,
+  sendingWapro,
   onClose,
   className = '',
 }: CrmOrderCartPanelProps) {
@@ -227,6 +231,23 @@ export function CrmOrderCartPanel({
               )}
               Wyślij zamówienie na Discord
             </button>
+
+            {onSendWapro && (
+              <button
+                type="button"
+                onClick={onSendWapro}
+                disabled={sendingWapro}
+                title="Tworzy zamówienie (ZO) w WAPRO Mag, w buforze — wymaga zatwierdzenia. SKU = indeks katalogowy."
+                className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-700 px-3 py-2.5 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-50"
+              >
+                {sendingWapro ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+                {sendingWapro ? 'Wysyłanie do WAPRO…' : 'Do WAPRO (ZO w buforze)'}
+              </button>
+            )}
 
             <div className="flex flex-wrap gap-1.5">
               <button

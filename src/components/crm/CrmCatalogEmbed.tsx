@@ -103,7 +103,7 @@ export function CrmCatalogEmbed({
 
   return (
     <div
-      className={`crm-catalog-embed flex min-h-[min(52vh,640px)] flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60 ${className}`}
+      className={`crm-catalog-embed flex min-h-[min(52vh,640px)] flex-col lg:overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60 ${className}`}
     >
       <div className="shrink-0 border-b border-slate-800 px-3 py-3">
         <div className="flex items-center gap-2">
@@ -231,7 +231,7 @@ export function CrmCatalogEmbed({
         </p>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2 sm:px-3">
+      <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain px-2 py-2 sm:px-3">
         {filtered.length === 0 ? (
           <div className="flex h-full min-h-[12rem] flex-col items-center justify-center px-4 text-center text-sm text-slate-500">
             Brak produktów dla wybranych filtrów.

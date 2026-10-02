@@ -297,7 +297,12 @@ export function printOrderDraftPdf(draft: OrderDraft, authorLabel: string): void
   .meta{font-size:13px;color:#444;margin-bottom:16px;line-height:1.5}
   table{width:100%;border-collapse:collapse}
   th{text-align:left;font-size:11px;text-transform:uppercase;color:#666;padding:6px;border-bottom:2px solid #333}
-  @media print{body{padding:0}}
+  @media print{
+    /* margin:0 na @page usuwa domyslny naglowek/stopke przegladarki (adres, data) —
+       wlasny odstep od krawedzi papieru dajemy przez padding na body ponizej. */
+    body{padding:14mm 16mm}
+    @page{margin:0}
+  }
 </style></head><body>
   <h1>${escapeHtml(draft.kind === 'quote' ? 'Prośba o ofertę' : 'Zamówienie')} — Kenochem</h1>
   <div class="meta">

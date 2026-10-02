@@ -389,10 +389,16 @@ export function CrmPipelinePanel({ clients, onOpenOrder, authorLabel }: CrmPipel
                 type="button"
                 onClick={() => {
                   if (!confirm(`Usunąć leada „${selected.title}"? Tej operacji nie można cofnąć.`)) return;
-                  deleteLead(selected.id);
+                  const leadId = selected.id;
                   setSelectedId(null);
                   refresh();
-                  showToast('Usunięto leada', 'info');
+                  void deleteLead(leadId).then((ok) => {
+                    refresh();
+                    showToast(
+                      ok ? 'Usunięto leada' : 'Nie udało się usunąć leada — spróbuj ponownie',
+                      ok ? 'info' : 'error',
+                    );
+                  });
                 }}
                 className="inline-flex items-center gap-1 rounded-lg border border-red-900/50 px-2 py-1 text-xs text-red-400 hover:bg-red-950/40"
               >

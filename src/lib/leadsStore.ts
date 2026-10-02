@@ -130,9 +130,23 @@ async function refreshCache(): Promise<void> {
     cacheReady = true;
     return;
   }
+  // Filtr po user_id wprost w zapytaniu — nie polegamy tylko na RLS w bazie.
+  // Lejek jest prywatny per handlowiec; to druga (klientowa) warstwa ochrony,
+  // zeby nikt nie widzial cudzych leadow nawet gdyby polityka w Supabase
+  // byla niedeployowana/bledna.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    cache = [];
+    cacheReady = true;
+    window.dispatchEvent(new CustomEvent(CHANGED_EVENT));
+    return;
+  }
   const { data, error } = await supabase
     .from('crm_leads')
     .select('*')
+    .eq('user_id', user.id)
     .order('sort_order', { ascending: true });
   if (!error && data) {
     cache = data.map((r) => mapRow(r as Record<string, unknown>));
@@ -212,7 +226,7 @@ async function persistPatch(leads: SalesLead[]): Promise<void> {
 
 async function persistInsert(lead: SalesLead, userId: string): Promise<void> {
   if (!supabase) return;
-  await supabase.from('crm_leads').insert({
+  const { error } = await supabase.from('crm_leads').insert({
     id: lead.id,
     user_id: userId,
     title: lead.title,
@@ -230,12 +244,35 @@ async function persistInsert(lead: SalesLead, userId: string): Promise<void> {
     created_at: lead.createdAt,
     updated_at: lead.updatedAt,
   });
+  if (error) {
+    console.warn('createLead: zapis w Supabase nie powiodl sie — lead zostanie tylko lokalnie do odswiezenia strony', error);
+  }
 }
 
-export function deleteLead(id: string): void {
+/**
+ * Usuwa leada. Optymistycznie znika z widoku od razu, ale jesli usuniecie w
+ * Supabase faktycznie sie nie powiedzie (np. wygasla sesja), lead wraca do
+ * cache — zeby stan na ekranie nigdy nie klamal w stosunku do bazy (a nie
+ * "znika, ale po odswiezeniu i tak jest z powrotem"). Zwraca true/false, wiec
+ * wywolujacy moze pokazac uzytkownikowi, czy usuniecie naprawde sie udalo.
+ */
+export async function deleteLead(id: string): Promise<boolean> {
+  const removed = cache.find((l) => l.id === id) ?? null;
   cache = cache.filter((l) => l.id !== id);
   window.dispatchEvent(new CustomEvent(CHANGED_EVENT));
-  void supabase?.from('crm_leads').delete().eq('id', id);
+
+  if (!supabase) return true;
+
+  const { error } = await supabase.from('crm_leads').delete().eq('id', id);
+  if (error) {
+    console.warn('deleteLead: usuniecie w Supabase nie powiodlo sie — przywracam leada', error);
+    if (removed && !cache.some((l) => l.id === id)) {
+      cache = [...cache, removed];
+      window.dispatchEvent(new CustomEvent(CHANGED_EVENT));
+    }
+    return false;
+  }
+  return true;
 }
 
 export function loadLeads(): SalesLead[] {
@@ -432,48 +469,3 @@ export function pipelineStats() {
   };
 }
 
-const SEED_KEY = 'katalog-leads-seeded-v2';
-
-/** Demo-leady tylko przy pierwszym uzyciu i tylko jesli handlowiec faktycznie
- * nie ma jeszcze zadnych leadow w bazie (nie tylko flaga w localStorage). */
-export async function seedDemoLeadsIfEmpty(): Promise<void> {
-  if (localStorage.getItem(SEED_KEY)) return;
-  localStorage.setItem(SEED_KEY, '1');
-  ensureLeadsLoaded();
-  if (inFlight) await inFlight;
-  if (cache.length > 0) return;
-
-  const demos: Parameters<typeof createLead>[0][] = [
-    {
-      title: 'Zapytanie o wiertła HSS — partia 200 szt.',
-      companyName: 'Auto-Master Sp. z o.o.',
-      contactName: 'Jan Kowalski',
-      phone: '+48 601 111 222',
-      valueEstimate: 8400,
-      source: 'Allegro',
-    },
-    {
-      title: 'Smary litowe — umowa roczna',
-      companyName: 'Serwis-Tech Wrocław',
-      contactName: 'Anna Nowak',
-      valueEstimate: 24500,
-      source: 'Polecenie',
-    },
-    {
-      title: 'Klucze dynamometryczne — przetarg',
-      companyName: 'Bud-Met Kraków',
-      contactName: 'Piotr Wiśniewski',
-      valueEstimate: 15600,
-      source: 'Telefon',
-    },
-  ];
-  const created = demos.map((d) => createLead(d));
-  if (created[1]) {
-    moveLeadStage(created[1].id, 'contact');
-    addActivity(created[1].id, 'call', 'Rozmowa wstępna — zainteresowani pakietem chemii.');
-  }
-  if (created[2]) {
-    moveLeadStage(created[2].id, 'offer');
-    addActivity(created[2].id, 'offer_sent', 'Oferta PDF wysłana mailem, termin odpowiedzi 7 dni.');
-  }
-}

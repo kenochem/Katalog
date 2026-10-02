@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Product } from '../types';
 import { fetchCrmClients, fetchCrmOrders, type CrmClient, type CrmOrder } from '../lib/crm';
-import { CRM_INBOX_ENABLED } from '../lib/crmInboxFeature';
+import { useCrmMailEnabled } from '../lib/crmMailFeatureStore';
 import { fetchCrmInboxUnreadCount } from '../lib/crmMail';
-import { getOpenLeads, pipelineStats, seedDemoLeadsIfEmpty } from '../lib/leadsStore';
+import { getOpenLeads, pipelineStats } from '../lib/leadsStore';
 import {
   CRM_SETTINGS_CHANGED,
   DEFAULT_CRM_COMPANY_CONFIG,
@@ -23,6 +23,7 @@ import { CrmHistoryPanel } from './CrmHistoryPanel';
 import type { CrmTab } from './crm/CrmSubNav';
 import { CrmNotesPanel } from './crm/CrmNotesPanel';
 import { CrmTaskHeader } from './crm/CrmTaskHeader';
+import { ContextHelp } from './ContextHelp';
 import { CrmCustomerInboxView } from './crm/CrmCustomerInboxView';
 import { CrmInboxPausedView } from './crm/CrmInboxPausedView';
 import { CrmPipelinePanel } from './crm/CrmPipelinePanel';
@@ -101,6 +102,7 @@ export function CrmHubView({
   onChanged,
   onOpenCatalog,
 }: CrmHubViewProps) {
+  const mailEnabled = useCrmMailEnabled();
   const [tab, setTab] = useState<CrmTab>('hub');
   const [clients, setClients] = useState<CrmClient[]>([]);
   const [orders, setOrders] = useState<CrmOrder[]>([]);
@@ -160,7 +162,6 @@ export function CrmHubView({
   }, []);
 
   useEffect(() => {
-    void seedDemoLeadsIfEmpty();
     setPipelineTick((t) => t + 1);
     const onLeads = () => setPipelineTick((t) => t + 1);
     window.addEventListener('katalog-leads-changed', onLeads);
@@ -181,7 +182,7 @@ export function CrmHubView({
   }, [pipelineTick]);
 
   const refreshInboxBadge = () => {
-    if (!CRM_INBOX_ENABLED || !cloudEnabled) {
+    if (!mailEnabled || !cloudEnabled) {
       setInboxUnread(0);
       return;
     }
@@ -442,7 +443,7 @@ export function CrmHubView({
       )}
 
       {tab === 'inbox' &&
-        (CRM_INBOX_ENABLED ? (
+        (mailEnabled ? (
           <CrmCustomerInboxView
             cloudEnabled={cloudEnabled}
             onOpenClient={pickClientFromInbox}
@@ -474,6 +475,7 @@ export function CrmHubView({
             title="Klienci"
             subtitle="Kartoteka, NIP/GUS, notatki — wybierz firmę do zamówienia."
             onBack={goHub}
+            helpId="crmClients"
           />
           <CrmClientsPanel
             cloudEnabled={cloudEnabled}
@@ -520,6 +522,7 @@ export function CrmHubView({
             title="Historia zamówień"
             subtitle="Wczytaj poprzednią ofertę do koszyka."
             onBack={goHub}
+            helpId="crmHistory"
           />
           <CrmHistoryPanel
             cloudEnabled={cloudEnabled}
@@ -541,6 +544,7 @@ export function CrmHubView({
             title="Prowizja od marży"
             subtitle="Szacunek z historii CRM w tym miesiącu + suwak udziału."
             onBack={goHub}
+            helpId="crmCommission"
           />
           <label className="block">
             <span className="text-xs text-slate-500">Udział w marży (%)</span>
@@ -696,8 +700,9 @@ function CrmOperatingCenter({
               <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-400">
                 Centrum pracy CRM
               </p>
-              <h3 className="mt-1 text-lg font-semibold text-slate-50">
+              <h3 className="inline-flex items-center gap-1.5 mt-1 text-lg font-semibold text-slate-50">
                 Co handlowiec ma zrobic teraz
+                <ContextHelp id="crmOperatingCenter" />
               </h3>
               <p className="mt-1 max-w-2xl text-sm leading-relaxed text-slate-400">
                 Priorytety sa liczone z koszyka, lejka, inboxa i bazy klientow.
@@ -706,7 +711,7 @@ function CrmOperatingCenter({
             </div>
             <div className="grid grid-cols-2 gap-2 md:min-w-[18rem]">
               <MiniCrmMetric label="Zamowienia mies." value={String(stats.monthOrders)} />
-              <MiniCrmMetric label="Prowizja est." value={formatPricePln(stats.commissionPln)} />
+              <MiniCrmMetric label="Prowizja est." value={formatPricePln(stats.commissionPln)} helpId="crmCommission" />
             </div>
           </div>
 
@@ -851,8 +856,9 @@ function CrmCompanyLayer({
           <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-400">
             Model Kenochem
           </p>
-          <h3 className="mt-1 text-lg font-semibold text-slate-50">
+          <h3 className="inline-flex items-center gap-1.5 mt-1 text-lg font-semibold text-slate-50">
             B2B, rejony, wizyty i kontrola zamowien
+            <ContextHelp id="crmCompanyModel" />
           </h3>
           <p className="mt-1 max-w-3xl text-sm leading-relaxed text-slate-400">
             Ten blok pilnuje klientow, tras handlowcow i zamowien oczekujacych na dalszy krok.
@@ -956,7 +962,11 @@ function CrmCompanyLayer({
         </button>
       </div>
 
-      <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1fr_1fr_1.3fr]">
+      <p className="mt-4 inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+        Ustawienia firmowe
+        <ContextHelp id="crmCompanySettings" />
+      </p>
+      <div className="mt-2 grid gap-3 lg:grid-cols-[1fr_1fr_1fr_1.3fr]">
         <CrmConfigField
           label="Klient cichnie po"
           suffix="dni"
@@ -1197,7 +1207,7 @@ function buildCrmPriorities({
     });
   }
 
-  if (CRM_INBOX_ENABLED && inboxUnread > 0) {
+  if (inboxUnread > 0) {
     priorities.push({
       id: 'inbox',
       title: 'Odpowiedz klientom',
@@ -1288,10 +1298,13 @@ function buildAccountRows(clients: CrmClient[], orders: CrmOrder[]) {
   });
 }
 
-function MiniCrmMetric({ label, value }: { label: string; value: string }) {
+function MiniCrmMetric({ label, value, helpId }: { label: string; value: string; helpId?: string }) {
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2.5">
-      <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-slate-500">
+        {label}
+        {helpId ? <ContextHelp id={helpId} /> : null}
+      </p>
       <p className="mt-0.5 truncate text-sm font-semibold tabular-nums text-slate-50">{value}</p>
     </div>
   );

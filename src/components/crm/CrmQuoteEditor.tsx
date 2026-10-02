@@ -1,9 +1,13 @@
-import { ChevronLeft, Download, Eye, FileDown, Loader2, Minus, Plus, RotateCcw, Truck } from 'lucide-react';
+import { ChevronLeft, Download, Eye, FileDown, Loader2, Minus, Pencil, Plus, RotateCcw, Truck } from 'lucide-react';
+import { useState } from 'react';
 import type { Product } from '../../types';
 import type { CrmClient } from '../../lib/crm';
 import type { OrderDraft } from '../../lib/orderDraft';
 import { formatPricePln } from '../../lib/format';
 import { getProductImage } from '../../lib/products';
+import { useAuth } from '../../lib/auth';
+import { showToast } from '../../lib/toast';
+import { NetGrossPriceInput } from './NetGrossPriceInput';
 import {
   QUOTE_DISCOUNT_PRESETS,
   computeQuoteLine,
@@ -31,6 +35,7 @@ export function CrmQuoteEditor({
   draft,
   productBySku,
   activeClient,
+  authorLabel,
   onSync,
   onBack,
   onGeneratePdf,
@@ -46,7 +51,9 @@ export function CrmQuoteEditor({
   }
 
   const discountPct = draft.discountPct ?? 0;
-  const totals = computeQuoteTotals(draft.items, catalogNetBySku, discountPct, draft.transportCost);
+  // Rabat globalny jest teraz zapisywany bezposrednio w lineDiscountPct kazdej
+  // pozycji (patrz setGlobalDiscount) — totals nie dolicza go po raz drugi.
+  const totals = computeQuoteTotals(draft.items, catalogNetBySku, 0, draft.transportCost);
   const transportEnabled = draft.transportCost != null;
 
   function toggleTransport() {
@@ -57,23 +64,20 @@ export function CrmQuoteEditor({
     });
   }
 
-  function setTransportAmount(raw: string) {
-    const parsed = Number(raw.replace(',', '.'));
+  function setTransportAmount(net: number) {
     onSync({
       ...draft,
       kind: 'quote',
-      transportCost: Number.isFinite(parsed) ? Math.max(0, parsed) : 0,
+      transportCost: Math.max(0, net),
     });
   }
 
-  function updateItemPrice(productId: string, raw: string) {
-    const parsed = Number(raw.replace(',', '.'));
-    const unitPriceNet = Number.isFinite(parsed) ? Math.max(0, parsed) : null;
+  function updateItemPrice(productId: string, net: number) {
     onSync({
       ...draft,
       kind: 'quote',
       items: draft.items.map((i) =>
-        i.productId === productId ? { ...i, unitPriceNet } : i,
+        i.productId === productId ? { ...i, unitPriceNet: net } : i,
       ),
     });
   }
@@ -115,7 +119,12 @@ export function CrmQuoteEditor({
   }
 
   function setGlobalDiscount(pct: number) {
-    onSync({ ...draft, kind: 'quote', discountPct: pct });
+    onSync({
+      ...draft,
+      kind: 'quote',
+      discountPct: pct,
+      items: draft.items.map((i) => ({ ...i, lineDiscountPct: pct })),
+    });
   }
 
   return (
@@ -181,15 +190,136 @@ export function CrmQuoteEditor({
 
       <div className="grid gap-4 lg:grid-cols-[1fr_min(20rem,32%)]">
         <div className="crm-panel overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-sm">
+          {/* Telefon/tablet: karty pod sobą — pole rabatu widoczne od razu, bez
+              przewijania w bok. Od `lg` wraca klasyczna tabela (więcej miejsca
+              w poziomie na desktopie). */}
+          <div className="divide-y divide-slate-800 lg:hidden">
+            {draft.items.map((item) => {
+              const p = productBySku.get(item.sku.toUpperCase());
+              const catalogNet = p?.priceSaleNet ?? 0;
+              const line = computeQuoteLine(item, catalogNet);
+              const img = item.imageUrl ?? (p ? getProductImage(p) : null);
+              const edited = item.unitPriceNet != null || (item.lineDiscountPct ?? 0) > 0;
+              return (
+                <div key={item.productId} className="crm-panel-row space-y-3 px-3 py-3">
+                  <div className="flex items-center gap-3">
+                    {img ? (
+                      <img
+                        src={img}
+                        alt=""
+                        className="h-12 w-12 shrink-0 rounded-lg bg-slate-100 object-contain dark:bg-slate-800"
+                      />
+                    ) : (
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[10px] text-slate-500 dark:bg-slate-800">
+                        —
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="crm-heading line-clamp-2 text-sm font-medium">
+                        {item.displayName}
+                      </p>
+                      <p className="font-mono text-xs text-brand-600 dark:text-brand-400">
+                        {item.sku}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => updateItemQty(item.productId, -1)}
+                        className="flex h-7 w-7 items-center justify-center rounded-md bg-red-600/90 text-white hover:bg-red-500"
+                        aria-label="Mniej"
+                      >
+                        <Minus className="h-3.5 w-3.5" />
+                      </button>
+                      <span className="crm-heading w-6 text-center text-sm font-semibold tabular-nums">
+                        {item.quantity}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => updateItemQty(item.productId, 1)}
+                        className="flex h-7 w-7 items-center justify-center rounded-md bg-brand-600 text-white hover:bg-brand-500"
+                        aria-label="Więcej"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <div className="crm-label flex items-center justify-between gap-1">
+                        Cena netto / brutto
+                        {edited && (
+                          <button
+                            type="button"
+                            onClick={() => resetItemPrice(item.productId)}
+                            className="crm-muted shrink-0 text-xs hover:text-brand-600 dark:hover:text-brand-400"
+                            title="Przywróć cenę katalogową"
+                          >
+                            ↺
+                          </button>
+                        )}
+                      </div>
+                      <NetGrossPriceInput
+                        net={line.unitNet}
+                        onChangeNet={(net) => updateItemPrice(item.productId, net)}
+                        className="mt-1"
+                      />
+                    </div>
+                    <label className="crm-label block">
+                      Rabat %
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={1}
+                        value={item.lineDiscountPct ?? ''}
+                        placeholder="0"
+                        onChange={(e) => updateLineDiscount(item.productId, e.target.value)}
+                        className="input-field mt-1 w-full text-sm tabular-nums"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="crm-muted flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px]">
+                    {item.unitPriceNet != null && catalogNet > 0 && (
+                      <span>katalog {formatPricePln(catalogNet)}</span>
+                    )}
+                    {p && <span>dostępne: {p.stock ?? 0}</span>}
+                  </div>
+
+                  <div className="flex items-center justify-between rounded-xl bg-slate-950/40 px-3 py-2">
+                    <div>
+                      {line.lineDiscountPct > 0 && (
+                        <p className="text-[11px] tabular-nums text-amber-800 dark:text-amber-300">
+                          po rabacie {formatPricePln(line.unitNetAfterDiscount)} · −
+                          {formatPricePln(line.lineDiscountAmount)}
+                        </p>
+                      )}
+                      <p className="crm-muted text-[11px]">
+                        brutto razem {formatPricePln(line.lineGross)}
+                      </p>
+                    </div>
+                    <p className="crm-heading text-base font-semibold tabular-nums">
+                      {formatPricePln(line.lineNet)}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="hidden overflow-x-auto lg:block">
+            <table className="w-full min-w-[860px] text-left text-sm">
               <thead>
                 <tr className="crm-panel-head text-[10px] uppercase tracking-wide">
                   <th className="px-3 py-2.5">Produkt</th>
                   <th className="px-3 py-2.5 text-center">Ilość</th>
                   <th className="px-3 py-2.5 text-right">Cena netto</th>
                   <th className="px-3 py-2.5 text-center">Rabat %</th>
+                  <th className="px-3 py-2.5 text-right">Cena po rabacie</th>
                   <th className="px-3 py-2.5 text-right">Wartość netto</th>
+                  <th className="px-3 py-2.5 text-right">Wartość brutto</th>
                 </tr>
               </thead>
               <tbody>
@@ -254,20 +384,18 @@ export function CrmQuoteEditor({
                         )}
                       </td>
                       <td className="px-3 py-3">
-                        <div className="flex items-center justify-end gap-1">
-                          <input
-                            type="number"
-                            min={0}
-                            step={0.01}
-                            value={line.unitNet}
-                            onChange={(e) => updateItemPrice(item.productId, e.target.value)}
-                            className="input-field w-24 text-right text-xs tabular-nums"
+                        <div className="flex items-start justify-end gap-1">
+                          <NetGrossPriceInput
+                            net={line.unitNet}
+                            onChangeNet={(net) => updateItemPrice(item.productId, net)}
+                            compact
+                            align="right"
                           />
                           {edited && (
                             <button
                               type="button"
                               onClick={() => resetItemPrice(item.productId)}
-                              className="crm-muted text-[10px] hover:text-brand-600 dark:hover:text-brand-400"
+                              className="crm-muted mt-1.5 shrink-0 text-[10px] hover:text-brand-600 dark:hover:text-brand-400"
                               title="Przywróć cenę katalogową"
                             >
                               ↺
@@ -299,8 +427,25 @@ export function CrmQuoteEditor({
                           )}
                         </div>
                       </td>
+                      <td className="px-3 py-3 text-right tabular-nums">
+                        {line.lineDiscountPct > 0 ? (
+                          <>
+                            <p className="crm-heading font-medium">
+                              {formatPricePln(line.unitNetAfterDiscount)}
+                            </p>
+                            <p className="crm-muted text-[10px]">
+                              brutto {formatPricePln(line.unitGrossAfterDiscount)}
+                            </p>
+                          </>
+                        ) : (
+                          <span className="crm-muted">—</span>
+                        )}
+                      </td>
                       <td className="crm-heading px-3 py-3 text-right tabular-nums font-medium">
                         {formatPricePln(line.lineNet)}
+                      </td>
+                      <td className="px-3 py-3 text-right tabular-nums">
+                        {formatPricePln(line.lineGross)}
                       </td>
                     </tr>
                   );
@@ -311,6 +456,8 @@ export function CrmQuoteEditor({
         </div>
 
         <aside className="space-y-3">
+          <AuthorLabelBox authorLabel={authorLabel} />
+
           <div className="crm-panel p-4">
             <p className="crm-label">Klient</p>
             <p className="crm-heading mt-1 text-base font-semibold">
@@ -338,24 +485,23 @@ export function CrmQuoteEditor({
               />
             </label>
             {transportEnabled && (
-              <label className="crm-label mt-3 block">
-                Koszt transportu netto
-                <input
-                  type="number"
-                  min={0}
-                  step={1}
-                  value={draft.transportCost ?? 0}
-                  onChange={(e) => setTransportAmount(e.target.value)}
-                  className="input-field mt-1 text-sm tabular-nums"
+              <div className="mt-3">
+                <p className="crm-label">Koszt transportu</p>
+                <NetGrossPriceInput
+                  net={draft.transportCost ?? 0}
+                  onChangeNet={setTransportAmount}
+                  className="mt-1"
                 />
-              </label>
+              </div>
             )}
           </div>
 
           <div className="crm-panel p-4">
             <p className="crm-label">Rabat globalny (na całość)</p>
             <p className="crm-muted mt-1 text-[11px]">
-              Nakłada się po rabatach poszczególnych pozycji. Indywidualna cena ma pierwszeństwo.
+              Ustawia ten sam rabat na każdej pozycji od razu — dokładnie jak przy ręcznym
+              rabatowaniu linia po linii. Możesz później zmienić rabat pojedynczo dla
+              wybranego produktu w tabeli poniżej.
             </p>
             <div className="mt-2 flex flex-wrap gap-1.5">
               <button
@@ -428,7 +574,7 @@ export function CrmQuoteEditor({
           <div className="crm-summary-box p-4">
             <div className="space-y-2 text-sm">
               <div className="crm-muted flex justify-between">
-                <span>Suma netto</span>
+                <span>Wartość przed rabatem</span>
                 <span className="tabular-nums">{formatPricePln(totals.subtotalNet)}</span>
               </div>
               {totals.totalDiscountAmount > 0 && (
@@ -440,7 +586,12 @@ export function CrmQuoteEditor({
               {totals.transportCost > 0 && (
                 <div className="crm-muted flex justify-between">
                   <span>Transport</span>
-                  <span className="tabular-nums">{formatPricePln(totals.transportCost)}</span>
+                  <span className="text-right tabular-nums">
+                    {formatPricePln(totals.transportCost)}
+                    <span className="block text-[10px] text-slate-500">
+                      brutto {formatPricePln(totals.transportCost * 1.23)}
+                    </span>
+                  </span>
                 </div>
               )}
               <div className="crm-heading flex justify-between font-semibold">
@@ -455,6 +606,77 @@ export function CrmQuoteEditor({
           </div>
         </aside>
       </div>
+    </div>
+  );
+}
+
+/** Nazwa wystawiającego widoczna na PDF oferty — edytowalna od razu tutaj,
+ * żeby nie trzeba było szukać tego w menu profilu. Zapisuje się globalnie
+ * (profiles.display_name), więc zmienia się też np. etykieta w hubie. */
+function AuthorLabelBox({ authorLabel }: { authorLabel: string }) {
+  const { updateDisplayName } = useAuth();
+  const [editing, setEditing] = useState(false);
+  const [draftName, setDraftName] = useState(authorLabel);
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    const next = draftName.trim();
+    if (!next || next === authorLabel) {
+      setEditing(false);
+      return;
+    }
+    setSaving(true);
+    const { error } = await updateDisplayName(next);
+    setSaving(false);
+    if (error) {
+      showToast(error, 'error');
+      return;
+    }
+    showToast('Nazwa na ofertach zaktualizowana', 'ok');
+    setEditing(false);
+  }
+
+  return (
+    <div className="crm-panel p-4">
+      <p className="crm-label">Wystawia ofertę</p>
+      {editing ? (
+        <div className="mt-1.5 flex items-center gap-1.5">
+          <input
+            autoFocus
+            value={draftName}
+            onChange={(e) => setDraftName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') void save();
+              if (e.key === 'Escape') setEditing(false);
+            }}
+            className="input-field flex-1 text-sm"
+            placeholder="Imię i nazwisko na ofercie"
+          />
+          <button
+            type="button"
+            onClick={() => void save()}
+            disabled={saving}
+            className="crm-btn-secondary shrink-0 px-2.5 py-1.5 text-xs disabled:opacity-50"
+          >
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Zapisz'}
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            setDraftName(authorLabel);
+            setEditing(true);
+          }}
+          className="mt-1 flex w-full items-center justify-between gap-2 text-left"
+        >
+          <span className="crm-heading text-base font-semibold">{authorLabel}</span>
+          <Pencil className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+        </button>
+      )}
+      <p className="crm-muted mt-1 text-[11px]">
+        Ta nazwa pojawia się na PDF oferty jako osoba wystawiająca.
+      </p>
     </div>
   );
 }

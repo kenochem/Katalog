@@ -484,7 +484,9 @@ async function fetchImapMessageBody(
   }
 }
 
-/** Krótkie połączenia IMAP — incremental po UID (Edge) lub backfill przy pierwszym sync. */
+/** Jedno polaczenie IMAP na cala synchronizacje — bez rozlaczania miedzy paczkami
+ * (poprzednia wersja laczyla sie od nowa co 4 wiadomosci + 350ms uspienia, co przy
+ * wiekszej liczbie nowych maili przekraczalo limit czasu funkcji Edge — "EarlyDrop"). */
 async function pullInboxThreadsIncremental(
   settings: MailboxSettingsRow,
   password: string,
@@ -492,17 +494,15 @@ async function pullInboxThreadsIncremental(
   initialBackfill: number,
 ): Promise<{ threads: Record<string, unknown>[]; inboxTotal: number; maxUid: number; warn?: string }> {
   const backfill = Math.min(200, Math.max(10, initialBackfill));
-  const CHUNK = 4;
   let inboxTotal = 0;
   let maxUid = lastImapUid ?? 0;
   const items: EnvelopeListItem[] = [];
-  const warnings: string[] = [];
 
-  {
-    const client = imapClient(settings, password);
+  const client = imapClient(settings, password);
+  try {
+    await client.connect();
+    const lock = await client.getMailboxLock('INBOX');
     try {
-      await client.connect();
-      const lock = await client.getMailboxLock('INBOX');
       inboxTotal =
         client.mailbox && 'exists' in client.mailbox
           ? Number(client.mailbox.exists)
@@ -520,93 +520,59 @@ async function pullInboxThreadsIncremental(
         const sorted = (Array.isArray(all) ? all : []).sort((a, b) => a - b);
         uidList = sorted.slice(-backfill);
       }
-      lock.release();
-      await client.logout();
 
-      for (let i = 0; i < uidList.length; i += CHUNK) {
-        const slice = uidList.slice(i, i + CHUNK);
-        if (slice.length === 0) continue;
-        const uidSet = slice.join(',');
-        const client2 = imapClient(settings, password);
-        try {
-          await client2.connect();
-          const lock2 = await client2.getMailboxLock('INBOX');
-          try {
-            for await (const msg of client2.fetch(
-              uidSet,
-              { uid: true, envelope: true, flags: true },
-              { uid: true },
-            )) {
-              if (msg.uid > maxUid) maxUid = msg.uid;
-              items.push({
-                uid: msg.uid,
-                envelope: msg.envelope as EnvelopeListItem['envelope'],
-                seen: msg.flags?.has('\\Seen') ?? false,
-              });
-            }
-          } finally {
-            lock2.release();
-          }
-          await client2.logout();
-        } catch (err) {
-          warnings.push(err instanceof Error ? err.message : String(err));
+      if (uidList.length > 0) {
+        const uidSet = uidList.join(',');
+        for await (const msg of client.fetch(
+          uidSet,
+          { uid: true, envelope: true, flags: true },
+          { uid: true },
+        )) {
+          if (msg.uid > maxUid) maxUid = msg.uid;
+          items.push({
+            uid: msg.uid,
+            envelope: msg.envelope as EnvelopeListItem['envelope'],
+            seen: msg.flags?.has('\\Seen') ?? false,
+          });
         }
-        await sleep(350);
       }
-    } catch (err) {
-      throw err;
+    } finally {
+      lock.release();
+    }
+  } finally {
+    try {
+      await client.logout();
+    } catch {
+      /* ignore */
     }
   }
 
   const threads = items.map((item) => threadFromEnvelopeItem(item, settings));
-  if (threads.length === 0 && warnings.length > 0 && inboxTotal > 0) {
-    throw new Error(warnings[warnings.length - 1]!);
-  }
-  return { threads, inboxTotal, maxUid, warn: warnings[0] };
+  return { threads, inboxTotal, maxUid };
 }
 
-/** @deprecated Okno sekwencyjne — fallback gdy brak kolumny last_imap_uid */
+/** Fallback (male, bezpieczne okno) — jedno polaczenie, bez rozlaczen miedzy paczkami. */
 async function pullInboxThreads(
   settings: MailboxSettingsRow,
   password: string,
   limit: number,
 ): Promise<{ threads: Record<string, unknown>[]; inboxTotal: number; warn?: string }> {
   const cap = Math.min(24, Math.max(1, limit));
-  const CHUNK = 3;
   let inboxTotal = 0;
   const items: EnvelopeListItem[] = [];
-  const warnings: string[] = [];
 
-  {
-    const client = imapClient(settings, password);
+  const client = imapClient(settings, password);
+  try {
+    await client.connect();
+    const lock = await client.getMailboxLock('INBOX');
     try {
-      await client.connect();
-      const lock = await client.getMailboxLock('INBOX');
       inboxTotal =
         client.mailbox && 'exists' in client.mailbox
           ? Number(client.mailbox.exists)
           : 0;
-      lock.release();
-      await client.logout();
-    } catch (err) {
-      throw err;
-    }
-  }
-
-  if (inboxTotal <= 0) {
-    return { threads: [], inboxTotal: 0 };
-  }
-
-  const fromSeq = Math.max(1, inboxTotal - cap + 1);
-
-  for (let start = fromSeq; start <= inboxTotal; start += CHUNK) {
-    const end = Math.min(start + CHUNK - 1, inboxTotal);
-    const client = imapClient(settings, password);
-    try {
-      await client.connect();
-      const lock = await client.getMailboxLock('INBOX');
-      try {
-        for await (const msg of client.fetch(`${start}:${end}`, {
+      if (inboxTotal > 0) {
+        const fromSeq = Math.max(1, inboxTotal - cap + 1);
+        for await (const msg of client.fetch(`${fromSeq}:${inboxTotal}`, {
           uid: true,
           envelope: true,
           flags: true,
@@ -617,21 +583,19 @@ async function pullInboxThreads(
             seen: msg.flags?.has('\\Seen') ?? false,
           });
         }
-      } finally {
-        lock.release();
       }
-      await client.logout();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      warnings.push(msg);
+    } finally {
+      lock.release();
     }
-    await sleep(350);
+  } finally {
+    try {
+      await client.logout();
+    } catch {
+      /* ignore */
+    }
   }
 
   const threads = items.map((item) => threadFromEnvelopeItem(item, settings));
-  if (threads.length === 0 && warnings.length > 0) {
-    throw new Error(warnings[warnings.length - 1]!);
-  }
   return { threads, inboxTotal };
 }
 
@@ -703,12 +667,37 @@ async function runImapSync(
 
   const now = new Date().toISOString();
   if (threads.length > 0) {
-    const rows = threads.map((p) => ({
-      id: String((p as { id: string }).id),
-      user_id: userId,
-      payload: p,
-      received_at: (p as { createdAt: string }).createdAt || now,
-    }));
+    // Scal z istniejacym payloadem, zeby fallback (nie-inkrementalny) resync nie
+    // kasowal category/replied ustawionych recznie w CRM dla juz zsynchronizowanych wiadomosci.
+    const ids = threads.map((p) => String((p as { id: string }).id));
+    const { data: existingRows } = await admin
+      .from('crm_inbox_sync')
+      .select('id, payload')
+      .eq('user_id', userId)
+      .in('id', ids);
+    const existingById = new Map(
+      (existingRows ?? []).map((r) => [String(r.id), r.payload as Record<string, unknown>]),
+    );
+
+    const rows = threads.map((p) => {
+      const id = String((p as { id: string }).id);
+      const prev = existingById.get(id);
+      const next = prev
+        ? {
+            ...p,
+            replied: prev.replied ?? (p as Record<string, unknown>).replied,
+            category: prev.category ?? (p as Record<string, unknown>).category,
+            unread:
+              prev.unread === false ? false : (p as Record<string, unknown>).unread,
+          }
+        : p;
+      return {
+        id,
+        user_id: userId,
+        payload: next,
+        received_at: (next as { createdAt: string }).createdAt || now,
+      };
+    });
     const { error: upErr } = await admin
       .from('crm_inbox_sync')
       .upsert(rows, { onConflict: 'user_id,id' });
@@ -899,7 +888,7 @@ Deno.serve(async (req) => {
       });
       if (credErr) return json({ error: humanizeMailError(credErr.message) }, 500);
 
-      const limit = Math.min(120, Math.max(25, Number(body.limit) || 50));
+      const limit = Math.min(40, Math.max(10, Number(body.limit) || 20));
       const settings = settingsFromBody(mailboxEmail, username, discovered);
       const syncResult = await runImapSync(admin, user.id, settings, password, limit);
       if (syncResult.error && (syncResult.imported ?? 0) === 0) {
@@ -969,7 +958,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'sync') {
-      const limit = Math.min(120, Math.max(25, Number(body.limit) || 50));
+      const limit = Math.min(40, Math.max(10, Number(body.limit) || 20));
       const { settings, password } = await loadMailbox();
       const syncResult = await runImapSync(
         admin,

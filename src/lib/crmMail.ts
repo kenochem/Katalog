@@ -78,8 +78,8 @@ export const MAILBOX_PRESETS: Record<
   },
 };
 
-export const DEFAULT_SYNC_LIMIT = 50;
-export const MAX_SYNC_LIMIT = 120;
+export const DEFAULT_SYNC_LIMIT = 20;
+export const MAX_SYNC_LIMIT = 40;
 export const CRM_INBOX_LIST_LIMIT = 500;
 
 type InvokePayload = { error?: string; ok?: boolean; hint?: string; diagnostics?: unknown };

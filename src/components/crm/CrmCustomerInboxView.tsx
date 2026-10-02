@@ -191,8 +191,8 @@ export function CrmCustomerInboxView({
 
       <InboxFilterBar active={filter} onChange={setFilter} counts={counts} />
 
-      <div className="grid min-h-[calc(100dvh-14rem)] gap-3 lg:grid-cols-5 lg:gap-4">
-        <ul className="space-y-1 lg:col-span-2">
+      <div className="grid gap-3 lg:min-h-[calc(100dvh-14rem)] lg:grid-cols-5 lg:gap-4">
+        <ul className={`space-y-1 lg:col-span-2 ${activeThread ? 'hidden lg:block' : ''}`}>
           {filtered.length === 0 ? (
             <li className="rounded-xl border border-dashed border-slate-800 py-10 text-center text-sm text-slate-500">
               Brak wiadomości — u góry kliknij „Połącz i pobierz pocztę” lub „Odśwież”.
@@ -245,7 +245,11 @@ export function CrmCustomerInboxView({
           )}
         </ul>
 
-        <div className="flex min-h-[calc(100dvh-14rem)] flex-col rounded-2xl border border-slate-800 bg-slate-900/60 p-4 lg:col-span-3">
+        <div
+          className={`flex-col rounded-2xl border border-slate-800 bg-slate-900/60 p-4 lg:col-span-3 lg:flex lg:min-h-[calc(100dvh-14rem)] ${
+            activeThread ? 'flex' : 'hidden lg:flex'
+          }`}
+        >
           {!activeThread ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <Inbox className="mb-3 h-10 w-10 text-slate-600" />
@@ -253,6 +257,13 @@ export function CrmCustomerInboxView({
             </div>
           ) : (
             <>
+              <button
+                type="button"
+                onClick={() => setActiveThread(null)}
+                className="mb-3 inline-flex w-fit items-center gap-1 text-xs font-medium text-brand-400 lg:hidden"
+              >
+                ← Wróć do listy
+              </button>
               <div className="shrink-0 border-b border-slate-800 pb-3">
                 <p className="text-sm font-semibold text-slate-100">{activeThread.subject}</p>
                 <p className="mt-0.5 text-xs text-slate-500">{activeThread.from}</p>

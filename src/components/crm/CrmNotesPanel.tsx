@@ -138,7 +138,7 @@ export function CrmNotesPanel({ clients, clientId, compact = false }: CrmNotesPa
                       </span>
                     )}
                   </div>
-                  <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
+                  <div className="flex shrink-0 items-center gap-0.5 opacity-100 transition lg:opacity-0 lg:group-hover:opacity-100">
                     <button
                       type="button"
                       onClick={() => togglePinNote(n.id)}

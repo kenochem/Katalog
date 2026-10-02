@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import {
   CalendarDays,
   GitBranch,
@@ -8,7 +9,7 @@ import {
   ShoppingCart,
   Users,
 } from 'lucide-react';
-import { CRM_INBOX_ENABLED } from '../../lib/crmInboxFeature';
+import { useCrmMailEnabled } from '../../lib/crmMailFeatureStore';
 
 export type CrmTab =
   | 'hub'
@@ -30,12 +31,14 @@ interface CrmSubNavProps {
   variant?: 'bar' | 'sidebar';
 }
 
-const TABS: {
+type CrmTabDef = {
   id: CrmTab;
   label: string;
   short: string;
   icon: React.ReactNode;
-}[] = [
+};
+
+const BASE_TABS: CrmTabDef[] = [
   { id: 'hub', label: 'Pulpit', short: 'Pulpit', icon: <LayoutDashboard className="h-4 w-4" /> },
   {
     id: 'order',
@@ -49,16 +52,6 @@ const TABS: {
     short: 'Lejek',
     icon: <GitBranch className="h-4 w-4" />,
   },
-  ...(CRM_INBOX_ENABLED
-    ? [
-        {
-          id: 'inbox' as const,
-          label: 'Obsługa klienta',
-          short: 'Inbox',
-          icon: <LayoutDashboard className="h-4 w-4 hidden" />,
-        },
-      ]
-    : []),
   { id: 'clients', label: 'Klienci', short: 'Klienci', icon: <Users className="h-4 w-4" /> },
   {
     id: 'routes',
@@ -86,6 +79,13 @@ const TABS: {
   },
 ];
 
+const INBOX_TAB: CrmTabDef = {
+  id: 'inbox',
+  label: 'Obsługa klienta',
+  short: 'Inbox',
+  icon: <LayoutDashboard className="h-4 w-4 hidden" />,
+};
+
 export function CrmSubNav({
   active,
   onChange,
@@ -95,6 +95,13 @@ export function CrmSubNav({
   variant = 'bar',
 }: CrmSubNavProps) {
   const isSidebar = variant === 'sidebar';
+  const mailEnabled = useCrmMailEnabled();
+  const tabs = useMemo(() => {
+    if (!mailEnabled) return BASE_TABS;
+    const withInbox = [...BASE_TABS];
+    withInbox.splice(3, 0, INBOX_TAB);
+    return withInbox;
+  }, [mailEnabled]);
 
   return (
     <nav
@@ -107,17 +114,17 @@ export function CrmSubNav({
     >
       {!isSidebar && (
         <div className="flex gap-1 overflow-x-auto py-2 scrollbar-none">
-          {TABS.map((tab) => renderTab(tab, active, onChange, orderQty, inboxUnread, pipelineOpen, false))}
+          {tabs.map((tab) => renderTab(tab, active, onChange, orderQty, inboxUnread, pipelineOpen, false))}
         </div>
       )}
       {isSidebar &&
-        TABS.map((tab) => renderTab(tab, active, onChange, orderQty, inboxUnread, pipelineOpen, true))}
+        tabs.map((tab) => renderTab(tab, active, onChange, orderQty, inboxUnread, pipelineOpen, true))}
     </nav>
   );
 }
 
 function renderTab(
-  tab: (typeof TABS)[number],
+  tab: CrmTabDef,
   active: CrmTab,
   onChange: (tab: CrmTab) => void,
   orderQty: number,

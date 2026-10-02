@@ -57,7 +57,7 @@ export function CrmMailMessageBody({ body, bodyHtml }: CrmMailMessageBodyProps) 
     return (
       <iframe
         ref={iframeRef}
-        sandbox=""
+        sandbox="allow-popups allow-popups-to-escape-sandbox"
         title="Treść wiadomości e-mail"
         className="min-h-[480px] w-full rounded-lg border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-100"
         srcDoc={wrapEmailDocument(html)}

@@ -6,10 +6,11 @@ interface CrmTaskHeaderProps {
   title: string;
   subtitle: string;
   onBack: () => void;
+  helpId?: string;
 }
 
-export function CrmTaskHeader({ title, subtitle, onBack }: CrmTaskHeaderProps) {
-  const helpId = inferContextHelpId(`${title} ${subtitle}`);
+export function CrmTaskHeader({ title, subtitle, onBack, helpId: helpIdProp }: CrmTaskHeaderProps) {
+  const helpId = helpIdProp ?? inferContextHelpId(`${title} ${subtitle}`);
   return (
     <div className="space-y-3">
       <button

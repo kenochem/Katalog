@@ -48,28 +48,28 @@ export function ActiveClientBar({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`flex w-full items-center gap-3 rounded-2xl border px-3.5 py-3 text-left transition ${
+        className={`flex w-full items-center gap-3.5 rounded-2xl border-2 px-4 py-3.5 text-left shadow-sm transition hover:-translate-y-px hover:shadow-md ${
           activeClient
-            ? 'border-brand-500/35 bg-brand-500/10 hover:bg-brand-500/15'
-            : 'border-dashed border-slate-700 bg-slate-900/60 hover:border-slate-600'
+            ? 'border-brand-500 bg-brand-500/15 hover:bg-brand-500/20 hover:shadow-brand-900/20'
+            : 'border-dashed border-brand-500/50 bg-brand-500/5 hover:border-brand-400 hover:bg-brand-500/10'
         }`}
       >
         <span
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-            activeClient ? 'bg-brand-600/30 text-brand-200' : 'bg-slate-800 text-slate-500'
+          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition ${
+            activeClient ? 'bg-brand-600 text-white' : 'bg-brand-500/15 text-brand-400'
           }`}
         >
           {activeClient
             ? (() => {
                 const Icon = getClientIcon(activeClient.icon);
-                return <Icon className="h-5 w-5" />;
+                return <Icon className="h-6 w-6" />;
               })()
-            : <User className="h-5 w-5" />}
+            : <User className="h-6 w-6" />}
         </span>
         <div className="min-w-0 flex-1">
           {activeClient ? (
             <>
-              <p className="truncate text-sm font-semibold text-slate-50">
+              <p className="truncate text-base font-bold text-slate-50">
                 {activeClient.displayName}
               </p>
               <p className="truncate text-xs text-slate-400">
@@ -79,8 +79,8 @@ export function ActiveClientBar({
             </>
           ) : (
             <>
-              <p className="text-sm font-semibold text-slate-200">Krok 1: wybierz firmę</p>
-              <p className="text-xs text-slate-500">Dla kogo składasz to zamówienie?</p>
+              <p className="text-sm font-bold text-brand-200">Krok 1: wybierz firmę</p>
+              <p className="text-xs text-slate-400">Dla kogo składasz to zamówienie?</p>
             </>
           )}
         </div>
@@ -153,18 +153,18 @@ export function ActiveClientBar({
                         setOpen(false);
                         setQuery('');
                       }}
-                      className={`group flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-colors duration-150 hover:bg-slate-800 ${
-                        activeClient?.id === c.id ? 'bg-brand-500/10' : ''
+                      className={`group flex w-full items-start gap-3 rounded-xl border border-transparent px-3 py-2.5 text-left transition-all duration-150 hover:border-brand-500/40 hover:bg-brand-500/10 hover:pl-3.5 ${
+                        activeClient?.id === c.id ? 'border-brand-500/40 bg-brand-500/10' : ''
                       }`}
                     >
-                      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-brand-400 transition-colors group-hover:bg-brand-500/20 group-hover:text-brand-300">
+                      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-brand-400 transition-colors group-hover:bg-brand-500 group-hover:text-white">
                         {(() => {
                           const Icon = getClientIcon(c.icon);
                           return <Icon className="h-4 w-4" />;
                         })()}
                       </span>
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-slate-100">
+                        <p className="truncate text-sm font-medium text-slate-100 group-hover:text-white">
                           {c.displayName}
                         </p>
                         <p className="text-xs text-slate-500">{c.nip || 'bez NIP'}</p>

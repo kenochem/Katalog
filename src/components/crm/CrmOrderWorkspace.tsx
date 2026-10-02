@@ -19,6 +19,12 @@ import { buildQuoteHtml, openQuoteDocument } from '../../lib/quotePdf';
 import { getProductImage } from '../../lib/products';
 import { formatPricePln } from '../../lib/format';
 import { showToast } from '../../lib/toast';
+import { useAuth } from '../../lib/auth';
+import {
+  buildWaproOrderPayload,
+  getWaproOrderRequest,
+  requestWaproOrder,
+} from '../../lib/waproOrder';
 import { ActiveClientBar } from './ActiveClientBar';
 import {
   CrmOrderCartMobileBar,
@@ -55,6 +61,8 @@ export function CrmOrderWorkspace({
   onRefreshClients,
   refreshingClients,
 }: CrmOrderWorkspaceProps) {
+  const { role } = useAuth();
+  const isAdmin = role === 'admin';
   const [addClientOpen, setAddClientOpen] = useState(false);
   const [draft, setDraft] = useState<OrderDraft>(() => getOrderDraft());
   const [phase, setPhase] = useState<OrderPhase>(() =>
@@ -63,6 +71,7 @@ export function CrmOrderWorkspace({
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
+  const [sendingWapro, setSendingWapro] = useState(false);
   const [generatingQuote, setGeneratingQuote] = useState(false);
   const [generatedQuote, setGeneratedQuote] = useState<{ html: string; number: string } | null>(
     null,
@@ -351,6 +360,70 @@ export function CrmOrderWorkspace({
     }
   }
 
+  async function sendWapro() {
+    if (!isAdmin) return;
+    if (!draft.items.length) {
+      showToast('Koszyk pusty', 'warn');
+      return;
+    }
+    const built = buildWaproOrderPayload(
+      { ...draft, kind: draft.kind === 'quote' ? 'quote' : 'order' },
+      (item) => {
+        const p = productBySku.get(item.sku.toUpperCase());
+        return {
+          sku: item.sku,
+          priceSaleNet: item.unitPriceNet ?? p?.priceSaleNet ?? null,
+          priceSaleGross: item.unitPriceGross ?? p?.priceSaleGross ?? null,
+        };
+      },
+    );
+    if (!built.ok) {
+      showToast(built.error, 'warn', 5000);
+      return;
+    }
+    const payload = {
+      ...built.payload,
+      clientName: activeClient?.displayName || draft.clientName.trim() || built.payload.clientName,
+      clientNip: activeClient?.nip || undefined,
+    };
+    setSendingWapro(true);
+    try {
+      const res = await requestWaproOrder(payload);
+      if (!res.ok || !res.id) {
+        showToast(res.error || 'Nie udało się wysłać do WAPRO', 'error', 5000);
+        return;
+      }
+      showToast('Wysyłanie do WAPRO…', 'info');
+      const requestId = res.id;
+      const deadline = Date.now() + 120_000;
+      let finished = false;
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 3000));
+        const status = await getWaproOrderRequest(requestId);
+        if (!status) continue;
+        if (status.status === 'done') {
+          showToast(
+            `Zamówienie w WAPRO (ZO ${status.wapro_order_number ?? status.wapro_order_id ?? ''}) — w buforze, wymaga zatwierdzenia`,
+            'ok',
+            6000,
+          );
+          finished = true;
+          break;
+        }
+        if (status.status === 'error') {
+          showToast(`Błąd WAPRO: ${status.message || 'nieznany'}`, 'error', 6000);
+          finished = true;
+          break;
+        }
+      }
+      if (!finished) {
+        showToast('WAPRO nadal przetwarza — sprawdź za chwilę w Mag', 'warn', 5000);
+      }
+    } finally {
+      setSendingWapro(false);
+    }
+  }
+
   function clearAll() {
     clearOrderDraft();
     sync(getOrderDraft());
@@ -431,7 +504,7 @@ export function CrmOrderWorkspace({
       )}
 
       {draftQty > 0 && (
-        <div className="crm-alert-banner flex flex-wrap items-center gap-2 px-4 py-3">
+        <div className="crm-alert-banner flex flex-wrap items-center gap-2 px-4 py-3 lg:hidden">
           <p className="flex-1 text-sm font-medium">
             <span className="font-semibold">{draftQty} szt.</span> w koszyku ·{' '}
             {formatPricePln(draftTotal)} netto
@@ -482,8 +555,10 @@ export function CrmOrderWorkspace({
               onSaveHistory={() => void saveHistoryOnly()}
               onSendDiscord={() => void sendDiscord()}
               onGoToQuote={goToQuote}
+              onSendWapro={cloudEnabled && isAdmin ? () => void sendWapro() : undefined}
               saving={saving}
               sending={sending}
+              sendingWapro={sendingWapro}
               className="h-full max-h-[calc(100dvh-7rem)]"
             />
           </aside>
@@ -498,7 +573,7 @@ export function CrmOrderWorkspace({
         )}
 
         <div
-          className={`fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-[65] flex max-h-[min(68vh,30rem)] flex-col px-2 transition-transform duration-300 lg:hidden ${
+          className={`fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-[65] flex max-h-[calc(92dvh-4.25rem-env(safe-area-inset-bottom))] flex-col px-2 transition-transform duration-300 lg:hidden ${
             mobileCartOpen ? 'translate-y-0' : 'pointer-events-none translate-y-full'
           }`}
         >
@@ -514,10 +589,12 @@ export function CrmOrderWorkspace({
             onSaveHistory={() => void saveHistoryOnly()}
             onSendDiscord={() => void sendDiscord()}
             onGoToQuote={goToQuote}
+            onSendWapro={cloudEnabled && isAdmin ? () => void sendWapro() : undefined}
             saving={saving}
             sending={sending}
+            sendingWapro={sendingWapro}
             onClose={() => setMobileCartOpen(false)}
-            className="max-h-[min(72vh,32rem)] shadow-2xl"
+            className="max-h-[calc(92dvh-4.25rem-env(safe-area-inset-bottom))] shadow-2xl"
           />
         </div>
 

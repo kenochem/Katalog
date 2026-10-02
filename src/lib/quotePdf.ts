@@ -6,11 +6,20 @@ const VAT_RATE = 0.23;
 export const QUOTE_DISCOUNT_PRESETS = [5, 10, 15, 20, 25, 30, 35, 40] as const;
 
 export interface QuoteLineCalc {
+  /** Cena jednostkowa netto przed rabatem. */
   unitNet: number;
+  /** Cena jednostkowa brutto przed rabatem. */
+  unitGross: number;
   lineSubtotal: number;
   lineDiscountPct: number;
   lineDiscountAmount: number;
+  /** Cena jednostkowa netto po rabacie. */
+  unitNetAfterDiscount: number;
+  /** Cena jednostkowa brutto po rabacie. */
+  unitGrossAfterDiscount: number;
   lineNet: number;
+  /** Wartość pozycji brutto po rabacie. */
+  lineGross: number;
 }
 
 export interface QuoteLineTotals {
@@ -45,11 +54,25 @@ export function computeQuoteLine(
   catalogNet?: number | null,
 ): QuoteLineCalc {
   const unitNet = resolveQuoteUnitNet(item, catalogNet);
+  const unitGross = unitNet * (1 + VAT_RATE);
   const lineSubtotal = unitNet * item.quantity;
   const lineDiscountPct = clampPct(item.lineDiscountPct ?? 0);
   const lineDiscountAmount = lineSubtotal * (lineDiscountPct / 100);
   const lineNet = Math.max(0, lineSubtotal - lineDiscountAmount);
-  return { unitNet, lineSubtotal, lineDiscountPct, lineDiscountAmount, lineNet };
+  const lineGross = lineNet * (1 + VAT_RATE);
+  const unitNetAfterDiscount = item.quantity > 0 ? lineNet / item.quantity : lineNet;
+  const unitGrossAfterDiscount = unitNetAfterDiscount * (1 + VAT_RATE);
+  return {
+    unitNet,
+    unitGross,
+    lineSubtotal,
+    lineDiscountPct,
+    lineDiscountAmount,
+    unitNetAfterDiscount,
+    unitGrossAfterDiscount,
+    lineNet,
+    lineGross,
+  };
 }
 
 export function computeQuoteTotals(
@@ -120,12 +143,9 @@ export function buildQuoteHtml(
   quoteNumber: string,
   client?: QuoteClientInfo,
 ): string {
-  const totals = computeQuoteTotals(
-    draft.items,
-    catalogNetBySku,
-    draft.discountPct ?? 0,
-    draft.transportCost,
-  );
+  // Rabat globalny jest juz zapisany w lineDiscountPct kazdej pozycji (patrz
+  // CrmQuoteEditor.setGlobalDiscount) — nie doliczamy go tu po raz drugi.
+  const totals = computeQuoteTotals(draft.items, catalogNetBySku, 0, draft.transportCost);
   const validDays = draft.quoteValidDays ?? 14;
   const issued = new Date();
   const validUntil = new Date(issued);
@@ -140,17 +160,31 @@ export function buildQuoteHtml(
         : '';
       const discountCell =
         line.lineDiscountPct > 0
-          ? `<td class="discount"><span class="discount-pct">${line.lineDiscountPct}%</span><span class="discount-amt">−${escapeHtml(formatPricePln(line.lineDiscountAmount))}</span></td>`
+          ? `<td class="discount"><span class="discount-pct">−${line.lineDiscountPct}%</span></td>`
           : `<td class="discount discount-empty">—</td>`;
-      return `<tr>
+      const afterPriceCell =
+        line.lineDiscountPct > 0
+          ? `<td class="money">
+              <span class="price-net">${escapeHtml(formatPricePln(line.unitNetAfterDiscount))}</span>
+              <span class="price-gross">brutto ${escapeHtml(formatPricePln(line.unitGrossAfterDiscount))}</span>
+            </td>`
+          : `<td class="money discount-empty">—</td>`;
+      return `<tr class="${idx % 2 === 1 ? 'alt' : ''}">
         <td class="num">${idx + 1}</td>
         <td class="img">${img}</td>
         <td class="sku">${escapeHtml(item.sku)}</td>
         <td class="name">${escapeHtml(item.displayName)}</td>
         <td class="num">${item.quantity}</td>
-        <td class="money">${escapeHtml(formatPricePln(line.unitNet))}</td>
+        <td class="money">
+          <span class="price-net">${escapeHtml(formatPricePln(line.unitNet))}</span>
+          <span class="price-gross">brutto ${escapeHtml(formatPricePln(line.unitGross))}</span>
+        </td>
         ${discountCell}
-        <td class="money">${escapeHtml(formatPricePln(line.lineNet))}</td>
+        ${afterPriceCell}
+        <td class="money value-cell">
+          <span class="price-net">${escapeHtml(formatPricePln(line.lineNet))}</span>
+          <span class="price-gross">brutto ${escapeHtml(formatPricePln(line.lineGross))}</span>
+        </td>
       </tr>`;
     })
     .join('');
@@ -158,7 +192,7 @@ export function buildQuoteHtml(
   const discountRow =
     totals.totalDiscountAmount > 0
       ? `<tr class="summary-discount">
-          <td colspan="7" class="label">Rabat łącznie${totals.globalDiscountPct > 0 ? ` (w tym globalny ${totals.globalDiscountPct}%)` : ''}</td>
+          <td class="label">Rabat łącznie</td>
           <td class="money">−${escapeHtml(formatPricePln(totals.totalDiscountAmount))}</td>
         </tr>`
       : '';
@@ -189,7 +223,7 @@ export function buildQuoteHtml(
   const html = `<!DOCTYPE html><html lang="pl"><head><meta charset="utf-8"/>
 <title>Oferta — ${escapeHtml(draft.clientName.trim() || 'Kenochem')}</title>
 <style>
-  *{box-sizing:border-box}
+  *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}
   body{font-family:"Segoe UI",system-ui,sans-serif;margin:0;padding:32px 40px;color:#18181b;background:#fff;font-size:13px;line-height:1.45}
   .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #16a34a;padding-bottom:20px;margin-bottom:24px}
   .brand img{height:52px;width:auto;max-width:240px;object-fit:contain;display:block}
@@ -202,30 +236,39 @@ export function buildQuoteHtml(
   .party-name{font-size:16px;font-weight:600;color:#18181b}
   .party-meta{font-size:12px;color:#52525b;margin-top:4px}
   table.items{width:100%;border-collapse:collapse;margin-bottom:20px}
-  table.items th{text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#52525b;padding:10px 8px;border-bottom:2px solid #18181b;background:#fafafa}
-  table.items td{padding:10px 8px;border-bottom:1px solid #e4e4e7;vertical-align:middle}
+  table.items th{text-align:left;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#52525b;padding:10px 8px;border-bottom:2px solid #18181b;background:#fafafa}
+  table.items td{padding:9px 8px;border-bottom:1px solid #e4e4e7;vertical-align:middle}
+  table.items tr.alt{background:#fafafa}
   table.items td.num{text-align:center;width:32px;color:#71717a}
   table.items td.img{width:48px}
   table.items td.sku{font-family:Consolas,monospace;font-size:11px;color:#16a34a;white-space:nowrap}
-  table.items td.name{font-size:12px;max-width:280px}
-  table.items td.money{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:500}
-  table.items td.discount{text-align:center;white-space:nowrap;min-width:4.5rem}
-  table.items td.discount .discount-pct{display:block;font-weight:700;color:#b45309;font-size:12px}
-  table.items td.discount .discount-amt{display:block;font-size:10px;color:#78716c;margin-top:2px}
-  table.items td.discount-empty{color:#a8a29e}
-  table.totals{width:100%;max-width:320px;margin-left:auto;border-collapse:collapse}
+  table.items td.name{font-size:12px;max-width:240px}
+  table.items td.money{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  table.items td.money.value-cell .price-net{font-weight:700;color:#18181b}
+  table.items td .price-net{display:block;font-weight:500}
+  table.items td .price-gross{display:block;font-size:10px;color:#a1a1aa;margin-top:1px;font-weight:400}
+  table.items td.discount{text-align:center;white-space:nowrap;min-width:3.5rem}
+  table.items td.discount .discount-pct{display:inline-block;font-weight:700;color:#b45309;font-size:12px;background:#fef3c7;padding:2px 7px;border-radius:999px}
+  table.items td.discount-empty{color:#d4d4d8}
+  table.totals{width:100%;max-width:340px;margin-left:auto;border-collapse:collapse}
   table.totals td{padding:6px 0;font-size:13px}
   table.totals td.label{text-align:right;padding-right:16px;color:#52525b}
   table.totals td.money{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
-  table.totals tr.grand td{font-size:16px;padding-top:10px;border-top:2px solid #18181b;color:#16a34a}
+  table.totals tr.grand td{font-size:19px;padding:12px 0 12px 16px;color:#fff}
+  table.totals tr.grand td.label{color:#dcfce7}
+  table.totals tr.grand{background:#16a34a}
+  table.totals tr.grand td.money{padding-right:12px;border-radius:0 8px 8px 0}
+  table.totals tr.grand td.label{border-radius:8px 0 0 8px}
   .summary-discount td{color:#b45309}
   .notes{margin-top:28px;padding:16px 18px;background:#f4f4f5;border-radius:8px;border-left:4px solid #16a34a}
   .notes-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#52525b;margin:0 0 6px}
   .notes p{margin:0;font-size:12px;color:#3f3f46}
   .footer{margin-top:36px;padding-top:16px;border-top:1px solid #e4e4e7;font-size:11px;color:#71717a;display:flex;justify-content:space-between}
   @media print{
-    body{padding:16px 20px}
-    @page{margin:12mm}
+    /* margin:0 na @page usuwa domyslny naglowek/stopke przegladarki (adres, data) —
+       wlasny odstep od krawedzi papieru dajemy przez padding na body ponizej. */
+    body{padding:14mm 16mm}
+    @page{margin:0}
   }
 </style></head><body>
   <div class="header">
@@ -260,16 +303,17 @@ export function buildQuoteHtml(
         <th>SKU</th>
         <th>Nazwa produktu</th>
         <th style="text-align:center">Ilość</th>
-        <th style="text-align:right">Cena netto</th>
+        <th style="text-align:right">Cena przed rabatem</th>
         <th style="text-align:center">Rabat</th>
-        <th style="text-align:right">Wartość netto</th>
+        <th style="text-align:right">Cena po rabacie</th>
+        <th style="text-align:right">Wartość</th>
       </tr>
     </thead>
     <tbody>${rows}</tbody>
   </table>
   <table class="totals">
     <tr>
-      <td class="label">Suma netto</td>
+      <td class="label">Wartość przed rabatem</td>
       <td class="money">${escapeHtml(formatPricePln(totals.subtotalNet))}</td>
     </tr>
     ${discountRow}
