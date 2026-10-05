@@ -18,6 +18,7 @@ import { ROLE_MATRIX_CHANGED, hydrateRoleMatrixFromCloud } from './roleMatrixSto
 import { hydrateCrmMailFeatureFromCloud } from './crmMailFeatureStore';
 import { hydrateUserPreferences } from './userPreferences';
 import { loadUserAvatar } from './userAvatar';
+import { logAudit, setAuditActor } from './auditLog';
 
 export interface UserProfile {
   id: string;
@@ -118,6 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(next);
     setAuthError(null);
     if (!next?.user) {
+      setAuditActor(null);
       setProfile(null);
       if (readGuestFlag()) setMode('guest');
       else setMode('gate');
@@ -139,6 +141,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setProfile(p);
     setMode('signed_in');
+    setAuditActor({ id: p.id, label: p.displayName || p.email, role: p.role });
+    try {
+      const flag = `audit-login:${p.id}`;
+      if (!sessionStorage.getItem(flag)) {
+        sessionStorage.setItem(flag, '1');
+        logAudit({ action: 'auth.login', entityType: 'user', entityId: p.email, summary: 'Zalogowano' });
+      }
+    } catch {
+      /* brak sessionStorage */
+    }
     void hydrateRoleMatrixFromCloud();
     void hydrateCrmMailFeatureFromCloud();
     void hydrateUserPreferences(next.user.id);

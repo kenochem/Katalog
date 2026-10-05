@@ -1,3 +1,4 @@
+import { logAudit } from './auditLog';
 import {
   APP_ROLES,
   DEFAULT_ROLE_MATRIX,
@@ -138,6 +139,16 @@ export function setRoleMatrixCell(
   adminUserId?: string,
 ): void {
   if (role === 'guest') return;
+  const prev = matrix[role][action];
+  if (prev !== value) {
+    logAudit({
+      action: 'roles.matrix',
+      entityType: 'role',
+      entityId: role,
+      summary: `${action}: ${prev ? 'tak' : 'nie'} → ${value ? 'tak' : 'nie'}`,
+      changes: { [action]: { from: prev, to: value } },
+    });
+  }
   applyMatrix({
     ...matrix,
     [role]: { ...matrix[role], [action]: value },
@@ -146,6 +157,12 @@ export function setRoleMatrixCell(
 }
 
 export function resetRoleMatrixToDefault(adminUserId?: string): void {
+  logAudit({
+    action: 'roles.matrix',
+    entityType: 'role',
+    entityId: 'all',
+    summary: 'Przywrócono domyślne uprawnienia wszystkich ról',
+  });
   applyMatrix(cloneMatrix(DEFAULT_ROLE_MATRIX));
   if (adminUserId) scheduleRoleMatrixCloudSave(adminUserId);
 }

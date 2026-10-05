@@ -1,4 +1,6 @@
 import { supabase, isSupabaseConfigured, STORAGE_BUCKET } from './supabase';
+import { logAudit } from './auditLog';
+import { captureProductBefore, recordProductUpdate } from './productAudit';
 import { compressImageFile } from './imageCompress';
 import { getLocalProducts, saveLocalProduct, mergeProducts, hideProductId, removeLocalProduct, getHiddenProductIds } from './localStore';
 import {
@@ -375,6 +377,13 @@ export async function createProduct(
       .from('products')
       .upsert(productToRow(product));
     if (error) throw error;
+    logAudit({
+      action: 'product.create',
+      entityType: 'product',
+      entityId: product.sku,
+      entityLabel: product.displayName || product.name || '',
+      summary: `Nowy produkt (${product.catalog})`,
+    });
   } else {
     saveLocalProduct(product);
   }
@@ -387,6 +396,7 @@ export async function updateProduct(
   updates: Partial<Product>,
 ): Promise<void> {
   if (isSupabaseConfigured && supabase) {
+    const auditBefore = await captureProductBefore(productId, updates);
     const row: Record<string, unknown> = {};
     if (updates.displayName !== undefined) row.display_name = updates.displayName;
     if (updates.category !== undefined) row.category = updates.category;
@@ -439,6 +449,7 @@ export async function updateProduct(
         updates.catalog ?? (await fetchProductById(productId))?.catalog,
       );
     }
+    recordProductUpdate(productId, updates, auditBefore);
     return;
   }
 
@@ -684,6 +695,13 @@ export async function saveKit(kit: Omit<Kit, 'id'> & { id?: string }): Promise<s
 
   const { error } = await supabase.from('kits').upsert(kitToRow(full));
   if (error) throw error;
+  logAudit({
+    action: 'kit.save',
+    entityType: 'kit',
+    entityId: id,
+    entityLabel: String((full as { name?: string }).name ?? ''),
+    summary: kit.id ? 'Edycja zestawu' : 'Nowy zestaw',
+  });
   return id;
 }
 
@@ -691,6 +709,7 @@ export async function deleteKit(kitId: string): Promise<void> {
   if (!supabase) return;
   const { error } = await supabase.from('kits').delete().eq('id', kitId);
   if (error) throw error;
+  logAudit({ action: 'kit.delete', entityType: 'kit', entityId: kitId, summary: 'Zestaw usunięty' });
 }
 
 export async function uploadKitImage(kitId: string, file: File): Promise<string> {
@@ -810,8 +829,16 @@ export async function isProductSkuTaken(
 
 export async function deleteProduct(productId: string): Promise<void> {
   if (isSupabaseConfigured && supabase) {
+    const before = await captureProductBefore(productId, {});
     const { error } = await supabase.from('products').delete().eq('id', productId);
     if (error) throw error;
+    logAudit({
+      action: 'product.delete',
+      entityType: 'product',
+      entityId: String(before?.row.sku ?? productId),
+      entityLabel: String(before?.row.display_name || before?.row.name || ''),
+      summary: 'Produkt usunięty z bazy',
+    });
   }
   removeLocalProduct(productId);
   hideProductId(productId);

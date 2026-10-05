@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import {
   ArrowLeft,
   Calculator,
+  Activity,
   Database,
   FileSpreadsheet,
   Settings2,
@@ -13,9 +14,10 @@ import { roleCan } from '../lib/roles';
 import { ROLE_LABELS } from '../lib/roles';
 import { AdminUsersSection } from './AdminUsersSection';
 import { AdminPermissionsSection } from './AdminPermissionsSection';
+import { AdminAuditSection } from './AdminAuditSection';
 import { ContextHelp } from './ContextHelp';
 
-type AdminTab = 'users' | 'permissions' | 'operations';
+type AdminTab = 'users' | 'permissions' | 'operations' | 'audit';
 
 type AdminHubPanelProps = {
   onBack?: () => void;
@@ -40,6 +42,7 @@ export function AdminHubPanel({
   const showUsers = roleCan(role, 'manageUsers');
   const showMatrix = roleCan(role, 'viewRoleMatrix');
   const showOperations = product === 'ops';
+  const showAudit = roleCan(role, 'manageUsers');
   const canEditMatrix = roleCan(role, 'editRoleMatrix');
 
   return (
@@ -103,6 +106,14 @@ export function AdminHubPanel({
               label="Uprawnienia"
             />
           )}
+          {showAudit && (
+            <TabButton
+              active={tab === 'audit'}
+              onClick={() => setTab('audit')}
+              icon={<Activity className="h-4 w-4" />}
+              label="Aktywność"
+            />
+          )}
           {showOperations && (
             <TabButton
               active={tab === 'operations'}
@@ -117,6 +128,8 @@ export function AdminHubPanel({
       {tab === 'users' && showUsers && <AdminUsersSection />}
 
       {tab === 'operations' && showOperations && <OpsAdminSection />}
+
+      {tab === 'audit' && showAudit && <AdminAuditSection />}
 
       {tab === 'permissions' && showMatrix && (
         <AdminPermissionsSection canEditMatrix={canEditMatrix} />

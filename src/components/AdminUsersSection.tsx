@@ -10,6 +10,7 @@ import { summarizeRolePermissions } from '../lib/access';
 import { RoleChangePreview } from './AdminPermissionsSection';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
+import { logAudit } from '../lib/auditLog';
 
 interface AdminUserRow {
   id: string;
@@ -130,6 +131,13 @@ export function AdminUsersSection() {
         setError(res.error || 'Nie utworzono użytkownika');
         return;
       }
+      logAudit({
+        action: 'user.create',
+        entityType: 'user',
+        entityId: email.trim(),
+        entityLabel: displayName.trim(),
+        summary: `Nowe konto, rola: ${ROLE_LABELS[role]}`,
+      });
       setEmail('');
       setPassword('');
       setDisplayName('');
@@ -173,6 +181,23 @@ export function AdminUsersSection() {
           return;
         }
       }
+      const target = users.find((u) => u.id === id);
+      logAudit({
+        action: 'user.update',
+        entityType: 'user',
+        entityId: target?.email ?? id,
+        entityLabel: target?.display_name ?? '',
+        summary: Object.keys(patch).join(', '),
+        changes: {
+          ...(patch.role ? { rola: { from: target?.role, to: patch.role } } : {}),
+          ...(patch.active !== undefined
+            ? { aktywne: { from: target?.active, to: patch.active } }
+            : {}),
+          ...(patch.display_name
+            ? { nazwa: { from: target?.display_name, to: patch.display_name } }
+            : {}),
+        },
+      });
       await load();
     } finally {
       setBusy(false);
@@ -214,6 +239,12 @@ export function AdminUsersSection() {
         setError(res.error || 'Nie udało się zmienić hasła');
         return;
       }
+      logAudit({
+        action: 'user.password',
+        entityType: 'user',
+        entityId: userEmail,
+        summary: 'Admin ustawił nowe hasło',
+      });
       window.alert(`Hasło ustawione dla ${userEmail}:\n\n${pwd}\n\nPrzekaż je użytkownikowi.`);
     } finally {
       setBusy(false);
