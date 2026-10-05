@@ -12,6 +12,13 @@ export interface AppChangelogEntry {
  */
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
+    date: '2026-10-05',
+    title: 'Foldery: poprawione usuwanie produktów i folderów',
+    description:
+      'Usunięty produkt lub folder potrafił wracać po odświeżeniu (scalanie z kopią z konta). Teraz usunięcie jest trwałe, a jeśli nie dojdzie od razu do konta, dokończy się samo przy następnym wczytaniu. Dodano przycisk usuwania folderu na liście, powiadomienia po usunięciu i większy przycisk „Usuń z folderu” na telefonie.',
+    tag: 'poprawka',
+  },
+  {
     date: '2026-10-02',
     title: 'CRM: historia wygenerowanych ofert',
     description:

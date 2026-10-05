@@ -162,6 +162,32 @@ export function ProductCollectionsView({
     }
   }
 
+  async function handleDeleteFolder(id: string, name: string) {
+    try {
+      const synced = await deleteCollection(userKey, id);
+      if (activeId === id) leaveFolder();
+      refresh();
+      showToast(
+        synced
+          ? `Usunięto folder „${name}”`
+          : `Usunięto „${name}” — zsynchronizuje się z kontem po odświeżeniu`,
+        synced ? 'info' : 'warn',
+      );
+    } catch {
+      showToast('Nie udało się usunąć folderu', 'error');
+    }
+  }
+
+  async function handleRemoveProduct(collectionId: string, p: Product) {
+    try {
+      await removeProductFromCollection(userKey, collectionId, p.id);
+      refresh();
+      showToast(`Usunięto z folderu: ${p.sku || p.name}`, 'info');
+    } catch {
+      showToast('Nie udało się usunąć produktu z folderu', 'error');
+    }
+  }
+
   function leaveFolder() {
     setActiveId(null);
     setEditingMeta(false);
@@ -261,11 +287,11 @@ export function ProductCollectionsView({
       ) : !activeId ? (
         <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {collections.map((c) => (
-            <li key={c.id}>
+            <li key={c.id} className="relative">
               <button
                 type="button"
                 onClick={() => setActiveId(c.id)}
-                className="flex w-full items-center gap-3 rounded-2xl border border-slate-700 bg-slate-900 px-4 py-4 text-left transition hover:border-brand-500/50 hover:bg-slate-800/80"
+                className="flex w-full items-center gap-3 rounded-2xl pr-12 border border-slate-700 bg-slate-900 px-4 py-4 text-left transition hover:border-brand-500/50 hover:bg-slate-800/80"
               >
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-500/15 text-brand-400">
                   <FolderOpen className="h-5 w-5" />
@@ -276,6 +302,18 @@ export function ProductCollectionsView({
                     {COLLECTION_INTENT_LABELS[c.intent]} · {c.productIds.length} produktów
                   </span>
                 </span>
+              </button>
+              <button
+                type="button"
+                aria-label={`Usuń folder ${c.name}`}
+                title="Usuń folder"
+                onClick={() => {
+                  if (!confirm(`Usunąć folder „${c.name}” (${c.productIds.length} produktów)?`)) return;
+                  void handleDeleteFolder(c.id, c.name);
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-500 hover:bg-red-950/30 hover:text-red-400"
+              >
+                <Trash2 className="h-4 w-4" />
               </button>
             </li>
           ))}
@@ -330,12 +368,7 @@ export function ProductCollectionsView({
                 type="button"
                 onClick={() => {
                   if (!confirm(`Usunąć folder „${active.name}”?`)) return;
-                  void deleteCollection(userKey, active.id)
-                    .then(() => {
-                      refresh();
-                      leaveFolder();
-                    })
-                    .catch(() => showToast('Nie udało się usunąć folderu', 'error'));
+                  void handleDeleteFolder(active.id, active.name);
                 }}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/40 px-3 py-2 text-xs text-red-400 hover:bg-red-950/30"
               >
@@ -437,10 +470,9 @@ export function ProductCollectionsView({
                     <button
                       type="button"
                       title="Usuń z folderu"
-                      onClick={() => {
-                        void removeProductFromCollection(userKey, active.id, p.id).then(refresh);
-                      }}
-                      className="absolute right-2 top-2 rounded-lg bg-slate-950/90 p-1.5 text-slate-300 shadow hover:text-red-300"
+                      aria-label="Usuń z folderu"
+                      onClick={() => void handleRemoveProduct(active.id, p)}
+                      className="absolute right-2 top-2 rounded-lg bg-slate-950/90 p-2 text-slate-300 shadow hover:text-red-300"
                     >
                       <X className="h-4 w-4" />
                     </button>

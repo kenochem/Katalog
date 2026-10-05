@@ -35,6 +35,32 @@ export function isCloudCollectionsAccount(userKey: string): boolean {
   return userKey !== 'guest' && userKey.length > 8;
 }
 
+function tombstoneKey(userKey: string): string {
+  return `${STORAGE_PREFIX}-deleted:${userKey || 'guest'}`;
+}
+
+/** Id folderów usuniętych lokalnie, których usunięcie w chmurze nie zostało jeszcze potwierdzone. */
+function readTombstones(userKey: string): Set<string> {
+  try {
+    const raw = localStorage.getItem(tombstoneKey(userKey));
+    const parsed = raw ? (JSON.parse(raw) as unknown) : [];
+    return new Set(
+      Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [],
+    );
+  } catch {
+    return new Set();
+  }
+}
+
+function writeTombstones(userKey: string, ids: Set<string>): void {
+  try {
+    if (ids.size === 0) localStorage.removeItem(tombstoneKey(userKey));
+    else localStorage.setItem(tombstoneKey(userKey), JSON.stringify([...ids]));
+  } catch {
+    /* brak localStorage */
+  }
+}
+
 function readLocal(userKey: string): ProductCollection[] {
   try {
     const raw = localStorage.getItem(storageKey(userKey));
@@ -120,14 +146,11 @@ function mergeCollectionLists(
 ): ProductCollection[] {
   const byId = new Map<string, ProductCollection>();
   for (const c of cloud) byId.set(c.id, c);
+  // Wygrywa nowszy updatedAt całego folderu (chmura przy remisie). Nie łączymy list
+  // produktów — inaczej usunięty produkt wracałby z drugiej kopii.
   for (const c of local) {
     const prev = byId.get(c.id);
-    if (!prev || c.updatedAt > prev.updatedAt) {
-      byId.set(c.id, c);
-    } else if (prev) {
-      const ids = [...new Set([...prev.productIds, ...c.productIds])];
-      byId.set(c.id, { ...prev, productIds: ids, updatedAt: Math.max(prev.updatedAt, c.updatedAt) });
-    }
+    if (!prev || c.updatedAt > prev.updatedAt) byId.set(c.id, c);
   }
   return [...byId.values()].sort((a, b) => b.updatedAt - a.updatedAt);
 }
@@ -147,10 +170,28 @@ export async function hydrateCollections(userKey: string): Promise<ProductCollec
     return loadCollections(userKey);
   }
 
-  const localFirst = readLocal(userKey);
+  const tombstones = readTombstones(userKey);
+  const localFirst = readLocal(userKey).filter((c) => !tombstones.has(c.id));
 
   try {
-    const cloud = await fetchCloudCollections(userKey);
+    const cloudAll = await fetchCloudCollections(userKey);
+
+    // Dokończ usunięcia, które wcześniej nie doszły do chmury.
+    for (const id of [...tombstones]) {
+      if (!cloudAll.some((c) => c.id === id)) {
+        tombstones.delete(id);
+        continue;
+      }
+      try {
+        await deleteCloudCollection(userKey, id);
+        tombstones.delete(id);
+      } catch (err) {
+        console.warn('hydrateCollections delete', id, err);
+      }
+    }
+    writeTombstones(userKey, tombstones);
+
+    const cloud = cloudAll.filter((c) => !tombstones.has(c.id));
     const merged = mergeCollectionLists(localFirst, cloud);
     writeLocal(userKey, merged);
 
@@ -183,7 +224,12 @@ async function persistCollection(userKey: string, col: ProductCollection): Promi
   else list.unshift(col);
   writeLocal(userKey, list);
   if (isCloudCollectionsAccount(userKey)) {
-    await upsertCloudCollection(userKey, col);
+    try {
+      await upsertCloudCollection(userKey, col);
+    } catch (err) {
+      // Zmiana jest już lokalnie; następny hydrateCollections dośle ją do chmury.
+      console.warn('persistCollection', col.id, err);
+    }
   }
 }
 
@@ -222,13 +268,24 @@ export async function updateCollection(
   return next;
 }
 
-export async function deleteCollection(userKey: string, id: string): Promise<void> {
+/** Zwraca false, gdy usunięto tylko lokalnie (chmura dokończy przy następnym wczytaniu). */
+export async function deleteCollection(userKey: string, id: string): Promise<boolean> {
   writeLocal(
     userKey,
     readLocal(userKey).filter((c) => c.id !== id),
   );
-  if (isCloudCollectionsAccount(userKey)) {
+  if (!isCloudCollectionsAccount(userKey)) return true;
+  const tombstones = readTombstones(userKey);
+  tombstones.add(id);
+  writeTombstones(userKey, tombstones);
+  try {
     await deleteCloudCollection(userKey, id);
+    tombstones.delete(id);
+    writeTombstones(userKey, tombstones);
+    return true;
+  } catch (err) {
+    console.warn('deleteCollection', id, err);
+    return false;
   }
 }
 
