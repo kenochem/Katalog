@@ -16,6 +16,7 @@
 | Temat | Opis | Priorytet |
 |-------|------|-----------|
 | **Brak testów automatycznych** | Zero testów (`vitest`/`jest`). Pierwsze kandydatury: `productSearchIndex`, `catalogCategory`, `roleDefinitions`, `quotePdf` (rachunki netto/brutto), mapowania `db.ts` | 🟡 |
+| **Martwy kod trybu „hub osadzony”** | Po przebudowie Suite na launcher `embeddedInHub` w `App.tsx` jest zawsze `false`. Do usunięcia: `src/suite/SuiteHubContext.tsx`, `hubLoaders.tsx`, `HubSegmentOverlay.tsx`, `hubViewMap.ts`, `src/components/hub/HubShell*` i powiązane gałęzie w `App.tsx` | 🟢 |
 | **Brak CI** | Build i deploy ręcznie z lokalnej maszyny. Minimum: GitHub Actions z `tsc -b` + `build:catalog` na PR | 🟡 |
 | **Monolityczny `App.tsx`** | ~3000 linii, współdzielony przez Katalog/Handel/Operacje; widoki wbudowane w plik (`MissingImagesView`, `LabelsView`…). Wydzielać do `src/modules/*` i osobnych plików (zasada z `ROADMAP.md`) | 🟡 |
 | **Agent WAPRO wdrażany ręcznie** | Kopiowanie `.ps1` na serwer bez wersjonowania. Pomysł: numer wersji w logu startu + prosty skrypt `install-katalog-sync.ps1` jako jedyna ścieżka aktualizacji | 🟡 |

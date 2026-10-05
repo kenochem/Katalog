@@ -7,7 +7,7 @@
 | ID | Nazwa | Tryb buildu | Hosting | Moduły | Stan |
 |----|-------|-------------|---------|--------|------|
 | `catalog` | Katalog | `catalog` | `kenochem-katalog` | katalog | ✅ produkcja |
-| `suite` | Suite (pełny hub) | `suite` | `kenochem-f4a5b` | katalog + CRM + Ops + kalendarz | ✅ produkcja |
+| `suite` | Suite (launcher + statystyki + przewodnik) | `suite` | `kenochem-f4a5b` | launcher | ✅ produkcja |
 | `sell` | Handel | `sell` | `kenochem-sell` | katalog + CRM | ✅ produkcja |
 | `stock` | Magazyn | `stock` | `kenochem-stock` | katalog (magazyn) | ✅ produkcja |
 | `ops` | Operacje | `ops` | `kenochem-ops` | Ops | ✅ produkcja |
@@ -26,12 +26,12 @@ Architektura i sposób wyboru aplikacji: [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 | 2 | ✅ | `src/modules/*` + rejestr modułów (`moduleRegistry.ts`) |
 | 3 | 🟡 | Szkielet `apps/` + `packages/core` — jest, ale nieużywany; build nadal z korzenia |
 | 4 | ✅ | Skrypty `build:*` / `deploy:*` dla wszystkich produktów |
-| 5 | 🔄 | Suite jako pełny hub (port hub-platform) — [`HUB-PLATFORM-PORT-PLAN.md`](./HUB-PLATFORM-PORT-PLAN.md) |
+| 5 | ✅ | Suite jako zewnętrzny hub-launcher (decyzja 2026-10: bez osadzania katalogu/CRM; plan portu w [`HUB-PLATFORM-PORT-PLAN.md`](./HUB-PLATFORM-PORT-PLAN.md) jest archiwalny) |
 
 ## Zasady kodu
 
 1. Nowe ekrany modułowe → `src/modules/{moduł}/`, nie bezpośrednio do `App.tsx`.
-2. Widok modułu w Suite **i** w produkcie wąskim: `moduleEnabled('crm') && roleCan(...)`.
+2. Widok modułu w produkcie, który go zawiera: `moduleEnabled('crm') && roleCan(...)`. Suite tylko linkuje do aplikacji (kafelek w `src/suite/suiteTools.ts`).
 3. Opcjonalne moduły ładujemy `lazy()` tylko gdy `BUILD_HAS_*` (tree-shake w buildach, które ich nie mają).
 4. Teksty w `App.tsx` biorą nazwę produktu z `branding.*` — ten plik obsługuje jednocześnie Katalog, Handel i Operacje.
 5. Jedna baza Supabase: brak UI ≠ brak tabeli; RLS obowiązuje niezależnie od produktu.

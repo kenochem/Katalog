@@ -11,7 +11,7 @@ Wewnętrzna platforma Kenochem: **katalog produktów** (stany, ceny, zdjęcia, k
 | Produkt | URL | Moduły | Do czego |
 |---------|-----|--------|----------|
 | **Katalog** | [kenochem-katalog.web.app](https://kenochem-katalog.web.app) | katalog | Praca na produktach: wyszukiwanie, stany, zdjęcia, kategorie, nowości, logi syncu |
-| **Suite** | [kenochem-f4a5b.web.app](https://kenochem-f4a5b.web.app) | katalog + CRM + Ops + kalendarz | Pełny hub — wszystko w jednym |
+| **Suite** | [kenochem-f4a5b.web.app](https://kenochem-f4a5b.web.app) | — (launcher) | Centrum narzędzi: kafelki aplikacji wg roli, zbiorcze powiadomienia, stan syncu WAPRO, własne oferty, przewodnik. **Bez** katalogu/CRM w środku |
 | **Handel** | [kenochem-sell.web.app](https://kenochem-sell.web.app) | katalog + CRM | Handlowiec: koszyk, oferty PDF, klienci, lejek, mapa |
 | **Magazyn** | [kenochem-stock.web.app](https://kenochem-stock.web.app) | katalog (tryb magazyn) | Stany, etykiety, lokalizacje, układ magazynu |
 | **Operacje** | [kenochem-ops.web.app](https://kenochem-ops.web.app) | Ops | Finanse, marże, analiza sprzedaży, martwy stock |
@@ -27,7 +27,7 @@ Szczegóły: [`docs/products/URLS.md`](docs/products/URLS.md), architektura: [`d
 npm install
 cp .env.example .env        # uzupełnij VITE_SUPABASE_URL i VITE_SUPABASE_ANON_KEY
 npm run dev:catalog         # tylko katalog (http://localhost:5173)
-npm run dev                 # Suite (wszystkie moduły)
+npm run dev                 # Suite (launcher: kafelki, powiadomienia, statystyki, przewodnik)
 ```
 
 Inne tryby deweloperskie: `dev:sell`, `dev:stock`, `dev:ops`, `dev:calendar`, `dev:talk`.
@@ -53,7 +53,7 @@ src/
   main.tsx            # wejście — wybiera aplikację wg VITE_APP_PRODUCT
   App.tsx             # wspólna aplikacja: katalog / handel / operacje
   app/                # moduleRegistry (produkty, branding), dostęp, układ
-  suite/              # Suite (hub): nawigacja i loadery modułów
+  suite/              # Suite: launcher (kafelki, zbiorcze statystyki i powiadomienia z bazy)
   modules/            # kod per moduł: crm, ops, comms, stock, calendar, logistics…
   components/         # UI (katalog, CRM, Ops, magazyn, hub)
   lib/                # Supabase, auth, role, wyszukiwanie, synchronizacje, formatowanie

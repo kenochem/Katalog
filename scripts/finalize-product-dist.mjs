@@ -1,7 +1,14 @@
 /**
  * Po buildzie Vite: manifest + poprawka ikon w dist/index.html (pewne PWA nawet przy równoległych buildach).
  */
-import { copyFileSync, existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import {
+  copyFileSync,
+  existsSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { applyProductHead, manifests, outDirs } from './product-build-config.mjs';
 
@@ -29,6 +36,13 @@ if (existsSync(productIndex)) {
 if (existsSync(distIndex)) {
   const html = readFileSync(distIndex, 'utf8');
   writeFileSync(distIndex, applyProductHead(html, product));
+}
+
+// Suite to sam launcher — nie potrzebuje danych katalogu ani biblioteki (to zostaje w aplikacjach).
+if (product === 'suite') {
+  for (const dir of ['data', 'biblioteka', 'chat-wallpapers']) {
+    rmSync(join(distRoot, dir), { recursive: true, force: true });
+  }
 }
 
 console.log(`finalize-product-dist: ${product} manifest + index.html -> ${outDir}`);

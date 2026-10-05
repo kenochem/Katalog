@@ -29,7 +29,7 @@
 
 | `APP_PRODUCT` | Komponent startowy |
 |---------------|--------------------|
-| `suite` | `SuiteHubApp` (`src/suite/`) — hub z nawigacją modułów |
+| `suite` | `SuiteHubApp` (`src/suite/`) — lekki launcher; **nie importuje `App.tsx`** ani katalogu produktów |
 | `stock` | `StockProductApp` (`src/modules/stock/`) |
 | `talk` | `TalkProductApp` (`src/modules/comms/`) |
 | `calendar` | `CalendarProductApp` (`src/modules/calendar/`) |
@@ -54,7 +54,7 @@
 | sell | katalog + CRM |
 | ops | Ops |
 | calendar | kalendarz |
-| suite | katalog + CRM + Ops + kalendarz (+ czat po wyłączeniu `TALK_SUSPENDED`) |
+| suite | brak (launcher: linki do osobnych aplikacji, `suite: []` w rejestrze) |
 
 ## Podział kodu i ładowanie
 

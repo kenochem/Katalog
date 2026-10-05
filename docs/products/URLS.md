@@ -5,7 +5,7 @@
 | Produkt | Target (`firebase.json`) | Site ID | URL | Moduły | Status |
 |---------|--------------------------|---------|-----|--------|--------|
 | **Katalog** | `katalog` | `kenochem-katalog` | https://kenochem-katalog.web.app | katalog | ✅ produkcja |
-| **Suite** | `suite` | `kenochem-f4a5b` | https://kenochem-f4a5b.web.app | katalog + CRM + Ops + kalendarz | ✅ produkcja |
+| **Suite** | `suite` | `kenochem-f4a5b` | https://kenochem-f4a5b.web.app | launcher (bez modułów) | ✅ produkcja |
 | **Handel** | `sell` | `kenochem-sell` | https://kenochem-sell.web.app | katalog + CRM | ✅ produkcja |
 | **Magazyn** | `stock` | `kenochem-stock` | https://kenochem-stock.web.app | katalog (tryb magazyn) | ✅ produkcja |
 | **Operacje** | `ops` | `kenochem-ops` | https://kenochem-ops.web.app | Ops | ✅ produkcja |

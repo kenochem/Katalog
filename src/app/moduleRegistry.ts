@@ -43,9 +43,8 @@ export const APP_PRODUCT = parseAppProduct();
 const MODULES_BY_PRODUCT: Record<AppProduct, readonly HubModuleId[]> = {
   catalog: ['catalog'],
   stock: ['catalog'],
-  suite: TALK_SUSPENDED
-    ? ['catalog', 'crm', 'ops', 'calendar']
-    : ['catalog', 'crm', 'ops', 'comms', 'calendar'],
+  // Suite to launcher (src/suite): linki do osobnych aplikacji + statystyki, bez wbudowanych modulow.
+  suite: [],
   sell: TALK_SUSPENDED ? ['catalog', 'crm'] : ['catalog', 'crm', 'comms'],
   ops: ['ops'],
   talk: TALK_SUSPENDED ? [] : ['comms'],
@@ -56,21 +55,15 @@ const MODULES_BY_PRODUCT: Record<AppProduct, readonly HubModuleId[]> = {
 export const ENABLED_MODULES: readonly HubModuleId[] =
   MODULES_BY_PRODUCT[APP_PRODUCT];
 
-export const BUILD_HAS_CRM =
-  APP_PRODUCT === 'suite' || APP_PRODUCT === 'sell';
-export const BUILD_HAS_OPS = APP_PRODUCT === 'suite' || APP_PRODUCT === 'ops';
+export const BUILD_HAS_CRM = APP_PRODUCT === 'sell';
+export const BUILD_HAS_OPS = APP_PRODUCT === 'ops';
 export const BUILD_HAS_COMMS =
-  !TALK_SUSPENDED &&
-  (APP_PRODUCT === 'suite' ||
-    APP_PRODUCT === 'talk' ||
-    APP_PRODUCT === 'sell');
+  !TALK_SUSPENDED && (APP_PRODUCT === 'talk' || APP_PRODUCT === 'sell');
 export const BUILD_HAS_CATALOG =
   APP_PRODUCT === 'catalog' ||
   APP_PRODUCT === 'stock' ||
-  APP_PRODUCT === 'suite' ||
   APP_PRODUCT === 'sell';
-export const BUILD_HAS_CALENDAR =
-  APP_PRODUCT === 'suite' || APP_PRODUCT === 'calendar';
+export const BUILD_HAS_CALENDAR = APP_PRODUCT === 'calendar';
 
 export function moduleEnabled(id: HubModuleId): boolean {
   return ENABLED_MODULES.includes(id);
@@ -105,7 +98,7 @@ export const PRODUCT_BRANDING: Record<AppProduct, ProductBranding> = {
     headerTitle: 'Kenochem Suite',
     manifestName: 'Kenochem Suite',
     manifestShortName: 'Suite',
-    description: 'Katalog, CRM, operacje i czat - pelny hub Kenochem',
+    description: 'Centrum narzedzi Kenochem - launcher aplikacji, powiadomienia, statystyki i przewodnik',
   },
   sell: {
     appTitle: 'Handel - Kenochem',

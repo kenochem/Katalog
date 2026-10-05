@@ -27,9 +27,10 @@ Kod `App.tsx` i wspólne komponenty trafiają do **wielu** produktów — wdraż
 
 | Zmiana w… | Wdróż |
 |-----------|-------|
-| Katalog (widoki, wyszukiwanie, karty produktów) | `catalog`, `suite`, `sell`, `stock` (wspólny kod) — minimum `catalog` |
-| CRM (koszyk, oferty, klienci) | `sell`, `suite` (+ `catalog`, jeśli ruszasz kartę produktu) |
-| Operacje | `ops`, `suite` |
+| Katalog (widoki, wyszukiwanie, karty produktów) | `catalog`, `sell`, `stock` (wspólny kod) — minimum `catalog` |
+| CRM (koszyk, oferty, klienci) | `sell` (+ `catalog`, jeśli ruszasz kartę produktu) |
+| Operacje | `ops` |
+| Launcher, powiadomienia i statystyki Suite (`src/suite/`), przewodnik | `suite` |
 | Wspólny nagłówek/nawigacja/CSS | wszystkie |
 | Tylko dziennik aktualizacji (`appChangelog.ts`) | `catalog` |
 
