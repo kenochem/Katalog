@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-06',
+    title: 'Karta produktu: zwarty układ bez przewijania',
+    description:
+      'Panel BaseLinker przeniesiony do prawej kolumny i skompresowany (stan, cena i EAN w jednym rzędzie, przyciski synchronizacji i pomijania w jednej linii). Pola danych produktu są gęstsze: jedna sekcja „Magazyn · media · logistyka”, bez zbędnych powtórzeń (ID rekordu równego SKU, tytułu oferty identycznego z nazwą). Zdjęcie po lewej jest nieco niższe, żeby całość mieściła się na ekranie.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-06',
     title: 'Zdjęcia z wyciętym tłem zostają przezroczyste',
     description:
       'Wgrywane zdjęcia PNG/WebP z przezroczystym tłem (wycięty produkt) trafiały do katalogu z czarnym tłem, bo były zapisywane jako JPEG. Teraz zdjęcia z przezroczystością są zapisywane w formacie WebP i zachowują przezroczyste tło, więc produkt stoi bez tła na kafelku, w każdym motywie. Zdjęcia bez przezroczystości nadal trafiają jako JPEG. Zdjęcia wgrane wcześniej z czarnym tłem trzeba wgrać ponownie.',

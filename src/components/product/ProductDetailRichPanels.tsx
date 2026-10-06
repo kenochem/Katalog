@@ -51,11 +51,11 @@ export function DetailRow({
 
   return (
     <div
-      className={`flex flex-col gap-0.5 bg-slate-950/50 px-4 py-3 sm:flex-row sm:gap-3 ${sourceClass} ${
-        span ? 'sm:col-span-2' : ''
+      className={`flex flex-col gap-0 bg-slate-950/50 px-3 py-1.5 sm:flex-row sm:items-center sm:gap-2 ${sourceClass} ${
+        span ? 'sm:col-span-2 xl:col-span-2' : ''
       }`}
     >
-      <dt className="flex shrink-0 items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-slate-400 sm:w-32 dark:text-slate-500">
+      <dt className="flex shrink-0 items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-slate-400 sm:w-28 dark:text-slate-500">
         <span>{label}</span>
         {source ? <SourceBadge source={source} /> : null}
       </dt>
@@ -88,7 +88,7 @@ function SourceBadge({ source }: { source: 'wapro' | 'baselinker' }) {
 function FactSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-800 bg-white dark:bg-slate-950/30">
-      <p className="border-b border-slate-800 bg-slate-900/80 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+      <p className="border-b border-slate-800 bg-slate-900/80 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
         {title}
       </p>
       <dl className="grid gap-px bg-slate-800 text-sm sm:grid-cols-2">{children}</dl>
@@ -124,7 +124,7 @@ export function ProductDetailFacts({
   const sourceCategory = getProductSourceCategory(detail);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <FactSection title="Identyfikacja">
         <DetailRow label="SKU" value={detail.sku} mono prominent source={isWapro ? 'wapro' : undefined} />
         {!isGroup && (
@@ -136,7 +136,7 @@ export function ProductDetailFacts({
             source={isBaselinker ? 'baselinker' : isWapro ? 'wapro' : undefined}
           />
         )}
-        <DetailRow label="ID rekordu" value={detail.id} mono span />
+        {detail.id !== detail.sku ? <DetailRow label="ID rekordu" value={detail.id} mono span /> : null}
         {hasBaselinkerLink(detail) ? (
           <DetailRow
             label="BaseLinker"
@@ -180,10 +180,12 @@ export function ProductDetailFacts({
             source={isBaselinker ? 'baselinker' : isWapro ? 'wapro' : undefined}
           />
         ) : null}
-        <DetailRow label="Tytuł oferty" value={detail.displayName} span source={isBaselinker ? 'baselinker' : undefined} />
+        {detail.name !== detail.displayName ? (
+          <DetailRow label="Tytuł oferty" value={detail.displayName} span source={isBaselinker ? 'baselinker' : undefined} />
+        ) : null}
       </FactSection>
 
-      <FactSection title="Magazyn i media">
+      <FactSection title="Magazyn · media · logistyka">
         <DetailRow
           label="Stan"
           value={
@@ -197,30 +199,22 @@ export function ProductDetailFacts({
         {isGroup && variantCount > 0 ? (
           <DetailRow label="Warianty" value={`${variantCount} pozycji SKU`} source="wapro" />
         ) : null}
-        {locationCode ? <DetailRow label="Lokalizacja" value={locationCode} mono span source="wapro" /> : null}
+        {locationCode ? <DetailRow label="Lokalizacja" value={locationCode} mono source="wapro" /> : null}
         <DetailRow label="Zdjęcia" value={imageCount > 0 ? `${imageCount} plików` : 'Brak'} />
+        {meta?.weightKg != null ? (
+          <DetailRow label="Waga" value={`${meta.weightKg} kg`} source="baselinker" />
+        ) : null}
+        {formatDimensions(meta) ? (
+          <DetailRow label="Wymiary" value={formatDimensions(meta)!} mono source="baselinker" />
+        ) : null}
+        {meta?.unit ? <DetailRow label="Jednostka" value={meta.unit} source="baselinker" /> : null}
+        {meta?.vatRate != null ? (
+          <DetailRow label="VAT" value={`${meta.vatRate}%`} source="baselinker" />
+        ) : null}
         {detail.tags?.length ? (
           <DetailRow label="Tagi" value={detail.tags.join(' · ')} span />
         ) : null}
       </FactSection>
-
-      {(meta?.weightKg != null ||
-        formatDimensions(meta) ||
-        meta?.unit ||
-        meta?.vatRate != null) && (
-        <FactSection title="Logistyka (BaseLinker)">
-          {meta?.weightKg != null ? (
-            <DetailRow label="Waga" value={`${meta.weightKg} kg`} source="baselinker" />
-          ) : null}
-          {formatDimensions(meta) ? (
-            <DetailRow label="Wymiary" value={formatDimensions(meta)!} mono source="baselinker" />
-          ) : null}
-          {meta?.unit ? <DetailRow label="Jednostka" value={meta.unit} source="baselinker" /> : null}
-          {meta?.vatRate != null ? (
-            <DetailRow label="VAT" value={`${meta.vatRate}%`} source="baselinker" />
-          ) : null}
-        </FactSection>
-      )}
     </div>
   );
 }

@@ -16,7 +16,7 @@ import { mergeProductMeta } from '../../lib/productMeta';
 import { showToast } from '../../lib/toast';
 import { formatPricePln } from '../../lib/format';
 
-function Row({
+function Cell({
   label,
   ours,
   bl,
@@ -28,19 +28,21 @@ function Row({
   same: boolean | null;
 }) {
   return (
-    <div className="grid grid-cols-[1fr_auto_auto] items-center gap-3 border-t border-slate-800/70 py-1.5 text-sm first:border-t-0">
-      <span className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</span>
-      <span className="tabular-nums text-slate-300" title="Katalog (WAPRO)">
-        {ours}
-      </span>
-      <span
-        className={`min-w-[5.5rem] text-right font-semibold tabular-nums ${
-          same === null ? 'text-slate-400' : same ? 'text-emerald-400' : 'text-amber-400'
-        }`}
-        title="BaseLinker"
-      >
-        {bl}
-      </span>
+    <div className="min-w-0 rounded-lg border border-slate-800/80 bg-slate-950/40 px-2.5 py-1.5">
+      <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-0.5 flex items-baseline justify-between gap-2 text-sm tabular-nums">
+        <span className="truncate text-slate-300" title="Katalog (WAPRO)">
+          {ours}
+        </span>
+        <span
+          className={`truncate font-semibold ${
+            same === null ? 'text-slate-400' : same ? 'text-emerald-400' : 'text-amber-400'
+          }`}
+          title="BaseLinker"
+        >
+          {bl}
+        </span>
+      </p>
     </div>
   );
 }
@@ -160,13 +162,23 @@ export function BaselinkerProductPanel({ product }: { product: Product }) {
 
   return (
     <div className="space-y-2 rounded-2xl border border-slate-800 bg-slate-950/40 p-3">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[10px] font-bold uppercase tracking-wide text-sky-400">BaseLinker</p>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <p className="flex min-w-0 items-center gap-2 text-[10px] font-bold uppercase tracking-wide text-sky-400">
+          BaseLinker
+          {data?.found && (
+            <span className="inline-flex items-center gap-1 text-[11px] font-medium normal-case tracking-normal text-emerald-400" title={data.name}>
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              w BL · ID {data.id}
+              {data.isBundle ? ' · zestaw' : ''}
+            </span>
+          )}
+          {loading && !data && <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-500" />}
+        </p>
         <button
           type="button"
           onClick={() => void load(true)}
           disabled={loading}
-          className="inline-flex items-center gap-1 rounded-lg border border-slate-700 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+          className="inline-flex items-center gap-1 rounded-lg border border-slate-700 px-2 py-0.5 text-[11px] text-slate-300 hover:bg-slate-800 disabled:opacity-50"
           title="Pobierz ponownie z BaseLinkera"
         >
           <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
@@ -174,79 +186,53 @@ export function BaselinkerProductPanel({ product }: { product: Product }) {
         </button>
       </div>
 
-      {loading && !data && (
-        <p className="flex items-center gap-2 text-xs text-slate-500">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          Pobieram z BaseLinkera…
-        </p>
-      )}
-
       {error && (
-        <p className="flex items-start gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-2 text-xs text-red-300">
+        <p className="flex items-start gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-xs text-red-300">
           <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           {error}
         </p>
       )}
 
       {data && !data.found && (
-        <p className="flex items-start gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-2 text-xs text-amber-300">
-          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          Nie znaleziono SKU {product.sku} w BaseLinkerze — produkt nie jest tam wystawiony albo ma inne SKU.
-        </p>
-      )}
-      {data && !data.found && isAdmin && (
-        <button
-          type="button"
-          disabled={importing}
-          onClick={() => void importThis()}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-500 disabled:opacity-50"
-        >
-          {importing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-          Dodaj do BaseLinkera
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="flex min-w-0 flex-1 items-start gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-300">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            Brak SKU {product.sku} w BaseLinkerze — produkt nie jest tam wystawiony albo ma inne SKU.
+          </p>
+          {isAdmin && (
+            <button
+              type="button"
+              disabled={importing}
+              onClick={() => void importThis()}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+            >
+              {importing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              Dodaj do BaseLinkera
+            </button>
+          )}
+        </div>
       )}
 
       {data?.found && (
         <>
-          <p className="flex items-center gap-1.5 text-xs text-emerald-400">
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            W BaseLinkerze · ID {data.id}
-            {data.isBundle ? ' · zestaw' : ''}
-          </p>
-          <p className="truncate text-xs text-slate-400" title={data.name}>
-            {data.name}
-          </p>
-
-          <div>
-            <div className="grid grid-cols-[1fr_auto_auto] gap-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
-              <span />
-              <span>Katalog</span>
-              <span className="min-w-[5.5rem] text-right">BaseLinker</span>
-            </div>
-            <Row
-              label="Stan"
+          <div className="grid grid-cols-3 gap-2">
+            <Cell
+              label="Stan (kat. → BL)"
               ours={String(Math.max(0, Math.floor(product.stock ?? 0)))}
               bl={String(data.stock ?? 0)}
               same={stockSame}
             />
-            <Row
+            <Cell
               label="Cena brutto"
               ours={ourGross != null ? formatPricePln(ourGross) : '—'}
               bl={data.priceGross != null ? formatPricePln(data.priceGross) : '—'}
               same={priceSame}
             />
-            <Row
-              label="EAN"
-              ours={product.ean || '—'}
-              bl={data.ean || '—'}
-              same={eanSame}
-            />
+            <Cell label="EAN" ours={product.ean || '—'} bl={data.ean || '—'} same={eanSame} />
           </div>
 
-          <div className="flex flex-wrap gap-1.5 text-[11px]">
-            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-300">
-              Zdjęć: {data.imageCount ?? 0}
-            </span>
+          <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-300">Zdjęć: {data.imageCount ?? 0}</span>
             <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-300">
               Opis: {data.descriptionLength ? `${data.descriptionLength} zn.` : 'brak'}
             </span>
@@ -256,84 +242,63 @@ export function BaselinkerProductPanel({ product }: { product: Product }) {
             {data.weight != null && Number(data.weight) > 0 && (
               <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-300">{data.weight} kg</span>
             )}
+            {(stockSame === false || priceSame === false) && (
+              <span className="text-amber-400">
+                Różnice względem katalogu{!isAdmin ? ' — korektę robi administrator' : ''}
+              </span>
+            )}
           </div>
 
-          {!!data.images?.length && (
-            <div className="flex gap-1.5 overflow-x-auto">
-              {data.images.slice(0, 5).map((u) => (
-                <img key={u} src={u} alt="" className="h-12 w-12 shrink-0 rounded-lg bg-white object-contain" />
-              ))}
-            </div>
-          )}
-
-          {(stockSame === false || priceSame === false) && (
-            <p className="text-[11px] text-amber-400">
-              Wartości w BaseLinkerze różnią się od katalogu (WAPRO).
-              {!isAdmin && ' Korektę robi administrator.'}
-            </p>
-          )}
           {isAdmin && (
-            <div className="space-y-2 border-t border-slate-800/70 pt-2">
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  disabled={pushing !== null}
-                  onClick={() => void pushField('stock')}
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50 ${
-                    stockSame === false ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-700 hover:bg-slate-600'
-                  }`}
-                  title="Ustawia stan w BaseLinkerze na wartość z katalogu (WAPRO)"
-                >
-                  {pushing === 'stock' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  Synchronizuj stan ({Math.max(0, Math.floor(product.stock ?? 0))})
-                </button>
-                <button
-                  type="button"
-                  disabled={pushing !== null || ourGross == null}
-                  onClick={() => void pushField('price')}
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50 ${
-                    priceSame === false ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-700 hover:bg-slate-600'
-                  }`}
-                  title="Ustawia cenę brutto w BaseLinkerze na wartość z katalogu (WAPRO)"
-                >
-                  {pushing === 'price' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  Synchronizuj cenę ({ourGross != null ? formatPricePln(ourGross) : '—'})
-                </button>
-              </div>
-
-              <div className="space-y-1 text-xs text-slate-400">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                  Pomijaj w synchronizacji grupowej
-                </p>
-                <label className="flex cursor-pointer items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={skipStock}
-                    disabled={savingFlag}
-                    onChange={(e) => void saveSkipFlag('baselinkerSkipStock', e.target.checked)}
-                    className="h-3.5 w-3.5 accent-brand-500"
-                  />
-                  Stan (np. stan własny typu 999999)
-                </label>
-                <label className="flex cursor-pointer items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={skipPrice}
-                    disabled={savingFlag}
-                    onChange={(e) => void saveSkipFlag('baselinkerSkipPrice', e.target.checked)}
-                    className="h-3.5 w-3.5 accent-brand-500"
-                  />
-                  Cena
-                </label>
-                {data.skipStockAbove ? (
-                  <p className="text-[11px] text-slate-500">
-                    Dodatkowo stany od {data.skipStockAbove} szt. są pomijane automatycznie (ustawienie ogólne).
-                  </p>
-                ) : null}
-                <p className="text-[11px] text-slate-500">
-                  Przyciski powyżej działają zawsze, także dla produktów oznaczonych jako pomijane.
-                </p>
-              </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-slate-800/70 pt-2">
+              <button
+                type="button"
+                disabled={pushing !== null}
+                onClick={() => void pushField('stock')}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-white disabled:opacity-50 ${
+                  stockSame === false ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-700 hover:bg-slate-600'
+                }`}
+                title="Ustawia stan w BaseLinkerze na wartość z katalogu (WAPRO)"
+              >
+                {pushing === 'stock' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Synchronizuj stan
+              </button>
+              <button
+                type="button"
+                disabled={pushing !== null || ourGross == null}
+                onClick={() => void pushField('price')}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-white disabled:opacity-50 ${
+                  priceSame === false ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-700 hover:bg-slate-600'
+                }`}
+                title="Ustawia cenę brutto w BaseLinkerze na wartość z katalogu (WAPRO)"
+              >
+                {pushing === 'price' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Synchronizuj cenę
+              </button>
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Pomijaj w grupowej:</span>
+              <label
+                className="flex cursor-pointer items-center gap-1.5 text-xs text-slate-400"
+                title="Np. stan własny typu 999999. Przyciski obok działają zawsze."
+              >
+                <input
+                  type="checkbox"
+                  checked={skipStock}
+                  disabled={savingFlag}
+                  onChange={(e) => void saveSkipFlag('baselinkerSkipStock', e.target.checked)}
+                  className="h-3.5 w-3.5 accent-brand-500"
+                />
+                stan
+              </label>
+              <label className="flex cursor-pointer items-center gap-1.5 text-xs text-slate-400">
+                <input
+                  type="checkbox"
+                  checked={skipPrice}
+                  disabled={savingFlag}
+                  onChange={(e) => void saveSkipFlag('baselinkerSkipPrice', e.target.checked)}
+                  className="h-3.5 w-3.5 accent-brand-500"
+                />
+                cenę
+              </label>
             </div>
           )}
         </>

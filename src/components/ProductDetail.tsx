@@ -821,7 +821,7 @@ export function ProductDetail({
         <div
           className={`relative bg-slate-800 ${
             hubStyle
-              ? `aspect-[4/3] max-h-[min(38dvh,13.5rem)] overflow-hidden rounded-2xl border bg-white sm:max-h-[min(46dvh,24rem)] lg:max-h-[min(48dvh,28rem)] dark:bg-slate-800 ${
+              ? `aspect-[4/3] max-h-[min(38dvh,13.5rem)] overflow-hidden rounded-2xl border bg-white sm:max-h-[min(46dvh,24rem)] lg:max-h-[min(40dvh,22rem)] dark:bg-slate-800 ${
                   imageDragOver
                     ? 'border-brand-500 ring-2 ring-brand-500/40'
                     : 'border-slate-700 dark:border-slate-800'
@@ -985,9 +985,6 @@ export function ProductDetail({
         {hubStyle && showPrices && !editing && detailTab === 'info' && (
           <ProductDetailPriceGrid detail={detail} compact />
         )}
-        {hubStyle && showPrices && !editing && detailTab === 'info' && detail.sku && (
-          <BaselinkerProductPanel product={detail} />
-        )}
         {hubStyle && !editing && detailTab === 'info' && (
           <ProductDetailCatalogQuickActions
             detail={detail}
@@ -1004,9 +1001,9 @@ export function ProductDetail({
         )}
         </div>
 
-        <div className={hubStyle ? 'min-w-0 space-y-4 pb-1 sm:pb-0' : 'space-y-4 p-4'}>
+        <div className={hubStyle ? 'min-w-0 space-y-3 pb-1 sm:pb-0' : 'space-y-4 p-4'}>
           {hubStyle && roleCan(role, 'editStock') && detailTab === 'info' && !editing && (
-            <div className="flex items-center justify-center gap-4 rounded-2xl border border-slate-800 bg-slate-950/60 py-3">
+            <div className="flex items-center justify-center gap-4 rounded-2xl border border-slate-800 bg-slate-950/60 py-2">
               <button
                 type="button"
                 disabled={stockSaving}
@@ -1048,6 +1045,10 @@ export function ProductDetail({
                 }
               />
             )}
+
+          {hubStyle && showPrices && !editing && detailTab === 'info' && detail.sku && (
+            <BaselinkerProductPanel product={detail} />
+          )}
 
           {hubStyle && !editing && detailTab === 'info' && (
             <ProductDetailDataPanel
