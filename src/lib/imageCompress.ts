@@ -11,19 +11,69 @@
  * dekodowania pikseli), a potem prosimy przegladarke o zdekodowanie OD RAZU w
  * docelowym, mniejszym rozmiarze (createImageBitmap z resizeWidth/resizeHeight) -
  * pelnorozdzielczy bitmap nigdy nie trafia do pamieci.
+ *
+ * PRZEZROCZYSTOSC: zdjecia z wycietym tlem (PNG/WebP z kanalem alfa) maja zostac
+ * przezroczyste - produkt stoi bez tla na kafelku. Zapis do JPEG (brak alfa) robil z
+ * przezroczystosci czern, wiec dla plikow, ktore faktycznie maja przezroczyste piksele,
+ * eksportujemy WebP (z alfa; PNG jako zapas). Reszta nadal idzie jako JPEG.
  */
-
-/**
- * Canvas bez kanału alfa startuje CZARNY, a JPEG nie ma przezroczystości — bez wypełnienia
- * zdjęcia z wyciętym tłem (PNG/WebP z alfą) lądowały z czarnym tłem. Wypełniamy na biało.
- */
-function paintWhiteBackground(ctx: CanvasRenderingContext2D, w: number, h: number): void {
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, w, h);
-}
 
 function mayHaveAlpha(file: Blob): boolean {
   return /image\/(png|webp|gif|avif)/i.test(file.type);
+}
+
+/** Czy bitmapa ma jakikolwiek (pol)przezroczysty piksel — sprawdzane na malej miniaturze. */
+function bitmapHasAlpha(bitmap: ImageBitmap): boolean {
+  try {
+    const side = 160;
+    const scale = Math.min(1, side / Math.max(bitmap.width, bitmap.height));
+    const w = Math.max(1, Math.round(bitmap.width * scale));
+    const h = Math.max(1, Math.round(bitmap.height * scale));
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return false;
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    const data = ctx.getImageData(0, 0, w, h).data;
+    for (let i = 3; i < data.length; i += 4) {
+      if (data[i] < 250) return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/** Rysuje bitmape i koduje: z alfa -> WebP/PNG (przezroczystosc zachowana), bez alfa -> JPEG. */
+async function encodeBitmap(
+  bitmap: ImageBitmap,
+  w: number,
+  h: number,
+  maybeAlpha: boolean,
+  quality: number,
+): Promise<Blob | null> {
+  const withAlpha = maybeAlpha && bitmapHasAlpha(bitmap);
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d', { alpha: withAlpha });
+  if (!ctx) return null;
+  if (!withAlpha) {
+    // Canvas bez alfa startuje czarny; zdjecie bez przezroczystosci i tak go w pelni zamalowuje,
+    // biale tlo to tylko zabezpieczenie przed czernia.
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+  }
+  ctx.drawImage(bitmap, 0, 0, w, h);
+  const toBlob = (type: string, q?: number) =>
+    new Promise<Blob | null>((resolve) => canvas.toBlob((b) => resolve(b), type, q));
+  if (withAlpha) {
+    const webp = await toBlob('image/webp', 0.92);
+    if (webp && webp.type === 'image/webp' && webp.size > 0) return webp;
+    return toBlob('image/png');
+  }
+  return toBlob('image/jpeg', quality);
 }
 
 function readImageDimensions(file: Blob): Promise<{ width: number; height: number } | null> {
@@ -69,16 +119,7 @@ async function compressViaResizedBitmap(
     return null;
   }
   try {
-    const canvas = document.createElement('canvas');
-    canvas.width = bitmap.width;
-    canvas.height = bitmap.height;
-    const ctx = canvas.getContext('2d', { alpha: false });
-    if (!ctx) return null;
-    paintWhiteBackground(ctx, canvas.width, canvas.height);
-    ctx.drawImage(bitmap, 0, 0);
-    return await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob((b) => resolve(b), 'image/jpeg', quality);
-    });
+    return await encodeBitmap(bitmap, bitmap.width, bitmap.height, mayHaveAlpha(file), quality);
   } finally {
     bitmap.close();
   }
@@ -99,16 +140,7 @@ async function compressViaFullDecode(
     const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
     const w = Math.max(1, Math.round(bitmap.width * scale));
     const h = Math.max(1, Math.round(bitmap.height * scale));
-    const canvas = document.createElement('canvas');
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext('2d', { alpha: false });
-    if (!ctx) return null;
-    paintWhiteBackground(ctx, w, h);
-    ctx.drawImage(bitmap, 0, 0, w, h);
-    return await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob((b) => resolve(b), 'image/jpeg', quality);
-    });
+    return await encodeBitmap(bitmap, w, h, mayHaveAlpha(file), quality);
   } finally {
     bitmap.close();
   }
@@ -122,17 +154,15 @@ export async function compressImageFile(
   // Sciezka 1 (preferowana, oszczedna dla pamieci): tanio poznaj wymiary, potem
   // poproś przegladarke o dekodowanie od razu w mniejszym rozmiarze.
   const resized = await compressViaResizedBitmap(file, maxSide, quality).catch(() => null);
-  // Pliki z potencjalną przezroczystością zawsze spłaszczamy na białe tło (nawet gdy JPEG jest
-  // większy od PNG) — inaczej oryginał z alfą wyglądałby na ciemnych motywach jak czarny.
-  const flatten = mayHaveAlpha(file);
-  if (resized && resized.size > 0 && (flatten || resized.size < file.size)) return resized;
+  if (resized && resized.size > 0 && resized.size < file.size) return resized;
 
   // Sciezka 2 (fallback dla starszych przegladarek bez resize przy dekodowaniu):
   // pelne dekodowanie + reczne skalowanie na canvasie - wieksze zuzycie pamieci,
   // ale nadal lepsze niz wyslanie surowego oryginalu.
   const fullDecode = await compressViaFullDecode(file, maxSide, quality).catch(() => null);
-  if (fullDecode && fullDecode.size > 0 && (flatten || fullDecode.size < file.size)) return fullDecode;
+  if (fullDecode && fullDecode.size > 0 && fullDecode.size < file.size) return fullDecode;
 
   // Ostatnia deska ratunku: wyslij oryginal zamiast wywalac cala operacje.
+  // (Oryginalny PNG/WebP z alfa tez zachowuje przezroczystosc.)
   return file;
 }

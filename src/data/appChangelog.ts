@@ -13,9 +13,9 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-06',
-    title: 'Zdjęcia z wyciętym tłem: koniec z czarnym tłem',
+    title: 'Zdjęcia z wyciętym tłem zostają przezroczyste',
     description:
-      'Wgrywane zdjęcia PNG/WebP z przezroczystym tłem (wycięty produkt) trafiały do katalogu z czarnym tłem. Teraz przezroczystość jest wypełniana na biało przy wgrywaniu, więc produkt z wyciętym tłem wygląda poprawnie w każdym motywie. Zdjęcia wgrane wcześniej z czarnym tłem trzeba wgrać ponownie.',
+      'Wgrywane zdjęcia PNG/WebP z przezroczystym tłem (wycięty produkt) trafiały do katalogu z czarnym tłem, bo były zapisywane jako JPEG. Teraz zdjęcia z przezroczystością są zapisywane w formacie WebP i zachowują przezroczyste tło, więc produkt stoi bez tła na kafelku, w każdym motywie. Zdjęcia bez przezroczystości nadal trafiają jako JPEG. Zdjęcia wgrane wcześniej z czarnym tłem trzeba wgrać ponownie.',
     tag: 'poprawka',
   },
   {

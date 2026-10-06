@@ -462,6 +462,13 @@ export async function updateProduct(
   }
 }
 
+/** Rozszerzenie pliku po kompresji: WebP/PNG zachowują przezroczystość, reszta to JPEG. */
+function extForBlobType(type: string): string {
+  if (type === 'image/webp') return 'webp';
+  if (type === 'image/png') return 'png';
+  return 'jpg';
+}
+
 function withCacheBust(url: string): string {
   const joiner = url.includes('?') ? '&' : '?';
   return `${url}${joiner}v=${Date.now()}`;
@@ -478,13 +485,13 @@ async function uploadProductImageFile(
   const originalExt = (file.name.split('.').pop() || 'jpg').toLowerCase();
   const compressed = await compressImageFile(file);
   const wasCompressed = compressed !== (file as Blob);
-  const ext = wasCompressed ? 'jpg' : originalExt;
+  const ext = wasCompressed ? extForBlobType(compressed.type) : originalExt;
   const path = suffix
     ? `products/${productId}-${suffix}.${ext}`
     : `products/${productId}.${ext}`;
 
   const contentType = wasCompressed
-    ? 'image/jpeg'
+    ? compressed.type || 'image/jpeg'
     : file.type ||
       (ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg');
 
@@ -718,12 +725,12 @@ export async function uploadKitImage(kitId: string, file: File): Promise<string>
   const originalExt = file.name.split('.').pop() || 'jpg';
   const compressed = await compressImageFile(file);
   const wasCompressed = compressed !== (file as Blob);
-  const ext = wasCompressed ? 'jpg' : originalExt;
+  const ext = wasCompressed ? extForBlobType(compressed.type) : originalExt;
   const path = `kits/${kitId}.${ext}`;
 
   const { error } = await supabase.storage
     .from(STORAGE_BUCKET)
-    .upload(path, compressed, { upsert: true, contentType: wasCompressed ? 'image/jpeg' : file.type });
+    .upload(path, compressed, { upsert: true, contentType: wasCompressed ? compressed.type || 'image/jpeg' : file.type });
   if (error) throw error;
 
   const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
