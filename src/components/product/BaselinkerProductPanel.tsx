@@ -9,6 +9,8 @@ import {
   type BaselinkerProduct,
 } from '../../lib/baselinkerApi';
 import { useAuth } from '../../lib/auth';
+import { updateProduct } from '../../lib/products';
+import { mergeProductMeta } from '../../lib/productMeta';
 import { showToast } from '../../lib/toast';
 import { formatPricePln } from '../../lib/format';
 
@@ -47,6 +49,29 @@ export function BaselinkerProductPanel({ product }: { product: Product }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pushing, setPushing] = useState<BaselinkerField | null>(null);
+  const [skipStock, setSkipStock] = useState(Boolean(product.meta?.baselinkerSkipStock));
+  const [skipPrice, setSkipPrice] = useState(Boolean(product.meta?.baselinkerSkipPrice));
+  const [savingFlag, setSavingFlag] = useState(false);
+
+  useEffect(() => {
+    setSkipStock(Boolean(product.meta?.baselinkerSkipStock));
+    setSkipPrice(Boolean(product.meta?.baselinkerSkipPrice));
+  }, [product.id, product.meta?.baselinkerSkipStock, product.meta?.baselinkerSkipPrice]);
+
+  async function saveSkipFlag(key: 'baselinkerSkipStock' | 'baselinkerSkipPrice', value: boolean) {
+    const setter = key === 'baselinkerSkipStock' ? setSkipStock : setSkipPrice;
+    setter(value);
+    setSavingFlag(true);
+    try {
+      await updateProduct(product.id, { meta: mergeProductMeta(product.meta, { [key]: value }) });
+      showToast(value ? 'Produkt będzie pomijany w synchronizacji grupowej' : 'Produkt wraca do synchronizacji grupowej', 'ok');
+    } catch (err) {
+      setter(!value);
+      showToast(err instanceof Error ? err.message : 'Nie udało się zapisać', 'error', 6000);
+    } finally {
+      setSavingFlag(false);
+    }
+  }
   const { role } = useAuth();
   const isAdmin = role === 'admin';
 
@@ -200,30 +225,68 @@ export function BaselinkerProductPanel({ product }: { product: Product }) {
               {!isAdmin && ' Korektę robi administrator.'}
             </p>
           )}
-          {isAdmin && (stockSame === false || priceSame === false) && (
-            <div className="flex flex-wrap gap-2">
-              {stockSame === false && (
+          {isAdmin && (
+            <div className="space-y-2 border-t border-slate-800/70 pt-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   disabled={pushing !== null}
                   onClick={() => void pushField('stock')}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50 ${
+                    stockSame === false ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-700 hover:bg-slate-600'
+                  }`}
+                  title="Ustawia stan w BaseLinkerze na wartość z katalogu (WAPRO)"
                 >
                   {pushing === 'stock' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  Ustaw stan w BL = {Math.max(0, Math.floor(product.stock ?? 0))}
+                  Synchronizuj stan ({Math.max(0, Math.floor(product.stock ?? 0))})
                 </button>
-              )}
-              {priceSame === false && (
                 <button
                   type="button"
-                  disabled={pushing !== null}
+                  disabled={pushing !== null || ourGross == null}
                   onClick={() => void pushField('price')}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50 ${
+                    priceSame === false ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-700 hover:bg-slate-600'
+                  }`}
+                  title="Ustawia cenę brutto w BaseLinkerze na wartość z katalogu (WAPRO)"
                 >
                   {pushing === 'price' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  Ustaw cenę w BL = {ourGross != null ? formatPricePln(ourGross) : '—'}
+                  Synchronizuj cenę ({ourGross != null ? formatPricePln(ourGross) : '—'})
                 </button>
-              )}
+              </div>
+
+              <div className="space-y-1 text-xs text-slate-400">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                  Pomijaj w synchronizacji grupowej
+                </p>
+                <label className="flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={skipStock}
+                    disabled={savingFlag}
+                    onChange={(e) => void saveSkipFlag('baselinkerSkipStock', e.target.checked)}
+                    className="h-3.5 w-3.5 accent-brand-500"
+                  />
+                  Stan (np. stan własny typu 999999)
+                </label>
+                <label className="flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={skipPrice}
+                    disabled={savingFlag}
+                    onChange={(e) => void saveSkipFlag('baselinkerSkipPrice', e.target.checked)}
+                    className="h-3.5 w-3.5 accent-brand-500"
+                  />
+                  Cena
+                </label>
+                {data.skipStockAbove ? (
+                  <p className="text-[11px] text-slate-500">
+                    Dodatkowo stany od {data.skipStockAbove} szt. są pomijane automatycznie (ustawienie ogólne).
+                  </p>
+                ) : null}
+                <p className="text-[11px] text-slate-500">
+                  Przyciski powyżej działają zawsze, także dla produktów oznaczonych jako pomijane.
+                </p>
+              </div>
             </div>
           )}
         </>

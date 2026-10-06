@@ -12,6 +12,13 @@ export interface AppChangelogEntry {
  */
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
+    date: '2026-10-07',
+    title: 'BaseLinker: synchronizacja pojedynczego produktu i pomijanie stanów własnych',
+    description:
+      'Na karcie produktu administrator ma stałe przyciski „Synchronizuj stan” i „Synchronizuj cenę” (do małych korekt bez porównywania całego katalogu) oraz pola wyboru „Pomijaj w synchronizacji grupowej” dla stanu i ceny — np. dla towarów ze stanem własnym typu 999999. Dodatkowo w ustawieniach BaseLinker można ustawić próg: stany równe lub większe są pomijane automatycznie.',
+    tag: 'nowość',
+  },
+  {
     date: '2026-10-06',
     title: 'BaseLinker: panel zarządzania synchronizacją',
     description:

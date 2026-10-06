@@ -46,6 +46,8 @@ interface SyncSettings {
   excludePrefixes: string[];
   excludeSkus: string[];
   priceTolerance: number;
+  /** Stan >= tej wartosci uznajemy za "wlasny" (np. 999999) i pomijamy w synchronizacji grupowej; 0 = wylaczone. */
+  skipStockAbove: number;
 }
 
 const DEFAULT_SETTINGS: SyncSettings = {
@@ -57,6 +59,7 @@ const DEFAULT_SETTINGS: SyncSettings = {
   excludePrefixes: [],
   excludeSkus: [],
   priceTolerance: 0.01,
+  skipStockAbove: 99999,
 };
 
 async function bl(method: string, parameters: Record<string, unknown>) {
@@ -149,6 +152,10 @@ async function loadSettings(admin: Admin): Promise<SyncSettings> {
   return merged;
 }
 
+function skipStockFor(o: { stock: number; skipStock: boolean }, s: SyncSettings): boolean {
+  return o.skipStock || (s.skipStockAbove > 0 && o.stock >= s.skipStockAbove);
+}
+
 function isExcluded(sku: string, s: SyncSettings): boolean {
   const u = sku.toUpperCase();
   return s.excludeSkus.includes(u) || s.excludePrefixes.some((p) => u.startsWith(p));
@@ -159,6 +166,8 @@ interface OurProduct {
   name: string;
   stock: number;
   stockManual: boolean;
+  skipStock: boolean;
+  skipPrice: boolean;
   priceGross: number | null;
 }
 
@@ -175,7 +184,7 @@ function ourGrossPrice(r: Record<string, unknown>): number | null {
 }
 
 const OUR_COLUMNS =
-  'sku,stock,display_name,name,stock_manual,price_sale_net,price_sale_gross,vat:product_meta->>vatRate';
+  'sku,stock,display_name,name,stock_manual,price_sale_net,price_sale_gross,vat:product_meta->>vatRate,skip_stock:product_meta->>baselinkerSkipStock,skip_price:product_meta->>baselinkerSkipPrice';
 
 function mapOur(r: Record<string, unknown>): OurProduct {
   return {
@@ -183,6 +192,8 @@ function mapOur(r: Record<string, unknown>): OurProduct {
     name: String(r.display_name || r.name || ''),
     stock: Number(r.stock ?? 0),
     stockManual: r.stock_manual === true,
+    skipStock: r.skip_stock === 'true',
+    skipPrice: r.skip_price === 'true',
     priceGross: ourGrossPrice(r),
   };
 }
@@ -290,6 +301,7 @@ Deno.serve(async (req) => {
         taxRate: p.tax_rate ?? null,
         weight: p.weight ?? null,
         categoryId: p.category_id ?? null,
+        skipStockAbove: settings.skipStockAbove,
         images,
         imageCount: Object.keys(imagesMap).length,
         descriptionLength: description.replace(/<[^>]*>/g, '').trim().length,
@@ -336,6 +348,7 @@ Deno.serve(async (req) => {
         excludePrefixes: (incoming.excludePrefixes ?? []).map((s) => String(s).toUpperCase().trim()).filter(Boolean),
         excludeSkus: (incoming.excludeSkus ?? []).map((s) => String(s).toUpperCase().trim()).filter(Boolean),
         priceTolerance: Math.max(0, Number(incoming.priceTolerance) || 0.01),
+        skipStockAbove: Math.max(0, Math.round(Number(incoming.skipStockAbove) || 0)),
       };
       const { data: row } = await admin.from('app_settings').select('data').eq('id', 'default').maybeSingle();
       const data = { ...((row?.data as Record<string, unknown>) ?? {}), baselinkerSync: clean };
@@ -385,6 +398,8 @@ Deno.serve(async (req) => {
       const links: Record<string, unknown>[] = [];
       let matched = 0;
       let excluded = 0;
+      let skippedStock = 0;
+      let skippedPrice = 0;
 
       for (const o of ours) {
         if (!o.sku || seen.has(o.sku)) continue;
@@ -413,12 +428,15 @@ Deno.serve(async (req) => {
         }
         const want = Math.max(0, Math.floor(o.stock));
         if (blStock !== want) {
-          stockDiffs.push({ sku: o.sku, name: o.name, ours: want, bl: blStock, blId: b.id, manual: o.stockManual });
+          if (skipStockFor(o, settings)) skippedStock++;
+          else stockDiffs.push({ sku: o.sku, name: o.name, ours: want, bl: blStock, blId: b.id, manual: o.stockManual });
         }
-        if (o.priceGross != null && blPrice != null && Math.abs(o.priceGross - blPrice) > settings.priceTolerance) {
-          priceDiffs.push({ sku: o.sku, name: o.name, ours: o.priceGross, bl: blPrice, blId: b.id });
-        } else if (o.priceGross != null && blPrice == null) {
-          priceDiffs.push({ sku: o.sku, name: o.name, ours: o.priceGross, bl: null, blId: b.id });
+        const priceDiffers =
+          o.priceGross != null &&
+          (blPrice == null || Math.abs(o.priceGross - blPrice) > settings.priceTolerance);
+        if (priceDiffers) {
+          if (o.skipPrice) skippedPrice++;
+          else priceDiffs.push({ sku: o.sku, name: o.name, ours: o.priceGross, bl: blPrice, blId: b.id });
         }
       }
 
@@ -438,6 +456,8 @@ Deno.serve(async (req) => {
           bl: blProducts.length,
           matched,
           excluded,
+          skippedStock,
+          skippedPrice,
           stockDiffs: stockDiffs.length,
           priceDiffs: priceDiffs.length,
           missingInBl: missingInBl.length,
@@ -535,13 +555,13 @@ Deno.serve(async (req) => {
             continue;
           }
           if (field === 'stock') {
-            if (isSystem && settings.skipManualStock && o.stockManual) {
+            if (isSystem && ((settings.skipManualStock && o.stockManual) || skipStockFor(o, settings))) {
               skipped++;
               continue;
             }
             payload.push([String(blId), Math.max(0, Math.floor(o.stock)), sku]);
           } else {
-            if (o.priceGross == null) {
+            if (o.priceGross == null || (isSystem && o.skipPrice)) {
               skipped++;
               continue;
             }

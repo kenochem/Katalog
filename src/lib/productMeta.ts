@@ -37,6 +37,10 @@ export interface ProductMeta {
   waproImportedAt?: string;
   /** Nie sumuj w analizie sprzedaży Ops (np. rozpis składników / kwiatek na FV). */
   salesExcludeFromSum?: boolean;
+  /** Nie wysyłaj stanu tego produktu do BaseLinkera w synchronizacji grupowej (np. stan własny 999999). */
+  baselinkerSkipStock?: boolean;
+  /** Nie wysyłaj ceny tego produktu do BaseLinkera w synchronizacji grupowej. */
+  baselinkerSkipPrice?: boolean;
   /** Produkt celowo wycofany z widoku katalogu, ale zostaje w bazie i syncu. */
   catalogHidden?: boolean;
   /** Krótki powód ukrycia, np. stara marka, produkt przestarzały. */
@@ -62,6 +66,8 @@ export const PRODUCT_META_LABELS: Record<
     | 'waproSkeleton'
     | 'waproImportedAt'
     | 'salesExcludeFromSum'
+    | 'baselinkerSkipStock'
+    | 'baselinkerSkipPrice'
     | 'catalogHidden'
     | 'catalogHiddenAt'
   >,
@@ -148,6 +154,8 @@ export function normalizeProductMeta(raw: unknown): ProductMeta | undefined {
   if (typeof o.waproSkeleton === 'boolean') meta.waproSkeleton = o.waproSkeleton;
   if (typeof o.baselinkerDescriptionFull === 'boolean') meta.baselinkerDescriptionFull = o.baselinkerDescriptionFull;
   if (typeof o.salesExcludeFromSum === 'boolean') meta.salesExcludeFromSum = o.salesExcludeFromSum;
+  if (typeof o.baselinkerSkipStock === 'boolean') meta.baselinkerSkipStock = o.baselinkerSkipStock;
+  if (typeof o.baselinkerSkipPrice === 'boolean') meta.baselinkerSkipPrice = o.baselinkerSkipPrice;
   if (typeof o.catalogHidden === 'boolean') meta.catalogHidden = o.catalogHidden;
 
   return Object.keys(meta).length > 0 ? meta : undefined;

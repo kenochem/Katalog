@@ -19,6 +19,7 @@ export interface BaselinkerProduct {
   imageCount?: number;
   descriptionLength?: number;
   isBundle?: boolean;
+  skipStockAbove?: number;
 }
 
 export type BaselinkerField = 'stock' | 'price';
@@ -32,6 +33,7 @@ export interface BaselinkerSettings {
   excludePrefixes: string[];
   excludeSkus: string[];
   priceTolerance: number;
+  skipStockAbove: number;
 }
 
 export interface BaselinkerDiffRow {
@@ -51,6 +53,8 @@ export interface BaselinkerCompare {
     bl: number;
     matched: number;
     excluded: number;
+    skippedStock: number;
+    skippedPrice: number;
     stockDiffs: number;
     priceDiffs: number;
     missingInBl: number;

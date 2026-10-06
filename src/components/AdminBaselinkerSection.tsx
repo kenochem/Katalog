@@ -358,6 +358,22 @@ export function AdminBaselinkerSection() {
             </label>
             <label className="block">
               <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Pomijaj stany od wartości (stan „własny", np. 999999)
+              </span>
+              <input
+                type="number"
+                min={0}
+                value={draft.skipStockAbove}
+                onChange={(e) => setDraft({ ...draft, skipStockAbove: Number(e.target.value) })}
+                className="input-field text-sm"
+              />
+              <span className="mt-1 block text-xs text-slate-500">
+                Produkty ze stanem w katalogu równym lub większym są pomijane w porównaniu i w automacie (0 = wyłączone).
+                Pojedyncze produkty możesz też oznaczyć na ich karcie.
+              </span>
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Tolerancja różnicy ceny (zł)
               </span>
               <input
@@ -457,7 +473,7 @@ export function AdminBaselinkerSection() {
                     ['Różne stany', result.totals.stockDiffs],
                     ['Różne ceny', result.totals.priceDiffs],
                     ['Brak w BL', result.totals.missingInBl],
-                    ['Wyłączone', result.totals.excluded],
+                    ['Pominięte (stan/cena)', result.totals.excluded + result.totals.skippedStock + result.totals.skippedPrice],
                   ] as [string, number][]
                 ).map(([label, value]) => (
                   <div key={label} className="rounded-xl border border-slate-800 bg-slate-950/50 px-3 py-2">
