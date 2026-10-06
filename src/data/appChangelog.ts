@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-06',
+    title: 'Nowe produkty: kolejność i dokładna data z godziną',
+    description:
+      'Lista Nowych produktów jest teraz posortowana od najnowszych i podzielona na dni (Dzisiaj, Wczoraj, kolejne daty), a przy każdym produkcie widać dokładny moment dopisania: „Dopisano 29.09.2026, 08:30”. Dodano też wyjaśnienie, że data oznacza chwilę wykrycia nowego indeksu w Mag przez sync WAPRO, a nie datę założenia artykułu w WAPRO.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-06',
     title: 'Bez zdjęć: nowe filtry jak w głównym katalogu',
     description:
       'Widok „Bez zdjęć” ma teraz ten sam pasek filtrów co katalog: rozwijane listy Kategoria (pogrupowana jak w sklepie) i Producent z licznikami, filtr stanu, sortowanie, rozmiar kafelków oraz aktywne filtry z możliwością szybkiego usunięcia i przyciskiem „Wyczyść”. Filtry są lokalne dla tego widoku (nie mieszają się z katalogiem), a link „Najwięcej braków wg marki” od razu filtruje po marce.',

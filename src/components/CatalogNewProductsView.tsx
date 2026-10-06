@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Sparkles, Loader2, RefreshCw, Calendar } from 'lucide-react';
+import { Sparkles, Loader2, RefreshCw, Calendar, Clock } from 'lucide-react';
 import type { Product } from '../types';
 import { getRecentlyImportedProducts, windowCutoffIso } from '../lib/newProducts';
 import { ProductGrid } from './ProductGrid';
@@ -46,6 +46,46 @@ function formatRelativeDate(iso: string | undefined): string {
   return new Date(iso).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
 }
 
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+/** Lokalny klucz dnia (RRRR-MM-DD) — do grupowania „dodano w dniu…”. */
+function localDayKey(iso: string | undefined): string {
+  if (!iso) return 'brak-daty';
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return 'brak-daty';
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function dayHeading(key: string): string {
+  if (key === 'brak-daty') return 'Bez daty';
+  const today = localDayKey(new Date().toISOString());
+  const yesterday = localDayKey(new Date(Date.now() - 86_400_000).toISOString());
+  const d = new Date(`${key}T12:00:00`);
+  const long = d.toLocaleDateString('pl-PL', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  if (key === today) return `Dzisiaj · ${long}`;
+  if (key === yesterday) return `Wczoraj · ${long}`;
+  return long.charAt(0).toUpperCase() + long.slice(1);
+}
+
+/** „29.09.2026, 08:30” — dokładny moment dopisania przez sync. */
+function formatAddedAt(iso: string | undefined): string {
+  if (!iso) return 'brak daty';
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return 'brak daty';
+  return d.toLocaleString('pl-PL', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 interface CatalogNewProductsViewProps {
   gridDensity?: GridDensity;
   hideImages?: boolean;
@@ -88,10 +128,28 @@ export function CatalogNewProductsView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [range.from, range.to]);
 
-  const newestDate = useMemo(
-    () => formatRelativeDate(products?.[0]?.meta?.waproImportedAt),
+  // Najnowsze na górze; grupy według dnia dopisania do katalogu.
+  const sorted = useMemo(
+    () =>
+      [...(products ?? [])].sort((a, b) =>
+        String(b.meta?.waproImportedAt ?? '').localeCompare(String(a.meta?.waproImportedAt ?? '')),
+      ),
     [products],
   );
+
+  const groups = useMemo(() => {
+    const map = new Map<string, Product[]>();
+    for (const p of sorted) {
+      const key = localDayKey(p.meta?.waproImportedAt);
+      const list = map.get(key);
+      if (list) list.push(p);
+      else map.set(key, [p]);
+    }
+    return [...map.entries()];
+  }, [sorted]);
+
+  const newestAt = sorted[0]?.meta?.waproImportedAt;
+  const newestDate = useMemo(() => formatRelativeDate(newestAt), [newestAt]);
 
   const rangeLabel = useMemo(() => {
     const found = PRESETS.find((p) => p.id === preset);
@@ -157,7 +215,13 @@ export function CatalogNewProductsView({
               <>
                 <strong>{products.length}</strong> produktów dopisanych automatycznie przez sync
                 WAPRO — {rangeLabel} (nowe indeksy z Mag).
-                {newestDate && <> Najnowszy: {newestDate}.</>}
+                {newestAt && (
+                  <>
+                    {' '}
+                    Najnowszy: {formatAddedAt(newestAt)}
+                    {newestDate ? ` (${newestDate})` : ''}.
+                  </>
+                )}
               </>
             )}
           </p>
@@ -173,6 +237,16 @@ export function CatalogNewProductsView({
         </button>
       </div>
 
+      <p className="flex items-start gap-1.5 text-xs text-slate-500">
+        <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+        <span>
+          Data przy produkcie to <strong className="font-medium text-slate-400">moment, w którym sync WAPRO
+          wykrył nowy indeks w Mag i dopisał go do katalogu</strong> — nie data założenia artykułu w WAPRO.
+          Sync działa co kilka minut, więc różnica zwykle jest niewielka; dla starszych pozycji
+          (zaimportowanych hurtowo) data może odpowiadać dniowi importu.
+        </span>
+      </p>
+
       {loading && products === null ? (
         <div className="flex items-center justify-center py-16 text-slate-500">
           <Loader2 className="h-6 w-6 animate-spin" />
@@ -187,27 +261,49 @@ export function CatalogNewProductsView({
           </p>
         </div>
       ) : (
-        <ProductGrid
-          products={products ?? []}
-          className={GRID_CLASS[gridDensity]}
-          resetKey={`${gridDensity}|${range.from}|${range.to ?? ''}`}
-          renderItem={(product) => (
-            <CatalogGridCard
-              product={product}
-              editMode={false}
-              isFavorite={false}
-              onProductClick={onProductClick}
-              stockBusy={false}
-              density={gridDensity}
-              orderQty={0}
-              hideImages={hideImages}
-              showPrices={showPrices}
-              showCatalogKind
-              collectionUserKey={collectionUserKey}
-              onCollectionsChange={onCollectionsChange}
-            />
-          )}
-        />
+        <div className="space-y-6">
+          {groups.map(([dayKey, list]) => (
+            <section key={dayKey}>
+              <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-200">
+                <Calendar className="h-4 w-4 text-brand-400" />
+                {dayHeading(dayKey)}
+                <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[11px] font-medium text-slate-400">
+                  {list.length}
+                </span>
+              </h3>
+              <ProductGrid
+                products={list}
+                className={GRID_CLASS[gridDensity]}
+                resetKey={`${gridDensity}|${range.from}|${range.to ?? ''}|${dayKey}`}
+                renderItem={(product) => (
+                  <div>
+                    <CatalogGridCard
+                      product={product}
+                      editMode={false}
+                      isFavorite={false}
+                      onProductClick={onProductClick}
+                      stockBusy={false}
+                      density={gridDensity}
+                      orderQty={0}
+                      hideImages={hideImages}
+                      showPrices={showPrices}
+                      showCatalogKind
+                      collectionUserKey={collectionUserKey}
+                      onCollectionsChange={onCollectionsChange}
+                    />
+                    <p
+                      className="mt-1 flex items-center gap-1 px-1 text-[11px] tabular-nums text-slate-500"
+                      title="Moment dopisania do katalogu przez sync WAPRO"
+                    >
+                      <Clock className="h-3 w-3 shrink-0" />
+                      Dopisano {formatAddedAt(product.meta?.waproImportedAt)}
+                    </p>
+                  </div>
+                )}
+              />
+            </section>
+          ))}
+        </div>
       )}
     </div>
   );
