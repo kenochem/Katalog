@@ -17,7 +17,20 @@ export interface AuditChange {
   to?: unknown;
 }
 
+export interface AuditDevice {
+  browser?: string;
+  os?: string;
+  type?: string;
+  screen?: string;
+  lang?: string;
+  tz?: string;
+  pwa?: boolean;
+  ua?: string;
+}
+
 export interface AuditEntry {
+  ip?: string;
+  device?: AuditDevice;
   id: string;
   createdAt: string;
   userId: string;
@@ -55,6 +68,56 @@ export function setAuditActor(next: AuditActor | null): void {
   actor = next;
 }
 
+/** Dane urządzenia z przeglądarki (IP ustala serwer — patrz audit_log_write). */
+export function collectDeviceInfo(): AuditDevice {
+  const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+  const browser = /Edg\//.test(ua)
+    ? 'Edge'
+    : /OPR\//.test(ua)
+      ? 'Opera'
+      : /Firefox\//.test(ua)
+        ? 'Firefox'
+        : /Chrome\//.test(ua)
+          ? 'Chrome'
+          : /Safari\//.test(ua)
+            ? 'Safari'
+            : 'inna';
+  const os = /Windows NT/.test(ua)
+    ? 'Windows'
+    : /Android/.test(ua)
+      ? 'Android'
+      : /iPhone|iPad|iPod/.test(ua)
+        ? 'iOS'
+        : /Mac OS X/.test(ua)
+          ? 'macOS'
+          : /Linux/.test(ua)
+            ? 'Linux'
+            : 'inny';
+  const type = /Mobi|Android|iPhone|iPod/.test(ua) ? 'telefon' : /iPad|Tablet/.test(ua) ? 'tablet' : 'komputer';
+  let pwa = false;
+  try {
+    pwa = window.matchMedia('(display-mode: standalone)').matches;
+  } catch {
+    /* ignore */
+  }
+  let tz = '';
+  try {
+    tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    /* ignore */
+  }
+  return {
+    browser,
+    os,
+    type,
+    screen: typeof screen !== 'undefined' ? `${screen.width}x${screen.height}` : undefined,
+    lang: typeof navigator !== 'undefined' ? navigator.language : undefined,
+    tz,
+    pwa,
+    ua: ua.slice(0, 300),
+  };
+}
+
 export function hasAuditActor(): boolean {
   return actor != null;
 }
@@ -79,17 +142,16 @@ function clip(value: unknown): unknown {
 
 export function logAudit(input: AuditInput): void {
   if (!isSupabaseConfigured || !supabase || !actor) return;
+  // Zapis przez funkcję SQL: user_id/nazwa/rola z sesji, IP z nagłówków żądania (serwer).
   const row = {
-    user_id: actor.id,
-    user_label: actor.label,
-    user_role: actor.role,
-    app: APP_PRODUCT,
-    action: input.action,
-    entity_type: input.entityType ?? '',
-    entity_id: input.entityId ?? '',
-    entity_label: input.entityLabel ?? '',
-    summary: input.summary ?? '',
-    changes: input.changes
+    p_app: APP_PRODUCT,
+    p_action: input.action,
+    p_entity_type: input.entityType ?? '',
+    p_entity_id: input.entityId ?? '',
+    p_entity_label: input.entityLabel ?? '',
+    p_summary: input.summary ?? '',
+    p_device: input.action === 'auth.login' ? collectDeviceInfo() : null,
+    p_changes: input.changes
       ? Object.fromEntries(
           Object.entries(input.changes).map(([k, v]) => [
             k,
@@ -98,10 +160,7 @@ export function logAudit(input: AuditInput): void {
         )
       : null,
   };
-  void supabase
-    .from('audit_log')
-    .insert(row)
-    .then(({ error }) => {
+  void supabase.rpc('audit_log_write', row).then(({ error }) => {
       if (error) console.warn('audit_log', error.message);
     });
 }
@@ -134,6 +193,8 @@ function mapRow(r: Record<string, unknown>): AuditEntry {
     entityId: String(r.entity_id ?? ''),
     entityLabel: String(r.entity_label ?? ''),
     summary: String(r.summary ?? ''),
+    ip: r.ip ? String(r.ip) : undefined,
+    device: r.device && typeof r.device === 'object' ? (r.device as AuditDevice) : undefined,
     changes:
       r.changes && typeof r.changes === 'object'
         ? (r.changes as Record<string, AuditChange>)

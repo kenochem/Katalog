@@ -36,6 +36,12 @@ function fmtValue(v: unknown): string {
   return String(v);
 }
 
+function deviceLabel(e: AuditEntry): string {
+  const d = e.device;
+  if (!d) return '';
+  return [d.browser, d.os, d.type, d.pwa ? 'PWA' : ''].filter(Boolean).join(' · ');
+}
+
 function fmtWhen(iso: string): string {
   return new Date(iso).toLocaleString('pl-PL', {
     day: '2-digit',
@@ -128,7 +134,7 @@ export function AdminAuditSection() {
   function exportCsv() {
     downloadCsv(
       stampFile('dziennik_aktywnosci'),
-      ['Data', 'Użytkownik', 'Rola', 'Aplikacja', 'Akcja', 'Obiekt', 'Nazwa', 'Zmiany'],
+      ['Data', 'Użytkownik', 'Rola', 'Aplikacja', 'Akcja', 'Obiekt', 'Nazwa', 'IP', 'Urządzenie', 'Zmiany'],
       entries.map((e) => [
         fmtWhen(e.createdAt),
         e.userLabel,
@@ -137,6 +143,8 @@ export function AdminAuditSection() {
         AUDIT_ACTION_LABELS[e.action] ?? e.action,
         e.entityId,
         e.entityLabel,
+        e.ip ?? '',
+        deviceLabel(e),
         e.changes
           ? Object.entries(e.changes)
               .map(([k, v]) => `${k}: ${fmtValue(v.from)} → ${fmtValue(v.to)}`)
@@ -259,6 +267,11 @@ export function AdminAuditSection() {
                   {e.entityLabel && <span className="text-slate-400"> · {e.entityLabel}</span>}
                   {!e.entityId && e.summary}
                 </span>
+                {e.action === 'auth.login' && (e.ip || e.device) && (
+                  <span className="shrink-0 text-xs text-slate-500">
+                    {[e.ip, deviceLabel(e)].filter(Boolean).join(' · ')}
+                  </span>
+                )}
                 {changeCount > 0 && (
                   <span className="shrink-0 text-xs text-slate-500">{e.summary}</span>
                 )}
@@ -269,6 +282,26 @@ export function AdminAuditSection() {
                     {e.userLabel} ({e.userRole || 'brak roli'}) · aplikacja: {e.app || '—'} ·{' '}
                     {e.summary}
                   </p>
+                  {(e.ip || e.device) && (
+                    <p className="break-all text-slate-300">
+                      <span className="font-medium text-slate-100">IP:</span> {e.ip ?? '—'}
+                      {e.device && (
+                        <>
+                          {' · '}
+                          <span className="font-medium text-slate-100">Urządzenie:</span>{' '}
+                          {deviceLabel(e)}
+                          {e.device.screen ? ` · ekran ${e.device.screen}` : ''}
+                          {e.device.tz ? ` · ${e.device.tz}` : ''}
+                          {e.device.lang ? ` · ${e.device.lang}` : ''}
+                          {e.device.ua && (
+                            <span className="mt-0.5 block text-[11px] text-slate-500">
+                              {e.device.ua}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </p>
+                  )}
                   {e.changes &&
                     Object.entries(e.changes).map(([field, v]) => (
                       <p key={field} className="break-all text-slate-300">

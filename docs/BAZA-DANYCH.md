@@ -39,7 +39,7 @@ Ważne pola `product_meta` (JSONB): `baselinkerProductId`, `shopCategoryPath` / 
 `ops_customers` (kontrahenci z WAPRO). Dane kosztowe Ops są ładowane m.in. z pliku `public/data/finance-koszty.json` (generowanego przez `npm run export:finance`), a analiza sprzedaży z `products.wapro_sales_stats`.
 
 ### Konta, role, ustawienia
-`profiles` (rola, nazwa wyświetlana, avatar, `active`), `app_role_matrix` (nadpisania macierzy uprawnień), `app_settings` (flagi globalne edytowane przez admina, np. `crmMailEnabled`), `audit_log` (dziennik aktywności: kto, co i kiedy zmienił — zapis przez każdego zalogowanego jako on sam, **odczyt tylko admin**, wpisy niezmienne; `migration-audit-log.sql`).
+`profiles` (rola, nazwa wyświetlana, avatar, `active`), `app_role_matrix` (nadpisania macierzy uprawnień), `app_settings` (flagi globalne edytowane przez admina, np. `crmMailEnabled`), `audit_log` (dziennik aktywności: kto, co i kiedy zmienił — zapis przez każdego zalogowanego jako on sam, **odczyt tylko admin**, wpisy niezmienne; zapis wyłącznie przez funkcję `audit_log_write()`, która zapisuje też **IP** (z nagłówków żądania) i dla logowań **dane urządzenia**; `migration-audit-log.sql` + `migration-audit-log-ip-device.sql`).
 
 ### Czat (Talk — chwilowo wyłączony)
 `chat_threads`, `chat_thread_members`, `chat_messages`, `chat_message_reactions`, `chat_message_reads`, `chat_message_thanks`, `chat_push_subscriptions`, `chat_push_logs`.
@@ -52,7 +52,7 @@ Ważne pola `product_meta` (JSONB): `baselinkerProductId`, `shopCategoryPath` / 
 4. CRM: `migration-crm-clients-orders.sql`, `migration-crm-client-*.sql`, `migration-crm-lead-owner.sql`, `migration-crm-notes.sql`, `migration-crm-personal-stores.sql`, `migration-crm-quote-number.sql`, `migration-crm-mailbox.sql`
 5. Ops: `migration-ops-customers.sql`
 6. Biblioteka: `migration-technical-library.sql`, `migration-catalog-brand-overrides.sql`
-7. Ustawienia: `migration-app-settings.sql`, `migration-audit-log.sql`
+7. Ustawienia: `migration-app-settings.sql`, `migration-audit-log.sql`, `migration-audit-log-ip-device.sql`
 8. Czat (jeśli włączany): `migration-chat*.sql`
 
 Jednorazowe czyszczenie: `cleanup-wapro-x-skeleton-products.sql` (usuwa szkielety pozycji archiwalnych „X…").
