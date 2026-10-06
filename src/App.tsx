@@ -1338,13 +1338,14 @@ export default function App() {
     }
   }, [selectedProduct]);
 
-  const openMissingImages = useCallback((categoryFilter = 'Wszystkie') => {
-    setMissingCategory(categoryFilter);
+  // Funkcja bywa podpinana wprost jako onClick — wtedy dostaje obiekt zdarzenia zamiast nazwy kategorii.
+  const openMissingImages = useCallback((categoryFilter: unknown = 'Wszystkie') => {
+    setMissingCategory(typeof categoryFilter === 'string' && categoryFilter ? categoryFilter : 'Wszystkie');
     setView('missing-images');
   }, []);
 
-  const openKnowledgeGaps = useCallback((categoryFilter = 'Wszystkie') => {
-    setCategory(categoryFilter);
+  const openKnowledgeGaps = useCallback((categoryFilter: unknown = 'Wszystkie') => {
+    setCategory(typeof categoryFilter === 'string' && categoryFilter ? categoryFilter : 'Wszystkie');
     setKnowledgeFilter('weak');
     setView('catalog');
     setSelectedProduct(null);
@@ -2911,7 +2912,7 @@ function MissingImagesView({
   canUpload?: boolean;
 }) {
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState(initialCategory);
+  const [category, setCategory] = useState(typeof initialCategory === 'string' ? initialCategory : 'Wszystkie');
   // Filtry tego widoku są lokalne — nie mieszają się z filtrami głównego katalogu.
   const [manufacturer, setManufacturer] = useState('Wszyscy');
   const [stockFilter, setStockFilter] = useState<StockFilter>('all');
@@ -2921,7 +2922,7 @@ function MissingImagesView({
   const [quickMode, setQuickMode] = useState(false);
 
   useEffect(() => {
-    setCategory(initialCategory);
+    setCategory(typeof initialCategory === 'string' && initialCategory ? initialCategory : 'Wszystkie');
   }, [initialCategory]);
 
   // Liczniki uwzględniają pozostałe filtry (kategoria nie zawęża liczników kategorii, producent —
