@@ -5,6 +5,7 @@ import {
   fetchBaselinkerProduct,
   invalidateBaselinkerProduct,
   pushToBaselinker,
+  importToBaselinker,
   type BaselinkerField,
   type BaselinkerProduct,
 } from '../../lib/baselinkerApi';
@@ -74,6 +75,36 @@ export function BaselinkerProductPanel({ product }: { product: Product }) {
   }
   const { role } = useAuth();
   const isAdmin = role === 'admin';
+
+  const [importing, setImporting] = useState(false);
+
+  async function importThis() {
+    if (
+      !confirm(
+        `Dodać produkt ${product.sku} do głównego katalogu BaseLinkera?\n\nZostaną przesłane: nazwa, opis, ceny (sprzedaż brutto i zakup netto), stan, EAN, waga, wymiary, zdjęcia, kategoria i producent (jeśli istnieją w BL).`,
+      )
+    )
+      return;
+    setImporting(true);
+    try {
+      const [r] = await importToBaselinker([product.sku]);
+      if (r.status === 'created') {
+        showToast(
+          r.warnings?.length ? `Dodano do BaseLinkera. Ostrzeżenia: ${r.warnings.join('; ')}` : 'Dodano do BaseLinkera',
+          r.warnings?.length ? 'warn' : 'ok',
+          9000,
+        );
+        invalidateBaselinkerProduct(product.sku);
+        await load(true);
+      } else {
+        showToast(r.message || 'Import zablokowany', r.status === 'blocked' ? 'warn' : 'error', 8000);
+      }
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Błąd importu', 'error', 6000);
+    } finally {
+      setImporting(false);
+    }
+  }
 
   async function pushField(field: BaselinkerField) {
     setPushing(field);
@@ -157,6 +188,17 @@ export function BaselinkerProductPanel({ product }: { product: Product }) {
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           Nie znaleziono SKU {product.sku} w BaseLinkerze — produkt nie jest tam wystawiony albo ma inne SKU.
         </p>
+      )}
+      {data && !data.found && isAdmin && (
+        <button
+          type="button"
+          disabled={importing}
+          onClick={() => void importThis()}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+        >
+          {importing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+          Dodaj do BaseLinkera
+        </button>
       )}
 
       {data?.found && (

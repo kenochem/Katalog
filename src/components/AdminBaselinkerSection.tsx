@@ -10,11 +10,16 @@ import {
   XCircle,
   History,
   GitCompare,
+  PackagePlus,
 } from 'lucide-react';
 import {
   compareBaselinker,
   fetchBaselinkerConfig,
   fetchBaselinkerHistory,
+  fetchImportCandidates,
+  importToBaselinker,
+  type ImportCandidates,
+  type ImportResultRow,
   pushToBaselinker,
   saveBaselinkerSettings,
   type BaselinkerCompare,
@@ -28,7 +33,7 @@ import { downloadCsv, stampFile } from '../lib/exportReport';
 import { formatPricePln } from '../lib/format';
 import { showToast } from '../lib/toast';
 
-type Section = 'settings' | 'compare' | 'history';
+type Section = 'settings' | 'compare' | 'import' | 'history';
 type CompareTab = 'stock' | 'price' | 'missing' | 'onlyBl';
 
 function asList(v: unknown): Record<string, unknown>[] {
@@ -45,6 +50,7 @@ const STATUS_STYLE: Record<string, string> = {
 const FIELD_LABEL: Record<string, string> = {
   stock: 'Stany',
   price: 'Ceny',
+  import: 'Import produktów',
   'stock+price': 'Stany + ceny',
 };
 
@@ -95,6 +101,15 @@ export function AdminBaselinkerSection() {
   const [pushResult, setPushResult] = useState<BaselinkerPushResult | null>(null);
   const [filter, setFilter] = useState('');
 
+  const [cands, setCands] = useState<ImportCandidates | null>(null);
+  const [candsLoading, setCandsLoading] = useState(false);
+  const [candSel, setCandSel] = useState<Set<string>>(new Set());
+  const [onlyComplete, setOnlyComplete] = useState(false);
+  const [candFilter, setCandFilter] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [importResults, setImportResults] = useState<ImportResultRow[]>([]);
+  const [importProgress, setImportProgress] = useState('');
+
   const [history, setHistory] = useState<BaselinkerLogRow[] | null>(null);
   const [historyError, setHistoryError] = useState<string | null>(null);
 
@@ -123,6 +138,65 @@ export function AdminBaselinkerSection() {
   useEffect(() => {
     if (section === 'history') void loadHistory();
   }, [section]);
+
+  async function loadCandidates() {
+    setCandsLoading(true);
+    try {
+      const r = await fetchImportCandidates();
+      setCands(r);
+      setCandSel(new Set());
+      setImportResults([]);
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Błąd', 'error', 6000);
+    } finally {
+      setCandsLoading(false);
+    }
+  }
+
+  const candRows = useMemo(() => {
+    const q = candFilter.trim().toLowerCase();
+    return (cands?.rows ?? []).filter(
+      (r) =>
+        (!onlyComplete || (!r.warnings.length && !r.blockers.length)) &&
+        (!q || r.sku.toLowerCase().includes(q) || r.name.toLowerCase().includes(q)),
+    );
+  }, [cands, onlyComplete, candFilter]);
+
+  async function runImport() {
+    const skus = [...candSel];
+    if (!skus.length) return;
+    const withWarn = (cands?.rows ?? []).filter((r) => candSel.has(r.sku) && r.warnings.length).length;
+    if (
+      !confirm(
+        `Dodać do głównego katalogu BaseLinkera ${skus.length} produktów?` +
+          (withWarn ? `\n\n${withWarn} z nich ma ostrzeżenia (braki) — zostaną dodane z tym, co jest.` : '') +
+          `\n\nProdukty, których SKU już istnieje w BaseLinkerze, zostaną pominięte.`,
+      )
+    )
+      return;
+    setImporting(true);
+    setImportResults([]);
+    const all: ImportResultRow[] = [];
+    try {
+      for (let i = 0; i < skus.length; i += 25) {
+        setImportProgress(`Wysyłam ${Math.min(i + 25, skus.length)} / ${skus.length}…`);
+        const part = await importToBaselinker(skus.slice(i, i + 25));
+        all.push(...part);
+        setImportResults([...all]);
+      }
+      const created = all.filter((r) => r.status === 'created').length;
+      showToast(`Utworzono w BaseLinkerze: ${created} z ${skus.length}`, created ? 'ok' : 'warn', 6000);
+      const doneSkus = new Set(all.filter((r) => r.status === 'created').map((r) => r.sku));
+      setCands((c) => (c ? { ...c, rows: c.rows.filter((r) => !doneSkus.has(r.sku)), total: c.total - doneSkus.size } : c));
+      setCandSel((prev) => new Set([...prev].filter((s) => !doneSkus.has(s))));
+    } catch (e) {
+      setImportResults([...all]);
+      showToast(e instanceof Error ? e.message : 'Błąd importu', 'error', 8000);
+    } finally {
+      setImporting(false);
+      setImportProgress('');
+    }
+  }
 
   async function saveSettings() {
     if (!draft) return;
@@ -288,6 +362,7 @@ export function AdminBaselinkerSection() {
       <div className="flex flex-wrap gap-1 border-b border-slate-800 pb-2">
         {sectionBtn('settings', 'Ustawienia synchronizacji', <Settings2 className="h-4 w-4" />)}
         {sectionBtn('compare', 'Porównanie i korekta', <GitCompare className="h-4 w-4" />)}
+        {sectionBtn('import', 'Import do BaseLinkera', <PackagePlus className="h-4 w-4" />)}
         {sectionBtn('history', 'Historia wysyłek', <History className="h-4 w-4" />)}
       </div>
 
@@ -658,6 +733,169 @@ export function AdminBaselinkerSection() {
                     </tbody>
                   </table>
                 </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ---------------- IMPORT ---------------- */}
+      {section === 'import' && (
+        <div className="space-y-3">
+          <p className="text-xs text-slate-500">
+            Produkty z katalogu, których SKU nie ma jeszcze w głównym katalogu BaseLinkera. Przesyłane są: nazwa, opis,
+            cena sprzedaży brutto, cena zakupu netto (średnia), stan, EAN, waga, wymiary, VAT, tagi, lokalizacja, zdjęcia
+            (do 16), kategoria i producent. Gdy SKU już istnieje w BaseLinkerze — import jest blokowany. Braki
+            (zdjęcie, EAN, waga, opis, kategoria lub producent niedostępne w BL) są ostrzeżeniami, nie blokadą.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void loadCandidates()}
+              disabled={candsLoading || !config?.configured.token}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-500 disabled:opacity-50"
+            >
+              {candsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              Wczytaj produkty do importu
+            </button>
+            {cands && (
+              <span className="text-xs text-slate-500">
+                Do importu: {cands.total} · kompletnych: {cands.complete} · kategorii w BL: {cands.categoriesKnown} ·
+                producentów w BL: {cands.manufacturersKnown}
+              </span>
+            )}
+          </div>
+
+          {cands && (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  value={candFilter}
+                  onChange={(e) => setCandFilter(e.target.value)}
+                  placeholder="Filtr SKU / nazwa…"
+                  className="input-field max-w-xs text-sm"
+                />
+                <label className="flex cursor-pointer items-center gap-1.5 text-sm text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={onlyComplete}
+                    onChange={(e) => setOnlyComplete(e.target.checked)}
+                    className="h-4 w-4 accent-brand-500"
+                  />
+                  Tylko kompletne (bez ostrzeżeń)
+                </label>
+                <span className="text-xs text-slate-500">Zaznaczono {candSel.size}</span>
+                <button
+                  type="button"
+                  onClick={() => void runImport()}
+                  disabled={importing || !candSel.size}
+                  className="ml-auto inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                >
+                  {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  {importing ? importProgress || 'Wysyłam…' : 'Dodaj zaznaczone do BaseLinkera'}
+                </button>
+              </div>
+
+              {!!importResults.length && (
+                <ul className="max-h-48 space-y-1 overflow-auto rounded-xl border border-slate-800 bg-slate-950/40 p-2 text-xs">
+                  {importResults.map((r) => (
+                    <li
+                      key={r.sku}
+                      className={
+                        r.status === 'created'
+                          ? 'text-emerald-300'
+                          : r.status === 'blocked'
+                            ? 'text-amber-300'
+                            : 'text-red-300'
+                      }
+                    >
+                      <span className="font-mono">{r.sku}</span> —{' '}
+                      {r.status === 'created'
+                        ? `utworzono (ID ${r.blId})${r.warnings?.length ? ` · ostrzeżenia: ${r.warnings.join('; ')}` : ''}`
+                        : r.message}
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <div className="max-h-[28rem] overflow-auto rounded-xl border border-slate-800">
+                <table className="min-w-full text-sm">
+                  <thead className="sticky top-0 bg-slate-900 text-left text-[11px] uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-3 py-2">
+                        <input
+                          type="checkbox"
+                          checked={candRows.length > 0 && candRows.every((r) => candSel.has(r.sku))}
+                          onChange={(e) =>
+                            setCandSel((prev) => {
+                              const next = new Set(prev);
+                              for (const r of candRows) {
+                                if (r.blockers.length) continue;
+                                if (e.target.checked) next.add(r.sku);
+                                else next.delete(r.sku);
+                              }
+                              return next;
+                            })
+                          }
+                          className="h-4 w-4 accent-brand-500"
+                        />
+                      </th>
+                      <th className="px-3 py-2">SKU</th>
+                      <th className="px-3 py-2">Nazwa</th>
+                      <th className="px-3 py-2 text-right">Stan</th>
+                      <th className="px-3 py-2 text-right">Cena brutto</th>
+                      <th className="px-3 py-2 text-right">Zdjęcia</th>
+                      <th className="px-3 py-2">Ostrzeżenia</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {candRows.slice(0, 500).map((r) => (
+                      <tr key={r.sku} className="border-t border-slate-800/70 align-top">
+                        <td className="px-3 py-1.5">
+                          <input
+                            type="checkbox"
+                            disabled={r.blockers.length > 0}
+                            checked={candSel.has(r.sku)}
+                            onChange={(e) =>
+                              setCandSel((prev) => {
+                                const next = new Set(prev);
+                                if (e.target.checked) next.add(r.sku);
+                                else next.delete(r.sku);
+                                return next;
+                              })
+                            }
+                            className="h-4 w-4 accent-brand-500"
+                          />
+                        </td>
+                        <td className="px-3 py-1.5 font-mono text-brand-300">{r.sku}</td>
+                        <td className="max-w-[18rem] truncate px-3 py-1.5 text-slate-300">{r.name}</td>
+                        <td className="px-3 py-1.5 text-right tabular-nums">{r.stock}</td>
+                        <td className="px-3 py-1.5 text-right tabular-nums">
+                          {r.price != null ? formatPricePln(r.price) : '—'}
+                        </td>
+                        <td className="px-3 py-1.5 text-right tabular-nums">{r.images}</td>
+                        <td className="max-w-[22rem] px-3 py-1.5 text-xs">
+                          {r.blockers.length > 0 && <span className="text-red-400">{r.blockers.join(', ')} </span>}
+                          {r.warnings.length > 0 ? (
+                            <span className="text-amber-400">{r.warnings.join(' · ')}</span>
+                          ) : (
+                            !r.blockers.length && <span className="text-emerald-400">kompletny</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {!candRows.length && (
+                      <tr>
+                        <td colSpan={7} className="px-3 py-6 text-center text-slate-500">
+                          Brak produktów do importu dla wybranych filtrów.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {candRows.length > 500 && (
+                <p className="text-xs text-slate-500">Pokazano 500 z {candRows.length} — zawęź filtrem.</p>
               )}
             </>
           )}

@@ -102,6 +102,33 @@ export interface BaselinkerLogRow {
   sample?: { sku: string; blId: string; value: number }[] | null;
 }
 
+export interface ImportCandidate {
+  sku: string;
+  name: string;
+  stock: number;
+  price: number | null;
+  images: number;
+  warnings: string[];
+  blockers: string[];
+}
+
+export interface ImportCandidates {
+  total: number;
+  complete: number;
+  rows: ImportCandidate[];
+  categoriesKnown: number;
+  manufacturersKnown: number;
+}
+
+export interface ImportResultRow {
+  sku: string;
+  status: 'created' | 'blocked' | 'error';
+  message?: string;
+  blId?: number;
+  warnings?: string[];
+  blWarnings?: Record<string, unknown>;
+}
+
 async function call<T>(body: Record<string, unknown>): Promise<T> {
   if (!supabase) throw new Error('Brak Supabase');
   const { data, error } = await supabase.functions.invoke('baselinker', { body });
@@ -149,5 +176,8 @@ export const saveBaselinkerSettings = (settings: BaselinkerSettings) =>
 export const compareBaselinker = () => call<BaselinkerCompare>({ action: 'compare' });
 export const pushToBaselinker = (skus: string[], fields: BaselinkerField[]) =>
   call<BaselinkerPushResult>({ action: 'push', skus, fields });
+export const fetchImportCandidates = () => call<ImportCandidates>({ action: 'import-candidates' });
+export const importToBaselinker = (skus: string[]) =>
+  call<{ results: ImportResultRow[] }>({ action: 'import', skus }).then((r) => r.results);
 export const fetchBaselinkerHistory = () =>
   call<{ rows: BaselinkerLogRow[] }>({ action: 'history' }).then((r) => r.rows);

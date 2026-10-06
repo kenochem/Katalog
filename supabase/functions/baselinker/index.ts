@@ -209,6 +209,194 @@ async function loadOurAll(admin: Admin): Promise<OurProduct[]> {
   return out;
 }
 
+
+// ---------------------------------------------------------------------------------------------
+// Import produktu z katalogu do BaseLinkera (addInventoryProduct)
+// ---------------------------------------------------------------------------------------------
+
+const IMPORT_COLUMNS =
+  'sku,ean,name,display_name,description,category,manufacturer,stock,stock_manual,price_purchase_net,price_sale_net,price_sale_gross,tags,warehouse_location,image_url,custom_image_url,extra_images,product_meta';
+
+const INTERNAL_TAGS = new Set(['wapro-import', 'do-uzupelnienia', 'sonax']);
+
+interface ImportCtx {
+  warehouse: string;
+  priceGroupId: string;
+  categories: Map<string, number[]>;
+  manufacturers: Map<string, number>;
+  settings: SyncSettings;
+}
+
+function leafName(path: string): string {
+  const parts = String(path || '').split(/[>/|]/).map((x) => x.trim()).filter(Boolean);
+  return parts.length ? parts[parts.length - 1] : '';
+}
+
+async function loadImportCtx(settings: SyncSettings): Promise<ImportCtx> {
+  const warehouse = await resolveWarehouse();
+  let priceGroupId = priceGroupFor(settings);
+  if (!priceGroupId) {
+    const groups = ((await bl('getInventoryPriceGroups', {})).price_groups ?? []) as { price_group_id: number }[];
+    if (groups.length === 1) priceGroupId = String(groups[0].price_group_id);
+    else throw new Error('Wybierz grupe cenowa w ustawieniach synchronizacji (zakladka BaseLinker).');
+  }
+
+  const categories = new Map<string, number[]>();
+  try {
+    const cats = ((await bl('getInventoryCategories', { inventory_id: INVENTORY_ID })).categories ?? []) as {
+      category_id: number;
+      name: string;
+    }[];
+    for (const c of cats) {
+      const k = String(c.name).trim().toLowerCase();
+      categories.set(k, [...(categories.get(k) ?? []), Number(c.category_id)]);
+    }
+  } catch {
+    /* brak kategorii — ostrzezenie przy produkcie */
+  }
+
+  const manufacturers = new Map<string, number>();
+  try {
+    const raw = (await bl('getInventoryManufacturers', {})).manufacturers ?? [];
+    const list = Array.isArray(raw)
+      ? raw
+      : Object.entries(raw as Record<string, unknown>).map(([id, v]) =>
+          typeof v === 'string' ? { manufacturer_id: id, name: v } : { manufacturer_id: id, ...(v as object) },
+        );
+    for (const m of list as { manufacturer_id: number | string; name: string }[]) {
+      manufacturers.set(String(m.name).trim().toLowerCase(), Number(m.manufacturer_id));
+    }
+  } catch {
+    /* brak producentow — ostrzezenie przy produkcie */
+  }
+
+  return { warehouse, priceGroupId, categories, manufacturers, settings };
+}
+
+function escapeHtml(t: string): string {
+  return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/** Buduje ladunek addInventoryProduct z wiersza produktu + liste ostrzezen/blokad. */
+function buildImport(row: Record<string, unknown>, ctx: ImportCtx) {
+  const warnings: string[] = [];
+  const blockers: string[] = [];
+  const meta = (row.product_meta ?? {}) as Record<string, unknown>;
+  const sku = String(row.sku ?? '').trim();
+  const name = String(row.display_name || row.name || '').trim();
+  if (!sku) blockers.push('brak SKU');
+  if (!name) blockers.push('brak nazwy');
+
+  const vatRaw = Number(meta.vatRate);
+  const vat = Number.isFinite(vatRaw) && vatRaw >= 0 ? vatRaw : 23;
+  const gross = Number(row.price_sale_gross);
+  const net = Number(row.price_sale_net);
+  let priceGross: number | null = null;
+  if (Number.isFinite(gross) && gross > 0) priceGross = Math.round(gross * 100) / 100;
+  else if (Number.isFinite(net) && net > 0) priceGross = Math.round(net * (1 + vat / 100) * 100) / 100;
+  if (priceGross == null) warnings.push('brak ceny sprzedazy');
+
+  const purchase = Number(row.price_purchase_net);
+  const hasPurchase = Number.isFinite(purchase) && purchase > 0;
+  if (!hasPurchase) warnings.push('brak ceny zakupu');
+
+  // zdjecia
+  const urls: string[] = [];
+  const push = (u: unknown) => {
+    const t = typeof u === 'string' ? u.trim() : '';
+    if (/^https?:\/\//i.test(t) && t.length <= 995 && !urls.includes(t)) urls.push(t);
+  };
+  push(row.custom_image_url);
+  push(row.image_url);
+  if (Array.isArray(row.extra_images)) for (const u of row.extra_images) push(u);
+  if (!urls.length) warnings.push('brak zdjec');
+
+  const ean = String(row.ean ?? '').trim();
+  if (!ean) warnings.push('brak EAN');
+
+  const weight = Number(meta.weightKg);
+  if (!(Number.isFinite(weight) && weight > 0)) warnings.push('brak wagi');
+
+  const descRaw = String(row.description ?? '').trim();
+  if (!descRaw) warnings.push('brak opisu');
+  const description = !descRaw ? '' : /<[a-z][\s\S]*>/i.test(descRaw) ? descRaw : escapeHtml(descRaw).replace(/\r?\n/g, '<br>');
+
+  // kategoria
+  const catNames = [leafName(String(meta.shopCategoryPath ?? '')), String(row.category ?? '').trim()].filter(Boolean);
+  let categoryId: number | null = null;
+  for (const n of catNames) {
+    const ids = ctx.categories.get(n.toLowerCase());
+    if (ids?.length) {
+      categoryId = ids[0];
+      break;
+    }
+  }
+  if (categoryId == null) warnings.push(`brak kategorii w BaseLinkerze (${catNames[0] ?? 'nie przypisano'})`);
+
+  // producent
+  const manName = String(row.manufacturer ?? '').trim();
+  const manufacturerId = manName ? ctx.manufacturers.get(manName.toLowerCase()) ?? null : null;
+  if (manufacturerId == null) warnings.push(`brak producenta w BaseLinkerze (${manName || 'nie przypisano'})`);
+
+  // stan (stan wlasny typu 999999 nie jest przenoszony)
+  const stockRaw = Math.max(0, Math.floor(Number(row.stock ?? 0)));
+  const ownStock =
+    meta.baselinkerSkipStock === true || (ctx.settings.skipStockAbove > 0 && stockRaw >= ctx.settings.skipStockAbove);
+  if (ownStock) warnings.push('stan wlasny — w BaseLinkerze ustawiono 0');
+  const stock = ownStock ? 0 : stockRaw;
+
+  const payload: Record<string, unknown> = {
+    inventory_id: INVENTORY_ID,
+    sku,
+    tax_rate: vat,
+    prices: priceGross != null ? { [ctx.priceGroupId]: priceGross } : {},
+    stock: { [ctx.warehouse]: stock },
+    text_fields: {
+      name,
+      ...(description ? { description } : {}),
+      ...(meta.shortDescription ? { description_extra1: String(meta.shortDescription) } : {}),
+      ...(meta.parameters && typeof meta.parameters === 'object' && Object.keys(meta.parameters as object).length
+        ? { features: meta.parameters }
+        : {}),
+    },
+  };
+  if (ean) payload.ean = ean;
+  if (hasPurchase) payload.average_cost = Math.round(purchase * 100) / 100;
+  if (Number.isFinite(weight) && weight > 0) payload.weight = weight;
+  for (const [k, mk] of [['height', 'heightCm'], ['width', 'widthCm'], ['length', 'depthCm']] as const) {
+    const v = Number(meta[mk]);
+    if (Number.isFinite(v) && v > 0) payload[k] = v;
+  }
+  if (categoryId != null) payload.category_id = categoryId;
+  if (manufacturerId != null) payload.manufacturer_id = manufacturerId;
+  const tags = (Array.isArray(row.tags) ? row.tags : [])
+    .map((t) => String(t).trim())
+    .filter((t) => t && !INTERNAL_TAGS.has(t.toLowerCase()));
+  if (tags.length) payload.tags = tags;
+  const loc = String(row.warehouse_location ?? '').trim();
+  if (loc) payload.locations = { [ctx.warehouse]: loc };
+  if (urls.length) {
+    const images: Record<string, string> = {};
+    urls.slice(0, 16).forEach((u, i) => (images[String(i)] = `url:${u}`));
+    payload.images = images;
+  }
+
+  return { sku, name, payload, warnings, blockers, priceGross, stock };
+}
+
+/** Zbior SKU istniejacych w katalogu BL (do blokady importu). */
+async function existingBlSkus(): Promise<{ exact: Set<string>; norm: Set<string> }> {
+  const all = await listAllBlProducts();
+  const exact = new Set<string>();
+  const norm = new Set<string>();
+  for (const p of all) {
+    if (!p.sku) continue;
+    exact.add(p.sku.toUpperCase());
+    norm.add(normSku(p.sku));
+  }
+  return { exact, norm };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -628,6 +816,154 @@ Deno.serve(async (req) => {
       }
 
       return json({ fields, requested: skus.length, results, noLink: noLink.slice(0, 200), noLinkCount: noLink.length });
+    }
+
+
+    // ---- import-candidates ---------------------------------------------------------------
+    if (action === 'import-candidates') {
+      needAdmin();
+      const settings = await loadSettings(admin);
+      const ctx = await loadImportCtx(settings);
+      const { exact, norm } = await existingBlSkus();
+
+      const withDesc = new Set<string>();
+      for (let from = 0; ; from += 1000) {
+        const { data } = await admin.from('products').select('sku').neq('description', '').not('description', 'is', null).range(from, from + 999);
+        for (const r of data ?? []) withDesc.add(String(r.sku).toUpperCase());
+        if (!data || data.length < 1000) break;
+      }
+
+      const rows: Record<string, unknown>[] = [];
+      const seen = new Set<string>();
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await admin
+          .from('products')
+          .select(IMPORT_COLUMNS.replace('description,', ''))
+          .order('id')
+          .range(from, from + 999);
+        if (error) return json({ error: error.message }, 500);
+        for (const r of data ?? []) {
+          const sku = String(r.sku ?? '').toUpperCase();
+          if (!sku || seen.has(sku) || exact.has(sku) || norm.has(normSku(sku))) continue;
+          seen.add(sku);
+          const meta = (r.product_meta ?? {}) as Record<string, unknown>;
+          if (meta.catalogHidden === true) continue;
+          // opis ocenia osobny zbior (bez pobierania tresci)
+          const built = buildImport({ ...r, description: withDesc.has(sku) ? 'x' : '' }, ctx);
+          rows.push({
+            sku,
+            name: built.name,
+            stock: built.stock,
+            price: built.priceGross,
+            images: built.payload.images ? Object.keys(built.payload.images as object).length : 0,
+            warnings: built.warnings,
+            blockers: built.blockers,
+          });
+        }
+        if (!data || data.length < 1000) break;
+      }
+      rows.sort((a, b) => (a.warnings as string[]).length - (b.warnings as string[]).length);
+      return json({
+        total: rows.length,
+        complete: rows.filter((r) => !(r.warnings as string[]).length && !(r.blockers as string[]).length).length,
+        rows: rows.slice(0, 1500),
+        categoriesKnown: ctx.categories.size,
+        manufacturersKnown: ctx.manufacturers.size,
+      });
+    }
+
+    // ---- import --------------------------------------------------------------------------
+    if (action === 'import') {
+      needAdmin();
+      if (isSystem) return json({ error: 'Import tylko recznie' }, 400);
+      const settings = await loadSettings(admin);
+      const skus = Array.isArray(body.skus)
+        ? [...new Set((body.skus as unknown[]).map((x) => String(x).toUpperCase().trim()).filter(Boolean))]
+        : [];
+      if (!skus.length) return json({ error: 'Brak listy sku' }, 400);
+      if (skus.length > 40) return json({ error: 'Maksymalnie 40 produktow na jedno wywolanie' }, 400);
+
+      const ctx = await loadImportCtx(settings);
+      const { exact, norm } = await existingBlSkus(); // swieze sprawdzenie tuz przed zapisem
+
+      const { data: rows, error } = await admin.from('products').select(IMPORT_COLUMNS).in('sku', skus);
+      if (error) return json({ error: error.message }, 500);
+      const bySku = new Map<string, Record<string, unknown>>();
+      for (const r of rows ?? []) {
+        const k = String(r.sku).toUpperCase();
+        if (!bySku.has(k)) bySku.set(k, r);
+      }
+
+      const results: Record<string, unknown>[] = [];
+      const links: Record<string, unknown>[] = [];
+      for (const sku of skus) {
+        const row = bySku.get(sku);
+        if (!row) {
+          results.push({ sku, status: 'error', message: 'Nie znaleziono produktu w katalogu' });
+          continue;
+        }
+        if (exact.has(sku) || norm.has(normSku(sku))) {
+          results.push({ sku, status: 'blocked', message: 'SKU juz istnieje w katalogu BaseLinkera — import zablokowany' });
+          continue;
+        }
+        const built = buildImport(row, ctx);
+        if (built.blockers.length) {
+          results.push({ sku, status: 'error', message: built.blockers.join(', ') });
+          continue;
+        }
+        try {
+          const res = await bl('addInventoryProduct', built.payload);
+          const blId = Number(res.product_id);
+          results.push({
+            sku,
+            status: 'created',
+            blId,
+            warnings: built.warnings,
+            blWarnings: res.warnings ?? {},
+          });
+          exact.add(sku);
+          norm.add(normSku(sku));
+          links.push({
+            sku,
+            bl_product_id: blId,
+            bl_sku: sku,
+            bl_name: built.name,
+            bl_stock: built.stock,
+            bl_price_gross: built.priceGross,
+            checked_at: new Date().toISOString(),
+          });
+          await new Promise((r) => setTimeout(r, 700)); // limit 100 zapytan/min
+        } catch (e) {
+          results.push({ sku, status: 'error', message: e instanceof Error ? e.message : String(e) });
+        }
+      }
+      if (links.length) await admin.from('baselinker_links').upsert(links, { onConflict: 'sku' });
+
+      const created = results.filter((r) => r.status === 'created').length;
+      await admin.from('baselinker_sync_log').insert({
+        trigger: 'manual',
+        user_label: userLabel,
+        field: 'import',
+        requested: skus.length,
+        updated: created,
+        skipped: results.filter((r) => r.status === 'blocked').length,
+        status: results.some((r) => r.status === 'error') ? 'warning' : 'ok',
+        note: `Import produktow do BaseLinker: utworzono ${created} z ${skus.length}`,
+        sample: results.slice(0, 20),
+      });
+      if (userId) {
+        await admin.from('audit_log').insert({
+          user_id: userId,
+          user_label: userLabel,
+          user_role: 'admin',
+          app: 'baselinker',
+          action: 'baselinker.import',
+          entity_type: 'baselinker',
+          entity_id: String(INVENTORY_ID),
+          summary: `Import do BaseLinker: utworzono ${created} z ${skus.length} produktow`,
+        });
+      }
+      return json({ results });
     }
 
     return json({ error: `Nieznana akcja: ${action}` }, 400);
