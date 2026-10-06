@@ -268,6 +268,8 @@ function ProductDetailPricePanelBody({
   const purchase = detail.pricePurchaseNet;
   const vatRate = detail.meta?.vatRate ?? 23;
   const clientAmount = customerGrossPrice(gross, saleNet, vatRate);
+  const purchaseGross =
+    purchase != null ? Math.round(purchase * (1 + vatRate / 100) * 100) / 100 : undefined;
   const clientEstimated = gross == null && saleNet != null && clientAmount != null;
 
   return (
@@ -306,11 +308,16 @@ function ProductDetailPricePanelBody({
         ) : null}
       </div>
 
-      <div className="grid grid-cols-1 border-t border-slate-700/50 sm:grid-cols-3 sm:divide-x sm:divide-slate-700/50 dark:border-slate-700/80 dark:sm:divide-slate-700/80">
+      <div className="grid grid-cols-2 border-t border-slate-700/50 sm:grid-cols-4 sm:divide-x sm:divide-slate-700/50 dark:border-slate-700/80 dark:sm:divide-slate-700/80">
         <ProductPriceMetric
           label="Zakup netto"
           value={formatPricePln(purchase)}
           hint="Koszt magazynowy"
+        />
+        <ProductPriceMetric
+          label="Zakup brutto"
+          value={formatPricePln(purchaseGross)}
+          hint={`Netto + VAT ${vatRate}%`}
         />
         <ProductPriceMetric
           label="Sprzedaż netto"
