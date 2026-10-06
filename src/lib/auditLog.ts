@@ -60,6 +60,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'user.update': 'Zmiana konta',
   'user.password': 'Reset hasła',
   'roles.matrix': 'Uprawnienia ról',
+  'baselinker.push': 'Stany → BaseLinker',
 };
 
 let actor: AuditActor | null = null;

@@ -2299,6 +2299,27 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
     }
   }
 
+  # BaseLinker: wyslij stany zmienione w tym przebiegu (Edge Function `baselinker`; dziala
+  # tylko gdy admin wlaczyl "automatyczne wysylanie" w Administracja -> BaseLinker).
+  if ($changeRows.Count -gt 0 -and $envMap['BASELINKER_AUTO_PUSH'] -ne '0') {
+    $blSkus = @($changeRows | Where-Object { $_.field -eq 'stock' } | ForEach-Object { [string]$_.sku } | Select-Object -Unique)
+    if ($blSkus.Count -gt 0) {
+      try {
+        $blBody = ConvertTo-JsonText @{ action = 'push'; skus = $blSkus } 4 -Compress
+        $blBytes = [System.Text.Encoding]::UTF8.GetBytes($blBody)
+        $blUri = '{0}/functions/v1/baselinker' -f $SupabaseUrl
+        $blRes = Invoke-RestMethod -Uri $blUri -Headers $jsonHeaders -Method Post -Body $blBytes -ContentType 'application/json; charset=utf-8' -TimeoutSec 120
+        if ($blRes.skipped) {
+          Write-Log ('BaseLinker: pominieto ({0})' -f $blRes.reason)
+        } else {
+          Write-Log ('BaseLinker: wyslano stany {0} z {1} SKU (bez powiazania: {2})' -f $blRes.updated, $blRes.requested, $blRes.noLinkCount)
+        }
+      } catch {
+        Write-Log ('BaseLinker: blad wysylki stanow: {0}' -f $_.Exception.Message)
+      }
+    }
+  }
+
   $msg = 'Tryb WAPRO: {0}. Zakres: {1}. Zaktualizowano: {2}, bez zmian: {3}, reczne stan: {4}, brak w WAPRO: {5}, uzupelnione pola cen: {6}, SKU z SQL: {7}, dopasowane po legacy/alt SKU: {8}, odkryte (pierwsze stany/ceny): {9}, ostrzezenia: {10}{11}' -f `
     $waproPriceMode, $syncScope, $updated, $unchanged, $skippedManual, $skippedMissing, $pricesFilled, $stockBySku.Count, $linkedViaAlt, $bootstrapped, $warnings, $unmatchedNote
 

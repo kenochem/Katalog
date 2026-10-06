@@ -22,7 +22,7 @@ Kolejność i widoczność pozycji użytkownik może zmieniać (ikona ustawień 
 | **Ukryte** | `viewProgress` | Produkty ukryte w katalogu (z możliwością przywrócenia) |
 | **Bez zdjęć** | `viewProgress` | Produkty bez zdjęcia; wgrywanie z kafelka oraz tryb **Szybkie zdjęcia** (pełnoekranowy, kolejno produkt po produkcie, aparat od razu) |
 | **Etykiety** | `printLabels` | Kolejka i wydruk etykiet półkowych |
-| **Administracja** | admin | Konta, macierz uprawnień, **Aktywność** (dziennik zmian użytkowników: filtry po osobie/akcji/okresie/SKU, wartości przed → po, eksport CSV), higiena EAN, ustawienia globalne |
+| **Administracja** | admin | Konta, macierz uprawnień, **BaseLinker** (porównanie i wysyłka stanów, automat po syncu WAPRO), **Aktywność** (dziennik zmian użytkowników: filtry po osobie/akcji/okresie/SKU, wartości przed → po, eksport CSV), higiena EAN, ustawienia globalne |
 | **Magazyn** | produkt Magazyn | Stany ±, lokalizacje, edytor układu magazynu (widok izometryczny, regały) |
 
 **Ctrl+K** — paleta poleceń: skoki do produktów po SKU/nazwie i do widoków.

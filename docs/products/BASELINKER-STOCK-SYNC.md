@@ -1,5 +1,16 @@
 # BaseLinker — stan magazynowy i metka w katalogu
 
+> **Integracja API (2026-10-06):** Edge Function `baselinker` (token tylko po stronie Supabase) zasila (1) panel **BaseLinker** na karcie produktu (porównanie stanu/ceny/EAN, zdjęcia, opis) i (2) zakładkę **Administracja → BaseLinker**: porównanie stanów katalog ↔ BL, ręczna wysyłka zaznaczonych i automatyczne wysyłanie stanów po syncu WAPRO.
+>
+> **Konfiguracja (jednorazowo):**
+> 1. `npx supabase secrets set BASELINKER_TOKEN=... BASELINKER_INVENTORY_ID=17991` (+ `BASELINKER_WAREHOUSE_ID=bl_123`, gdy w BL jest kilka magazynów; opcjonalnie `BASELINKER_PRICE_GROUP_ID`)
+> 2. Migracja `supabase/migration-baselinker.sql` (tabela `baselinker_links` — cache SKU → ID produktu w BL)
+> 3. `npx supabase functions deploy baselinker`
+> 4. Administracja → BaseLinker → *Porównaj stany* (to też buduje powiązania SKU → ID BL)
+> 5. Automat: zaznacz „Automatycznie wysyłaj…" i skopiuj nowy `sync-wapro-stock-server.ps1` na serwer WAPRO (agent po syncu wysyła tylko SKU ze zmienionym stanem; wyłączenie po stronie serwera: `BASELINKER_AUTO_PUSH=0` w `katalog-sync.env`).
+>
+> Źródłem prawdy dla stanów pozostaje WAPRO — wysyłka jest jednokierunkowa: katalog → BaseLinker. Skrypt `sync-baselinker-stock.mjs` poniżej jest przestarzały (miał błędny format żądania).
+
 ## Co już jest w katalogu
 
 | Element | Opis |

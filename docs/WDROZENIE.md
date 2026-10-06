@@ -40,7 +40,8 @@ Kod `App.tsx` i wspólne komponenty trafiają do **wielu** produktów — wdraż
 |----|-----|----------|
 | Agent WAPRO (`sync-wapro-stock-server.ps1`) | Skopiować plik na serwer WAPRO do `C:\katalog-sync\` | [`WAPRO-SYNC.md`](./WAPRO-SYNC.md) |
 | Migracje SQL | Wkleić w Supabase → SQL Editor | [`BAZA-DANYCH.md`](./BAZA-DANYCH.md) |
-| Edge Functions | `npx supabase functions deploy <nazwa>` | [`BAZA-DANYCH.md`](./BAZA-DANYCH.md) |
+| Edge Functions | `npx supabase functions deploy <nazwa>` (m.in. `baselinker`) | [`BAZA-DANYCH.md`](./BAZA-DANYCH.md) |
+| Sekrety Edge Functions | `npx supabase secrets set NAZWA=wartość` (np. `BASELINKER_TOKEN`) | [`products/BASELINKER-STOCK-SYNC.md`](./products/BASELINKER-STOCK-SYNC.md) |
 
 ## Checklista wydania
 

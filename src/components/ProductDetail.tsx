@@ -52,6 +52,7 @@ import {
   type ProductMeta,
 } from './product/ProductDetailRichPanels';
 import { ProductDetailSalesPanel } from './product/ProductDetailSalesPanel';
+import { BaselinkerProductPanel } from './product/BaselinkerProductPanel';
 import {
   mergeProductMeta,
   parseParametersText,
@@ -981,6 +982,9 @@ export function ProductDetail({
         )}
         {hubStyle && showPrices && !editing && detailTab === 'info' && (
           <ProductDetailPriceGrid detail={detail} compact />
+        )}
+        {hubStyle && showPrices && !editing && detailTab === 'info' && detail.sku && (
+          <BaselinkerProductPanel product={detail} />
         )}
         {hubStyle && !editing && detailTab === 'info' && (
           <ProductDetailCatalogQuickActions

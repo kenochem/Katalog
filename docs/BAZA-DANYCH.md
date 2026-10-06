@@ -20,6 +20,7 @@
 | `user_favorites` | Ulubione (chmura) |
 | `catalog_product_overrides` | Nadpisania opisu/kategorii z *Katalogów marek* (Biblioteka) — klucz `catalog_slug` + `sku` |
 | `technical_library_articles` | Edytowalna treść zeszytów Biblioteki Technicznej |
+| `baselinker_links` | Cache SKU → ID produktu w BaseLinker (+ ostatnio znany stan BL); zapisuje funkcja `baselinker`, odczyt dla zalogowanych (`migration-baselinker.sql`) |
 
 Ważne pola `product_meta` (JSONB): `baselinkerProductId`, `shopCategoryPath` / `shopCategoryWpId` (kategoria ze sklepu), `categoryAssignedBy/At`, `waproImport` / `waproSkeleton` / `waproImportedAt` (produkt dopisany przez auto-import z Mag → zakładka *Nowości*), `salesExcludeFromSum` (wykluczenie z martwego stocku i KPI — wspólne dla zespołu), `catalogHidden` (ukryty w katalogu), `shortDescription`, `parameters`.
 
@@ -52,7 +53,7 @@ Ważne pola `product_meta` (JSONB): `baselinkerProductId`, `shopCategoryPath` / 
 4. CRM: `migration-crm-clients-orders.sql`, `migration-crm-client-*.sql`, `migration-crm-lead-owner.sql`, `migration-crm-notes.sql`, `migration-crm-personal-stores.sql`, `migration-crm-quote-number.sql`, `migration-crm-mailbox.sql`
 5. Ops: `migration-ops-customers.sql`
 6. Biblioteka: `migration-technical-library.sql`, `migration-catalog-brand-overrides.sql`
-7. Ustawienia: `migration-app-settings.sql`, `migration-audit-log.sql`, `migration-audit-log-ip-device.sql`
+7. Ustawienia: `migration-app-settings.sql`, `migration-audit-log.sql`, `migration-audit-log-ip-device.sql`, `migration-baselinker.sql`
 8. Czat (jeśli włączany): `migration-chat*.sql`
 
 Jednorazowe czyszczenie: `cleanup-wapro-x-skeleton-products.sql` (usuwa szkielety pozycji archiwalnych „X…").
@@ -73,6 +74,7 @@ Jednorazowe czyszczenie: `cleanup-wapro-x-skeleton-products.sql` (usuwa szkielet
 | `crm-mail` | Skrzynka e-mail w CRM: pobieranie IMAP i wysyłka SMTP (hasło tylko po stronie serwera) |
 | `chat-push` | Powiadomienia Web Push dla czatu (deploy z `--no-verify-jwt`: `npm run deploy:chat-push`) |
 | `image-proxy` | Proxy obrazów (omijanie blokad hotlinkingu / CORS) |
+| `baselinker` | Proxy API BaseLinker: podgląd produktu, porównanie i wysyłka stanów (token w sekretach `BASELINKER_*`); wołana też przez agenta WAPRO po syncu — patrz [`products/BASELINKER-STOCK-SYNC.md`](./products/BASELINKER-STOCK-SYNC.md) |
 | `product-knowledge` | API dla botów uzupełniających wiedzę o produktach — wymaga sekretu `KNOWLEDGE_BOT_SECRET`, patrz [`products/KNOWLEDGE-BOT-API.md`](./products/KNOWLEDGE-BOT-API.md) |
 
 Deploy: `npx supabase functions deploy <nazwa>` (po `npx supabase login` i `npx supabase link --project-ref <ref>`).

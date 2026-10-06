@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   Calculator,
   Activity,
+  Link2,
   Database,
   FileSpreadsheet,
   Settings2,
@@ -15,9 +16,10 @@ import { ROLE_LABELS } from '../lib/roles';
 import { AdminUsersSection } from './AdminUsersSection';
 import { AdminPermissionsSection } from './AdminPermissionsSection';
 import { AdminAuditSection } from './AdminAuditSection';
+import { AdminBaselinkerSection } from './AdminBaselinkerSection';
 import { ContextHelp } from './ContextHelp';
 
-type AdminTab = 'users' | 'permissions' | 'operations' | 'audit';
+type AdminTab = 'users' | 'permissions' | 'operations' | 'audit' | 'baselinker';
 
 type AdminHubPanelProps = {
   onBack?: () => void;
@@ -114,6 +116,14 @@ export function AdminHubPanel({
               label="Aktywność"
             />
           )}
+          {showAudit && (
+            <TabButton
+              active={tab === 'baselinker'}
+              onClick={() => setTab('baselinker')}
+              icon={<Link2 className="h-4 w-4" />}
+              label="BaseLinker"
+            />
+          )}
           {showOperations && (
             <TabButton
               active={tab === 'operations'}
@@ -130,6 +140,8 @@ export function AdminHubPanel({
       {tab === 'operations' && showOperations && <OpsAdminSection />}
 
       {tab === 'audit' && showAudit && <AdminAuditSection />}
+
+      {tab === 'baselinker' && showAudit && <AdminBaselinkerSection />}
 
       {tab === 'permissions' && showMatrix && (
         <AdminPermissionsSection canEditMatrix={canEditMatrix} />
