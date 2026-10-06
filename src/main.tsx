@@ -2,6 +2,7 @@ import { StrictMode, lazy, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AuthProvider } from './lib/auth';
 import { ToastHost } from './components/ToastHost';
+import { DialogHost } from './components/DialogHost';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PwaUpdateBanner } from './components/PwaUpdateBanner';
 import { captureInstallPromptEarly } from './lib/pwaInstall';
@@ -96,6 +97,7 @@ createRoot(document.getElementById('root')!).render(
           <RootApp />
         </Suspense>
         <ToastHost />
+        <DialogHost />
         <PwaUpdateBanner />
       </AuthProvider>
     </ErrorBoundary>

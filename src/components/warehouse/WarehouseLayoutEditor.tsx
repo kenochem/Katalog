@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { confirmDialog } from '../../lib/dialog';
 import {
   ArrowLeft,
   Copy,
@@ -469,8 +470,15 @@ export function WarehouseLayoutEditor({
                 <button
                   type="button"
                   aria-label={`Usuń własny element ${cd.label}`}
-                  onClick={() => {
-                    if (!confirm(`Usunąć własny element „${cd.label}" z palety? (rozstawione już elementy zostaną na planie)`)) return;
+                  onClick={async () => {
+                    if (
+                      !(await confirmDialog({
+                        title: 'Usunąć własny element?',
+                        tone: 'danger',
+                        message: `Element „${cd.label}” zostanie usunięty z palety. Rozstawione już elementy zostaną na planie.`,
+                      }))
+                    )
+                      return;
                     deleteCustomElementDef(cd.id);
                     if (selectedCustomDefId === cd.id) {
                       setPaintType(null);

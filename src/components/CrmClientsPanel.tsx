@@ -1,4 +1,5 @@
 import { Download, Loader2, Pencil, Plus, Search, Tag, Trash2 } from 'lucide-react';
+import { confirmDialog } from '../lib/dialog';
 import { useEffect, useMemo, useState } from 'react';
 import {
   CRM_CLIENT_TAGS,
@@ -211,7 +212,14 @@ export function CrmClientsPanel({ cloudEnabled, onPickClient }: CrmClientsPanelP
                 type="button"
                 className="rounded-lg p-1.5 text-slate-500 hover:bg-red-950/40 hover:text-red-400"
                 onClick={async () => {
-                  if (!confirm(`Usunąć „${c.displayName}"?`)) return;
+                  if (
+                    !(await confirmDialog({
+                      title: 'Usunąć klienta?',
+                      tone: 'danger',
+                      message: `Klient „${c.displayName}” zostanie usunięty.`,
+                    }))
+                  )
+                    return;
                   try {
                     await deleteCrmClient(c.id);
                     await reload();

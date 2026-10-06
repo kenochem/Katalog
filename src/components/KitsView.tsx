@@ -1,4 +1,5 @@
 import { Plus, Trash2, Package, ChevronDown, ChevronUp, Save, X, ShoppingCart, Camera, Upload, Loader2, ImageOff } from 'lucide-react';
+import { confirmDialog } from '../lib/dialog';
 import { useMemo, useRef, useState } from 'react';
 import type { Kit, KitItem, Product } from '../types';
 import { saveKit, deleteKit, getProductImage, uploadKitImage } from '../lib/products';
@@ -141,7 +142,13 @@ export function KitsView({
                 setShowEditor(true);
               }}
               onDelete={async () => {
-                if (confirm(`Usunąć zestaw „${kit.name}"?`)) {
+                if (
+                  await confirmDialog({
+                    title: 'Usunąć zestaw?',
+                    tone: 'danger',
+                    message: `Zestaw „${kit.name}” zostanie usunięty.`,
+                  })
+                ) {
                   await deleteKit(kit.id);
                   onKitsChange();
                 }

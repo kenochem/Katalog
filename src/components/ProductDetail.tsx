@@ -1,4 +1,5 @@
-﻿import {
+﻿import { confirmDialog } from '../lib/dialog';
+import {
   X, Camera, Upload, Loader2, Package, Pencil, Save, Trash2,
   Minus, Plus, Images, Printer, Tag, ArrowLeft,
   FileText, Barcode, Copy, Check, Scissors, Undo2, Layers,
@@ -284,7 +285,15 @@ export function ProductDetail({
 
   async function handleRestoreImageBeforeNobg() {
     if (!hasImageRevert) return;
-    if (!confirm('Przywrócić zdjęcie sprzed ostatniego wycinania tła?')) return;
+    if (
+      !(await confirmDialog({
+        title: 'Przywrócić poprzednie zdjęcie?',
+        tone: 'warn',
+        confirmLabel: 'Przywróć',
+        message: 'Zdjęcie sprzed ostatniego wycinania tła zastąpi obecne zdjęcie główne.',
+      }))
+    )
+      return;
     setRevertBusy(true);
     try {
       const url = await restorePrimaryImageFromRevert(product.id);
@@ -378,7 +387,14 @@ export function ProductDetail({
     const message = allImages.length > 1
       ? 'Usunąć wybrane zdjęcie?'
       : 'Czy na pewno chcesz usunąć zdjęcie? Będziesz mógł wgrać nowe.';
-    if (!confirm(message)) return;
+    if (
+      !(await confirmDialog({
+        title: allImages.length > 1 ? 'Usunąć to zdjęcie?' : 'Usunąć zdjęcie produktu?',
+        tone: 'danger',
+        message,
+      }))
+    )
+      return;
 
     setDeleting(true);
     try {
@@ -496,9 +512,12 @@ export function ProductDetail({
   async function handleDeleteProductCompletely() {
     const label = detail.sku || detail.displayName || detail.id;
     if (
-      !confirm(
-        `Trwale usunąć produkt „${label}” z katalogu?\n\nZniknie z listy (także wpisy ze sklepu/JSON). Użyj tego, gdy chcesz zmienić kod SKU — usuń stary wpis i dodaj produkt z nowym kodem.\n\nTej operacji nie można cofnąć.`,
-      )
+      !(await confirmDialog({
+        title: 'Trwale usunąć produkt?',
+        tone: 'danger',
+        confirmLabel: 'Usuń produkt',
+        message: `Produkt „${label}” zostanie usunięty z katalogu.\n\nZniknie z listy (także wpisy ze sklepu/JSON). Użyj tego, gdy chcesz zmienić kod SKU — usuń stary wpis i dodaj produkt z nowym kodem.\n\nTej operacji nie można cofnąć.`,
+      }))
     ) {
       return;
     }

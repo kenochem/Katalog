@@ -1,3 +1,4 @@
+import { confirmDialog } from '../lib/dialog';
 import {
   FolderOpen,
   Trash2,
@@ -307,8 +308,15 @@ export function ProductCollectionsView({
                 type="button"
                 aria-label={`Usuń folder ${c.name}`}
                 title="Usuń folder"
-                onClick={() => {
-                  if (!confirm(`Usunąć folder „${c.name}” (${c.productIds.length} produktów)?`)) return;
+                onClick={async () => {
+                  if (
+                    !(await confirmDialog({
+                      title: 'Usunąć folder?',
+                      tone: 'danger',
+                      message: `Folder „${c.name}” (${c.productIds.length} produktów) zostanie usunięty. Same produkty zostają w katalogu.`,
+                    }))
+                  )
+                    return;
                   void handleDeleteFolder(c.id, c.name);
                 }}
                 className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-500 hover:bg-red-950/30 hover:text-red-400"
@@ -366,8 +374,15 @@ export function ProductCollectionsView({
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  if (!confirm(`Usunąć folder „${active.name}”?`)) return;
+                onClick={async () => {
+                  if (
+                    !(await confirmDialog({
+                      title: 'Usunąć folder?',
+                      tone: 'danger',
+                      message: `Folder „${active.name}” zostanie usunięty. Same produkty zostają w katalogu.`,
+                    }))
+                  )
+                    return;
                   void handleDeleteFolder(active.id, active.name);
                 }}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/40 px-3 py-2 text-xs text-red-400 hover:bg-red-950/30"

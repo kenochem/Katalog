@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { confirmDialog, promptDialog } from '../../lib/dialog';
 import {
   DndContext,
   DragOverlay,
@@ -344,8 +345,14 @@ export function CrmPipelinePanel({ clients, onOpenOrder, authorLabel }: CrmPipel
                 {selected.ownerName || 'Nieprzypisany'}
                 <button
                   type="button"
-                  onClick={() => {
-                    const next = prompt('Przypisz leada do:', selected.ownerName || authorLabel || '');
+                  onClick={async () => {
+                    const next = await promptDialog({
+                      title: 'Przypisz leada',
+                      message: 'Komu przypisać tego leada?',
+                      tone: 'info',
+                      confirmLabel: 'Przypisz',
+                      defaultValue: selected.ownerName || authorLabel || '',
+                    });
                     if (next == null) return;
                     updateLead(selected.id, { ownerName: next.trim() || undefined });
                     refresh();
@@ -387,8 +394,15 @@ export function CrmPipelinePanel({ clients, onOpenOrder, authorLabel }: CrmPipel
               )}
               <button
                 type="button"
-                onClick={() => {
-                  if (!confirm(`Usunąć leada „${selected.title}"? Tej operacji nie można cofnąć.`)) return;
+                onClick={async () => {
+                  if (
+                    !(await confirmDialog({
+                      title: 'Usunąć leada?',
+                      tone: 'danger',
+                      message: `Lead „${selected.title}” zostanie usunięty. Tej operacji nie można cofnąć.`,
+                    }))
+                  )
+                    return;
                   const leadId = selected.id;
                   setSelectedId(null);
                   refresh();

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { confirmDialog } from '../lib/dialog';
 import {
   CheckCircle2,
   Download,
@@ -170,11 +171,15 @@ export function AdminBaselinkerSection() {
     if (!skus.length) return;
     const withWarn = (cands?.rows ?? []).filter((r) => candSel.has(r.sku) && r.warnings.length).length;
     if (
-      !confirm(
-        `Dodać do głównego katalogu BaseLinkera ${skus.length} produktów?` +
+      !(await confirmDialog({
+        title: 'Dodać produkty do BaseLinkera?',
+        tone: 'warn',
+        confirmLabel: 'Dodaj do BaseLinkera',
+        message:
+          `Do głównego katalogu BaseLinkera zostanie dodanych ${skus.length} produktów.` +
           (withWarn ? `\n\n${withWarn} z nich ma ostrzeżenia (braki) — zostaną dodane z tym, co jest.` : '') +
           `\n\nProdukty, których SKU już istnieje w BaseLinkerze, zostaną pominięte.`,
-      )
+      }))
     )
       return;
     setImporting(true);
@@ -245,9 +250,12 @@ export function AdminBaselinkerSection() {
     if (!skus.length) return;
     const what = field === 'stock' ? 'stany' : 'ceny brutto';
     if (
-      !confirm(
-        `Wysłać do BaseLinkera ${what} dla ${skus.length} produktów?\n\nWartości w BaseLinkerze zostaną ustawione na te z katalogu (WAPRO).`,
-      )
+      !(await confirmDialog({
+        title: `Wysłać ${what} do BaseLinkera?`,
+        tone: 'warn',
+        confirmLabel: 'Wyślij',
+        message: `Zmiana obejmie ${skus.length} produktów.\n\nWartości w BaseLinkerze zostaną ustawione na te z katalogu (WAPRO).`,
+      }))
     )
       return;
     setPushing(true);

@@ -1,4 +1,5 @@
 import { FolderPlus, Plus } from 'lucide-react';
+import { promptDialog } from '../lib/dialog';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { Product } from '../types';
@@ -60,7 +61,13 @@ export function AddToCollectionMenu({
   }
 
   async function quickCreate() {
-    const name = window.prompt('Nazwa nowego folderu:');
+    const name = await promptDialog({
+      title: 'Nowy folder',
+      message: 'Podaj nazwę nowego folderu:',
+      tone: 'info',
+      confirmLabel: 'Utwórz i dodaj',
+      placeholder: 'np. Promocja wiosenna',
+    });
     if (!name?.trim()) return;
     try {
       const col = await createCollection(userKey, { name: name.trim(), intent: 'shop-tags' });

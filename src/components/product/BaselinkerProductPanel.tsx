@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { confirmDialog } from '../../lib/dialog';
 import { AlertTriangle, CheckCircle2, Loader2, RefreshCw, XCircle } from 'lucide-react';
 import type { Product } from '../../types';
 import {
@@ -84,9 +85,12 @@ export function BaselinkerProductPanel({ product }: { product: Product }) {
 
   async function importThis() {
     if (
-      !confirm(
-        `Dodać produkt ${product.sku} do głównego katalogu BaseLinkera?\n\nZostaną przesłane: nazwa, opis, ceny (sprzedaż brutto i zakup netto), stan, EAN, waga, wymiary, zdjęcia, kategoria i producent (jeśli istnieją w BL).`,
-      )
+      !(await confirmDialog({
+        title: 'Dodać produkt do BaseLinkera?',
+        tone: 'warn',
+        confirmLabel: 'Dodaj do BaseLinkera',
+        message: `Produkt ${product.sku} trafi do głównego katalogu BaseLinkera.\n\nZostaną przesłane: nazwa, opis, ceny (sprzedaż brutto i zakup netto), stan, EAN, waga, wymiary, zdjęcia, kategoria i producent (jeśli istnieją w BL).`,
+      }))
     )
       return;
     setImporting(true);

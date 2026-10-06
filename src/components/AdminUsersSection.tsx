@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { alertDialog, promptDialog } from '../lib/dialog';
 import { Check, Loader2, Pencil, UserPlus, X } from 'lucide-react';
 import {
   ACCOUNT_ROLES,
@@ -218,10 +219,13 @@ export function AdminUsersSection() {
     const accessToken = await freshToken();
     if (!accessToken) return;
     const suggested = `Tmp${Math.random().toString(36).slice(2, 8)}!a1`;
-    const pwd = window.prompt(
-      `Nowe hasło dla ${userEmail} (min. 8 znaków). Podaj własne albo zostaw propozycję:`,
-      suggested,
-    );
+    const pwd = await promptDialog({
+      title: 'Ustaw nowe hasło',
+      message: `Nowe hasło dla ${userEmail} (min. 8 znaków). Podaj własne albo zostaw propozycję:`,
+      tone: 'info',
+      confirmLabel: 'Ustaw hasło',
+      defaultValue: suggested,
+    });
     if (!pwd) return;
     if (pwd.length < 8) {
       setError('Hasło musi mieć min. 8 znaków');
@@ -245,7 +249,11 @@ export function AdminUsersSection() {
         entityId: userEmail,
         summary: 'Admin ustawił nowe hasło',
       });
-      window.alert(`Hasło ustawione dla ${userEmail}:\n\n${pwd}\n\nPrzekaż je użytkownikowi.`);
+      await alertDialog({
+        title: 'Hasło ustawione',
+        tone: 'info',
+        message: `Hasło dla ${userEmail}:\n\n${pwd}\n\nPrzekaż je użytkownikowi.`,
+      });
     } finally {
       setBusy(false);
     }

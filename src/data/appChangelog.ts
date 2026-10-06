@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-06',
+    title: 'Ładne okna potwierdzeń zamiast komunikatów przeglądarki',
+    description:
+      'Pytania typu „Usunąć zdjęcie?”, „Usunąć folder?”, „Dodać do BaseLinkera?” oraz okna z pytaniem o nazwę (np. nowy folder, przypisanie leada, nowe hasło) mają teraz własny, spójny wygląd: wyśrodkowane okno z ikoną ostrzeżenia, tytułem i opisem. Przy usuwaniu domyślnie zaznaczone jest „Anuluj”, a Esc zamyka okno bez wykonywania akcji.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-06',
     title: 'Uprawnienie „BaseLinker: synchronizacja i import” dla ról',
     description:
       'W Administracja → Uprawnienia pojawiło się nowe uprawnienie „BaseLinker: synchronizacja i import”. Rola, która je ma (np. operator), widzi zakładkę BaseLinker w panelu administracji oraz przyciski synchronizacji i dodawania do BaseLinkera na karcie produktu. Domyślnie ma je tylko administrator; uprawnienie jest też sprawdzane po stronie serwera.',

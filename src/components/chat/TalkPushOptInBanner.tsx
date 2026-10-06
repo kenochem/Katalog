@@ -1,4 +1,5 @@
 import { Bell } from 'lucide-react';
+import { alertDialog } from '../../lib/dialog';
 import { useState } from 'react';
 import {
   isWebPushSupported,
@@ -31,9 +32,12 @@ export function TalkPushOptInBanner({ userId }: { userId: string }) {
 
   async function enable() {
     if (status === 'denied') {
-      window.alert(
-        'Powiadomienia sa zablokowane. Odblokuj Kenochem Talk w ustawieniach telefonu albo przegladarki.',
-      );
+      await alertDialog({
+        title: 'Powiadomienia zablokowane',
+        tone: 'warn',
+        message:
+          'Powiadomienia są zablokowane. Odblokuj Kenochem Talk w ustawieniach telefonu albo przeglądarki.',
+      });
       return;
     }
 
@@ -43,9 +47,12 @@ export function TalkPushOptInBanner({ userId }: { userId: string }) {
       const perm = await requestNotificationPermission();
       if (perm === 'granted') await subscribeTalkWebPush(userId);
       if (perm === 'denied') {
-        window.alert(
-          'Powiadomienia sa zablokowane. Odblokuj Kenochem Talk w ustawieniach telefonu albo przegladarki.',
-        );
+        await alertDialog({
+          title: 'Powiadomienia zablokowane',
+          tone: 'warn',
+          message:
+            'Powiadomienia są zablokowane. Odblokuj Kenochem Talk w ustawieniach telefonu albo przeglądarki.',
+        });
       }
     } finally {
       setBusy(false);

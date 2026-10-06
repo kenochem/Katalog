@@ -1,3 +1,4 @@
+import { confirmDialog } from '../lib/dialog';
 import {
   AlertTriangle,
   Download,
@@ -498,7 +499,14 @@ export function CrmHistoryPanel({
             <button
               type="button"
               onClick={async () => {
-                if (!confirm("Usunąć ten wpis z historii?")) return;
+                if (
+                  !(await confirmDialog({
+                    title: "Usunąć wpis z historii?",
+                    tone: "danger",
+                    message: "Ten wpis zostanie trwale usunięty z historii.",
+                  }))
+                )
+                  return;
                 try {
                   await deleteCrmOrder(selected.id);
                   setSelected(null);
