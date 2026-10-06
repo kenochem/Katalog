@@ -214,6 +214,60 @@ async function loadOurAll(admin: Admin): Promise<OurProduct[]> {
 }
 
 
+
+/**
+ * Odswieza cache powiazan SKU -> produkt BL (baselinker_links): dodaje/aktualizuje znalezione
+ * i USUWA te, ktorych w BaseLinkerze juz nie ma. Zasila znaczniki B/W w aplikacji.
+ */
+async function refreshLinksServer(admin: Admin): Promise<{ matched: number; removed: number; bl: number }> {
+  const blProducts = await listAllBlProducts();
+  const blBySku = new Map<string, BlListItem>();
+  const blByNorm = new Map<string, BlListItem>();
+  for (const p of blProducts) {
+    if (!p.sku) continue;
+    blBySku.set(p.sku.toUpperCase(), p);
+    if (!blByNorm.has(normSku(p.sku))) blByNorm.set(normSku(p.sku), p);
+  }
+
+  const skus = new Set<string>();
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await admin.from('products').select('sku').order('id').range(from, from + 999);
+    if (error) throw new Error(error.message);
+    for (const r of data ?? []) skus.add(String(r.sku ?? '').toUpperCase());
+    if (!data || data.length < 1000) break;
+  }
+
+  const nowIso = new Date().toISOString();
+  const links: Record<string, unknown>[] = [];
+  const matched = new Set<string>();
+  for (const sku of skus) {
+    if (!sku) continue;
+    const b = blBySku.get(sku) ?? blByNorm.get(normSku(sku));
+    if (!b) continue;
+    matched.add(sku);
+    links.push({ sku, bl_product_id: b.id, bl_sku: b.sku, bl_name: b.name, checked_at: nowIso });
+  }
+  for (let i = 0; i < links.length; i += 500) {
+    await admin.from('baselinker_links').upsert(links.slice(i, i + 500), { onConflict: 'sku' });
+  }
+
+  const existing: string[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data } = await admin.from('baselinker_links').select('sku').order('sku').range(from, from + 999);
+    for (const r of data ?? []) existing.push(String(r.sku).toUpperCase());
+    if (!data || data.length < 1000) break;
+  }
+  const stale = existing.filter((s) => !matched.has(s));
+  for (let i = 0; i < stale.length; i += 200) {
+    await admin.from('baselinker_links').delete().in('sku', stale.slice(i, i + 200));
+  }
+
+  const { data: row } = await admin.from('app_settings').select('data').eq('id', 'default').maybeSingle();
+  const data = { ...((row?.data as Record<string, unknown>) ?? {}), baselinkerLinksRefreshedAt: nowIso };
+  await admin.from('app_settings').upsert({ id: 'default', data, updated_at: nowIso });
+  return { matched: matched.size, removed: stale.length, bl: blProducts.length };
+}
+
 // ---------------------------------------------------------------------------------------------
 // Import produktu z katalogu do BaseLinkera (addInventoryProduct)
 // ---------------------------------------------------------------------------------------------
@@ -444,6 +498,9 @@ Deno.serve(async (req) => {
     const needAdmin = () => {
       if (!isSystem && !isAdmin) throw Object.assign(new Error('Tylko administrator'), { status: 403 });
     };
+    if (action === 'refresh-links' && (!TOKEN || !INVENTORY_ID)) {
+      return json({ skipped: true, reason: 'BaseLinker nieskonfigurowany' });
+    }
     if (!INVENTORY_ID && action !== 'settings-set' && action !== 'history') {
       return json({ error: 'Brak sekretu BASELINKER_INVENTORY_ID w Supabase.' }, 500);
     }
@@ -464,9 +521,16 @@ Deno.serve(async (req) => {
         found = arr.find((p) => normSku(String(p.sku ?? '')) === normSku(sku)) ?? null;
         if (found) break;
       }
-      if (!found) return json({ found: false, sku, warehouse });
+      if (!found) {
+        await admin.from('baselinker_links').delete().eq('sku', sku.toUpperCase());
+        return json({ found: false, sku, warehouse });
+      }
 
       const id = Number(found.id);
+      await admin.from('baselinker_links').upsert(
+        { sku: sku.toUpperCase(), bl_product_id: id, bl_sku: String(found.sku ?? ''), bl_name: String(found.name ?? ''), checked_at: new Date().toISOString() },
+        { onConflict: 'sku' },
+      );
       const full = await bl('getInventoryProductsData', { inventory_id: INVENTORY_ID, products: [id] });
       const p = ((full.products ?? {}) as Record<string, Record<string, unknown>>)[String(id)] ?? found;
       const prices = (p.prices ?? {}) as Record<string, number>;
@@ -819,6 +883,20 @@ Deno.serve(async (req) => {
       return json({ fields, requested: skus.length, results, noLink: noLink.slice(0, 200), noLinkCount: noLink.length });
     }
 
+
+    // ---- refresh-links ------------------------------------------------------------------
+    if (action === 'refresh-links') {
+      needAdmin();
+      const maxAge = Number(body.maxAgeMinutes) || 0;
+      if (maxAge > 0) {
+        const { data: st } = await admin.from('app_settings').select('data').eq('id', 'default').maybeSingle();
+        const last = String(((st?.data as Record<string, unknown>) ?? {}).baselinkerLinksRefreshedAt ?? '');
+        if (last && Date.now() - new Date(last).getTime() < maxAge * 60_000) {
+          return json({ skipped: true, reason: 'Powiazania odswiezone niedawno', lastRefreshedAt: last });
+        }
+      }
+      return json({ ok: true, ...(await refreshLinksServer(admin)) });
+    }
 
     // ---- import-candidates ---------------------------------------------------------------
     if (action === 'import-candidates') {

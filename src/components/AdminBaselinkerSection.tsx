@@ -17,6 +17,7 @@ import {
   fetchBaselinkerConfig,
   fetchBaselinkerHistory,
   fetchImportCandidates,
+  refreshBaselinkerLinks,
   importToBaselinker,
   type ImportCandidates,
   type ImportResultRow,
@@ -30,6 +31,7 @@ import {
   type BaselinkerSettings,
 } from '../lib/baselinkerApi';
 import { downloadCsv, stampFile } from '../lib/exportReport';
+import { markBaselinkerLinked, refreshLiveLinks } from '../lib/baselinkerLive';
 import { formatPricePln } from '../lib/format';
 import { showToast } from '../lib/toast';
 
@@ -89,6 +91,7 @@ export function AdminBaselinkerSection() {
   const [prefixText, setPrefixText] = useState('');
   const [skuText, setSkuText] = useState('');
   const [saving, setSaving] = useState(false);
+  const [refreshingLinks, setRefreshingLinks] = useState(false);
 
   const [comparing, setComparing] = useState(false);
   const [result, setResult] = useState<BaselinkerCompare | null>(null);
@@ -187,6 +190,7 @@ export function AdminBaselinkerSection() {
       const created = all.filter((r) => r.status === 'created').length;
       showToast(`Utworzono w BaseLinkerze: ${created} z ${skus.length}`, created ? 'ok' : 'warn', 6000);
       const doneSkus = new Set(all.filter((r) => r.status === 'created').map((r) => r.sku));
+      for (const r of all) if (r.status === 'created') markBaselinkerLinked(r.sku, r.blId ?? 0);
       setCands((c) => (c ? { ...c, rows: c.rows.filter((r) => !doneSkus.has(r.sku)), total: c.total - doneSkus.size } : c));
       setCandSel((prev) => new Set([...prev].filter((s) => !doneSkus.has(s))));
     } catch (e) {
@@ -223,6 +227,7 @@ export function AdminBaselinkerSection() {
     setPushResult(null);
     try {
       const r = await compareBaselinker();
+      void refreshLiveLinks(true);
       setResult(r);
       setSelected({
         stock: new Set(r.stockDiffs.map((d) => d.sku)),
@@ -482,6 +487,37 @@ export function AdminBaselinkerSection() {
                 className="input-field text-sm"
               />
             </label>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-800 bg-slate-950/40 px-3 py-2.5">
+            <button
+              type="button"
+              disabled={refreshingLinks || !config?.configured.token}
+              onClick={async () => {
+                setRefreshingLinks(true);
+                try {
+                  const r = await refreshBaselinkerLinks();
+                  await refreshLiveLinks(true);
+                  showToast(
+                    `Oznaczenia B/W odświeżone: w BaseLinkerze ${r.matched ?? 0} produktów, usunięto nieaktualnych ${r.removed ?? 0}`,
+                    'ok',
+                    6000,
+                  );
+                } catch (e) {
+                  showToast(e instanceof Error ? e.message : 'Błąd', 'error', 6000);
+                } finally {
+                  setRefreshingLinks(false);
+                }
+              }}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-800 disabled:opacity-50"
+            >
+              {refreshingLinks ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              Odśwież oznaczenia „B" / „W" teraz
+            </button>
+            <span className="text-xs text-slate-500">
+              Niebieskie „B" pokazuje, czy produkt jest w BaseLinkerze. Lista odświeża się sama: po imporcie, przy otwarciu
+              karty produktu i co kilka minut przez agenta WAPRO.
+            </span>
           </div>
 
           <button

@@ -2299,6 +2299,20 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
     }
   }
 
+  # BaseLinker: odswiez cache powiazan SKU (znaczniki B/W w aplikacji); funkcja sama
+  # ogranicza to do jednego odswiezenia na 10 minut, a bez konfiguracji BL nic nie robi.
+  if ($envMap['BASELINKER_AUTO_PUSH'] -ne '0') {
+    try {
+      $blRefBody = [System.Text.Encoding]::UTF8.GetBytes('{"action":"refresh-links","maxAgeMinutes":10}')
+      $blRefRes = Invoke-RestMethod -Uri ('{0}/functions/v1/baselinker' -f $SupabaseUrl) -Headers $jsonHeaders -Method Post -Body $blRefBody -ContentType 'application/json; charset=utf-8' -TimeoutSec 120
+      if (-not $blRefRes.skipped) {
+        Write-Log ('BaseLinker: odswiezono powiazania SKU (dopasowane: {0}, usuniete: {1})' -f $blRefRes.matched, $blRefRes.removed)
+      }
+    } catch {
+      Write-Log ('BaseLinker: blad odswiezania powiazan: {0}' -f $_.Exception.Message)
+    }
+  }
+
   # BaseLinker: wyslij stany/ceny zmienione w tym przebiegu (Edge Function `baselinker`; dziala
   # tylko dla pol, ktorym admin wlaczyl automat w Administracja -> BaseLinker).
   if ($changeRows.Count -gt 0 -and $envMap['BASELINKER_AUTO_PUSH'] -ne '0') {

@@ -2,6 +2,7 @@
 import type { Product } from '../types';
 import { normalizeProductMeta } from './productMeta';
 import { BASELINKER_SKU_TO_ID } from './baselinkerSkuIndex.generated';
+import { getLiveLinkId, liveLinksReady, startLiveLinks } from './baselinkerLive';
 
 function normalizeBaselinkerSku(raw: string | undefined | null): string {
   const compact = String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -18,7 +19,14 @@ function baselinkerIdForProduct(product: Product): string {
     product.meta?.previousSku,
   ];
 
+  startLiveLinks();
+  const live = liveLinksReady();
   for (const raw of candidates) {
+    if (live) {
+      const liveId = getLiveLinkId(String(raw || ''));
+      if (liveId !== undefined) return liveId ? String(liveId) : 'live';
+      continue;
+    }
     const direct = String(raw || '').trim().toUpperCase();
     const normalized = normalizeBaselinkerSku(raw);
     const id = BASELINKER_SKU_TO_ID[direct] || BASELINKER_SKU_TO_ID[normalized];
@@ -41,7 +49,8 @@ export function baselinkerLinkLabel(product: Product): string | null {
   if (!hasBaselinkerLink(product)) return null;
 
   const meta = normalizeProductMeta(product.meta);
-  const id = (meta?.baselinkerProductId ?? '').trim() || baselinkerIdForProduct(product);
+  const liveId = baselinkerIdForProduct(product);
+  const id = (liveId && liveId !== 'live' ? liveId : '') || (meta?.baselinkerProductId ?? '').trim();
   if (id) return `Base #${id}`;
 
   return 'Base';

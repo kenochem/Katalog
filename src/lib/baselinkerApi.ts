@@ -176,6 +176,10 @@ export const saveBaselinkerSettings = (settings: BaselinkerSettings) =>
 export const compareBaselinker = () => call<BaselinkerCompare>({ action: 'compare' });
 export const pushToBaselinker = (skus: string[], fields: BaselinkerField[]) =>
   call<BaselinkerPushResult>({ action: 'push', skus, fields });
+export const refreshBaselinkerLinks = () =>
+  call<{ ok?: boolean; matched?: number; removed?: number; bl?: number; skipped?: boolean }>({
+    action: 'refresh-links',
+  });
 export const fetchImportCandidates = () => call<ImportCandidates>({ action: 'import-candidates' });
 export const importToBaselinker = (skus: string[]) =>
   call<{ results: ImportResultRow[] }>({ action: 'import', skus }).then((r) => r.results);

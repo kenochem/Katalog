@@ -61,6 +61,7 @@ import { ProductKnowledgeStatus } from './product/ProductKnowledgeStatus';
 import { suggestShortDescription } from '../lib/productKnowledge';
 import { BaselinkerTag } from './BaselinkerTag';
 import { baselinkerLinkLabel, hasBaselinkerLink } from '../lib/baselinkerLink';
+import { useBaselinkerLinksVersion } from '../lib/baselinkerLive';
 import { getShopCategoryTree, walkShopLeaves } from '../lib/shopCategoryTree';
 
 interface ProductDetailProps {
@@ -95,6 +96,7 @@ export function ProductDetail({
   collectionUserKey,
   onCollectionsChange,
 }: ProductDetailProps) {
+  useBaselinkerLinksVersion();
   const [detail, setDetail] = useState(product);
   const [uploading, setUploading] = useState(false);
   const [uploadingExtra, setUploadingExtra] = useState(false);

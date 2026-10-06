@@ -14,6 +14,7 @@ import {
 import { inferProductTypeLabel } from '../../lib/catalogKind';
 import { buildProductAiContext } from '../../lib/productAiContext';
 import { baselinkerLinkLabel, hasBaselinkerLink } from '../../lib/baselinkerLink';
+import { useBaselinkerLinksVersion } from '../../lib/baselinkerLive';
 import {
   getProductDisplayCategory,
   getProductSourceCategory,
@@ -106,6 +107,7 @@ export function ProductDetailFacts({
   isGroup?: boolean;
   variantCount?: number;
 }) {
+  useBaselinkerLinksVersion();
   const meta = detail.meta;
   const productTypeLabel = inferProductTypeLabel(detail);
   const imageCount =

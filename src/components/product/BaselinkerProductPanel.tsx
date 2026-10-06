@@ -10,6 +10,7 @@ import {
   type BaselinkerProduct,
 } from '../../lib/baselinkerApi';
 import { useAuth } from '../../lib/auth';
+import { markBaselinkerLinked, markBaselinkerUnlinked } from '../../lib/baselinkerLive';
 import { updateProduct } from '../../lib/products';
 import { mergeProductMeta } from '../../lib/productMeta';
 import { showToast } from '../../lib/toast';
@@ -94,6 +95,7 @@ export function BaselinkerProductPanel({ product }: { product: Product }) {
           r.warnings?.length ? 'warn' : 'ok',
           9000,
         );
+        markBaselinkerLinked(product.sku, r.blId ?? 0);
         invalidateBaselinkerProduct(product.sku);
         await load(true);
       } else {
@@ -130,7 +132,10 @@ export function BaselinkerProductPanel({ product }: { product: Product }) {
     setLoading(true);
     setError(null);
     try {
-      setData(await fetchBaselinkerProduct(product.sku, force));
+      const fresh = await fetchBaselinkerProduct(product.sku, force);
+      setData(fresh);
+      if (fresh.found) markBaselinkerLinked(product.sku, fresh.id ?? 0);
+      else markBaselinkerUnlinked(product.sku);
     } catch (err) {
       setData(null);
       setError(err instanceof Error ? err.message : 'Błąd');
