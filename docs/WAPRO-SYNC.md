@@ -89,6 +89,7 @@ Wzorzec: `scripts/katalog-sync.env.example`. **Nigdy nie commitujemy prawdziwego
 | `WAPRO_SQL_SERVER` / `WAPRO_SQL_DATABASE` | Gdy `sqlcmd` nie łączy się z `localhost` / bazą `WAPRO` |
 | `WAPRO_PRICE_SQL`, `WAPRO_PRICE_CSV` | Własne zapytanie / CSV cen, gdy standardowy eksport nie zwraca cen |
 | `WAPRO_AUTO_IMPORT=0` | Wyłącza auto-import nowych SKU |
+| `WAPRO_AUTO_SYNC_MINUTES=10` | Zadanie `-OnlyIfPending` bez zleceń z aplikacji robi pełny sync stanów/cen co tyle minut (domyślnie 10; `0` = tylko na zlecenie i w zadaniu dziennym). Znacznik: `stock-last-full-run.txt` |
 | `WAPRO_RUN_SALES_AFTER_STOCK=0` | Wyłącza automatyczne odświeżanie sprzedaży po syncu stanów (domyślnie włączone: raz dziennie + na zlecenie) |
 
 ## Pliki na serwerze
@@ -115,6 +116,8 @@ Skrypt jest uruchamiany przez **Windows PowerShell 5.1** i zapisany jako UTF-8 *
 4. Skopiuj plik na serwer (tabela wyżej).
 
 ## Rozwiązywanie problemów
+
+> **Historia (2026-10-06):** do tej pory pusta odpowiedź z listy zleceń (`[]`) była liczona jako „1 zlecenie bez ID" — agent robił pełny sync co 2 min, a przy próbie oznaczenia zlecenia logował `Nie udalo sie zaktualizowac statusu zlecenia : (400)`. Naprawione filtrem pustych ID. Zapytanie sprzedaży `extended_v2` miało przecinek przed `FROM` (`Incorrect syntax near the keyword 'FROM'`) i zawsze spadało do `bulk_v1` (bez rozbicia miesięcznego) — też naprawione.
 
 | Objaw | Przyczyna / działanie |
 |-------|------------------------|

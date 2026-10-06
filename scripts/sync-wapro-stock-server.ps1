@@ -38,6 +38,17 @@ $SyncDir = 'C:\katalog-sync'
 $EnvFile = Join-Path $SyncDir 'katalog-sync.env'
 $LogFile = Join-Path $SyncDir 'sync.log'
 
+# Wiek (w minutach) znacznika czasu zapisanego w pliku; brak/blad pliku = bardzo stary.
+function Get-StampAgeMinutes([string]$path) {
+  try {
+    if (Test-Path $path) {
+      $t = [DateTime]::Parse((Get-Content $path -Raw).Trim(), [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::RoundtripKind)
+      return ((Get-Date).ToUniversalTime() - $t.ToUniversalTime()).TotalMinutes
+    }
+  } catch { }
+  return 100000.0
+}
+
 function Write-Log([string]$msg) {
   $line = '{0} {1}' -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $msg
   Add-Content -Path $LogFile -Value $line -Encoding UTF8
@@ -1228,6 +1239,9 @@ function New-WaproSalesExtendedBulkSql {
     [void]$netMonth.Add("  CAST(ISNULL(SUM(CASE WHEN dh.DATA_WYSTAWIENIA >= @mb$lo AND dh.DATA_WYSTAWIENIA < @mb$hi THEN pd.ILOSC * ISNULL(pd.CENA_NETTO, 0) ELSE 0 END), 0) AS DECIMAL(18, 2)) AS net_cal_m$tag,")
   }
 
+  # Ostatnia kolumna przed FROM nie moze konczyc sie przecinkiem.
+  $netMonth[$netMonth.Count - 1] = $netMonth[$netMonth.Count - 1].TrimEnd(',')
+
   $head = @'
 SET NOCOUNT ON;
 DECLARE @d1 int = CAST(CAST(DATEADD(month, -1, CAST(GETDATE() AS date)) AS datetime) AS int) + 36163;
@@ -1748,7 +1762,7 @@ if (-not $DiagnoseSku) {
   try {
     $salesSyncUri = '{0}/rest/v1/sales_sync_requests?status=eq.pending&select=id&order=requested_at.asc' -f $SupabaseUrl
     $salesSyncPending = @(Invoke-RestMethod -Uri $salesSyncUri -Headers $headers -Method Get)
-    $salesSyncPendingIds = @($salesSyncPending | ForEach-Object { $_.id })
+    $salesSyncPendingIds = @($salesSyncPending | Where-Object { $_ -and $_.id } | ForEach-Object { $_.id })
   } catch {
     Write-Log ('Brak tabeli sales_sync_requests lub blad: {0}' -f $_.Exception.Message)
   }
@@ -1756,9 +1770,9 @@ if (-not $DiagnoseSku) {
   try {
     $pendingUri = '{0}/rest/v1/stock_sync_requests?status=eq.pending&select=id,catalog&order=requested_at.asc' -f $SupabaseUrl
     $pending = @(Invoke-RestMethod -Uri $pendingUri -Headers $headers -Method Get)
-    $pendingIds = @($pending | ForEach-Object { $_.id })
+    $pendingIds = @($pending | Where-Object { $_ -and $_.id } | ForEach-Object { $_.id })
     $scopes = @(
-      $pending | ForEach-Object {
+      $pending | Where-Object { $_ -and $_.id } | ForEach-Object {
         if ($_.catalog -and $_.catalog -ne '') { $_.catalog } else { 'all' }
       } | Select-Object -Unique
     )
@@ -1787,8 +1801,19 @@ if (-not $DiagnoseSku) {
   }
 
   if ($OnlyIfPending -and $pendingIds.Count -eq 0 -and $salesSyncPendingIds.Count -eq 0) {
-    Restore-SyncCulture
-    exit 0
+    # Brak zlecen z aplikacji. Zadanie uruchamiane co kilka minut robi pelny sync stanow i cen tylko
+    # raz na WAPRO_AUTO_SYNC_MINUTES (domyslnie 10; 0 = tylko na zlecenie i w zadaniu dziennym).
+    $autoMin = 10
+    if ($envMap['WAPRO_AUTO_SYNC_MINUTES']) {
+      $parsedAuto = 0
+      if ([int]::TryParse($envMap['WAPRO_AUTO_SYNC_MINUTES'], [ref]$parsedAuto)) { $autoMin = $parsedAuto }
+    }
+    $fullAge = Get-StampAgeMinutes (Join-Path $SyncDir 'stock-last-full-run.txt')
+    if ($autoMin -le 0 -or $fullAge -lt $autoMin) {
+      Restore-SyncCulture
+      exit 0
+    }
+    Write-Log ('Automatyczny sync stanow (odstep {0} min, brak zlecen z aplikacji)' -f $autoMin)
   }
 
   if ($OnlyIfPending -and $pendingIds.Count -eq 0 -and $salesSyncPendingIds.Count -gt 0) {
@@ -1819,6 +1844,7 @@ if ($DiagnoseSku) {
   Write-Log ('Diagnostyka SKU: {0}' -f $DiagnoseSku)
 } else {
   Write-Log ('Start sync WAPRO -> Supabase (zakres: {0})' -f $syncScope)
+  try { Set-Content -Path (Join-Path $SyncDir 'stock-last-full-run.txt') -Value ((Get-Date).ToUniversalTime().ToString('o')) -Encoding ASCII } catch { }
 }
 
 try {

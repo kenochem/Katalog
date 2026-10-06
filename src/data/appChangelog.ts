@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-06',
+    title: 'Sprzedaż: rozbicie miesięczne i porównanie z poprzednimi 12 miesiącami',
+    description:
+      'Naprawiono zapytanie do WAPRO, które zawsze kończyło się błędem składni i spadało do uproszczonej wersji (tylko sumy). Po skopiowaniu nowego skryptu na serwer sprzedaż w karcie produktu i w Operacjach wraca z pełnym rozbiciem na miesiące. Agent nie robi też już pełnego syncu co 2 minuty bez potrzeby — automat działa co 10 minut lub na zlecenie z aplikacji.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-06',
     title: 'Sprzedaż produktów odświeża się razem z syncem WAPRO',
     description:
       'Dane w zakładce Sprzedaż na karcie produktu (oraz w Operacjach) były aktualizowane tylko ręcznie i od 29.09 nie ruszyły. Teraz agent odświeża sprzedaż po dziennym syncu stanów oraz na zlecenie z aplikacji (nie częściej niż co 20 minut). Wymaga skopiowania nowego skryptu na serwer WAPRO.',
