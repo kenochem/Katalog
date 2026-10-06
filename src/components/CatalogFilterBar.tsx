@@ -85,6 +85,8 @@ interface CatalogFilterBarProps {
   onStockFilterChange: (v: StockFilter) => void;
   imageFilter: ImageFilter;
   onImageFilterChange: (v: ImageFilter) => void;
+  /** Ukrywa filtr „Zdjęcia” (np. w widoku „Bez zdjęć”, gdzie jest bez sensu). */
+  hideImageFilter?: boolean;
   knowledgeFilter?: KnowledgeFilter;
   onKnowledgeFilterChange?: (v: KnowledgeFilter) => void;
   baselinkerFilter?: BaselinkerFilter;
@@ -275,6 +277,7 @@ export function CatalogFilterBar({
   onStockFilterChange,
   imageFilter,
   onImageFilterChange,
+  hideImageFilter = false,
   knowledgeFilter = 'all',
   onKnowledgeFilterChange,
   baselinkerFilter = 'all',
@@ -502,7 +505,7 @@ export function CatalogFilterBar({
       {stockFilter !== 'all' && (
         <ActiveChip label={stockLabel} onRemove={() => onStockFilterChange('all')} />
       )}
-      {imageFilter !== 'all' && (
+      {!hideImageFilter && imageFilter !== 'all' && (
         <ActiveChip label={imageLabel} onRemove={() => onImageFilterChange('all')} />
       )}
       {knowledgeFilter !== 'all' && onKnowledgeFilterChange && (
@@ -664,6 +667,7 @@ export function CatalogFilterBar({
             )}
           </div>
 
+          {!hideImageFilter && (
           <div className="relative">
             <FilterTrigger
               label="Zdjęcia"
@@ -678,6 +682,7 @@ export function CatalogFilterBar({
               </div>
             )}
           </div>
+          )}
 
           {onKnowledgeFilterChange && (
             <div className="relative">
@@ -848,6 +853,7 @@ export function CatalogFilterBar({
                   ))}
                 </div>
               </MobileFilterSection>
+              {!hideImageFilter && (
               <MobileFilterSection title="Zdjęcia">
                 <div className="flex flex-wrap gap-1.5">
                   {IMAGE_OPTS.map((opt) => (
@@ -864,6 +870,7 @@ export function CatalogFilterBar({
                   ))}
                 </div>
               </MobileFilterSection>
+              )}
               {onKnowledgeFilterChange && (
                 <MobileFilterSection title="Opis w katalogu / AI">
                   <div className="flex flex-wrap gap-1.5">

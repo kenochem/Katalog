@@ -36,7 +36,6 @@ import { getProductSearchIndex } from './lib/productSearchIndex';
 import { isCatalogSearchPending, useDebouncedCatalogSearch } from './lib/useDebouncedCatalogSearch';
 import {
   applyCatalogFilters,
-  filterProducts,
   CATALOG_SORT_OPTIONS,
   type CatalogSort,
   type StockFilter,
@@ -102,7 +101,6 @@ import { getKenochemCategoryGroupsFor } from './lib/kenochemCategoryTree';
 import {
   deriveManufacturers,
   manufacturerCounts as buildManufacturerCounts,
-  effectiveManufacturer,
 } from './lib/waproManufacturers';
 import { resolveProductCatalogKind } from './lib/catalogKind';
 import { isCatalogHiddenProduct } from './lib/productMeta';
@@ -2014,10 +2012,8 @@ export default function App() {
           <MissingImagesView
             products={missingImages}
             categoryList={categoryList}
-            manufacturerList={manufacturerList}
+            shopCategoryGroups={shopCategoryGroups}
             initialCategory={missingCategory}
-            manufacturer={manufacturer}
-            onManufacturerChange={setManufacturer}
             gridDensity={gridDensity}
             onGridDensityChange={changeGridDensity}
             onProductClick={setSelectedProduct}
@@ -2893,10 +2889,8 @@ function LabelsView({
 function MissingImagesView({
   products,
   categoryList,
-  manufacturerList = [],
+  shopCategoryGroups,
   initialCategory = 'Wszystkie',
-  manufacturer = 'Wszyscy',
-  onManufacturerChange,
   gridDensity = 'md',
   onGridDensityChange,
   onProductClick,
@@ -2905,10 +2899,8 @@ function MissingImagesView({
 }: {
   products: Product[];
   categoryList: string[];
-  manufacturerList?: string[];
+  shopCategoryGroups?: ShopCategoryGroup[];
   initialCategory?: string;
-  manufacturer?: string;
-  onManufacturerChange?: (m: string) => void;
   gridDensity?: GridDensity;
   onGridDensityChange?: (v: GridDensity) => void;
   onProductClick: (p: Product) => void;
@@ -2917,6 +2909,11 @@ function MissingImagesView({
 }) {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState(initialCategory);
+  // Filtry tego widoku są lokalne — nie mieszają się z filtrami głównego katalogu.
+  const [manufacturer, setManufacturer] = useState('Wszyscy');
+  const [stockFilter, setStockFilter] = useState<StockFilter>('all');
+  const [sort, setSort] = useState<CatalogSort>('name-asc');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [quickMode, setQuickMode] = useState(false);
 
@@ -2934,14 +2931,28 @@ function MissingImagesView({
   }, [products]);
 
   const mfgCounts = useMemo(() => buildManufacturerCounts(products), [products]);
+  const manufacturerList = useMemo(() => deriveManufacturers(products), [products]);
 
-  const filtered = useMemo(() => {
-    let list = filterProducts(products, search, category);
-    if (manufacturer && manufacturer !== 'Wszyscy') {
-      list = list.filter((p) => effectiveManufacturer(p) === manufacturer);
-    }
-    return list.sort((a, b) => a.displayName.localeCompare(b.displayName, 'pl'));
-  }, [products, search, category, manufacturer]);
+  // Kategorie z głównego katalogu + te, które realnie występują wśród produktów bez zdjęcia.
+  const categories = useMemo(() => {
+    const extra = Object.keys(categoryCounts).filter(
+      (c) => c !== 'Wszystkie' && !categoryList.includes(c),
+    );
+    return [...categoryList, ...extra];
+  }, [categoryList, categoryCounts]);
+
+  const filtered = useMemo(
+    () =>
+      applyCatalogFilters(products, {
+        search,
+        category,
+        manufacturer,
+        sort,
+        stockFilter,
+        visibilityFilter: 'all',
+      }),
+    [products, search, category, manufacturer, stockFilter, sort],
+  );
 
   const topManufacturers = useMemo(
     () =>
@@ -2951,6 +2962,17 @@ function MissingImagesView({
         .slice(0, 5),
     [mfgCounts],
   );
+
+  const activeFilterCount =
+    (category !== 'Wszystkie' ? 1 : 0) +
+    (manufacturer !== 'Wszyscy' ? 1 : 0) +
+    (stockFilter !== 'all' ? 1 : 0);
+
+  function resetFilters() {
+    setCategory('Wszystkie');
+    setManufacturer('Wszyscy');
+    setStockFilter('all');
+  }
 
   return (
     <div className="space-y-4">
@@ -2964,10 +2986,16 @@ function MissingImagesView({
             <p className="mt-2 text-xs text-amber-900/80 dark:text-amber-200/80">
               Najwięcej braków wg marki:{' '}
               {topManufacturers.map(([m, count], i) => (
-                <span key={m}>
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setManufacturer(m)}
+                  className="underline-offset-2 hover:underline"
+                  title={`Pokaż tylko: ${m}`}
+                >
                   {i > 0 ? ' · ' : ''}
                   {m} ({count})
-                </span>
+                </button>
               ))}
             </p>
           )}
@@ -2984,106 +3012,67 @@ function MissingImagesView({
         )}
       </div>
 
-      <div className="flex items-center gap-2">
-        <div className="min-w-0 flex-1">
-          <SearchBar
-            value={search}
-            onChange={setSearch}
-            placeholder="Szukaj brakujących zdjęć po SKU, nazwie lub EAN..."
-            onScanClick={() => setShowScanner(true)}
-          />
-        </div>
-        {onGridDensityChange && (
-          <div className="flex shrink-0 items-center rounded-lg border border-slate-700 p-0.5">
-            {(
-              [
-                { id: 'sm' as const, icon: LayoutGrid, label: 'Małe' },
-                { id: 'md' as const, icon: Rows2, label: 'Średnie' },
-                { id: 'lg' as const, icon: Square, label: 'Duże' },
-              ] as const
-            ).map((opt) => (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => onGridDensityChange(opt.id)}
-                className={`rounded-md p-1.5 transition ${
-                  gridDensity === opt.id
-                    ? 'bg-brand-600 text-white'
-                    : 'text-slate-400 hover:text-slate-100'
-                }`}
-                title={opt.label}
-                aria-label={`Widok: ${opt.label}`}
-              >
-                <opt.icon className="h-4 w-4" />
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      <SearchBar
+        value={search}
+        onChange={setSearch}
+        placeholder="Szukaj brakujących zdjęć po SKU, nazwie lub EAN..."
+        onScanClick={() => setShowScanner(true)}
+      />
 
-      {onManufacturerChange && manufacturerList.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {manufacturerList
-            .filter((m) => m === 'Wszyscy' || (mfgCounts[m] ?? 0) > 0)
-            .slice(0, 28)
-            .map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => onManufacturerChange(m)}
-                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition ${
-                  manufacturer === m
-                    ? 'bg-violet-50 text-violet-950 ring-1 ring-violet-500/35 dark:bg-violet-500/25 dark:text-violet-100'
-                    : 'bg-slate-800 text-slate-400 hover:text-slate-100'
-                }`}
-              >
-                {m}
-                {(mfgCounts[m] ?? 0) > 0 && (
-                  <span className="ml-1 opacity-60">{mfgCounts[m]}</span>
-                )}
-              </button>
-            ))}
-        </div>
-      )}
-
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {categoryList.filter(
-          (c) => c === 'Wszystkie' || (categoryCounts[c] ?? 0) > 0,
-        ).map((cat) => (
-          <button
-            key={cat}
-            type="button"
-            onClick={() => setCategory(cat)}
-            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition ${
-              category === cat
-                ? 'bg-amber-500 text-amber-950'
-                : 'bg-slate-800 text-slate-400 hover:text-slate-100'
-            }`}
-          >
-            {cat}
-            {(categoryCounts[cat] ?? 0) > 0 && (
-              <span className="ml-1 opacity-60">{categoryCounts[cat]}</span>
-            )}
-          </button>
-        ))}
-      </div>
+      <CatalogFilterBar
+        categories={categories}
+        categoryCounts={categoryCounts}
+        category={category}
+        onCategoryChange={setCategory}
+        manufacturers={manufacturerList}
+        manufacturerCounts={mfgCounts}
+        manufacturer={manufacturer}
+        onManufacturerChange={setManufacturer}
+        stockFilter={stockFilter}
+        onStockFilterChange={setStockFilter}
+        imageFilter="all"
+        onImageFilterChange={() => undefined}
+        hideImageFilter
+        shopCategoryGroups={shopCategoryGroups}
+        sort={sort}
+        onSortChange={setSort}
+        sortDisabled={search.trim().length >= 2}
+        density={gridDensity}
+        onDensityChange={(d) => onGridDensityChange?.(d)}
+        filteredCount={filtered.length}
+        searching={search.trim().length >= 2}
+        onResetFilters={resetFilters}
+        mobileFiltersOpen={filtersOpen}
+        onMobileFiltersOpenChange={setFiltersOpen}
+        activeFilterCount={activeFilterCount}
+      />
 
       <p className="text-sm text-slate-500">
         {filtered.length} {filtered.length === 1 ? 'produkt' : 'produktów'}
         {search && ` dla „${search}"`}
         {manufacturer !== 'Wszyscy' && ` · ${manufacturer}`}
+        {category !== 'Wszystkie' && ` · ${category}`}
       </p>
 
       {filtered.length === 0 ? (
         <div className="py-16 text-center text-slate-500">
           <ImageOff className="mx-auto h-10 w-10 opacity-40" />
           <p className="mt-3">Brak produktów w tym filtrze</p>
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="mt-3 rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:bg-slate-800"
+            >
+              Wyczyść filtry
+            </button>
+          )}
         </div>
       ) : (
         <ProductGrid
           products={filtered}
           className={GRID_CLASS[gridDensity]}
-          resetKey={`missing|${gridDensity}|${category}|${manufacturer}|${search}|${filtered.length}`}
+          resetKey={`missing|${gridDensity}|${category}|${manufacturer}|${stockFilter}|${sort}|${search}|${filtered.length}`}
           renderItem={(product) => (
             <ProductCard
               product={product}
@@ -3101,8 +3090,7 @@ function MissingImagesView({
           <BarcodeScanner
             onScan={(code) => {
               setSearch(code);
-              setCategory('Wszystkie');
-              onManufacturerChange?.('Wszyscy');
+              resetFilters();
               setShowScanner(false);
             }}
             onClose={() => setShowScanner(false)}
