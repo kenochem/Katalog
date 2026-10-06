@@ -21,25 +21,43 @@ export interface BaselinkerProduct {
   isBundle?: boolean;
 }
 
+export type BaselinkerField = 'stock' | 'price';
+
+export interface BaselinkerSettings {
+  stockAuto: boolean;
+  priceAuto: boolean;
+  priceGroupId: string;
+  skipManualStock: boolean;
+  maxAutoChanges: number;
+  excludePrefixes: string[];
+  excludeSkus: string[];
+  priceTolerance: number;
+}
+
 export interface BaselinkerDiffRow {
   sku: string;
   name: string;
   ours: number;
-  bl: number;
+  bl: number | null;
   blId: number;
+  manual?: boolean;
 }
 
 export interface BaselinkerCompare {
   warehouse: string;
+  priceGroupId: string | null;
   totals: {
     ours: number;
     bl: number;
     matched: number;
-    diffs: number;
+    excluded: number;
+    stockDiffs: number;
+    priceDiffs: number;
     missingInBl: number;
     onlyInBl: number;
   };
-  diffs: BaselinkerDiffRow[];
+  stockDiffs: BaselinkerDiffRow[];
+  priceDiffs: BaselinkerDiffRow[];
   missingInBl: { sku: string; name: string; ours: number }[];
   onlyInBl: { sku: string; name: string; bl: number; blId: number }[];
 }
@@ -52,18 +70,32 @@ export interface BaselinkerConfig {
     priceGroupId: string | null;
   };
   resolvedWarehouse?: string | null;
-  autoStock: boolean;
+  settings: BaselinkerSettings;
   inventories?: unknown;
   warehouses?: unknown;
   priceGroups?: unknown;
 }
 
 export interface BaselinkerPushResult {
-  updated: number;
+  fields: BaselinkerField[];
   requested: number;
+  results: Record<string, { updated: number; skipped: number; warnings: Record<string, unknown>; error?: string }>;
   noLinkCount: number;
   noLink: string[];
-  warnings: Record<string, unknown>;
+}
+
+export interface BaselinkerLogRow {
+  id: string;
+  created_at: string;
+  trigger: string;
+  user_label: string;
+  field: string;
+  requested: number;
+  updated: number;
+  skipped: number;
+  status: string;
+  note: string;
+  sample?: { sku: string; blId: string; value: number }[] | null;
 }
 
 async function call<T>(body: Record<string, unknown>): Promise<T> {
@@ -108,8 +140,10 @@ export function invalidateBaselinkerProduct(sku: string): void {
 }
 
 export const fetchBaselinkerConfig = () => call<BaselinkerConfig>({ action: 'config' });
-export const compareBaselinkerStock = () => call<BaselinkerCompare>({ action: 'compare' });
-export const pushBaselinkerStock = (skus: string[]) =>
-  call<BaselinkerPushResult>({ action: 'push', skus });
-export const setBaselinkerAutoStock = (enabled: boolean) =>
-  call<{ ok: boolean; autoStock: boolean }>({ action: 'set-auto', enabled });
+export const saveBaselinkerSettings = (settings: BaselinkerSettings) =>
+  call<{ ok: boolean; settings: BaselinkerSettings }>({ action: 'settings-set', settings });
+export const compareBaselinker = () => call<BaselinkerCompare>({ action: 'compare' });
+export const pushToBaselinker = (skus: string[], fields: BaselinkerField[]) =>
+  call<BaselinkerPushResult>({ action: 'push', skus, fields });
+export const fetchBaselinkerHistory = () =>
+  call<{ rows: BaselinkerLogRow[] }>({ action: 'history' }).then((r) => r.rows);

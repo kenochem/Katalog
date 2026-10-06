@@ -2299,20 +2299,20 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
     }
   }
 
-  # BaseLinker: wyslij stany zmienione w tym przebiegu (Edge Function `baselinker`; dziala
-  # tylko gdy admin wlaczyl "automatyczne wysylanie" w Administracja -> BaseLinker).
+  # BaseLinker: wyslij stany/ceny zmienione w tym przebiegu (Edge Function `baselinker`; dziala
+  # tylko dla pol, ktorym admin wlaczyl automat w Administracja -> BaseLinker).
   if ($changeRows.Count -gt 0 -and $envMap['BASELINKER_AUTO_PUSH'] -ne '0') {
-    $blSkus = @($changeRows | Where-Object { $_.field -eq 'stock' } | ForEach-Object { [string]$_.sku } | Select-Object -Unique)
+    $blSkus = @($changeRows | ForEach-Object { [string]$_.sku } | Select-Object -Unique)
     if ($blSkus.Count -gt 0) {
       try {
-        $blBody = ConvertTo-JsonText @{ action = 'push'; skus = $blSkus } 4 -Compress
+        $blBody = ConvertTo-JsonText @{ action = 'push'; skus = $blSkus; fields = @('stock', 'price') } 4 -Compress
         $blBytes = [System.Text.Encoding]::UTF8.GetBytes($blBody)
         $blUri = '{0}/functions/v1/baselinker' -f $SupabaseUrl
         $blRes = Invoke-RestMethod -Uri $blUri -Headers $jsonHeaders -Method Post -Body $blBytes -ContentType 'application/json; charset=utf-8' -TimeoutSec 120
         if ($blRes.skipped) {
           Write-Log ('BaseLinker: pominieto ({0})' -f $blRes.reason)
         } else {
-          Write-Log ('BaseLinker: wyslano stany {0} z {1} SKU (bez powiazania: {2})' -f $blRes.updated, $blRes.requested, $blRes.noLinkCount)
+          Write-Log ('BaseLinker: wyslano zmiany dla {0} SKU (bez powiazania: {1})' -f $blRes.requested, $blRes.noLinkCount)
         }
       } catch {
         Write-Log ('BaseLinker: blad wysylki stanow: {0}' -f $_.Exception.Message)

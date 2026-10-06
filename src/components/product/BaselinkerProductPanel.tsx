@@ -3,8 +3,13 @@ import { AlertTriangle, CheckCircle2, Loader2, RefreshCw, XCircle } from 'lucide
 import type { Product } from '../../types';
 import {
   fetchBaselinkerProduct,
+  invalidateBaselinkerProduct,
+  pushToBaselinker,
+  type BaselinkerField,
   type BaselinkerProduct,
 } from '../../lib/baselinkerApi';
+import { useAuth } from '../../lib/auth';
+import { showToast } from '../../lib/toast';
 import { formatPricePln } from '../../lib/format';
 
 function Row({
@@ -41,6 +46,29 @@ export function BaselinkerProductPanel({ product }: { product: Product }) {
   const [data, setData] = useState<BaselinkerProduct | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pushing, setPushing] = useState<BaselinkerField | null>(null);
+  const { role } = useAuth();
+  const isAdmin = role === 'admin';
+
+  async function pushField(field: BaselinkerField) {
+    setPushing(field);
+    try {
+      const r = await pushToBaselinker([product.sku], [field]);
+      const res = r.results[field];
+      if (res?.error) throw new Error(res.error);
+      if (r.noLinkCount > 0) {
+        showToast('Brak powiązania z BaseLinkerem — uruchom najpierw Porównanie w Administracja → BaseLinker', 'warn', 6000);
+      } else {
+        showToast(field === 'stock' ? 'Stan wysłany do BaseLinkera' : 'Cena wysłana do BaseLinkera', 'ok');
+      }
+      invalidateBaselinkerProduct(product.sku);
+      await load(true);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Błąd wysyłki', 'error', 6000);
+    } finally {
+      setPushing(null);
+    }
+  }
 
   async function load(force = false) {
     setLoading(true);
@@ -168,9 +196,35 @@ export function BaselinkerProductPanel({ product }: { product: Product }) {
 
           {(stockSame === false || priceSame === false) && (
             <p className="text-[11px] text-amber-400">
-              Wartości w BaseLinkerze różnią się od katalogu (WAPRO). Zbiorczą korektę stanów robi admin w
-              Administracja → BaseLinker.
+              Wartości w BaseLinkerze różnią się od katalogu (WAPRO).
+              {!isAdmin && ' Korektę robi administrator.'}
             </p>
+          )}
+          {isAdmin && (stockSame === false || priceSame === false) && (
+            <div className="flex flex-wrap gap-2">
+              {stockSame === false && (
+                <button
+                  type="button"
+                  disabled={pushing !== null}
+                  onClick={() => void pushField('stock')}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                >
+                  {pushing === 'stock' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  Ustaw stan w BL = {Math.max(0, Math.floor(product.stock ?? 0))}
+                </button>
+              )}
+              {priceSame === false && (
+                <button
+                  type="button"
+                  disabled={pushing !== null}
+                  onClick={() => void pushField('price')}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                >
+                  {pushing === 'price' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  Ustaw cenę w BL = {ourGross != null ? formatPricePln(ourGross) : '—'}
+                </button>
+              )}
+            </div>
           )}
         </>
       )}
