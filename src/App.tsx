@@ -92,6 +92,7 @@ import {
 import { CatalogCommandPalette } from './components/CatalogCommandPalette';
 import { CatalogStatsBar } from './components/CatalogStatsBar';
 import { CatalogFilterBar, type ShopCategoryGroup } from './components/CatalogFilterBar';
+import { InlineErrorBoundary } from './components/InlineErrorBoundary';
 import { CatalogHomeView, type CatalogHomeQuickAction } from './components/CatalogHomeView';
 import { AppHeaderActions } from './components/AppHeaderActions';
 import { canAccessAdminPanel } from './lib/adminAccess';
@@ -2009,17 +2010,19 @@ export default function App() {
             />
           </Suspense>
         ) : (
-          <MissingImagesView
-            products={missingImages}
-            categoryList={categoryList}
-            shopCategoryGroups={shopCategoryGroups}
-            initialCategory={missingCategory}
-            gridDensity={gridDensity}
-            onGridDensityChange={changeGridDensity}
-            onProductClick={setSelectedProduct}
-            onImageUpdated={handleImageUpdated}
-            canUpload={roleCan(role, 'uploadImage')}
-          />
+          <InlineErrorBoundary label="Bez zdjęć">
+            <MissingImagesView
+              products={missingImages}
+              categoryList={categoryList}
+              shopCategoryGroups={shopCategoryGroups}
+              initialCategory={missingCategory}
+              gridDensity={gridDensity}
+              onGridDensityChange={changeGridDensity}
+              onProductClick={setSelectedProduct}
+              onImageUpdated={handleImageUpdated}
+              canUpload={roleCan(role, 'uploadImage')}
+            />
+          </InlineErrorBoundary>
         )}
 
         {canUseCrmModule(role) &&
@@ -2921,16 +2924,43 @@ function MissingImagesView({
     setCategory(initialCategory);
   }, [initialCategory]);
 
+  // Liczniki uwzględniają pozostałe filtry (kategoria nie zawęża liczników kategorii, producent —
+  // liczników producentów), żeby wybór z listy nie kończył się pustym wynikiem.
+  const forCategoryCounts = useMemo(
+    () =>
+      applyCatalogFilters(products, {
+        search,
+        category: 'Wszystkie',
+        manufacturer,
+        sort: 'name-asc',
+        stockFilter,
+        visibilityFilter: 'all',
+      }),
+    [products, search, manufacturer, stockFilter],
+  );
+  const forManufacturerCounts = useMemo(
+    () =>
+      applyCatalogFilters(products, {
+        search,
+        category,
+        manufacturer: 'Wszyscy',
+        sort: 'name-asc',
+        stockFilter,
+        visibilityFilter: 'all',
+      }),
+    [products, search, category, stockFilter],
+  );
+
   const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = { Wszystkie: products.length };
-    for (const p of products) {
+    const counts: Record<string, number> = { Wszystkie: forCategoryCounts.length };
+    for (const p of forCategoryCounts) {
       const c = getProductDisplayCategory(p);
       counts[c] = (counts[c] || 0) + 1;
     }
     return counts;
-  }, [products]);
+  }, [forCategoryCounts]);
 
-  const mfgCounts = useMemo(() => buildManufacturerCounts(products), [products]);
+  const mfgCounts = useMemo(() => buildManufacturerCounts(forManufacturerCounts), [forManufacturerCounts]);
   const manufacturerList = useMemo(() => deriveManufacturers(products), [products]);
 
   // Kategorie z głównego katalogu + te, które realnie występują wśród produktów bez zdjęcia.
@@ -2956,11 +2986,11 @@ function MissingImagesView({
 
   const topManufacturers = useMemo(
     () =>
-      Object.entries(mfgCounts)
+      Object.entries(buildManufacturerCounts(products))
         .filter(([m, count]) => m !== 'Wszyscy' && m !== 'Bez producenta' && count > 0)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5),
-    [mfgCounts],
+    [products],
   );
 
   const activeFilterCount =
