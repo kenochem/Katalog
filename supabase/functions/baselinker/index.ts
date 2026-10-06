@@ -152,6 +152,10 @@ async function loadSettings(admin: Admin): Promise<SyncSettings> {
   return merged;
 }
 
+function priceGroupFor(s: SyncSettings, fallback?: string): string {
+  return s.priceGroupId || ENV_PRICE_GROUP || fallback || '';
+}
+
 function skipStockFor(o: { stock: number; skipStock: boolean }, s: SyncSettings): boolean {
   return o.skipStock || (s.skipStockAbove > 0 && o.stock >= s.skipStockAbove);
 }
@@ -443,9 +447,6 @@ Deno.serve(async (req) => {
     if (!INVENTORY_ID && action !== 'settings-set' && action !== 'history') {
       return json({ error: 'Brak sekretu BASELINKER_INVENTORY_ID w Supabase.' }, 500);
     }
-
-    const priceGroupFor = (s: SyncSettings, fallback?: string) =>
-      s.priceGroupId || ENV_PRICE_GROUP || fallback || '';
 
     // ---- product -------------------------------------------------------------------------
     if (action === 'product') {
