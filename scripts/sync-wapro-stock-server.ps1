@@ -1487,7 +1487,7 @@ function Invoke-SyncWaproSalesBulk {
     foreach ($id in $PendingIds) {
       $body = @{ status = 'running'; started_at = $now } | ConvertTo-Json -Compress
       $uri = '{0}/rest/v1/sales_sync_requests?id=eq.{1}' -f $SupabaseUrl, $id
-      try { Invoke-RestMethod -Uri $uri -Headers $JsonHeaders -Method Patch -Body $body | Out-Null } catch { }
+      try { Invoke-RestMethod -Uri $uri -Headers $JsonHeaders -Method Patch -Body $body | Out-Null } catch { Write-Log ('Nie udalo sie zaktualizowac statusu zlecenia {0}: {1}' -f $id, $_.Exception.Message) }
     }
   }
 
@@ -1566,7 +1566,7 @@ function Invoke-SyncWaproSalesBulk {
       foreach ($id in $PendingIds) {
         $doneBody = @{ status = 'done'; finished_at = $doneAt; message = $msg } | ConvertTo-Json -Compress
         $doneUri = '{0}/rest/v1/sales_sync_requests?id=eq.{1}' -f $SupabaseUrl, $id
-        try { Invoke-RestMethod -Uri $doneUri -Headers $JsonHeaders -Method Patch -Body $doneBody | Out-Null } catch { }
+        try { Invoke-RestMethod -Uri $doneUri -Headers $JsonHeaders -Method Patch -Body $doneBody | Out-Null } catch { Write-Log ('Nie udalo sie zaktualizowac statusu zlecenia {0}: {1}' -f $id, $_.Exception.Message) }
       }
     }
     return $msg
@@ -1810,7 +1810,7 @@ if (-not $DiagnoseSku) {
       $uri = '{0}/rest/v1/stock_sync_requests?id=eq.{1}' -f $SupabaseUrl, $id
       try {
         Invoke-RestMethod -Uri $uri -Headers $jsonHeaders -Method Patch -Body $body | Out-Null
-      } catch { }
+      } catch { Write-Log ('Nie udalo sie zaktualizowac statusu zlecenia {0}: {1}' -f $id, $_.Exception.Message) }
     }
   }
 }
@@ -2318,7 +2318,7 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
       $uri = '{0}/rest/v1/stock_sync_requests?id=eq.{1}' -f $SupabaseUrl, $id
       try {
         Invoke-RestMethod -Uri $uri -Headers $jsonHeaders -Method Patch -Body $body | Out-Null
-      } catch { }
+      } catch { Write-Log ('Nie udalo sie zaktualizowac statusu zlecenia {0}: {1}' -f $id, $_.Exception.Message) }
     }
   }
 
