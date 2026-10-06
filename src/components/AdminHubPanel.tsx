@@ -38,13 +38,20 @@ export function AdminHubPanel({
 }: AdminHubPanelProps) {
   const { role } = useAuth();
   const [tab, setTab] = useState<AdminTab>(
-    roleCan(role, 'manageUsers') ? 'users' : product === 'ops' ? 'operations' : 'permissions',
+    roleCan(role, 'manageUsers')
+      ? 'users'
+      : product === 'ops'
+        ? 'operations'
+        : roleCan(role, 'viewRoleMatrix')
+          ? 'permissions'
+          : 'baselinker',
   );
 
   const showUsers = roleCan(role, 'manageUsers');
   const showMatrix = roleCan(role, 'viewRoleMatrix');
   const showOperations = product === 'ops';
   const showAudit = roleCan(role, 'manageUsers');
+  const showBaselinker = roleCan(role, 'manageBaselinker');
   const canEditMatrix = roleCan(role, 'editRoleMatrix');
 
   return (
@@ -116,7 +123,7 @@ export function AdminHubPanel({
               label="Aktywność"
             />
           )}
-          {showAudit && (
+          {showBaselinker && (
             <TabButton
               active={tab === 'baselinker'}
               onClick={() => setTab('baselinker')}
@@ -141,7 +148,7 @@ export function AdminHubPanel({
 
       {tab === 'audit' && showAudit && <AdminAuditSection />}
 
-      {tab === 'baselinker' && showAudit && <AdminBaselinkerSection />}
+      {tab === 'baselinker' && showBaselinker && <AdminBaselinkerSection />}
 
       {tab === 'permissions' && showMatrix && (
         <AdminPermissionsSection canEditMatrix={canEditMatrix} />

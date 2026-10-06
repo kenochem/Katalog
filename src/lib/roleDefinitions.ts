@@ -67,7 +67,8 @@ export type RoleAction =
   | 'useCrm'
   | 'viewRoleMatrix'
   | 'editRoleMatrix'
-  | 'viewOps';
+  | 'viewOps'
+  | 'manageBaselinker';
 
 export const ROLE_ACTION_LABELS: Record<RoleAction, string> = {
   editStock: 'Edycja stanów',
@@ -90,6 +91,7 @@ export const ROLE_ACTION_LABELS: Record<RoleAction, string> = {
   viewRoleMatrix: 'Podgląd uprawnień',
   editRoleMatrix: 'Edycja macierzy uprawnień',
   viewOps: 'Operacje / kalkulatory',
+  manageBaselinker: 'BaseLinker: synchronizacja i import',
 };
 
 export const ROLE_ACTIONS: RoleAction[] = Object.keys(
@@ -117,6 +119,7 @@ const ALL_FALSE: Record<RoleAction, boolean> = {
   viewRoleMatrix: false,
   editRoleMatrix: false,
   viewOps: false,
+  manageBaselinker: false,
 };
 
 /** Domyślna macierz — później można nadpisać z DB. */
@@ -175,6 +178,7 @@ export const DEFAULT_ROLE_MATRIX: Record<AppRole, Record<RoleAction, boolean>> =
     viewRoleMatrix: false,
     editRoleMatrix: false,
     viewOps: true,
+    manageBaselinker: false,
   },
   admin: {
     editStock: true,
@@ -197,5 +201,6 @@ export const DEFAULT_ROLE_MATRIX: Record<AppRole, Record<RoleAction, boolean>> =
     viewRoleMatrix: true,
     editRoleMatrix: true,
     viewOps: true,
+    manageBaselinker: true,
   },
 };

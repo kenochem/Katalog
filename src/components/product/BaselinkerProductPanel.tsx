@@ -10,6 +10,7 @@ import {
   type BaselinkerProduct,
 } from '../../lib/baselinkerApi';
 import { useAuth } from '../../lib/auth';
+import { roleCan } from '../../lib/roles';
 import { markBaselinkerLinked, markBaselinkerUnlinked } from '../../lib/baselinkerLive';
 import { updateProduct } from '../../lib/products';
 import { mergeProductMeta } from '../../lib/productMeta';
@@ -77,7 +78,7 @@ export function BaselinkerProductPanel({ product }: { product: Product }) {
     }
   }
   const { role } = useAuth();
-  const isAdmin = role === 'admin';
+  const isAdmin = roleCan(role, 'manageBaselinker');
 
   const [importing, setImporting] = useState(false);
 

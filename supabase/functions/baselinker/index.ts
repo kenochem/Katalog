@@ -472,6 +472,8 @@ Deno.serve(async (req) => {
     let userId: string | null = null;
     let userLabel = 'agent WAPRO';
     let isAdmin = false;
+    let canManage = isSystem;
+    let userRole = isSystem ? 'system' : '';
     if (!isSystem) {
       const userClient = createClient(supabaseUrl, anonKey, {
         global: { headers: { Authorization: authHeader } },
@@ -489,6 +491,14 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (!prof || prof.active === false) return json({ error: 'Konto nieaktywne' }, 403);
       isAdmin = prof.role === 'admin';
+      userRole = String(prof.role ?? '');
+      canManage = isAdmin;
+      if (!canManage) {
+        // Uprawnienie „manageBaselinker” nadawane roli w Administracja → Uprawnienia (app_role_matrix).
+        const { data: mx } = await admin.from('app_role_matrix').select('matrix').eq('id', 'default').maybeSingle();
+        const row = ((mx?.matrix ?? {}) as Record<string, Record<string, unknown>>)[userRole];
+        canManage = row?.manageBaselinker === true;
+      }
       userLabel = String(prof.display_name || prof.email || '');
     }
 
@@ -496,7 +506,7 @@ Deno.serve(async (req) => {
     const action = String(body.action ?? '');
 
     const needAdmin = () => {
-      if (!isSystem && !isAdmin) throw Object.assign(new Error('Tylko administrator'), { status: 403 });
+      if (!canManage) throw Object.assign(new Error('Brak uprawnienia do zarządzania BaseLinkerem (Administracja → Uprawnienia)'), { status: 403 });
     };
     if (action === 'refresh-links' && (!TOKEN || !INVENTORY_ID)) {
       return json({ skipped: true, reason: 'BaseLinker nieskonfigurowany' });
@@ -871,7 +881,7 @@ Deno.serve(async (req) => {
         await admin.from('audit_log').insert({
           user_id: userId,
           user_label: userLabel,
-          user_role: 'admin',
+          user_role: userRole,
           app: 'baselinker',
           action: 'baselinker.push',
           entity_type: 'baselinker',
@@ -1034,7 +1044,7 @@ Deno.serve(async (req) => {
         await admin.from('audit_log').insert({
           user_id: userId,
           user_label: userLabel,
-          user_role: 'admin',
+          user_role: userRole,
           app: 'baselinker',
           action: 'baselinker.import',
           entity_type: 'baselinker',
