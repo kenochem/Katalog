@@ -35,7 +35,7 @@ Agent **nie jest wdrażany automatycznie**. Po każdej zmianie w repo skopiuj pl
    - **puste szkice** zakładane w Mag i nigdy nieuzupełnione (nazwa „nowy artykuł (ID)" / SKU w formie `(12345)`).
    Wyłączenie auto-importu: `WAPRO_AUTO_IMPORT=0` w `katalog-sync.env`.
 5. **Eksport katalogu Mag** do `wapro-mag-catalog.json` (wejście dla auto-importu).
-6. Zlecenie sync sprzedaży, które czeka w kolejce, jest wykonywane po pełnym syncu stanów **tylko** gdy w `.env` jest `WAPRO_RUN_SALES_AFTER_STOCK=1`; w przeciwnym razie log podpowiada, żeby uruchomić `-SalesSyncOnly` (zrobi to też zadanie `-OnlyIfPending`, gdy nie ma zleceń stanów).
+6. **Sprzedaż** (zakładka *Sprzedaż* na karcie produktu i Operacje) odświeża się po pełnym syncu stanów: w zaplanowanym zadaniu dziennym (bez `-OnlyIfPending`), jeśli ostatni przebieg był ≥ 20 h temu, oraz gdy czeka zlecenie z aplikacji (nie częściej niż co 20 min). Znacznik ostatniego przebiegu: `C:\katalog-sync\sales-last-run.txt`. Wyłączenie: `WAPRO_RUN_SALES_AFTER_STOCK=0`. Ręcznie: `-SalesSyncOnly`.
 
 ## Sync sprzedaży (Operacje)
 
@@ -89,7 +89,7 @@ Wzorzec: `scripts/katalog-sync.env.example`. **Nigdy nie commitujemy prawdziwego
 | `WAPRO_SQL_SERVER` / `WAPRO_SQL_DATABASE` | Gdy `sqlcmd` nie łączy się z `localhost` / bazą `WAPRO` |
 | `WAPRO_PRICE_SQL`, `WAPRO_PRICE_CSV` | Własne zapytanie / CSV cen, gdy standardowy eksport nie zwraca cen |
 | `WAPRO_AUTO_IMPORT=0` | Wyłącza auto-import nowych SKU |
-| `WAPRO_RUN_SALES_AFTER_STOCK=1` | Oczekujące zlecenie sprzedaży jest realizowane od razu po pełnym syncu stanów |
+| `WAPRO_RUN_SALES_AFTER_STOCK=0` | Wyłącza automatyczne odświeżanie sprzedaży po syncu stanów (domyślnie włączone: raz dziennie + na zlecenie) |
 
 ## Pliki na serwerze
 

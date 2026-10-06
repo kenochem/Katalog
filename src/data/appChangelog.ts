@@ -13,6 +13,20 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-06',
+    title: 'Sprzedaż produktów odświeża się razem z syncem WAPRO',
+    description:
+      'Dane w zakładce Sprzedaż na karcie produktu (oraz w Operacjach) były aktualizowane tylko ręcznie i od 29.09 nie ruszyły. Teraz agent odświeża sprzedaż po dziennym syncu stanów oraz na zlecenie z aplikacji (nie częściej niż co 20 minut). Wymaga skopiowania nowego skryptu na serwer WAPRO.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-06',
+    title: 'Uprawnienie BaseLinker widoczne w macierzy uprawnień',
+    description:
+      'W Administracja → Uprawnienia pojawiło się brakujące uprawnienie „BaseLinker: synchronizacja i import” (grupa Administracja), które można nadać dowolnej roli, np. operatorowi.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-06',
     title: 'Ładne okna potwierdzeń zamiast komunikatów przeglądarki',
     description:
       'Pytania typu „Usunąć zdjęcie?”, „Usunąć folder?”, „Dodać do BaseLinkera?” oraz okna z pytaniem o nazwę (np. nowy folder, przypisanie leada, nowe hasło) mają teraz własny, spójny wygląd: wyśrodkowane okno z ikoną ostrzeżenia, tytułem i opisem. Przy usuwaniu domyślnie zaznaczone jest „Anuluj”, a Esc zamyka okno bez wykonywania akcji.',

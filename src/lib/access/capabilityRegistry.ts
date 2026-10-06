@@ -38,7 +38,8 @@ export type CapabilityId =
   | 'comms.manageTalk'
   | 'admin.manageUsers'
   | 'admin.viewRoleMatrix'
-  | 'admin.editRoleMatrix';
+  | 'admin.editRoleMatrix'
+  | 'admin.manageBaselinker';
 
 export interface CapabilityDef {
   id: CapabilityId;
@@ -262,6 +263,14 @@ export const CAPABILITY_REGISTRY: CapabilityDef[] = [
     roleAction: 'manageTalk',
     moduleId: 'comms',
     requires: ['module.comms', 'comms.useTalk'],
+  },
+  {
+    id: 'admin.manageBaselinker',
+    label: 'BaseLinker: synchronizacja i import',
+    description:
+      'Zakładka BaseLinker w panelu admina (ustawienia, porównanie, import, historia) oraz przyciski synchronizacji i dodawania do BaseLinkera na karcie produktu',
+    group: 'admin',
+    roleAction: 'manageBaselinker',
   },
   {
     id: 'admin.manageUsers',

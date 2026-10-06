@@ -2357,15 +2357,34 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
     }
   }
 
-  $runSalesAfterStock = $envMap['WAPRO_RUN_SALES_AFTER_STOCK'] -eq '1'
-  if ($salesSyncPendingIds.Count -gt 0 -and $runSalesAfterStock) {
+  # Sprzedaz (zakladka "Sprzedaz" na karcie produktu i Operacje) jest odswiezana po pelnym syncu:
+  #  - w zaplanowanym zadaniu dziennym (bez -OnlyIfPending), jesli ostatni przebieg byl >= 20 h temu,
+  #  - gdy czeka zlecenie z aplikacji (Ops: Sync z Mag), nie czesciej niz co 20 min.
+  # Limit czasowy chroni przed uruchamianiem ciezkiego zapytania co 2 min przez zadanie "na zadanie".
+  # Wylaczenie calosci: WAPRO_RUN_SALES_AFTER_STOCK=0 w katalog-sync.env.
+  $salesStampPath = Join-Path $SyncDir 'sales-last-run.txt'
+  $salesAgeMin = 100000.0
+  try {
+    if (Test-Path $salesStampPath) {
+      $salesLast = [DateTime]::Parse((Get-Content $salesStampPath -Raw).Trim(), [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::RoundtripKind)
+      $salesAgeMin = ((Get-Date).ToUniversalTime() - $salesLast.ToUniversalTime()).TotalMinutes
+    }
+  } catch { }
+  $salesDisabled = $envMap['WAPRO_RUN_SALES_AFTER_STOCK'] -eq '0'
+  $hasSalesRequest = $salesSyncPendingIds.Count -gt 0
+  $salesDueDaily = (-not $OnlyIfPending) -and ($salesAgeMin -ge 1200)
+  $salesDueRequest = $hasSalesRequest -and ($salesAgeMin -ge 20)
+  if ((-not $salesDisabled) -and ($salesDueDaily -or $salesDueRequest)) {
+    # znacznik czasu zapisujemy PRZED uruchomieniem — przy bledzie nie zapetlamy ciezkiego zapytania
+    try { Set-Content -Path $salesStampPath -Value ((Get-Date).ToUniversalTime().ToString('o')) -Encoding ASCII } catch { }
+    Write-Log 'Sprzedaz: uruchamiam odswiezenie danych sprzedazy po syncu stanow'
     try {
       Invoke-SyncWaproSalesBulk -SupabaseUrl $SupabaseUrl -Headers $headers -JsonHeaders $jsonHeaders -SyncDirPath $SyncDir -PendingIds $salesSyncPendingIds | Out-Null
     } catch {
       Write-Log ('Bulk sprzedaz po sync stanow BLAD: {0}' -f $_.Exception.Message)
     }
-  } elseif ($salesSyncPendingIds.Count -gt 0) {
-    Write-Log ('Sync sprzedazy pominiety przy syncu katalogu ({0} pending). Uruchom osobno -SalesSyncOnly.' -f $salesSyncPendingIds.Count)
+  } elseif ($hasSalesRequest) {
+    Write-Log ('Sync sprzedazy odroczony ({0} pending): ostatni przebieg {1:N0} min temu, minimalny odstep 20 min (lub WAPRO_RUN_SALES_AFTER_STOCK=0)' -f $salesSyncPendingIds.Count, $salesAgeMin)
   }
 }
 catch {
