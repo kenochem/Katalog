@@ -13,6 +13,19 @@
  * pelnorozdzielczy bitmap nigdy nie trafia do pamieci.
  */
 
+/**
+ * Canvas bez kanału alfa startuje CZARNY, a JPEG nie ma przezroczystości — bez wypełnienia
+ * zdjęcia z wyciętym tłem (PNG/WebP z alfą) lądowały z czarnym tłem. Wypełniamy na biało.
+ */
+function paintWhiteBackground(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, w, h);
+}
+
+function mayHaveAlpha(file: Blob): boolean {
+  return /image\/(png|webp|gif|avif)/i.test(file.type);
+}
+
 function readImageDimensions(file: Blob): Promise<{ width: number; height: number } | null> {
   return new Promise((resolve) => {
     const url = URL.createObjectURL(file);
@@ -61,6 +74,7 @@ async function compressViaResizedBitmap(
     canvas.height = bitmap.height;
     const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) return null;
+    paintWhiteBackground(ctx, canvas.width, canvas.height);
     ctx.drawImage(bitmap, 0, 0);
     return await new Promise<Blob | null>((resolve) => {
       canvas.toBlob((b) => resolve(b), 'image/jpeg', quality);
@@ -90,6 +104,7 @@ async function compressViaFullDecode(
     canvas.height = h;
     const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) return null;
+    paintWhiteBackground(ctx, w, h);
     ctx.drawImage(bitmap, 0, 0, w, h);
     return await new Promise<Blob | null>((resolve) => {
       canvas.toBlob((b) => resolve(b), 'image/jpeg', quality);
@@ -107,13 +122,16 @@ export async function compressImageFile(
   // Sciezka 1 (preferowana, oszczedna dla pamieci): tanio poznaj wymiary, potem
   // poproś przegladarke o dekodowanie od razu w mniejszym rozmiarze.
   const resized = await compressViaResizedBitmap(file, maxSide, quality).catch(() => null);
-  if (resized && resized.size > 0 && resized.size < file.size) return resized;
+  // Pliki z potencjalną przezroczystością zawsze spłaszczamy na białe tło (nawet gdy JPEG jest
+  // większy od PNG) — inaczej oryginał z alfą wyglądałby na ciemnych motywach jak czarny.
+  const flatten = mayHaveAlpha(file);
+  if (resized && resized.size > 0 && (flatten || resized.size < file.size)) return resized;
 
   // Sciezka 2 (fallback dla starszych przegladarek bez resize przy dekodowaniu):
   // pelne dekodowanie + reczne skalowanie na canvasie - wieksze zuzycie pamieci,
   // ale nadal lepsze niz wyslanie surowego oryginalu.
   const fullDecode = await compressViaFullDecode(file, maxSide, quality).catch(() => null);
-  if (fullDecode && fullDecode.size > 0 && fullDecode.size < file.size) return fullDecode;
+  if (fullDecode && fullDecode.size > 0 && (flatten || fullDecode.size < file.size)) return fullDecode;
 
   // Ostatnia deska ratunku: wyslij oryginal zamiast wywalac cala operacje.
   return file;
