@@ -4,10 +4,11 @@
 >
 > **Konfiguracja (jednorazowo):**
 > 1. `npx supabase secrets set BASELINKER_TOKEN=... BASELINKER_INVENTORY_ID=17991` (+ `BASELINKER_WAREHOUSE_ID=bl_123`, gdy w BL jest kilka magazynów; opcjonalnie `BASELINKER_PRICE_GROUP_ID`)
-> 2. Migracja `supabase/migration-baselinker.sql` (tabela `baselinker_links` — cache SKU → ID produktu w BL)
+> 2. Migracje `supabase/migration-baselinker.sql` (tabela `baselinker_links` — cache SKU → ID produktu w BL) i `supabase/migration-baselinker-sync-log.sql` (historia wysyłek)
 > 3. `npx supabase functions deploy baselinker`
 > 4. Administracja → BaseLinker → *Porównaj stany* (to też buduje powiązania SKU → ID BL)
-> 5. Automat: zaznacz „Automatycznie wysyłaj…" i skopiuj nowy `sync-wapro-stock-server.ps1` na serwer WAPRO (agent po syncu wysyła tylko SKU ze zmienionym stanem; wyłączenie po stronie serwera: `BASELINKER_AUTO_PUSH=0` w `katalog-sync.env`).
+> 5. **Panel zarządzania** (Administracja → BaseLinker): *Ustawienia synchronizacji* (automat dla stanów i cen osobno, grupa cenowa BL, pomijanie ręcznych stanów, limit zmian w przebiegu, wykluczenia po prefiksie/SKU, tolerancja ceny), *Porównanie i korekta* (stany i ceny: zaznacz i wyślij; braki po obu stronach; CSV) oraz *Historia wysyłek*. Na karcie produktu admin ma przyciski „Ustaw stan/cenę w BL".
+> 6. Automat: włącz w ustawieniach i skopiuj nowy `sync-wapro-stock-server.ps1` na serwer WAPRO (agent po syncu wysyła SKU ze zmianą; funkcja sama filtruje wg ustawień i limitu; wyłączenie po stronie serwera: `BASELINKER_AUTO_PUSH=0` w `katalog-sync.env`). Przekroczenie limitu zmian blokuje automat i zapisuje wpis „blocked" w historii.
 >
 > Źródłem prawdy dla stanów pozostaje WAPRO — wysyłka jest jednokierunkowa: katalog → BaseLinker. Skrypt `sync-baselinker-stock.mjs` poniżej jest przestarzały (miał błędny format żądania).
 

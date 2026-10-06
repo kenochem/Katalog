@@ -20,7 +20,8 @@
 | `user_favorites` | Ulubione (chmura) |
 | `catalog_product_overrides` | Nadpisania opisu/kategorii z *Katalogów marek* (Biblioteka) — klucz `catalog_slug` + `sku` |
 | `technical_library_articles` | Edytowalna treść zeszytów Biblioteki Technicznej |
-| `baselinker_links` | Cache SKU → ID produktu w BaseLinker (+ ostatnio znany stan BL); zapisuje funkcja `baselinker`, odczyt dla zalogowanych (`migration-baselinker.sql`) |
+| `baselinker_sync_log` | Historia wysyłek stanów/cen do BaseLinker (ręcznych i automatu); odczyt tylko admin (`migration-baselinker-sync-log.sql`) |
+| `baselinker_links` | Cache SKU → ID produktu w BaseLinker (+ ostatnio znany stan i cena BL); zapisuje funkcja `baselinker`, odczyt dla zalogowanych (`migration-baselinker.sql`) |
 
 Ważne pola `product_meta` (JSONB): `baselinkerProductId`, `shopCategoryPath` / `shopCategoryWpId` (kategoria ze sklepu), `categoryAssignedBy/At`, `waproImport` / `waproSkeleton` / `waproImportedAt` (produkt dopisany przez auto-import z Mag → zakładka *Nowości*), `salesExcludeFromSum` (wykluczenie z martwego stocku i KPI — wspólne dla zespołu), `catalogHidden` (ukryty w katalogu), `shortDescription`, `parameters`.
 
@@ -53,7 +54,7 @@ Ważne pola `product_meta` (JSONB): `baselinkerProductId`, `shopCategoryPath` / 
 4. CRM: `migration-crm-clients-orders.sql`, `migration-crm-client-*.sql`, `migration-crm-lead-owner.sql`, `migration-crm-notes.sql`, `migration-crm-personal-stores.sql`, `migration-crm-quote-number.sql`, `migration-crm-mailbox.sql`
 5. Ops: `migration-ops-customers.sql`
 6. Biblioteka: `migration-technical-library.sql`, `migration-catalog-brand-overrides.sql`
-7. Ustawienia: `migration-app-settings.sql`, `migration-audit-log.sql`, `migration-audit-log-ip-device.sql`, `migration-baselinker.sql`
+7. Ustawienia: `migration-app-settings.sql`, `migration-audit-log.sql`, `migration-audit-log-ip-device.sql`, `migration-baselinker.sql`, `migration-baselinker-sync-log.sql`
 8. Czat (jeśli włączany): `migration-chat*.sql`
 
 Jednorazowe czyszczenie: `cleanup-wapro-x-skeleton-products.sql` (usuwa szkielety pozycji archiwalnych „X…").
