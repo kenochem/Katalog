@@ -146,6 +146,14 @@ input[type="search"]::-webkit-search-cancel-button {
   background: #ffffff;
   color: #0f172a;
 }
+
+/* Ciemny i szary motyw: bazowe kolory powyżej (jasne) wygrywały nad wariantem dark:
+   (ma zerową specyficzność), więc panel był biały. Bierzemy kolory z palety motywu. */
+html.dark .surface-panel {
+  border-color: var(--color-slate-700);
+  background: color-mix(in srgb, var(--color-slate-900) 85%, transparent);
+  color: var(--color-slate-100);
+}
 .dark .input-field {
   @apply border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-500;
 }
