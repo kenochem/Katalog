@@ -9,6 +9,9 @@ export type WaproOrderRequest = {
   message?: string | null;
   wapro_order_id?: number | null;
   wapro_order_number?: string | null;
+  /** Stan realizacji ZO odczytany z WAPRO (agent, co ~10 min). */
+  wapro_state?: 'new' | 'partial' | 'realized' | 'deleted' | null;
+  wapro_realized_pct?: number | null;
 };
 
 export type WaproOrderPayloadItem = {
@@ -147,12 +150,19 @@ export async function getWaproOrderRequests(
 ): Promise<Map<string, WaproOrderRequest>> {
   const out = new Map<string, WaproOrderRequest>();
   if (!supabase || ids.length === 0) return out;
-  const { data } = await supabase
+  const base = 'id, status, requested_at, finished_at, message, wapro_order_id, wapro_order_number';
+  let rows: unknown[] | null = null;
+  const full = await supabase
     .from('wapro_order_requests')
-    .select(
-      'id, status, requested_at, finished_at, message, wapro_order_id, wapro_order_number',
-    )
+    .select(`${base}, wapro_state, wapro_realized_pct`)
     .in('id', ids);
-  for (const r of (data || []) as WaproOrderRequest[]) out.set(r.id, r);
+  if (!full.error) {
+    rows = full.data;
+  } else {
+    // brak kolumn stanu (migration-wapro-order-state.sql jeszcze nie wykonana) - pokaz sam numer ZO
+    const basic = await supabase.from('wapro_order_requests').select(base).in('id', ids);
+    rows = basic.data;
+  }
+  for (const r of (rows || []) as WaproOrderRequest[]) out.set(r.id, r);
   return out;
 }

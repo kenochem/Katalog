@@ -158,6 +158,68 @@ function Get-Initial([string]$text) {
   return 'X'
 }
 
+# ------------------------------------------------------------------ odczyt realizacji ZO z WAPRO (raz na ~10 min)
+function Update-OrderStates {
+  $stamp = Join-Path $SyncDir 'orders-status.stamp'
+  if (Test-Path $stamp) {
+    if (((Get-Date) - (Get-Item $stamp).LastWriteTime).TotalMinutes -lt 10) { return }
+  }
+  try {
+    $uri = '{0}/rest/v1/wapro_order_requests?status=eq.done&wapro_order_id=not.is.null&or=(wapro_state.is.null,wapro_state.in.(new,partial))&select=id,wapro_order_id&order=requested_at.desc&limit=100' -f $script:SupabaseUrl
+    $raw = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
+    $rows = @()
+    foreach ($x in @($raw)) { foreach ($y in @($x)) { if ($y -and $y.id -and ($y.id -is [string])) { $rows += $y } } }
+    Set-Content -Path $stamp -Value (Get-Date -Format 'o')
+    if ($rows.Count -eq 0) { return }
+
+    $ids = @($rows | ForEach-Object { [int64]$_.wapro_order_id })
+    $idList = ($ids | ForEach-Object { [string]$_ }) -join ','
+    $q = @"
+SET NOCOUNT ON;
+SELECT 'ST|' + CAST(z.ID_ZAMOWIENIA AS varchar(20)) + '|' + ISNULL(z.STAN_REALIZ, '') + '|' + ISNULL(z.STATUS_ZAM, '') + '|' +
+       REPLACE(CAST(ISNULL(p.zam, 0) AS varchar(32)), ',', '.') + '|' + REPLACE(CAST(ISNULL(p.real, 0) AS varchar(32)), ',', '.')
+FROM dbo.ZAMOWIENIE z
+LEFT JOIN (SELECT ID_ZAMOWIENIA, SUM(ZAMOWIONO) AS zam, SUM(ZREALIZOWANO) AS real FROM dbo.POZYCJA_ZAMOWIENIA GROUP BY ID_ZAMOWIENIA) p
+  ON p.ID_ZAMOWIENIA = z.ID_ZAMOWIENIA
+WHERE z.ID_ZAMOWIENIA IN ($idList);
+"@
+    $r = Invoke-SqlFile $q
+    Remove-SqlFile $r
+    if ($r.Code -ne 0) { Write-Log ('Odczyt realizacji: blad SQL ({0})' -f $r.Code); return }
+    $found = @{}
+    foreach ($line in (Get-Lines $r.Text 'ST|')) {
+      $p = $line.Trim().Split('|')
+      if ($p.Count -ge 6) { $found[$p[1]] = $p }
+    }
+    $now = (Get-Date).ToUniversalTime().ToString('o')
+    $changed = 0
+    foreach ($row in $rows) {
+      $key = [string][int64]$row.wapro_order_id
+      if (-not $found.ContainsKey($key)) {
+        Set-RequestStatus ([string]$row.id) @{ wapro_state = 'deleted'; wapro_checked_at = $now }
+        $changed++
+        continue
+      }
+      $p = $found[$key]
+      $zam = ConvertTo-Num $p[4]
+      $real = ConvertTo-Num $p[5]
+      if ($null -eq $zam) { $zam = 0.0 }
+      if ($null -eq $real) { $real = 0.0 }
+      $state = 'new'
+      $pct = 0
+      if ($zam -gt 0) {
+        $pct = [Math]::Round([Math]::Min(100.0, 100.0 * $real / $zam), 0)
+        if ($real -ge ($zam - 0.0001)) { $state = 'realized' } elseif ($real -gt 0) { $state = 'partial' }
+      }
+      Set-RequestStatus ([string]$row.id) @{ wapro_state = $state; wapro_realized_pct = $pct; wapro_raw = ('{0}/{1}' -f $p[2], $p[3]); wapro_checked_at = $now }
+      if ($state -ne 'new') { $changed++ }
+    }
+    Write-Log ('Odczyt realizacji ZO: sprawdzono {0}, zmian {1}' -f $rows.Count, $changed)
+  } catch {
+    Write-Log ('Odczyt realizacji ZO nieudany (migracja migration-wapro-order-state.sql wykonana?): {0}' -f $_.Exception.Message)
+  }
+}
+
 # ------------------------------------------------------------------ pobranie zlecen
 if ($RequestId) {
   $pendingUri = '{0}/rest/v1/wapro_order_requests?id=eq.{1}&select=id,seq,payload,requested_at' -f $script:SupabaseUrl, $RequestId
@@ -178,6 +240,7 @@ try {
   if ($OnlyIfPending) { Write-Log ('Brak tabeli wapro_order_requests lub blad: {0}' -f $_.Exception.Message); exit 0 }
   throw
 }
+if (-not $DryRun -and -not $RequestId) { Update-OrderStates }
 if ($pending.Count -eq 0) {
   if (-not $OnlyIfPending) { Write-Log 'Brak zlecen do przetworzenia' }
   exit 0

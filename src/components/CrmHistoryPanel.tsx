@@ -56,12 +56,32 @@ function orderBadge(
   const rid = o.quoteMeta?.waproRequestId;
   if (o.quoteMeta?.channel === "wapro" || rid) {
     const r = rid ? wapro.get(rid) : undefined;
-    if (r?.status === "done")
+    if (r?.status === "done") {
+      const zo = `WAPRO ${r.wapro_order_number || r.wapro_order_id || "ZO"}`;
+      if (r.wapro_state === "realized")
+        return {
+          label: `${zo} · zrealizowane`,
+          cls: "bg-emerald-500/30 text-emerald-200",
+          title: "Zamówienie w WAPRO w pełni zrealizowane",
+        };
+      if (r.wapro_state === "partial")
+        return {
+          label: `${zo} · ${Math.round(r.wapro_realized_pct ?? 0)}%`,
+          cls: "bg-amber-500/20 text-amber-200",
+          title: "Zamówienie w WAPRO częściowo zrealizowane",
+        };
+      if (r.wapro_state === "deleted")
+        return {
+          label: `${zo} · usunięte w WAPRO`,
+          cls: "bg-red-500/20 text-red-300",
+          title: "Zamówienia nie ma już w WAPRO",
+        };
       return {
-        label: `WAPRO ${r.wapro_order_number || r.wapro_order_id || "ZO"}`,
+        label: zo,
         cls: "bg-emerald-500/20 text-emerald-300",
-        title: "Zamówienie utworzone w WAPRO",
+        title: "Zamówienie utworzone w WAPRO, czeka na realizację",
       };
+    }
     if (r?.status === "error")
       return {
         label: "WAPRO: błąd",
@@ -465,7 +485,15 @@ export function CrmHistoryPanel({
                 <p className="mt-1 text-xs text-slate-400">
                   WAPRO:{" "}
                   {r.status === "done"
-                    ? `utworzono ${r.wapro_order_number || r.wapro_order_id}`
+                    ? `utworzono ${r.wapro_order_number || r.wapro_order_id}${
+                        r.wapro_state === "realized"
+                          ? " — zrealizowane"
+                          : r.wapro_state === "partial"
+                            ? ` — zrealizowano ${Math.round(r.wapro_realized_pct ?? 0)}%`
+                            : r.wapro_state === "deleted"
+                              ? " — usunięte w WAPRO"
+                              : " — czeka na realizację"
+                      }`
                     : r.status === "error"
                       ? `błąd — ${r.message || "brak szczegółów"}`
                       : "zlecenie w kolejce"}
