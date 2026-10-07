@@ -39,7 +39,8 @@ EXEC sp_helptext 'dbo.RM_DodajPozycjeZamowienia_Server';
 GO
 
 PRINT '=== 7. Uzytkownicy, firmy, magazyny (identyfikatory do konfiguracji agenta) ===';
-SELECT (SELECT TOP 30 * FROM dbo.UZYTKOWNIK FOR JSON PATH) AS uzytkownicy;
+-- bez kolumn z haslami (HASLO / HasloS)
+SELECT (SELECT TOP 30 ID_UZYTKOWNIKA, IDENTYFIKATOR, NAZWA, CZY_AKTYWNY, ADRES_IP, LOGIN_TIME FROM dbo.UZYTKOWNIK FOR JSON PATH) AS uzytkownicy;
 SELECT (SELECT TOP 10 * FROM dbo.FIRMA FOR JSON PATH) AS firmy;
 SELECT (SELECT TOP 10 * FROM dbo.MAGAZYN FOR JSON PATH) AS magazyny;
 GO

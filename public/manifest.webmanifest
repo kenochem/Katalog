@@ -1,7 +1,7 @@
 {
-  "name": "Kenochem Katalog",
-  "short_name": "Katalog",
-  "description": "Katalog produktów Kenochem — stany, etykiety, wyszukiwanie, zdjęcia",
+  "name": "Kenochem Handel",
+  "short_name": "Handel",
+  "description": "CRM, oferty, mapa tras i katalog produktów",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -12,23 +12,8 @@
   "lang": "pl",
   "categories": ["business", "productivity"],
   "icons": [
-    {
-      "src": "/icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/icon-maskable-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
+    { "src": "/icons/sell-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/sell-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/sell-icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
