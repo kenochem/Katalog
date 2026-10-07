@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-07',
+    title: 'Ukryte produkty nie pojawiają się w Decyzjach i Postępie',
+    description:
+      'Widok Decyzje (oraz statystyki w Postępie) liczył także produkty ukryte w katalogu, np. usługi. Teraz pokazuje wyłącznie widoczne produkty, tak jak widok Bez zdjęć. Ukryte pozycje nadal są dostępne w filtrze Status → Ukryte.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-07',
     title: 'Usługi (kody USŁ…) ukryte w katalogu',
     description:
       'Pozycje, których kod zaczyna się od „USŁ” (naprawy, transport, serwis), są usługami, a nie produktami — zostały ukryte w katalogu (można je zobaczyć w filtrze Status → Ukryte) i nie będą już dopisywane jako nowe produkty przy syncu WAPRO.',

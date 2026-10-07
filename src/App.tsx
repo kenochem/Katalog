@@ -1886,7 +1886,7 @@ export default function App() {
           </Suspense>
         ) : view === 'catalog-decisions' && isCatalogProduct() ? (
           <CatalogDecisionView
-            products={products}
+            products={activeProducts}
             onOpenProduct={setSelectedProduct}
             onApplyCategory={handleApplyDecisionCategory}
             categoryBusyId={categoryBusyId}
@@ -2005,7 +2005,7 @@ export default function App() {
         ) : view === 'progress' ? (
           <Suspense fallback={<ViewFallback />}>
             <CatalogProgressView
-              products={products}
+              products={activeProducts}
               onOpenMissing={(cat) => openMissingImages(cat ?? 'Wszystkie')}
               onOpenKnowledgeWeak={(cat) => openKnowledgeGaps(cat ?? 'Wszystkie')}
             />
