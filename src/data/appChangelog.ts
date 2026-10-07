@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-07',
+    title: 'CRM: transport w zamówieniu (KAT00178)',
+    description:
+      'W koszyku zamówienia można zaznaczyć „Doliczyć transport” i ustawić cenę netto/brutto. Kwota wlicza się do sum koszyka, trafia do wiadomości na Discord, a w zamówieniu do WAPRO jest dodawana jako pozycja KAT00178 (usługa transportu) w ustalonej cenie.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-07',
     title: 'Numer zamówienia w WAPRO: H + handlowiec + firma + numer',
     description:
       'Numer zamówienia klienta w ZO ma teraz 8 znaków: „H”, pierwsza litera imienia handlowca, pierwsza litera nazwy firmy i globalny numer zlecenia od 00001 (np. HLA00007). Wymaga migracji migration-wapro-order-seq.sql i nowej wersji agenta na serwerze.',

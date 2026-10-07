@@ -416,6 +416,17 @@ export function CrmOrderWorkspace({
       showToast(built.error, 'warn', 5000);
       return;
     }
+    const transport = draft.transportCost != null ? Math.max(0, draft.transportCost) : 0;
+    if (transport > 0) {
+      built.payload.items.push({
+        sku: 'KAT00178',
+        qty: 1,
+        displayName: 'Transport',
+        priceSaleNet: transport,
+        priceSaleGross: null, // brutto liczy agent wg VAT artykulu w WAPRO
+        discountPercent: null,
+      });
+    }
     const payload = {
       ...built.payload,
       clientName: activeClient?.displayName || draft.clientName.trim() || built.payload.clientName,

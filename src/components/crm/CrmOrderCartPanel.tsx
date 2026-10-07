@@ -18,6 +18,9 @@ import { formatPricePln } from '../../lib/format';
 import { getProductImage } from '../../lib/products';
 import type { CrmClient } from '../../lib/crm';
 import type { OrderDraft } from '../../lib/orderDraft';
+import { NetGrossPriceInput } from './NetGrossPriceInput';
+
+const DEFAULT_TRANSPORT_NET = 50;
 
 export interface CrmOrderCartPanelProps {
   draft: OrderDraft;
@@ -60,7 +63,10 @@ export function CrmOrderCartPanel({
 }: CrmOrderCartPanelProps) {
   const items = draft.items;
   const totalQty = items.reduce((s, d) => s + d.quantity, 0);
-  const grossTotal = draftTotal * 1.23;
+  const transportOn = draft.transportCost != null;
+  const transportNet = draft.transportCost ?? 0;
+  const totalNet = draftTotal + transportNet;
+  const grossTotal = totalNet * 1.23;
   const hasItems = items.length > 0;
 
   function bump(productId: string, delta: number) {
@@ -194,11 +200,35 @@ export function CrmOrderCartPanel({
           </ul>
 
           <div className="shrink-0 space-y-2.5 border-t border-slate-800 bg-slate-950/40 px-4 py-3">
+            <div className="rounded-xl border border-slate-800 bg-slate-900/80 px-3 py-2">
+              <label className="flex items-center gap-2 text-xs text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={transportOn}
+                  onChange={() =>
+                    onSync({
+                      ...draft,
+                      transportCost: transportOn ? undefined : DEFAULT_TRANSPORT_NET,
+                    })
+                  }
+                />
+                Doliczyć transport (usługa KAT00178)
+              </label>
+              {transportOn && (
+                <div className="mt-2">
+                  <NetGrossPriceInput
+                    net={transportNet}
+                    onChangeNet={(net) => onSync({ ...draft, transportCost: Math.max(0, net) })}
+                  />
+                </div>
+              )}
+            </div>
+
             <div className="grid grid-cols-2 gap-2">
               <div className="rounded-xl border border-slate-800 bg-slate-900/80 px-3 py-2">
                 <p className="text-[10px] uppercase tracking-wide text-slate-500">Netto</p>
                 <p className="text-lg font-semibold tabular-nums text-slate-100">
-                  {formatPricePln(draftTotal)}
+                  {formatPricePln(totalNet)}
                 </p>
               </div>
               <div className="rounded-xl border border-brand-500/30 bg-brand-500/10 px-3 py-2">
