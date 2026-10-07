@@ -1810,11 +1810,22 @@ export default function App() {
             allProducts={activeAllProducts}
             missingImagesCount={missingImages.length}
             decisionCount={catalogDecisionRows.length}
-            canSyncStock={mode === 'signed_in' && roleCan(role, 'editStock')}
             quickActions={catalogHomeQuickActions}
-            onOpenCatalog={(filter) => setCatalogFilter(filter)}
+            onOpenCatalog={() => setCatalogFilter('all')}
             onOpenMissingImages={() => openMissingImages()}
             onOpenScanner={() => setShowScanner(true)}
+            onOpenNews={() => {
+              setView('new-products');
+              setSelectedProduct(null);
+            }}
+            onOpenLibrary={() => {
+              setView('library');
+              setSelectedProduct(null);
+            }}
+            onOpenNotInBaselinker={() => {
+              setBaselinkerFilter('not-linked');
+              setCatalogFilter('all');
+            }}
           />
         ) : view === 'catalog' || view === 'favorites' ? (
           <CatalogView
