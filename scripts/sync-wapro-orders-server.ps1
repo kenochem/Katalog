@@ -14,7 +14,7 @@
   Kontrahent: dopasowanie po NIP (KONTRAHENT.NIP). Artykuly: INDEKS_KATALOGOWY = SKU, tylko wiersz z ID_MAGAZYNU = magazyn
   zamowienia (kazdy indeks ma po jednym wierszu na magazyn).
 
-  Idempotencja: numer zamowienia klienta (NR_ZAMOWIENIA_KLIENTA) = KAT-<8 znakow id zlecenia>. Jesli ZO o tym numerze
+  Idempotencja: numer zamowienia klienta (NR_ZAMOWIENIA_KLIENTA) = H<7 znakow id zlecenia> (8 znakow, H = handlowcy). Jesli ZO o tym numerze
   juz istnieje, zlecenie jest zamykane jako wykonane bez tworzenia duplikatu.
 
 .PARAMETER OnlyIfPending
@@ -177,7 +177,10 @@ if ($DryRun) { Write-Log 'TRYB TESTOWY (-DryRun): dokument zostanie utworzony i 
 # ------------------------------------------------------------------ przetwarzanie
 foreach ($req in $pending) {
   $id = [string]$req.id
-  $nrKlienta = 'KAT-' + $id.Replace('-', '').Substring(0, 8).ToUpperInvariant()
+  # Numer zamowienia klienta widoczny w WAPRO: "H" (handlowcy) + 7 znakow z id zlecenia = 8 znakow.
+  $idHex = $id.Replace('-', '').ToUpperInvariant()
+  $nrKlienta = 'H' + $idHex.Substring(0, 7)
+  $nrKlientaOld = 'KAT-' + $idHex.Substring(0, 8)   # starszy format (zgodnosc przy wykrywaniu duplikatow)
   Write-Log ('Zlecenie {0} (nr klienta {1})' -f $id, $nrKlienta)
   if (-not $DryRun) { Set-RequestStatus $id @{ status = 'running'; started_at = (Get-Date).ToUniversalTime().ToString('o') } }
 
@@ -193,7 +196,7 @@ foreach ($req in $pending) {
     $note = [string]$payload.note
 
     # ---- idempotencja: czy ZO z tym numerem klienta juz istnieje
-    $qDup = "SET NOCOUNT ON; SELECT 'DUP|' + CAST(ID_ZAMOWIENIA AS varchar(20)) + '|' + RTRIM(NUMER) FROM dbo.ZAMOWIENIE WHERE NR_ZAMOWIENIA_KLIENTA = '$(Esc $nrKlienta)';"
+    $qDup = "SET NOCOUNT ON; SELECT 'DUP|' + CAST(ID_ZAMOWIENIA AS varchar(20)) + '|' + RTRIM(NUMER) FROM dbo.ZAMOWIENIE WHERE NR_ZAMOWIENIA_KLIENTA IN ('$(Esc $nrKlienta)', '$(Esc $nrKlientaOld)');"
     $rDup = Invoke-SqlFile $qDup
     Remove-SqlFile $rDup
     $dup = Get-Lines $rDup.Text 'DUP|' | Select-Object -First 1

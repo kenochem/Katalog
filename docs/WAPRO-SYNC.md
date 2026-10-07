@@ -130,3 +130,25 @@ Skrypt jest uruchamiany przez **Windows PowerShell 5.1** i zapisany jako UTF-8 *
 | `Bulk sprzedaz wariant extended_v2: blad sqlcmd …` | Treść błędu SQL jest w logu; do czasu naprawy działa wariant `bulk_v1` (bez rozbicia miesięcznego) |
 | Puste „Nowe produkty" mimo nowych SKU w Mag | Auto-import wyłączony (`WAPRO_AUTO_IMPORT=0`), pozycje archiwalne (X…) lub puste szkice — są celowo pomijane |
 | Gość widzi puste logi / zmiany w czasie | Tabele logów są tylko dla zalogowanych (RLS) — to nie błąd |
+
+## Zamówienia CRM → WAPRO (ZO)
+
+Przycisk **Do WAPRO** w koszyku CRM (admin) tworzy zlecenie w `wapro_order_requests`. Agent `scripts/sync-wapro-orders-server.ps1` (kopiowany do `C:\katalog-sync\`) zamienia je na zamówienie od odbiorcy w Mag — tak samo jak program WAPRO (nagłówek → pozycje z sumowaniem → kontrola cen → zatwierdzenie z numeracją WAPRO), w jednej transakcji.
+
+- **Kontrahent:** po NIP klienta z CRM (`KONTRAHENT.NIP`); brak → błąd z komunikatem albo kontrahent zastępczy (`WAPRO_ORDER_ID_KONTRAHENTA`). Płatność i termin z karty kontrahenta.
+- **Pozycje:** SKU = `INDEKS_KATALOGOWY`, wiersz z magazynu zamówienia (każdy indeks ma po jednym wierszu na magazyn); VAT i jednostka z kartoteki; rezerwacja jak w programie (`WAPRO_ORDER_RESERVE=0` wyłącza).
+- **Numer zamówienia klienta** w WAPRO: `H` + 7 znaków identyfikatora zlecenia (8 znaków). Służy też do wykrywania duplikatów — to samo zlecenie nie utworzy drugiego ZO.
+- **Użytkownik:** `WAPRO_ORDER_ID_UZYTKOWNIKA` musi być istniejącym ID użytkownika WAPRO (np. 3000001 = admin). Nieistniejące ID (np. `1`) zostawia zablokowane, nieusuwalne zamówienie.
+
+### Procedura krok po kroku
+
+1. **Test bez śladu:** `powershell -ExecutionPolicy Bypass -File C:\katalog-sync\sync-wapro-orders-server.ps1 -DryRun` — tworzy ZO i cofa transakcję, loguje wynik (`TEST OK (cofniete): ZO …`); status zlecenia się nie zmienia.
+2. **Pojedyncze zlecenie:** `… -RequestId <id zlecenia>` albo bez parametrów (wszystkie czekające).
+3. **Automat:** w Harmonogramie zadań zadanie uruchamiane co 1 min: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\katalog-sync\sync-wapro-orders-server.ps1 -OnlyIfPending` (to samo konto i opcje, co zadanie syncu stanów; „Uruchom niezależnie od tego, czy użytkownik jest zalogowany").
+4. **Podgląd:** log `C:\katalog-sync\orders.log`; status i numer ZO w `wapro_order_requests` (`done` / `error` z opisem).
+5. **Błąd:** zlecenie ma status `error` z powodem (brak kontrahenta, brak SKU, odmowa WAPRO). Popraw przyczynę i wyślij zamówienie ponownie z CRM (nowe zlecenie).
+6. **Zablokowane ZO po awarii:** `scripts/wapro-orders-unlock-orphan.sql` (zmień ID zamówienia i `@zatwierdz`), potem usuń je w WAPRO.
+
+### Diagnostyka struktury WAPRO
+
+`scripts/wapro-orders-diagnose*.sql` (struktura tabel/procedur, bez haseł) i `scripts/wapro-trace-{1-start,2-read,3-stop}.sql` (nagranie wywołań procedur przy tworzeniu ZO w programie — Extended Events).
