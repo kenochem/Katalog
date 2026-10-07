@@ -12,6 +12,13 @@ export interface AppChangelogEntry {
  */
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
+    date: '2026-10-07',
+    title: 'Usługi (kody USŁ…) ukryte w katalogu',
+    description:
+      'Pozycje, których kod zaczyna się od „USŁ” (naprawy, transport, serwis), są usługami, a nie produktami — zostały ukryte w katalogu (można je zobaczyć w filtrze Status → Ukryte) i nie będą już dopisywane jako nowe produkty przy syncu WAPRO.',
+    tag: 'poprawka',
+  },
+  {
     date: '2026-10-06',
     title: 'Nowe produkty: kolejność i dokładna data z godziną',
     description:

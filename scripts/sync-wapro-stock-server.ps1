@@ -243,6 +243,9 @@ function Test-WaproPlaceholderProduct([string]$sku, [string]$name) {
   if ($n -and $n -match '^nowy\s*artykul\b') { return $true }
   $s = ([string]$sku).Trim()
   if ($s -and $s -match '^\(\d+\)$') { return $true }
+  # Uslugi (kody zaczynajace sie od "US" + duze L z kreska; po odczycie z SQL bywa to znak U+00A3) —
+  # nie sa produktami katalogowymi, wiec nie dopisujemy ich przy auto-imporcie.
+  if ($s -and $s -match '^US[\u0141\u00A3]') { return $true }
   return $false
 }
 
