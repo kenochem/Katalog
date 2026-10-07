@@ -451,7 +451,11 @@ export function CrmOrderWorkspace({
         }
       }
       if (!finished) {
-        showToast('WAPRO nadal przetwarza — sprawdź za chwilę w Mag', 'warn', 5000);
+        showToast(
+          'Zlecenie czeka w kolejce do WAPRO — agent na serwerze jeszcze go nie podjął (sprawdź zadanie w Harmonogramie zadań). Zamówienie jest zapisane w Historii.',
+          'warn',
+          9000,
+        );
       }
     } finally {
       setSendingWapro(false);
