@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-07',
+    title: 'CRM: zamówienie wysłane do WAPRO trafia też do historii',
+    description:
+      'Po kliknięciu „Do WAPRO” zamówienie zapisuje się od razu w Historii CRM (z adnotacją „Wysłano do WAPRO”), niezależnie od tego, kiedy agent na serwerze utworzy ZO. Numer ZO pokazuje się w komunikacie po przetworzeniu.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-07',
     title: 'Przyciski „Dodaj” i „Edycja” przeniesione do paska filtrów katalogu',
     description:
       'Przyciski „Dodaj” (nowy produkt) i „Edycja” (tryb edycji stanów) zniknęły z górnego paska aplikacji. Są teraz w pasku filtrów sekcji Katalog, obok sortowania i rozmiaru kafelków, czyli tam, gdzie mają sens. Tryb edycji wyłącza się automatycznie po wyjściu z katalogu. Menu „Więcej” na telefonie pokazuje te akcje tylko w katalogu.',

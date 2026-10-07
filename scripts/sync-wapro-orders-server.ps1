@@ -154,7 +154,15 @@ if ($RequestId) {
   $pendingUri = '{0}/rest/v1/wapro_order_requests?status=eq.pending&select=id,payload,requested_at&order=requested_at.asc&limit=5' -f $script:SupabaseUrl
 }
 try {
-  $pending = @(Invoke-RestMethod -Uri $pendingUri -Headers $headers -Method Get | Where-Object { $_ -and $_.id })
+  # Windows PowerShell 5.1 potrafi zwrocic cala tablice JSON jako JEDEN obiekt — rozwijamy ja recznie,
+  # inaczej dwa zlecenia sa traktowane jak jedno (sklejone id, NIP i nazwa).
+  $rawPending = Invoke-RestMethod -Uri $pendingUri -Headers $headers -Method Get
+  $pending = @()
+  foreach ($x in @($rawPending)) {
+    foreach ($y in @($x)) {
+      if ($y -and $y.id -and ($y.id -is [string])) { $pending += $y }
+    }
+  }
 } catch {
   if ($OnlyIfPending) { Write-Log ('Brak tabeli wapro_order_requests lub blad: {0}' -f $_.Exception.Message); exit 0 }
   throw

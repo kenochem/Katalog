@@ -213,7 +213,10 @@ export function CrmOrderWorkspace({
   }
 
   /** Historia zamówień; oferty PDF zapisują się osobno przy generowaniu (generateQuotePdf). */
-  async function persistOrderHistory(status: 'sent' | 'saved'): Promise<boolean> {
+  async function persistOrderHistory(
+    status: 'sent' | 'saved',
+    noteSuffix?: string,
+  ): Promise<boolean> {
     if (!cloudEnabled || !draft.items.length || draft.kind === 'quote') return false;
     try {
       const clientId = await ensureClientId();
@@ -227,7 +230,13 @@ export function CrmOrderWorkspace({
         };
       });
       await saveCrmOrder({
-        draft: { ...current, items, kind: 'order' },
+        draft: {
+          ...current,
+          items,
+          kind: 'order',
+          note: noteSuffix ? `${current.note ? `${current.note}
+` : ''}${noteSuffix}` : current.note,
+        },
         clientId,
         status,
       });
@@ -420,6 +429,8 @@ export function CrmOrderWorkspace({
         return;
       }
       showToast('Wysyłanie do WAPRO…', 'info');
+      // Zamówienie od razu trafia do historii CRM (nie zależy od tego, kiedy agent WAPRO je przetworzy).
+      await persistOrderHistory('sent', 'Wysłano do WAPRO (ZO)');
       const requestId = res.id;
       const deadline = Date.now() + 120_000;
       let finished = false;
@@ -428,11 +439,8 @@ export function CrmOrderWorkspace({
         const status = await getWaproOrderRequest(requestId);
         if (!status) continue;
         if (status.status === 'done') {
-          showToast(
-            `Zamówienie w WAPRO (ZO ${status.wapro_order_number ?? status.wapro_order_id ?? ''}) — w buforze, wymaga zatwierdzenia`,
-            'ok',
-            6000,
-          );
+          const zoLabel = status.wapro_order_number ?? status.wapro_order_id ?? '';
+          showToast(`Zamówienie utworzone w WAPRO: ${zoLabel}`, 'ok', 6000);
           finished = true;
           break;
         }
