@@ -43,3 +43,25 @@ SELECT (SELECT TOP 30 * FROM dbo.UZYTKOWNIK FOR JSON PATH) AS uzytkownicy;
 SELECT (SELECT TOP 10 * FROM dbo.FIRMA FOR JSON PATH) AS firmy;
 SELECT (SELECT TOP 10 * FROM dbo.MAGAZYN FOR JSON PATH) AS magazyny;
 GO
+
+PRINT '=== 8. Zamowienie utworzone przez nasza wczesniejsza probe ("Katalog: ...") — dlaczego nie da sie usunac ===';
+SELECT (
+  SELECT TOP 5 z.*
+  FROM dbo.ZAMOWIENIE z
+  WHERE CONVERT(nvarchar(max), (SELECT z.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)) LIKE '%Katalog: ADAMETAL%'
+  FOR JSON PATH
+) AS osierocone_zamowienie;
+GO
+
+PRINT '=== 9. Pozycje i zalezne rekordy tego zamowienia (liczba) ===';
+SELECT z.ID_ZAMOWIENIA,
+       (SELECT COUNT(*) FROM dbo.POZYCJA_ZAMOWIENIA p WHERE p.ID_ZAMOWIENIA = z.ID_ZAMOWIENIA) AS pozycji
+FROM dbo.ZAMOWIENIE z
+WHERE CONVERT(nvarchar(max), (SELECT z.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)) LIKE '%Katalog: ADAMETAL%';
+GO
+
+PRINT '=== 10. Procedury usuwania / anulowania zamowien ===';
+SELECT name AS procedura FROM sys.procedures
+WHERE name LIKE '%Usun%Zamow%' OR name LIKE '%Zamow%Usun%' OR name LIKE '%Anul%Zamow%' OR name LIKE '%Zamow%Anul%'
+ORDER BY name;
+GO

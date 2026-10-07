@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'rea
 import {
   ChevronDown,
   LayoutGrid,
+  Pencil,
   Plus,
   Rows2,
   SlidersHorizontal,
@@ -107,6 +108,10 @@ interface CatalogFilterBarProps {
   searching?: boolean;
   canAddProduct?: boolean;
   onAddProduct?: () => void;
+  /** Tryb edycji stanów (przycisk „Edycja” obok „Dodaj”). */
+  canToggleEdit?: boolean;
+  editMode?: boolean;
+  onToggleEdit?: () => void;
   onResetFilters: () => void;
   mobileFiltersOpen: boolean;
   onMobileFiltersOpenChange: (open: boolean) => void;
@@ -297,6 +302,9 @@ export function CatalogFilterBar({
   searching,
   canAddProduct,
   onAddProduct,
+  canToggleEdit,
+  editMode = false,
+  onToggleEdit,
   onResetFilters,
   mobileFiltersOpen,
   onMobileFiltersOpenChange,
@@ -755,6 +763,21 @@ export function CatalogFilterBar({
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <SortSelect sort={sort} onChange={onSortChange} disabled={sortDisabled} />
             <DensityToggle density={density} onChange={onDensityChange} />
+            {canToggleEdit && onToggleEdit && (
+              <button
+                type="button"
+                onClick={onToggleEdit}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                  editMode
+                    ? 'bg-amber-500 text-amber-950'
+                    : 'border border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-slate-100'
+                }`}
+                title="Tryb edycji stanów magazynowych w kafelkach"
+              >
+                <Pencil className="h-4 w-4" />
+                {editMode ? 'Edycja ON' : 'Edycja'}
+              </button>
+            )}
             {canAddProduct && onAddProduct && (
               <button
                 type="button"

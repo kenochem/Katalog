@@ -13,9 +13,9 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-07',
-    title: 'Przyciski „Dodaj” i „Edycja” tylko w sekcji Katalog',
+    title: 'Przyciski „Dodaj” i „Edycja” przeniesione do paska filtrów katalogu',
     description:
-      'Przyciski „Dodaj” (nowy produkt) i „Edycja” (tryb edycji stanów) nie pojawiają się już na pasku u góry na każdej podstronie — są widoczne tylko w sekcji Katalog (oraz Ulubione), czyli tam, gdzie mają sens. Tryb edycji wyłącza się automatycznie po wyjściu z katalogu. To samo dotyczy menu „Więcej” na telefonie.',
+      'Przyciski „Dodaj” (nowy produkt) i „Edycja” (tryb edycji stanów) zniknęły z górnego paska aplikacji. Są teraz w pasku filtrów sekcji Katalog, obok sortowania i rozmiaru kafelków, czyli tam, gdzie mają sens. Tryb edycji wyłącza się automatycznie po wyjściu z katalogu. Menu „Więcej” na telefonie pokazuje te akcje tylko w katalogu.',
     tag: 'poprawka',
   },
   {

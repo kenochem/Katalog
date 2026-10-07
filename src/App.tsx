@@ -4,8 +4,6 @@ import {
   Layers,
   ImageOff,
   Loader2,
-  Plus,
-  Pencil,
   Star,
   Printer,
   Trash2,
@@ -1660,37 +1658,6 @@ export default function App() {
 
           {/* Desktop actions — ukryte na mobile (są w Więcej) */}
           <div className="ml-auto hidden gap-1.5 lg:flex lg:flex-nowrap lg:items-center lg:justify-end">
-            {/* „Dodaj” i „Edycja” tylko w sekcji Katalog (lista produktów) — nie na każdej podstronie */}
-            {(view === 'catalog' || view === 'favorites') &&
-              isCatalogProduct() &&
-              roleCan(role, 'addProduct') && (
-              <button
-                type="button"
-                onClick={() => setShowAddProduct(true)}
-                className="flex shrink-0 items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-500"
-              >
-                <Plus className="h-4 w-4" />
-                Dodaj
-              </button>
-            )}
-            {!opsStandalone &&
-              !sellStandalone &&
-              (view === 'catalog' || view === 'favorites') &&
-              isCatalogProduct() &&
-              roleCan(role, 'editStock') && (
-              <button
-                type="button"
-                onClick={() => setEditMode((v) => !v)}
-                className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
-                  editMode
-                    ? 'bg-amber-500 text-amber-950'
-                    : 'border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-100'
-                }`}
-              >
-                <Pencil className="h-4 w-4" />
-                {editMode ? 'Edycja ON' : 'Edycja'}
-              </button>
-            )}
             {!opsStandalone && !sellStandalone && view !== 'admin' && (
               <RefreshControls
                 loading={loading}
@@ -1887,6 +1854,8 @@ export default function App() {
             shopLoading={shopLoading}
             canAddProduct={roleCan(role, 'addProduct')}
             onAddProduct={() => setShowAddProduct(true)}
+            canToggleEdit={!opsStandalone && !sellStandalone && roleCan(role, 'editStock')}
+            onToggleEdit={() => setEditMode((v) => !v)}
             collectionUserKey={collectionUserKey || undefined}
             onCollectionsChange={() => setCollectionsRevision((r) => r + 1)}
           />
@@ -2412,6 +2381,8 @@ function CatalogView({
   useHubFilters = false,
   canAddProduct = false,
   onAddProduct,
+  canToggleEdit = false,
+  onToggleEdit,
   catalogFilter,
   onCatalogFilterChange,
   catalogKindCounts,
@@ -2465,6 +2436,8 @@ function CatalogView({
   useHubFilters?: boolean;
   canAddProduct?: boolean;
   onAddProduct?: () => void;
+  canToggleEdit?: boolean;
+  onToggleEdit?: () => void;
   catalogFilter?: CatalogListFilter;
   onCatalogFilterChange?: (v: CatalogListFilter) => void;
   catalogKindCounts?: { all: number; accessories: number; shop: number };
@@ -2546,6 +2519,9 @@ function CatalogView({
         searching={searching || isSearchPending}
         canAddProduct={canAddProduct}
         onAddProduct={onAddProduct}
+        canToggleEdit={canToggleEdit}
+        editMode={editMode}
+        onToggleEdit={onToggleEdit}
         onResetFilters={resetFilters}
         mobileFiltersOpen={filtersOpen}
         onMobileFiltersOpenChange={setFiltersOpen}
