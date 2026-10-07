@@ -147,14 +147,25 @@ if ($idUser -le 0) {
 $headers = @{ apikey = $ServiceKey; Authorization = "Bearer $ServiceKey"; Accept = 'application/json' }
 $script:JsonHeaders = $headers + @{ 'Content-Type' = 'application/json'; Prefer = 'return=minimal' }
 
+function Get-Initial([string]$text) {
+  # pierwsza litera/cyfra (bez polskich znakow), wielka; brak -> X
+  if (-not $text) { return 'X' }
+  $t = $text.Replace([string][char]0x141, 'L').Replace([string][char]0x142, 'l')
+  $d = $t.Normalize([Text.NormalizationForm]::FormD)
+  foreach ($c in $d.ToCharArray()) {
+    if ($c -match '[A-Za-z0-9]') { return ([string]$c).ToUpperInvariant() }
+  }
+  return 'X'
+}
+
 # ------------------------------------------------------------------ pobranie zlecen
 if ($RequestId) {
-  $pendingUri = '{0}/rest/v1/wapro_order_requests?id=eq.{1}&select=id,payload,requested_at' -f $script:SupabaseUrl, $RequestId
+  $pendingUri = '{0}/rest/v1/wapro_order_requests?id=eq.{1}&select=id,seq,payload,requested_at' -f $script:SupabaseUrl, $RequestId
 } else {
-  $pendingUri = '{0}/rest/v1/wapro_order_requests?status=eq.pending&select=id,payload,requested_at&order=requested_at.asc&limit=5' -f $script:SupabaseUrl
+  $pendingUri = '{0}/rest/v1/wapro_order_requests?status=eq.pending&select=id,seq,payload,requested_at&order=requested_at.asc&limit=5' -f $script:SupabaseUrl
 }
 try {
-  # Windows PowerShell 5.1 potrafi zwrocic cala tablice JSON jako JEDEN obiekt — rozwijamy ja recznie,
+  # Windows PowerShell 5.1 potrafi zwrocic cala tablice JSON jako JEDEN obiekt - rozwijamy ja recznie,
   # inaczej dwa zlecenia sa traktowane jak jedno (sklejone id, NIP i nazwa).
   $rawPending = Invoke-RestMethod -Uri $pendingUri -Headers $headers -Method Get
   $pending = @()
@@ -177,10 +188,17 @@ if ($DryRun) { Write-Log 'TRYB TESTOWY (-DryRun): dokument zostanie utworzony i 
 # ------------------------------------------------------------------ przetwarzanie
 foreach ($req in $pending) {
   $id = [string]$req.id
-  # Numer zamowienia klienta widoczny w WAPRO: "H" (handlowcy) + 7 znakow z id zlecenia = 8 znakow.
+  # Numer zamowienia klienta (max 8 znakow): H + inicjal handlowca + inicjal firmy + 5 cyfr (globalny numer zlecenia)
   $idHex = $id.Replace('-', '').ToUpperInvariant()
-  $nrKlienta = 'H' + $idHex.Substring(0, 7)
-  $nrKlientaOld = 'KAT-' + $idHex.Substring(0, 8)   # starszy format (zgodnosc przy wykrywaniu duplikatow)
+  $nrKlientaHex = 'H' + $idHex.Substring(0, 7)       # poprzedni format (wykrywanie duplikatow)
+  $nrKlientaOld = 'KAT-' + $idHex.Substring(0, 8)    # najstarszy format
+  $pl0 = $req.payload
+  if ($pl0 -is [string]) { $pl0 = $pl0 | ConvertFrom-Json }
+  if ($req.seq) {
+    $nrKlienta = 'H' + (Get-Initial ([string]$pl0.salesperson)) + (Get-Initial ([string]$pl0.clientName)) + ([int64]$req.seq).ToString('00000')
+  } else {
+    $nrKlienta = $nrKlientaHex
+  }
   Write-Log ('Zlecenie {0} (nr klienta {1})' -f $id, $nrKlienta)
   if (-not $DryRun) { Set-RequestStatus $id @{ status = 'running'; started_at = (Get-Date).ToUniversalTime().ToString('o') } }
 
@@ -196,7 +214,7 @@ foreach ($req in $pending) {
     $note = [string]$payload.note
 
     # ---- idempotencja: czy ZO z tym numerem klienta juz istnieje
-    $qDup = "SET NOCOUNT ON; SELECT 'DUP|' + CAST(ID_ZAMOWIENIA AS varchar(20)) + '|' + RTRIM(NUMER) FROM dbo.ZAMOWIENIE WHERE NR_ZAMOWIENIA_KLIENTA IN ('$(Esc $nrKlienta)', '$(Esc $nrKlientaOld)');"
+    $qDup = "SET NOCOUNT ON; SELECT 'DUP|' + CAST(ID_ZAMOWIENIA AS varchar(20)) + '|' + RTRIM(NUMER) FROM dbo.ZAMOWIENIE WHERE NR_ZAMOWIENIA_KLIENTA IN ('$(Esc $nrKlienta)', '$(Esc $nrKlientaHex)', '$(Esc $nrKlientaOld)');"
     $rDup = Invoke-SqlFile $qDup
     Remove-SqlFile $rDup
     $dup = Get-Lines $rDup.Text 'DUP|' | Select-Object -First 1

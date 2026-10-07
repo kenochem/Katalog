@@ -23,6 +23,7 @@ export type WaproOrderPayloadItem = {
 export type WaproOrderPayload = {
   clientName: string;
   clientNip?: string;
+  salesperson?: string;
   note?: string;
   kind?: 'order' | 'quote';
   items: WaproOrderPayloadItem[];

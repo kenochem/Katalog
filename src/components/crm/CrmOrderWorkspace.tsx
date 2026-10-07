@@ -420,6 +420,7 @@ export function CrmOrderWorkspace({
       ...built.payload,
       clientName: activeClient?.displayName || draft.clientName.trim() || built.payload.clientName,
       clientNip: activeClient?.nip || undefined,
+      salesperson: authorLabel,
     };
     setSendingWapro(true);
     try {

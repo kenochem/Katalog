@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-07',
+    title: 'Numer zamówienia w WAPRO: H + handlowiec + firma + numer',
+    description:
+      'Numer zamówienia klienta w ZO ma teraz 8 znaków: „H”, pierwsza litera imienia handlowca, pierwsza litera nazwy firmy i globalny numer zlecenia od 00001 (np. HLA00007). Wymaga migracji migration-wapro-order-seq.sql i nowej wersji agenta na serwerze.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-07',
     title: 'CRM: zamówienie wysłane do WAPRO trafia też do historii',
     description:
       'Po kliknięciu „Do WAPRO” zamówienie zapisuje się od razu w Historii CRM (z adnotacją „Wysłano do WAPRO”), niezależnie od tego, kiedy agent na serwerze utworzy ZO. Numer ZO pokazuje się w komunikacie po przetworzeniu.',

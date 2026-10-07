@@ -137,7 +137,7 @@ Przycisk **Do WAPRO** w koszyku CRM (admin) tworzy zlecenie w `wapro_order_reque
 
 - **Kontrahent:** po NIP klienta z CRM (`KONTRAHENT.NIP`); brak → błąd z komunikatem albo kontrahent zastępczy (`WAPRO_ORDER_ID_KONTRAHENTA`). Płatność i termin z karty kontrahenta.
 - **Pozycje:** SKU = `INDEKS_KATALOGOWY`, wiersz z magazynu zamówienia (każdy indeks ma po jednym wierszu na magazyn); VAT i jednostka z kartoteki; rezerwacja jak w programie (`WAPRO_ORDER_RESERVE=0` wyłącza).
-- **Numer zamówienia klienta** w WAPRO: `H` + 7 znaków identyfikatora zlecenia (8 znaków). Służy też do wykrywania duplikatów — to samo zlecenie nie utworzy drugiego ZO.
+- **Numer zamówienia klienta** w WAPRO (8 znaków): `H` + pierwsza litera imienia handlowca + pierwsza litera firmy + globalny numer zlecenia `00001` (np. `HLA00007`; wymaga `supabase/migration-wapro-order-seq.sql`). Służy też do wykrywania duplikatów — to samo zlecenie nie utworzy drugiego ZO.
 - **Użytkownik:** `WAPRO_ORDER_ID_UZYTKOWNIKA` musi być istniejącym ID użytkownika WAPRO (np. 3000001 = admin). Nieistniejące ID (np. `1`) zostawia zablokowane, nieusuwalne zamówienie.
 
 ### Procedura krok po kroku
