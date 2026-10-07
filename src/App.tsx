@@ -506,6 +506,8 @@ export default function App() {
           ? 'ops'
           : 'catalog';
     if (!roleCan(role, 'editStock')) setEditMode(false);
+    // Przycisk „Edycja” jest tylko w sekcji Katalog — poza nią wyłączamy tryb, żeby nie został „zawieszony”.
+    if (view !== 'catalog' && view !== 'favorites') setEditMode(false);
     if (!canAccessAdminPanel(role) && view === 'admin') setView(fallback);
     if (!roleCan(role, 'printLabels') && view === 'labels') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'progress') setView(fallback);
@@ -1658,9 +1660,9 @@ export default function App() {
 
           {/* Desktop actions — ukryte na mobile (są w Więcej) */}
           <div className="ml-auto hidden gap-1.5 lg:flex lg:flex-nowrap lg:items-center lg:justify-end">
-            {view !== 'ops' &&
-              view !== 'crm' &&
-              view !== 'admin' &&
+            {/* „Dodaj” i „Edycja” tylko w sekcji Katalog (lista produktów) — nie na każdej podstronie */}
+            {(view === 'catalog' || view === 'favorites') &&
+              isCatalogProduct() &&
               roleCan(role, 'addProduct') && (
               <button
                 type="button"
@@ -1671,7 +1673,11 @@ export default function App() {
                 Dodaj
               </button>
             )}
-            {!opsStandalone && !sellStandalone && view !== 'admin' && roleCan(role, 'editStock') && (
+            {!opsStandalone &&
+              !sellStandalone &&
+              (view === 'catalog' || view === 'favorites') &&
+              isCatalogProduct() &&
+              roleCan(role, 'editStock') && (
               <button
                 type="button"
                 onClick={() => setEditMode((v) => !v)}

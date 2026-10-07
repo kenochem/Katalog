@@ -394,7 +394,7 @@ export function MobileMoreSheet({
               Akcje
             </p>
             <div className="grid grid-cols-2 gap-2">
-              {showCatalogTools && roleCan(role, 'addProduct') && (
+              {showCatalogTools && (view === 'catalog' || view === 'favorites') && roleCan(role, 'addProduct') && (
                 <SheetAction
                   icon={<Plus className="h-4 w-4" />}
                   label="Dodaj produkt"
@@ -404,7 +404,7 @@ export function MobileMoreSheet({
                   }}
                 />
               )}
-              {showCatalogTools && roleCan(role, 'editStock') && (
+              {showCatalogTools && (view === 'catalog' || view === 'favorites') && roleCan(role, 'editStock') && (
                 <SheetAction
                   active={editMode}
                   icon={<Pencil className="h-4 w-4" />}

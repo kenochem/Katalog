@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-07',
+    title: 'Przyciski „Dodaj” i „Edycja” tylko w sekcji Katalog',
+    description:
+      'Przyciski „Dodaj” (nowy produkt) i „Edycja” (tryb edycji stanów) nie pojawiają się już na pasku u góry na każdej podstronie — są widoczne tylko w sekcji Katalog (oraz Ulubione), czyli tam, gdzie mają sens. Tryb edycji wyłącza się automatycznie po wyjściu z katalogu. To samo dotyczy menu „Więcej” na telefonie.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-07',
     title: 'Nowa strona startowa katalogu',
     description:
       'Strona startowa ma teraz jeden duży przycisk „Przejdź do katalogu” (zamiast trzech osobnych: cały katalog, akcesoria, produkty sklepu) oraz skaner EAN. Poniżej: statystyki stanów, nowa sekcja BaseLinker (ile produktów jest w BaseLinkerze, ile poza nim i ile jest gotowych do dodania, ze skrótem do listy produktów spoza BaseLinkera), zadania porządkowe, okno „Nowości z WAPRO” (nowe produkty dziś i w 7 dni, zmiany stanów i cen z ostatniej doby, ostatnia zmiana danych) oraz skrót do Biblioteki zamiast biblioteki wiedzy AI.',
