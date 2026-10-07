@@ -211,6 +211,8 @@ WHERE z.ID_ZAMOWIENIA IN ($idList);
         $pct = [Math]::Round([Math]::Min(100.0, 100.0 * $real / $zam), 0)
         if ($real -ge ($zam - 0.0001)) { $state = 'realized' } elseif ($real -gt 0) { $state = 'partial' }
       }
+      # STAN_REALIZ z WAPRO: Z = zrealizowane, N = nie (potwierdzone na danych)
+      if ($p[2] -eq 'Z') { $state = 'realized'; $pct = 100 }
       Set-RequestStatus ([string]$row.id) @{ wapro_state = $state; wapro_realized_pct = $pct; wapro_raw = ('{0}/{1}' -f $p[2], $p[3]); wapro_checked_at = $now }
       if ($state -ne 'new') { $changed++ }
     }
