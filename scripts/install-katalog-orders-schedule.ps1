@@ -14,7 +14,8 @@
 param(
   [string]$SyncDir = 'C:\katalog-sync',
   [int]$EveryMinutes = 1,
-  [string]$TaskName = 'Kenochem-WaproOrders'
+  [string]$TaskName = 'Kenochem-WaproOrders',
+  [switch]$NoPassword   # zadanie dziala tylko gdy to konto jest zalogowane (np. sesja RDP), bez hasla
 )
 
 $ErrorActionPreference = 'Stop'
@@ -25,10 +26,6 @@ if (-not (Test-Path $Ps1)) {
 if (-not (Test-Path (Join-Path $SyncDir 'katalog-sync.env'))) {
   Write-Error "Brak $SyncDir\katalog-sync.env"
 }
-
-$cred = Get-Credential -UserName ("{0}\{1}" -f $env:USERDOMAIN, $env:USERNAME) `
-  -Message 'Konto Windows, na ktorym dziala zadanie (dostep do SQL WAPRO). Haslo zapisze Harmonogram zadan.'
-if (-not $cred) { Write-Error 'Anulowano.' }
 
 $action = New-ScheduledTaskAction -Execute 'powershell.exe' `
   -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$Ps1`" -OnlyIfPending"
@@ -45,10 +42,20 @@ if (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue) {
   Write-Host "Usunieto stare zadanie $TaskName"
 }
 
-Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Settings $settings `
-  -User $cred.UserName -Password $cred.GetNetworkCredential().Password -RunLevel Highest `
-  -Description 'Kenochem - zamowienia CRM -> WAPRO (ZO), co minute, tylko gdy sa zlecenia' -Force | Out-Null
-
-Write-Host "OK: zadanie $TaskName co $EveryMinutes min (-OnlyIfPending), konto $($cred.UserName)"
+$who = "{0}\{1}" -f $env:USERDOMAIN, $env:USERNAME
+if ($NoPassword) {
+  $principal = New-ScheduledTaskPrincipal -UserId $who -LogonType Interactive -RunLevel Highest
+  Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Settings $settings `
+    -Principal $principal -Description 'Kenochem - zamowienia CRM -> WAPRO (ZO)' -Force | Out-Null
+  $acc = "$who (tylko gdy zalogowany)"
+} else {
+  $cred = Get-Credential -UserName $who -Message 'Haslo konta Windows (dostep do SQL WAPRO)'
+  if (-not $cred) { Write-Error 'Anulowano.' }
+  Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Settings $settings `
+    -User $cred.UserName -Password $cred.GetNetworkCredential().Password -RunLevel Highest `
+    -Description 'Kenochem - zamowienia CRM -> WAPRO (ZO)' -Force | Out-Null
+  $acc = $cred.UserName
+}
+Write-Host "OK: zadanie $TaskName co $EveryMinutes min (-OnlyIfPending), konto $acc"
 Write-Host "Log: $SyncDir\orders.log"
 Write-Host "Test reczny:  powershell -ExecutionPolicy Bypass -File `"$Ps1`" -DryRun"
