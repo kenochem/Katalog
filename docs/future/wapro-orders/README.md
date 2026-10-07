@@ -1,6 +1,6 @@
 # Schowek: zamówienia katalog → WAPRO Mag (ZO)
 
-**Status (2026-10-02):** częściowo podłączone. Przycisk „Do WAPRO (ZO w buforze)" w koszyku CRM (tylko admin), `src/lib/waproOrder.ts` i tabela `wapro_order_requests` (`supabase/migration-wapro-order-requests.sql`) są już w repo. **Brakuje wdrożonego agenta na serwerze WAPRO** — `sync-wapro-orders-server.ps1` z tego folderu nie leży w `scripts/` ani w `C:\katalog-sync\`, więc zlecenia zostają w statusie `pending`.
+**Status (2026-10-07):** agent przepisany na podstawie nagrania wywołań WAPRO — `scripts/sync-wapro-orders-server.ps1` (tworzy ZO w transakcji: nagłówek → pozycje + sumowanie → kontrola cen → zatwierdzenie z numeracją WAPRO; kontrahent po NIP; artykuł z magazynu zamówienia; idempotencja po `NR_ZAMOWIENIA_KLIENTA = KAT-<id>`). Tryb próbny: `-DryRun` (dokument tworzony i cofany). Diagnostyka i nagrywanie: `scripts/wapro-orders-diagnose*.sql`, `scripts/wapro-trace-*.sql`. Stary szkic (błędne parametry, użytkownik `1`) został usunięty.
 
 Pomysł jak WFSync (Baselinker → Mag), tylko źródłem jest koszyk w katalogu.
 SKU w katalogu = `INDEKS_KATALOGOWY` w WAPRO.
