@@ -29,7 +29,6 @@ import { CrmInboxPausedView } from './crm/CrmInboxPausedView';
 import { CrmPipelinePanel } from './crm/CrmPipelinePanel';
 import { CrmOrderWorkspace } from './crm/CrmOrderWorkspace';
 import { CrmShellLayout } from './crm/CrmShellLayout';
-import { ClientTimelinePanel } from './crm/ClientTimelinePanel';
 import { CrmTasksPanel } from './crm/CrmTasksPanel';
 import { CalendarKenochemView } from './hub/CalendarKenochemView';
 import {
@@ -111,7 +110,6 @@ export function CrmHubView({
   const [inboxUnread, setInboxUnread] = useState(0);
   const [pipelineTick, setPipelineTick] = useState(0);
   const [clientPickerSignal, setClientPickerSignal] = useState(0);
-  const [timelineClient, setTimelineClient] = useState<CrmClient | null>(null);
   const [companyConfig, setCompanyConfig] = useState(loadCrmCompanyConfig);
 
   async function reload() {
@@ -287,7 +285,6 @@ export function CrmHubView({
         clientName: c.displayName,
         clientId: c.id,
       });
-      setTimelineClient(c);
       setTab('clients');
       onChanged?.();
     } else {
@@ -485,20 +482,10 @@ export function CrmHubView({
                 clientName: c.displayName,
                 clientId: c.id,
               });
-              setTimelineClient(c);
               onChanged?.();
               setTab('order');
             }}
           />
-          {timelineClient && (
-            <div className="grid gap-4 lg:grid-cols-2">
-              <ClientTimelinePanel
-                clientId={timelineClient.id}
-                clientName={timelineClient.displayName}
-              />
-              <CrmNotesPanel clients={clients} clientId={timelineClient.id} />
-            </div>
-          )}
         </div>
       )}
 

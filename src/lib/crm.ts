@@ -35,7 +35,15 @@ export interface CrmOrder {
   quoteHtml?: string;
   quoteTotalNet?: number;
   quoteTotalGross?: number;
-  quoteMeta?: { discountPct?: number; quoteValidDays?: number; transportCost?: number };
+  quoteMeta?: {
+    discountPct?: number;
+    quoteValidDays?: number;
+    transportCost?: number;
+    /** Kanał wysyłki zamówienia (puste = starszy wpis). */
+    channel?: 'discord' | 'wapro';
+    /** id zlecenia w wapro_order_requests (status i numer ZO pobieramy na żywo). */
+    waproRequestId?: string;
+  };
 }
 
 export interface NipLookupResult {
@@ -273,6 +281,9 @@ export async function saveCrmOrder(input: {
   clientId?: string | null;
   status: 'sent' | 'saved';
   quote?: { number: string; html: string; totalNet: number; totalGross: number };
+  /** Zamówienia: kanał wysyłki i powiązane zlecenie WAPRO. */
+  channel?: 'discord' | 'wapro';
+  waproRequestId?: string;
 }): Promise<CrmOrder> {
   if (!supabase) throw new Error('Brak Supabase');
   const {
@@ -302,7 +313,15 @@ export async function saveCrmOrder(input: {
               transportCost: input.draft.transportCost,
             },
           }
-        : {}),
+        : input.channel || input.draft.transportCost != null
+          ? {
+              quote_meta: {
+                channel: input.channel,
+                waproRequestId: input.waproRequestId,
+                transportCost: input.draft.transportCost,
+              },
+            }
+          : {}),
     })
     .select(ORDER_LIST_COLUMNS)
     .single();

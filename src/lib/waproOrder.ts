@@ -140,3 +140,19 @@ export async function getWaproOrderRequest(
     .maybeSingle();
   return (data as WaproOrderRequest) || null;
 }
+
+/** Statusy zlecen WAPRO dla podanych id (do historii CRM). */
+export async function getWaproOrderRequests(
+  ids: string[],
+): Promise<Map<string, WaproOrderRequest>> {
+  const out = new Map<string, WaproOrderRequest>();
+  if (!supabase || ids.length === 0) return out;
+  const { data } = await supabase
+    .from('wapro_order_requests')
+    .select(
+      'id, status, requested_at, finished_at, message, wapro_order_id, wapro_order_number',
+    )
+    .in('id', ids);
+  for (const r of (data || []) as WaproOrderRequest[]) out.set(r.id, r);
+  return out;
+}

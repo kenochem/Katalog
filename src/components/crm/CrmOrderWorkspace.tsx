@@ -216,6 +216,7 @@ export function CrmOrderWorkspace({
   async function persistOrderHistory(
     status: 'sent' | 'saved',
     noteSuffix?: string,
+    meta?: { channel?: 'discord' | 'wapro'; waproRequestId?: string },
   ): Promise<boolean> {
     if (!cloudEnabled || !draft.items.length || draft.kind === 'quote') return false;
     try {
@@ -239,6 +240,8 @@ export function CrmOrderWorkspace({
         },
         clientId,
         status,
+        channel: meta?.channel,
+        waproRequestId: meta?.waproRequestId,
       });
       return true;
     } catch (err) {
@@ -385,7 +388,7 @@ export function CrmOrderWorkspace({
         showToast(res.error || 'Wysyłka nieudana', 'error');
         return;
       }
-      await persistOrderHistory('sent');
+      await persistOrderHistory('sent', undefined, { channel: 'discord' });
       clearOrderDraft();
       sync(getOrderDraft());
       setPhase('browse');
@@ -442,8 +445,8 @@ export function CrmOrderWorkspace({
       }
       showToast('Wysyłanie do WAPRO…', 'info');
       // Zamówienie od razu trafia do historii CRM (nie zależy od tego, kiedy agent WAPRO je przetworzy).
-      await persistOrderHistory('sent', 'Wysłano do WAPRO (ZO)');
       const requestId = res.id;
+      await persistOrderHistory('sent', undefined, { channel: 'wapro', waproRequestId: requestId });
       const deadline = Date.now() + 120_000;
       let finished = false;
       while (Date.now() < deadline) {

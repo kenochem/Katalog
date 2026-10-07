@@ -1,4 +1,4 @@
-import { Download, Loader2, Pencil, Plus, Search, Tag, Trash2 } from 'lucide-react';
+import { Download, Loader2, Plus, Search, Tag } from 'lucide-react';
 import { confirmDialog } from '../lib/dialog';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -12,17 +12,7 @@ import { showToast } from '../lib/toast';
 import { downloadCsv, stampFile } from '../lib/exportReport';
 import { getClientIcon } from './crm/clientIcons';
 import { CrmClientEditModal } from './crm/CrmClientEditModal';
-
-const TAG_TONE: Record<string, string> = {
-  VIP: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
-  Ryzykowny: 'bg-red-500/15 text-red-300 border-red-500/30',
-  'Nowy prospekt': 'bg-sky-500/15 text-sky-300 border-sky-500/30',
-  Stały: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
-};
-
-function tagTone(tag: string): string {
-  return TAG_TONE[tag] || 'bg-slate-800 text-slate-400 border-slate-700';
-}
+import { CrmClientCardModal, tagTone } from './crm/CrmClientCardModal';
 
 interface CrmClientsPanelProps {
   cloudEnabled: boolean;
@@ -35,6 +25,7 @@ export function CrmClientsPanel({ cloudEnabled, onPickClient }: CrmClientsPanelP
   const [q, setQ] = useState('');
   const [tagFilter, setTagFilter] = useState<string | null>(null);
   const [editing, setEditing] = useState<Partial<CrmClient> | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
 
   async function reload() {
     if (!cloudEnabled) {
@@ -54,6 +45,8 @@ export function CrmClientsPanel({ cloudEnabled, onPickClient }: CrmClientsPanelP
   useEffect(() => {
     void reload();
   }, [cloudEnabled]);
+
+  const openClient = clients.find((c) => c.id === openId) ?? null;
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -157,85 +150,85 @@ export function CrmClientsPanel({ cloudEnabled, onPickClient }: CrmClientsPanelP
           Brak klientów — dodaj ręcznie albo po NIP
         </div>
       ) : (
-        <ul className="space-y-2">
-          {filtered.map((c) => (
-            <li
-              key={c.id}
-              className="flex items-start gap-2 rounded-xl border border-slate-800 bg-slate-900/80 px-3 py-2.5"
-            >
-              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-slate-400">
-                {(() => {
-                  const Icon = getClientIcon(c.icon);
-                  return <Icon className="h-4 w-4" />;
-                })()}
-              </span>
-              <button
-                type="button"
-                className="min-w-0 flex-1 text-left"
-                onClick={() => onPickClient?.(c)}
-                title="Wybierz do zamówienia"
-              >
-                <p className="truncate text-sm font-medium text-slate-100">{c.displayName}</p>
-                {c.legalName && c.legalName !== c.displayName && (
-                  <p className="truncate text-xs text-slate-500">{c.legalName}</p>
-                )}
-                <p className="mt-0.5 font-mono text-[11px] text-brand-400">
-                  {c.nip || 'bez NIP'}
-                </p>
-                {c.tags.length > 0 && (
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {c.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${tagTone(tag)}`}
-                      >
-                        {tag}
-                      </span>
-                    ))}
+        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          {filtered.map((c) => {
+            const Icon = getClientIcon(c.icon);
+            return (
+              <li key={c.id}>
+                <button
+                  type="button"
+                  onClick={() => setOpenId(c.id)}
+                  className="flex h-full w-full flex-col rounded-2xl border border-slate-800 bg-slate-900/80 p-3 text-left transition hover:border-brand-500/40 hover:bg-slate-900"
+                  title="Otwórz kartę klienta"
+                >
+                  <div className="flex items-start gap-2.5">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-slate-400">
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="line-clamp-2 text-sm font-semibold leading-snug text-slate-100">
+                        {c.displayName}
+                      </p>
+                      <p className="mt-0.5 font-mono text-[11px] text-brand-400">
+                        {c.nip || 'bez NIP'}
+                      </p>
+                    </div>
                   </div>
-                )}
-                {c.note?.trim() && (
-                  <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-slate-400">
-                    {c.note}
-                  </p>
-                )}
-              </button>
-              <button
-                type="button"
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-                onClick={() => setEditing(c)}
-                aria-label="Edytuj"
-              >
-                <Pencil className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                className="rounded-lg p-1.5 text-slate-500 hover:bg-red-950/40 hover:text-red-400"
-                onClick={async () => {
-                  if (
-                    !(await confirmDialog({
-                      title: 'Usunąć klienta?',
-                      tone: 'danger',
-                      message: `Klient „${c.displayName}” zostanie usunięty.`,
-                    }))
-                  )
-                    return;
-                  try {
-                    await deleteCrmClient(c.id);
-                    await reload();
-                    showToast('Usunięto klienta', 'info');
-                  } catch (err) {
-                    showToast(err instanceof Error ? err.message : 'Błąd', 'error');
-                  }
-                }}
-                aria-label="Usuń"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </li>
-          ))}
+                  {c.tags.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {c.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${tagTone(tag)}`}
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {c.note?.trim() && (
+                    <p className="mt-2 line-clamp-2 text-[11px] leading-snug text-slate-400">
+                      {c.note}
+                    </p>
+                  )}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
+
+      <CrmClientCardModal
+        client={openClient}
+        onClose={() => setOpenId(null)}
+        onOrder={(c) => {
+          setOpenId(null);
+          onPickClient?.(c);
+        }}
+        onEdit={(c) => {
+          setOpenId(null);
+          setEditing(c);
+        }}
+        onChanged={(c) => setClients((list) => list.map((x) => (x.id === c.id ? c : x)))}
+        onDelete={async (c) => {
+          if (
+            !(await confirmDialog({
+              title: 'Usunąć klienta?',
+              tone: 'danger',
+              message: `Klient „${c.displayName}” zostanie usunięty.`,
+            }))
+          )
+            return;
+          try {
+            await deleteCrmClient(c.id);
+            setOpenId(null);
+            await reload();
+            showToast('Usunięto klienta', 'info');
+          } catch (err) {
+            showToast(err instanceof Error ? err.message : 'Błąd', 'error');
+          }
+        }}
+      />
 
       <CrmClientEditModal
         initial={editing}

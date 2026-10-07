@@ -31,6 +31,7 @@ import { openQuoteDocument } from "../lib/quotePdf";
 import { showToast } from "../lib/toast";
 import { createNote } from "../lib/crmNotes";
 import { getClientIcon } from "./crm/clientIcons";
+import { getWaproOrderRequests, type WaproOrderRequest } from "../lib/waproOrder";
 
 interface CrmHistoryPanelProps {
   cloudEnabled: boolean;
@@ -44,6 +45,40 @@ interface QuietClientRow {
   client: CrmClient;
   lastOrderAt: number;
   daysSince: number;
+}
+
+function orderBadge(
+  o: CrmOrder,
+  wapro: Map<string, WaproOrderRequest>,
+): { label: string; cls: string; title?: string } {
+  if (o.kind === "quote")
+    return { label: "Oferta", cls: "bg-amber-500/20 text-amber-200" };
+  const rid = o.quoteMeta?.waproRequestId;
+  if (o.quoteMeta?.channel === "wapro" || rid) {
+    const r = rid ? wapro.get(rid) : undefined;
+    if (r?.status === "done")
+      return {
+        label: `WAPRO ${r.wapro_order_number || r.wapro_order_id || "ZO"}`,
+        cls: "bg-emerald-500/20 text-emerald-300",
+        title: "Zamówienie utworzone w WAPRO",
+      };
+    if (r?.status === "error")
+      return {
+        label: "WAPRO: błąd",
+        cls: "bg-red-500/20 text-red-300",
+        title: r.message || undefined,
+      };
+    return {
+      label: "WAPRO: w kolejce",
+      cls: "bg-sky-500/20 text-sky-300",
+      title: "Czeka na agenta na serwerze WAPRO",
+    };
+  }
+  if (o.quoteMeta?.channel === "discord")
+    return { label: "Discord", cls: "bg-brand-500/20 text-brand-300" };
+  if (o.status === "sent")
+    return { label: "Wysłane", cls: "bg-brand-500/20 text-brand-300" };
+  return { label: "Zapis", cls: "bg-slate-800 text-slate-400" };
 }
 
 export function CrmHistoryPanel({
@@ -63,6 +98,7 @@ export function CrmHistoryPanel({
   const [openingQuote, setOpeningQuote] = useState(false);
   const [noteDraftFor, setNoteDraftFor] = useState<string | null>(null);
   const [noteText, setNoteText] = useState("");
+  const [wapro, setWapro] = useState<Map<string, WaproOrderRequest>>(new Map());
   const hasWebhook = Boolean(import.meta.env.VITE_DISCORD_ORDERS_WEBHOOK);
 
   async function reload() {
@@ -72,7 +108,12 @@ export function CrmHistoryPanel({
     }
     setLoading(true);
     try {
-      setOrders(await fetchCrmOrders(500));
+      const list = await fetchCrmOrders(500);
+      setOrders(list);
+      const ids = list
+        .map((o) => o.quoteMeta?.waproRequestId)
+        .filter((x): x is string => Boolean(x));
+      setWapro(await getWaproOrderRequests(ids));
     } catch (err) {
       showToast(crmErrorMessage(err), "error", 5000);
     } finally {
@@ -83,6 +124,22 @@ export function CrmHistoryPanel({
   useEffect(() => {
     void reload();
   }, [cloudEnabled]);
+
+  const hasWaiting = useMemo(
+    () =>
+      orders.some((o) => {
+        const rid = o.quoteMeta?.waproRequestId;
+        if (!rid) return false;
+        const st = wapro.get(rid)?.status;
+        return !st || st === "pending" || st === "running";
+      }),
+    [orders, wapro],
+  );
+  useEffect(() => {
+    if (!hasWaiting) return;
+    const t = setInterval(() => void reload(), 20_000);
+    return () => clearInterval(t);
+  }, [hasWaiting, cloudEnabled]);
 
   const quietClients = useMemo<QuietClientRow[]>(() => {
     const lastOrderByClient = new Map<string, number>();
@@ -179,6 +236,7 @@ export function CrmHistoryPanel({
             draft,
             clientId: order.clientId,
             status: "sent",
+            channel: "discord",
           });
           await reload();
         } catch {
@@ -227,7 +285,7 @@ export function CrmHistoryPanel({
         new Date(o.createdAt).toLocaleString("pl-PL"),
         o.clientName || "",
         o.kind === "quote" ? "Oferta" : "Zamówienie",
-        o.status === "sent" ? "Wysłane" : "Zapisane",
+        orderBadge(o, wapro).label,
         o.items.length,
         o.items.reduce((s, i) => s + (i.quantity || 0), 0),
         o.note || "",
@@ -369,21 +427,17 @@ export function CrmHistoryPanel({
                       : ""}
                     {o.clientName || "(bez klienta)"}
                   </p>
-                  <span
-                    className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                      o.kind === "quote"
-                        ? "bg-amber-500/20 text-amber-200"
-                        : o.status === "sent"
-                          ? "bg-brand-500/20 text-brand-300"
-                          : "bg-slate-800 text-slate-400"
-                    }`}
-                  >
-                    {o.kind === "quote"
-                      ? "Oferta"
-                      : o.status === "sent"
-                        ? "Discord"
-                        : "Zapis"}
-                  </span>
+                  {(() => {
+                    const b = orderBadge(o, wapro);
+                    return (
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${b.cls}`}
+                        title={b.title}
+                      >
+                        {b.label}
+                      </span>
+                    );
+                  })()}
                 </div>
                 <p className="mt-0.5 text-xs text-slate-500">
                   {when} · {o.items.length} poz. · {qty} szt.
@@ -404,6 +458,25 @@ export function CrmHistoryPanel({
               {selected.quoteNumber ? `${selected.quoteNumber} · ` : ""}
               {selected.clientName || "(bez klienta)"}
             </p>
+            {(() => {
+              const rid = selected.quoteMeta?.waproRequestId;
+              const r = rid ? wapro.get(rid) : undefined;
+              return r ? (
+                <p className="mt-1 text-xs text-slate-400">
+                  WAPRO:{" "}
+                  {r.status === "done"
+                    ? `utworzono ${r.wapro_order_number || r.wapro_order_id}`
+                    : r.status === "error"
+                      ? `błąd — ${r.message || "brak szczegółów"}`
+                      : "zlecenie w kolejce"}
+                </p>
+              ) : null;
+            })()}
+            {selected.quoteMeta?.transportCost ? (
+              <p className="mt-1 text-xs text-slate-400">
+                Transport: {selected.quoteMeta.transportCost.toFixed(2)} zł netto
+              </p>
+            ) : null}
             {selected.note && (
               <p className="mt-1 text-xs text-slate-400">{selected.note}</p>
             )}
