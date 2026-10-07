@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-07',
+    title: 'CRM: uprawnienie do wysyłki do WAPRO i podgląd przed wysyłką',
+    description:
+      'Przycisk „Do WAPRO” nie jest już tylko dla admina — to osobne uprawnienie „CRM: wysyłka zamówień do WAPRO” w macierzy ról (domyślnie tylko admin, resztę włączasz w panelu uprawnień). Przed wysłaniem pojawia się podgląd: klient, NIP, liczba pozycji, transport, sumy netto/brutto i handlowiec; brak NIP jest wyraźnie zaznaczony.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-07',
     title: 'CRM: karta klienta, klienci w kafelkach, historia z numerem ZO',
     description:
       'Lista klientów to teraz kafelki, a kliknięcie klienta otwiera jego kartę (dane, etykiety do przypisywania i dodawania własnych, historia zamówień, notatki, oś czasu) z przyciskiem „Utwórz zamówienie” — zamiast od razu przenosić do koszyka. W historii zamówienia wysłane do WAPRO mają etykietę z numerem ZO (albo „w kolejce” / „błąd”), a „Discord” pojawia się tylko przy zamówieniach naprawdę wysłanych na Discord. Zamówienia zapamiętują też kwotę transportu.',

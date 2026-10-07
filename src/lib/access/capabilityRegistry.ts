@@ -39,7 +39,8 @@ export type CapabilityId =
   | 'admin.manageUsers'
   | 'admin.viewRoleMatrix'
   | 'admin.editRoleMatrix'
-  | 'admin.manageBaselinker';
+  | 'admin.manageBaselinker'
+  | 'crm.sendWaproOrder';
 
 export interface CapabilityDef {
   id: CapabilityId;
@@ -263,6 +264,16 @@ export const CAPABILITY_REGISTRY: CapabilityDef[] = [
     roleAction: 'manageTalk',
     moduleId: 'comms',
     requires: ['module.comms', 'comms.useTalk'],
+  },
+  {
+    id: 'crm.sendWaproOrder',
+    label: 'CRM: wysyłka zamówień do WAPRO',
+    description:
+      'Przycisk „Do WAPRO” w koszyku zamówienia — tworzy ZO w Mag (numer zamówienia zawiera inicjał handlowca)',
+    group: 'crm',
+    roleAction: 'sendWaproOrder',
+    moduleId: 'crm',
+    requires: ['module.crm', 'crm.use'],
   },
   {
     id: 'admin.manageBaselinker',

@@ -20,6 +20,8 @@ import { getProductImage } from '../../lib/products';
 import { formatPricePln } from '../../lib/format';
 import { showToast } from '../../lib/toast';
 import { useAuth } from '../../lib/auth';
+import { roleCan } from '../../lib/roles';
+import { confirmDialog } from '../../lib/dialog';
 import {
   buildWaproOrderPayload,
   getWaproOrderRequest,
@@ -62,7 +64,7 @@ export function CrmOrderWorkspace({
   refreshingClients,
 }: CrmOrderWorkspaceProps) {
   const { role } = useAuth();
-  const isAdmin = role === 'admin';
+  const canSendWapro = roleCan(role, 'sendWaproOrder');
   const [addClientOpen, setAddClientOpen] = useState(false);
   const [draft, setDraft] = useState<OrderDraft>(() => getOrderDraft());
   const [phase, setPhase] = useState<OrderPhase>(() =>
@@ -399,7 +401,7 @@ export function CrmOrderWorkspace({
   }
 
   async function sendWapro() {
-    if (!isAdmin) return;
+    if (!canSendWapro) return;
     if (!draft.items.length) {
       showToast('Koszyk pusty', 'warn');
       return;
@@ -436,6 +438,24 @@ export function CrmOrderWorkspace({
       clientNip: activeClient?.nip || undefined,
       salesperson: authorLabel,
     };
+    const totalNet = draftTotal + transport;
+    const preview = [
+      `Klient: ${payload.clientName}`,
+      payload.clientNip
+        ? `NIP: ${payload.clientNip}`
+        : 'UWAGA: klient bez NIP — WAPRO dopasowuje kontrahenta po NIP (bez niego zlecenie się nie powiedzie, o ile nie ustawiono kontrahenta zastępczego).',
+      `Pozycji: ${payload.items.length}${transport > 0 ? ` (w tym transport KAT00178: ${transport.toFixed(2)} zł netto)` : ''}`,
+      `Razem: ${formatPricePln(totalNet)} netto / ${formatPricePln(totalNet * 1.23)} brutto`,
+      `Handlowiec: ${authorLabel}`,
+    ].join('\n');
+    if (
+      !(await confirmDialog({
+        title: 'Utworzyć zamówienie w WAPRO?',
+        message: preview,
+        confirmLabel: 'Wyślij do WAPRO',
+      }))
+    )
+      return;
     setSendingWapro(true);
     try {
       const res = await requestWaproOrder(payload);
@@ -608,7 +628,7 @@ export function CrmOrderWorkspace({
               onSaveHistory={() => void saveHistoryOnly()}
               onSendDiscord={() => void sendDiscord()}
               onGoToQuote={goToQuote}
-              onSendWapro={cloudEnabled && isAdmin ? () => void sendWapro() : undefined}
+              onSendWapro={cloudEnabled && canSendWapro ? () => void sendWapro() : undefined}
               saving={saving}
               sending={sending}
               sendingWapro={sendingWapro}
@@ -642,7 +662,7 @@ export function CrmOrderWorkspace({
             onSaveHistory={() => void saveHistoryOnly()}
             onSendDiscord={() => void sendDiscord()}
             onGoToQuote={goToQuote}
-            onSendWapro={cloudEnabled && isAdmin ? () => void sendWapro() : undefined}
+            onSendWapro={cloudEnabled && canSendWapro ? () => void sendWapro() : undefined}
             saving={saving}
             sending={sending}
             sendingWapro={sendingWapro}
