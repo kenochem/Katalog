@@ -361,14 +361,7 @@ function buildImport(row: Record<string, unknown>, ctx: ImportCtx) {
   if (!hasPurchase) warnings.push('brak ceny zakupu');
 
   // zdjecia
-  const urls: string[] = [];
-  const push = (u: unknown) => {
-    const t = typeof u === 'string' ? u.trim() : '';
-    if (/^https?:\/\//i.test(t) && t.length <= 995 && !urls.includes(t)) urls.push(t);
-  };
-  push(row.custom_image_url);
-  push(row.image_url);
-  if (Array.isArray(row.extra_images)) for (const u of row.extra_images) push(u);
+  const urls = ourImageUrls(row);
   if (!urls.length) warnings.push('brak zdjec');
 
   const ean = String(row.ean ?? '').trim();
@@ -452,9 +445,16 @@ const MAX_BL_IMAGES = 16;
 
 function ourImageUrls(row: Record<string, unknown>): string[] {
   const urls: string[] = [];
+  const seenKeys = new Set<string>();
   const push = (u: unknown) => {
     const t = typeof u === 'string' ? u.trim() : '';
-    if (/^https?:\/\//i.test(t) && t.length <= 995 && !urls.includes(t)) urls.push(t);
+    if (!/^https?:\/\//i.test(t) || t.length > 995) return;
+    // kopie sklepowe kenochem.com/hpeciai/... to te same pliki co w wp-content (katalog tez je pomija)
+    if (/kenochem\.com\/hpeciai\//i.test(t)) return;
+    const key = imgFileKey(t);
+    if (seenKeys.has(key) || urls.includes(t)) return;
+    seenKeys.add(key);
+    urls.push(t);
   };
   push(row.custom_image_url);
   push(row.image_url);

@@ -790,9 +790,11 @@ export function collectProductImageCandidates(product: ProductImageSource): stri
 
 export function getProductImages(product: Product): string[] {
   const primary = getProductImage(product);
-  // Produkty (shop/chemia): tylko zdjęcie główne — dodatkowe niepotrzebne
+  // Sklep: galeria z importu zawiera te same zdjęcia dwa razy (wp-content + hpeciai) —
+  // collectProductImageCandidates odrzuca kopie hpeciai i duplikaty, więc pokazujemy
+  // zdjęcie główne + unikalne dodatkowe (tak jak w katalogu akcesoriów).
   if (product.catalog === 'shop') {
-    return primary ? [primary] : [];
+    return collectProductImageCandidates(product);
   }
   const extras = product.extraImageUrls || [];
   if (!primary) return extras;

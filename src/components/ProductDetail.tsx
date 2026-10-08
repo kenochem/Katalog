@@ -131,6 +131,11 @@ export function ProductDetail({
   const [copied, setCopied] = useState<'sku' | 'ean' | null>(null);
   const [stockSaving, setStockSaving] = useState(false);
   const [removeBgOpen, setRemoveBgOpen] = useState(false);
+  const [blMissing, setBlMissing] = useState<string[]>([]);
+  const isMissingInBl = (url: string) => {
+    const base = url.split('?')[0].toLowerCase();
+    return blMissing.some((m) => m.split('?')[0].toLowerCase() === base);
+  };
   const [prepareOpen, setPrepareOpen] = useState(false);
   const [prepareBusy, setPrepareBusy] = useState(false);
   const [removeBgBusy, setRemoveBgBusy] = useState(false);
@@ -178,6 +183,7 @@ export function ProductDetail({
     );
     setLocalPrimaryImage(null);
     setLocalExtraImages([]);
+    setBlMissing([]);
     setSelectedIdx(0);
     setEditing(false);
     setEditMeta({ ...product.meta });
@@ -979,13 +985,21 @@ export function ProductDetail({
                       key={url}
                       type="button"
                       onClick={() => setSelectedIdx(idx)}
-                      className={`h-12 w-12 overflow-hidden rounded-lg border-2 transition ${
+                      className={`relative h-12 w-12 overflow-hidden rounded-lg border-2 transition ${
                         idx === selectedIdx
                           ? 'border-brand-400'
-                          : 'border-transparent opacity-70 hover:opacity-100'
+                          : isMissingInBl(url)
+                            ? 'border-amber-400'
+                            : 'border-transparent opacity-70 hover:opacity-100'
                       }`}
+                      title={isMissingInBl(url) ? 'Brak tego zdjęcia w BaseLinkerze' : undefined}
                     >
                       <img src={url} alt="" className="h-full w-full object-cover" />
+                      {isMissingInBl(url) && (
+                        <span className="absolute inset-x-0 bottom-0 bg-amber-400 text-center text-[8px] font-bold leading-3 text-amber-950">
+                          brak w BL
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -1023,14 +1037,23 @@ export function ProductDetail({
                 key={url}
                 type="button"
                 onClick={() => setSelectedIdx(idx)}
-                className={`h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 transition ${
+                className={`relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 transition ${
                   idx === selectedIdx
                     ? 'border-brand-500'
-                    : 'border-slate-700 opacity-70 hover:opacity-100'
+                    : isMissingInBl(url)
+                      ? 'border-amber-400'
+                      : 'border-slate-700 opacity-70 hover:opacity-100'
                 }`}
-                title={`Zdjęcie ${idx + 1}`}
+                title={
+                  isMissingInBl(url) ? `Zdjęcie ${idx + 1} — brak w BaseLinkerze` : `Zdjęcie ${idx + 1}`
+                }
               >
                 <img src={url} alt="" className="h-full w-full object-cover" />
+                {isMissingInBl(url) && (
+                  <span className="absolute inset-x-0 bottom-0 bg-amber-400 text-center text-[9px] font-bold leading-3 text-amber-950">
+                    brak w BL
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -1100,7 +1123,7 @@ export function ProductDetail({
             )}
 
           {hubStyle && showPrices && !editing && detailTab === 'info' && detail.sku && (
-            <BaselinkerProductPanel product={detail} />
+            <BaselinkerProductPanel product={detail} onMissingImages={setBlMissing} />
           )}
 
           {hubStyle && !editing && detailTab === 'info' && (

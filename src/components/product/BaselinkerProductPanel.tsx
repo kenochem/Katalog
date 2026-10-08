@@ -53,7 +53,14 @@ function Cell({
 }
 
 /** Podgląd produktu w BaseLinkerze + porównanie ze stanem/ceną z WAPRO. */
-export function BaselinkerProductPanel({ product }: { product: Product }) {
+export function BaselinkerProductPanel({
+  product,
+  onMissingImages,
+}: {
+  product: Product;
+  /** Adresy zdjęć z katalogu, których nie ma w BaseLinkerze (do wyróżnienia w galerii). */
+  onMissingImages?: (urls: string[]) => void;
+}) {
   const [data, setData] = useState<BaselinkerProduct | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,8 +99,10 @@ export function BaselinkerProductPanel({ product }: { product: Product }) {
     try {
       const [row] = await fetchImageStatus([product.sku]);
       setImg(row ?? null);
+      onMissingImages?.(row?.missing ?? []);
     } catch {
       setImg(null);
+      onMissingImages?.([]);
     }
   }
 
@@ -189,6 +198,7 @@ export function BaselinkerProductPanel({ product }: { product: Product }) {
       } else {
         markBaselinkerUnlinked(product.sku);
         setImg(null);
+        onMissingImages?.([]);
       }
     } catch (err) {
       setData(null);

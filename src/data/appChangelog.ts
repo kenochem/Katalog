@@ -15,7 +15,7 @@ export const APP_CHANGELOG: AppChangelogEntry[] = [
     date: '2026-10-08',
     title: 'BaseLinker: sprawdzanie i dokładanie zdjęć (pojedynczo i hurtowo)',
     description:
-      'Na karcie produktu w panelu BaseLinker widać teraz, ile zdjęć jest w BL i w katalogu oraz ile brakuje; przycisk „Dołóż zdjęcia” dokłada brakujące na koniec galerii BL. Hurtowo: Zdjęcia do poprawy → „Zdjęcia → BaseLinker” (sprawdź wszystkie powiązane produkty, zaznacz i dołóż). Zdjęcia, które już są w BaseLinkerze, nigdy nie są usuwane ani podmieniane — po zapisie sprawdzamy, czy żadne nie zniknęło. Wymaga wdrożenia funkcji baselinker w Supabase.',
+      'Na karcie produktu w panelu BaseLinker widać teraz, ile zdjęć jest w BL i w katalogu oraz ile brakuje; przycisk „Dołóż zdjęcia” dokłada brakujące na koniec galerii BL. Hurtowo: Zdjęcia do poprawy → „Zdjęcia → BaseLinker” (sprawdź wszystkie powiązane produkty, zaznacz i dołóż). Zdjęcia, które już są w BaseLinkerze, nigdy nie są usuwane ani podmieniane — po zapisie sprawdzamy, czy żadne nie zniknęło. Zdjęcia brakujące w BL są wyróżnione w galerii produktu (pomarańczowa ramka „brak w BL”). Produkty ze „Sklepu” pokazują teraz w galerii wszystkie unikalne zdjęcia z importu (kopie hpeciai i duplikaty są pomijane), a liczniki zdjęć nie liczą już podwójnie. Wymaga wdrożenia funkcji baselinker w Supabase.',
     tag: 'nowość',
   },
   {
