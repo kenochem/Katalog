@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-08',
+    title: 'Katalog: „Przygotuj pod BaseLinker (min. 500×500)” przy zdjęciu produktu',
+    description:
+      'Na karcie produktu, pod „Wytnij białe tło”, jest nowy przycisk. Pokazuje rozmiar obecnego zdjęcia i podgląd przed/po: zdjęcie mniejsze niż 500×500 px jest powiększane z zachowaniem proporcji albo (tryb „Kwadrat”) dopełniane tłem do kwadratu; większe zostaje bez zmian. Przezroczystość (wycięte tło) zostaje zachowana. Wynik zapisuje się jako zdjęcie główne, z kopią do przywrócenia.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-08',
     title: 'Wyszukiwarka: edycja w środku frazy i przycisk „Szukaj”',
     description:
       'Naprawiony błąd, przez który na telefonie nie dało się normalnie dopisać znaku między już wpisanymi słowami (pole nadpisywało się starszą wartością i kursor skakał na koniec). Gdy coś wpisano, obok „X” jest teraz stały przycisk „Szukaj”, który od razu zatwierdza frazę i chowa klawiaturę (to samo robi Enter / „Szukaj” na klawiaturze telefonu).',

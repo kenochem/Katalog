@@ -3,7 +3,7 @@ import {
   X, Camera, Upload, Loader2, Package, Pencil, Save, Trash2,
   Minus, Plus, Images, Printer, Tag, ArrowLeft,
   FileText, Barcode, Copy, Check, Scissors, Undo2, Layers,
-  Sparkles, TrendingUp, Star,
+  Sparkles, TrendingUp, Star, Maximize2,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import type { Product, ProductVariant } from '../types';
@@ -32,6 +32,8 @@ import {
 } from '../lib/locationStore';
 import { formatLocationCode, parseLocationCode } from '../lib/warehouseLocation';
 import { RemoveBackgroundModal } from './RemoveBackgroundModal';
+import { PrepareImageModal } from './PrepareImageModal';
+import type { PrepareResult } from '../lib/imagePrepare';
 import { ContextHelp } from './ContextHelp';
 import {
   WarehouseLocationFields,
@@ -129,6 +131,8 @@ export function ProductDetail({
   const [copied, setCopied] = useState<'sku' | 'ean' | null>(null);
   const [stockSaving, setStockSaving] = useState(false);
   const [removeBgOpen, setRemoveBgOpen] = useState(false);
+  const [prepareOpen, setPrepareOpen] = useState(false);
+  const [prepareBusy, setPrepareBusy] = useState(false);
   const [removeBgBusy, setRemoveBgBusy] = useState(false);
   const [revertBusy, setRevertBusy] = useState(false);
   const [deleteProductBusy, setDeleteProductBusy] = useState(false);
@@ -260,6 +264,38 @@ export function ProductDetail({
     }
   }
 
+  async function handleApplyPrepare(result: PrepareResult) {
+    if (!displayImage || !isPrimarySelected) {
+      showToast('Wybierz zdjęcie główne (pierwsze w galerii)', 'warn', 4000);
+      return;
+    }
+    setPrepareBusy(true);
+    try {
+      await backupPrimaryImageForRevert(product.id, displayImage);
+      setHasImageRevert(true);
+      const ext = result.blob.type === 'image/png' ? 'png' : result.blob.type === 'image/webp' ? 'webp' : 'jpg';
+      const file = new File([result.blob], `${detail.sku || detail.id}.${ext}`, {
+        type: result.blob.type || 'image/jpeg',
+      });
+      await handleUpload(file, { skipRevertToast: true });
+      setPrepareOpen(false);
+      showToast(
+        `Zdjęcie przygotowane (${result.width}×${result.height}) — możesz przywrócić poprzednie`,
+        'ok',
+        5000,
+      );
+    } catch (err) {
+      console.error(err);
+      showToast(
+        err instanceof Error ? err.message : 'Nie udało się przygotować zdjęcia',
+        'error',
+        5000,
+      );
+    } finally {
+      setPrepareBusy(false);
+    }
+  }
+
   async function handleUpload(file: File, opts?: { skipRevertToast?: boolean }) {
     setUploading(true);
     try {
@@ -290,7 +326,7 @@ export function ProductDetail({
         title: 'Przywrócić poprzednie zdjęcie?',
         tone: 'warn',
         confirmLabel: 'Przywróć',
-        message: 'Zdjęcie sprzed ostatniego wycinania tła zastąpi obecne zdjęcie główne.',
+        message: 'Zdjęcie sprzed ostatniej zmiany (wycinanie tła / skalowanie) zastąpi obecne zdjęcie główne.',
       }))
     )
       return;
@@ -1373,6 +1409,7 @@ export function ProductDetail({
               revertBusy={revertBusy}
               onPickFile={applyImageFile}
               onOpenRemoveBg={() => setRemoveBgOpen(true)}
+              onOpenPrepare={() => setPrepareOpen(true)}
               onRestoreBeforeNobg={() => void handleRestoreImageBeforeNobg()}
               fileRef={fileRef}
               cameraRef={cameraRef}
@@ -1706,6 +1743,18 @@ export function ProductDetail({
               </div>
             )}
 
+            {displayImage && (
+              <button
+                type="button"
+                disabled={uploading || uploadingExtra || removeBgBusy || prepareBusy}
+                onClick={() => setPrepareOpen(true)}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-600 bg-slate-800/80 py-3 text-sm font-medium text-slate-200 transition hover:border-brand-500/40 hover:bg-slate-800 disabled:opacity-50"
+              >
+                <Maximize2 className="h-5 w-5 text-brand-300" />
+                Przygotuj pod BaseLinker (min. 500×500)
+              </button>
+            )}
+
             {hasImageRevert && isPrimarySelected && (
               <button
                 type="button"
@@ -1718,7 +1767,7 @@ export function ProductDetail({
                 ) : (
                   <Undo2 className="h-5 w-5" />
                 )}
-                Przywróć zdjęcie sprzed wycinania tła
+                Przywróć poprzednie zdjęcie (przed zmianą)
               </button>
             )}
 
@@ -1897,6 +1946,14 @@ export function ProductDetail({
           onClose={() => setImagePreviewOpen(false)}
         />
       )}
+      <PrepareImageModal
+        open={prepareOpen}
+        sourceUrl={displayImage}
+        productName={detail.displayName}
+        busy={prepareBusy || uploading}
+        onClose={() => !prepareBusy && !uploading && setPrepareOpen(false)}
+        onApply={(res) => void handleApplyPrepare(res)}
+      />
       <RemoveBackgroundModal
         open={removeBgOpen}
         sourceUrl={displayImage}
@@ -1920,6 +1977,7 @@ function HubProductPhotosPanel({
   revertBusy,
   onPickFile,
   onOpenRemoveBg,
+  onOpenPrepare,
   onRestoreBeforeNobg,
   fileRef,
   cameraRef,
@@ -1938,6 +1996,7 @@ function HubProductPhotosPanel({
   revertBusy: boolean;
   onPickFile: (file: File) => void;
   onOpenRemoveBg: () => void;
+  onOpenPrepare: () => void;
   onRestoreBeforeNobg: () => void;
   fileRef: RefObject<HTMLInputElement | null>;
   cameraRef: RefObject<HTMLInputElement | null>;
@@ -2019,6 +2078,18 @@ function HubProductPhotosPanel({
           </button>
         )}
 
+        {displayImage && (
+          <button
+            type="button"
+            disabled={busy || removeBgBusy}
+            onClick={onOpenPrepare}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-600 bg-slate-800/80 py-3 text-sm font-medium text-slate-200 transition hover:border-brand-500/40 hover:bg-slate-800 disabled:opacity-50"
+          >
+            <Maximize2 className="h-5 w-5 text-brand-300" />
+            Przygotuj pod BaseLinker (min. 500×500)
+          </button>
+        )}
+
         {hasImageRevert && isPrimarySelected && (
           <button
             type="button"
@@ -2031,7 +2102,7 @@ function HubProductPhotosPanel({
             ) : (
               <Undo2 className="h-5 w-5" />
             )}
-            Przywróć zdjęcie sprzed wycinania tła
+            Przywróć poprzednie zdjęcie (przed zmianą)
           </button>
         )}
 
