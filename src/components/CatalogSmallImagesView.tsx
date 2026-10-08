@@ -7,6 +7,7 @@ import { prepareImage, BASELINKER_MIN_SIDE, type PrepareMode } from '../lib/imag
 import { getCachedDims, scanImageDims, setCachedDims } from '../lib/imageDims';
 import { confirmDialog } from '../lib/dialog';
 import { showToast } from '../lib/toast';
+import { CatalogBaselinkerImagesPanel } from './CatalogBaselinkerImagesPanel';
 
 const PAGE = 100;
 
@@ -25,8 +26,45 @@ interface Props {
   canEdit: boolean;
 }
 
+/** Narzedzia zdjec: "Za male" (<500x500, hurtowa poprawa) i "BaseLinker" (dokladanie brakujacych zdjec). */
+export function CatalogSmallImagesView(props: Props & { canBaselinker: boolean }) {
+  const [tab, setTab] = useState<'small' | 'bl'>('small');
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-1 rounded-xl border border-slate-800 bg-slate-900/60 p-1">
+        {(
+          [
+            ['small', 'Za małe (<500×500)'],
+            ['bl', 'Zdjęcia → BaseLinker'],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setTab(key)}
+            className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium ${
+              tab === key ? 'bg-brand-600 text-white' : 'text-slate-400 hover:bg-slate-800'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {tab === 'small' ? (
+        <SmallImagesPanel {...props} />
+      ) : (
+        <CatalogBaselinkerImagesPanel
+          products={props.products}
+          onProductClick={props.onProductClick}
+          canPush={props.canBaselinker}
+        />
+      )}
+    </div>
+  );
+}
+
 /** Lista produktow, ktorych zdjecie glowne jest mniejsze niz 500x500 + hurtowa poprawa. */
-export function CatalogSmallImagesView({ products, onProductClick, onImageUpdated, canEdit }: Props) {
+function SmallImagesPanel({ products, onProductClick, onImageUpdated, canEdit }: Props) {
   const [version, setVersion] = useState(0);
   const [scan, setScan] = useState<{ done: number; total: number } | null>(null);
   const stopRef = useRef(false);

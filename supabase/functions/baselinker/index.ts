@@ -15,6 +15,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
  *   push          {skus, fields?}             — wyslanie stanow i/lub cen (admin lub agent WAPRO / service_role,
  *                                               agent tylko dla pol z wlaczonym automatem)
  *   history                                   — ostatnie wysylki (admin)
+ *   images-status {skus}                      — porownanie zdjec katalog vs BL (kazdy zalogowany, odczyt)
+ *   images-push   {skus}                      — DOKLADA brakujace zdjecia do BL (nigdy nie usuwa; admin)
  */
 
 const corsHeaders: Record<string, string> = {
@@ -442,6 +444,111 @@ function buildImport(row: Record<string, unknown>, ctx: ImportCtx) {
   return { sku, name, payload, warnings, blockers, priceGross, stock };
 }
 
+// ---------------------------------------------------------------------------------------------
+// Zdjecia: porownanie katalog <-> BaseLinker i DOKLADANIE brakujacych (nigdy nie usuwamy)
+// ---------------------------------------------------------------------------------------------
+
+const MAX_BL_IMAGES = 16;
+
+function ourImageUrls(row: Record<string, unknown>): string[] {
+  const urls: string[] = [];
+  const push = (u: unknown) => {
+    const t = typeof u === 'string' ? u.trim() : '';
+    if (/^https?:\/\//i.test(t) && t.length <= 995 && !urls.includes(t)) urls.push(t);
+  };
+  push(row.custom_image_url);
+  push(row.image_url);
+  if (Array.isArray(row.extra_images)) for (const u of row.extra_images) push(u);
+  return urls;
+}
+
+/** Adres bez prefiksu "url:", parametrow (?v=cache-bust) i fragmentu — do porownywania. */
+function cleanImgUrl(u: string): string {
+  return String(u || '')
+    .trim()
+    .replace(/^url:/i, '')
+    .split('#')[0]
+    .split('?')[0]
+    .toLowerCase();
+}
+
+/** Ostatni segment sciezki bez rozszerzenia (zapasowe dopasowanie, gdy BL zmienil host/adres). */
+function imgFileKey(u: string): string {
+  const last = cleanImgUrl(u).split('/').pop() ?? '';
+  return last.replace(/\.[a-z0-9]{2,5}$/i, '');
+}
+
+function blImagesOf(p: Record<string, unknown> | undefined): string[] {
+  const map = (p?.images ?? {}) as Record<string, unknown>;
+  return Object.keys(map)
+    .sort((a, b) => Number(a) - Number(b))
+    .map((k) => map[k])
+    .filter((u): u is string => typeof u === 'string' && u.length > 0);
+}
+
+function imageSetHas(set: { urls: Set<string>; keys: Set<string> }, u: string): boolean {
+  return set.urls.has(cleanImgUrl(u)) || set.keys.has(imgFileKey(u));
+}
+
+function toImageSet(urls: string[]) {
+  return { urls: new Set(urls.map(cleanImgUrl)), keys: new Set(urls.map(imgFileKey).filter(Boolean)) };
+}
+
+async function fetchBlImages(ids: number[]): Promise<Map<number, string[]>> {
+  const out = new Map<number, string[]>();
+  for (let i = 0; i < ids.length; i += 100) {
+    const chunk = ids.slice(i, i + 100);
+    const data = await bl('getInventoryProductsData', { inventory_id: INVENTORY_ID, products: chunk });
+    const prods = (data.products ?? {}) as Record<string, Record<string, unknown>>;
+    for (const id of chunk) out.set(id, blImagesOf(prods[String(id)]));
+  }
+  return out;
+}
+
+interface ImageCompare {
+  sku: string;
+  state: 'synced' | 'partial' | 'none' | 'not-in-bl' | 'no-local';
+  blId: number | null;
+  ours: string[];
+  bl: string[];
+  missing: string[];
+  blOnly: number;
+}
+
+async function compareImages(admin: Admin, skusIn: string[]): Promise<ImageCompare[]> {
+  const skus = [...new Set(skusIn.map((s) => String(s).toUpperCase().trim()).filter(Boolean))];
+  const our = new Map<string, string[]>();
+  const links = new Map<string, number>();
+  for (let i = 0; i < skus.length; i += 200) {
+    const part = skus.slice(i, i + 200);
+    const [{ data: pr }, { data: lk }] = await Promise.all([
+      admin.from('products').select('sku,custom_image_url,image_url,extra_images').in('sku', part),
+      admin.from('baselinker_links').select('sku,bl_product_id').in('sku', part),
+    ]);
+    for (const r of pr ?? []) {
+      const sku = String(r.sku ?? '').toUpperCase();
+      if (!our.has(sku)) our.set(sku, ourImageUrls(r));
+    }
+    for (const r of lk ?? []) links.set(String(r.sku).toUpperCase(), Number(r.bl_product_id));
+  }
+  const ids = [...new Set(skus.map((s) => links.get(s)).filter((x): x is number => typeof x === 'number'))];
+  const blImgs = ids.length ? await fetchBlImages(ids) : new Map<number, string[]>();
+
+  return skus.map((sku) => {
+    const ours = our.get(sku) ?? [];
+    const blId = links.get(sku) ?? null;
+    const bl = blId != null ? (blImgs.get(blId) ?? []) : [];
+    if (blId == null) return { sku, state: 'not-in-bl', blId, ours, bl, missing: [], blOnly: 0 };
+    if (!ours.length) return { sku, state: 'no-local', blId, ours, bl, missing: [], blOnly: bl.length };
+    const blSet = toImageSet(bl);
+    const ourSet = toImageSet(ours);
+    const missing = ours.filter((u) => !imageSetHas(blSet, u));
+    const blOnly = bl.filter((u) => !imageSetHas(ourSet, u)).length;
+    const state = missing.length === 0 ? 'synced' : missing.length === ours.length ? 'none' : 'partial';
+    return { sku, state, blId, ours, bl, missing, blOnly };
+  });
+}
+
 /** Zbior SKU istniejacych w katalogu BL (do blokady importu). */
 async function existingBlSkus(): Promise<{ exact: Set<string>; norm: Set<string> }> {
   const all = await listAllBlProducts();
@@ -571,6 +678,131 @@ Deno.serve(async (req) => {
         isBundle: Boolean(p.is_bundle),
         inventoryId: INVENTORY_ID,
       });
+    }
+
+    // ---- images-status: porownanie zdjec katalog <-> BL (kazdy zalogowany, tylko odczyt) -----
+    if (action === 'images-status') {
+      if (isSystem) return json({ error: 'Niedostepne dla service_role' }, 400);
+      const skus = Array.isArray(body.skus) ? (body.skus as unknown[]).map((s) => String(s)) : [];
+      if (!skus.length) return json({ error: 'Brak listy sku' }, 400);
+      if (skus.length > 300) return json({ error: 'Maksymalnie 300 sku na zapytanie' }, 400);
+      const rows = await compareImages(admin, skus);
+      return json({
+        items: rows.map((r) => ({
+          sku: r.sku,
+          state: r.state,
+          blId: r.blId,
+          oursCount: r.ours.length,
+          blCount: r.bl.length,
+          missingCount: r.missing.length,
+          blOnly: r.blOnly,
+          ours: r.ours,
+          bl: r.bl,
+          missing: r.missing,
+        })),
+      });
+    }
+
+    // ---- images-push: DOKLADA brakujace zdjecia do BL (istniejace zostaja) ------------------
+    if (action === 'images-push') {
+      needAdmin();
+      if (isSystem) return json({ error: 'Niedostepne dla service_role' }, 400);
+      const skus = Array.isArray(body.skus) ? (body.skus as unknown[]).map((s) => String(s)) : [];
+      if (!skus.length) return json({ error: 'Brak listy sku' }, 400);
+      if (skus.length > 30) return json({ error: 'Maksymalnie 30 sku na zapytanie (limit API BaseLinker)' }, 400);
+
+      const before = await compareImages(admin, skus);
+      const results: Record<string, unknown>[] = [];
+      let added = 0;
+      for (const r of before) {
+        if (r.state === 'not-in-bl' || r.blId == null) {
+          results.push({ sku: r.sku, status: 'skipped', reason: 'produktu nie ma w BaseLinkerze' });
+          continue;
+        }
+        if (!r.missing.length) {
+          results.push({ sku: r.sku, status: 'skipped', reason: 'wszystkie zdjecia juz sa w BaseLinkerze' });
+          continue;
+        }
+        // Zachowujemy WSZYSTKIE obecne zdjecia BL (kolejnosc bez zmian) i dokladamy brakujace na koncu.
+        const room = Math.max(0, MAX_BL_IMAGES - r.bl.length);
+        const toAdd = r.missing.slice(0, room);
+        if (!toAdd.length) {
+          results.push({
+            sku: r.sku,
+            status: 'skipped',
+            reason: `produkt ma juz ${r.bl.length} zdjec w BaseLinkerze (limit ${MAX_BL_IMAGES})`,
+          });
+          continue;
+        }
+        const images: Record<string, string> = {};
+        [...r.bl, ...toAdd].forEach((u, i) => (images[String(i)] = `url:${u.replace(/^url:/i, '')}`));
+        try {
+          await bl('addInventoryProduct', { inventory_id: INVENTORY_ID, product_id: r.blId, images });
+          results.push({
+            sku: r.sku,
+            status: 'ok',
+            added: toAdd.length,
+            trimmed: r.missing.length - toAdd.length,
+            before: r.bl.length,
+          });
+          added += toAdd.length;
+        } catch (e) {
+          results.push({ sku: r.sku, status: 'error', reason: e instanceof Error ? e.message : String(e) });
+        }
+      }
+
+      // Weryfikacja: zadne dotychczasowe zdjecie BL nie moze zniknac.
+      const touched = results.filter((x) => x.status === 'ok').map((x) => String(x.sku));
+      if (touched.length) {
+        try {
+          const afterMap = await fetchBlImages(
+            before.filter((b) => touched.includes(b.sku) && b.blId != null).map((b) => b.blId as number),
+          );
+          for (const b of before) {
+            if (!touched.includes(b.sku) || b.blId == null) continue;
+            const afterSet = toImageSet(afterMap.get(b.blId) ?? []);
+            const lost = b.bl.filter((u) => !imageSetHas(afterSet, u));
+            const res = results.find((x) => x.sku === b.sku);
+            if (res) {
+              res.after = (afterMap.get(b.blId) ?? []).length;
+              if (lost.length) {
+                res.status = 'warning';
+                res.reason = `Po zapisie brakuje ${lost.length} dotychczasowych zdjec BL — sprawdz produkt w BaseLinkerze`;
+                res.lost = lost;
+              }
+            }
+          }
+        } catch (e) {
+          results.push({ sku: '*', status: 'warning', reason: `Nie udalo sie zweryfikowac po zapisie: ${e instanceof Error ? e.message : String(e)}` });
+        }
+      }
+
+      const okCount = results.filter((x) => x.status === 'ok').length;
+      const problems = results.filter((x) => x.status === 'error' || x.status === 'warning').length;
+      await admin.from('baselinker_sync_log').insert({
+        trigger: 'manual',
+        user_label: userLabel,
+        field: 'images',
+        requested: skus.length,
+        updated: okCount,
+        skipped: results.filter((x) => x.status === 'skipped').length,
+        status: problems ? 'warning' : 'ok',
+        note: `Dolozono ${added} zdjec w ${okCount} produktach${problems ? `, problemy: ${problems}` : ''}`,
+        sample: results.slice(0, 20),
+      });
+      if (userId) {
+        await admin.from('audit_log').insert({
+          user_id: userId,
+          user_label: userLabel,
+          user_role: userRole,
+          app: 'baselinker',
+          action: 'baselinker.images',
+          entity_type: 'baselinker',
+          entity_id: 'images',
+          summary: `Dolozono ${added} zdjec do BaseLinker (${okCount}/${skus.length} produktow)`,
+        });
+      }
+      return json({ requested: skus.length, ok: okCount, added, results });
     }
 
     // ---- config --------------------------------------------------------------------------

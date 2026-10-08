@@ -2005,6 +2005,7 @@ export default function App() {
               onProductClick={setSelectedProduct}
               onImageUpdated={handleImageUpdated}
               canEdit={roleCan(role, 'uploadImage')}
+              canBaselinker={roleCan(role, 'manageBaselinker')}
             />
           </InlineErrorBoundary>
         ) : (

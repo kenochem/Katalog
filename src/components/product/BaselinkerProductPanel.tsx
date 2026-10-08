@@ -4,11 +4,14 @@ import { AlertTriangle, CheckCircle2, Loader2, RefreshCw, XCircle } from 'lucide
 import type { Product } from '../../types';
 import {
   fetchBaselinkerProduct,
+  fetchImageStatus,
   invalidateBaselinkerProduct,
+  pushImagesToBaselinker,
   pushToBaselinker,
   importToBaselinker,
   type BaselinkerField,
   type BaselinkerProduct,
+  type ImageStatusRow,
 } from '../../lib/baselinkerApi';
 import { useAuth } from '../../lib/auth';
 import { roleCan } from '../../lib/roles';
@@ -82,6 +85,45 @@ export function BaselinkerProductPanel({ product }: { product: Product }) {
   const isAdmin = roleCan(role, 'manageBaselinker');
 
   const [importing, setImporting] = useState(false);
+  const [img, setImg] = useState<ImageStatusRow | null>(null);
+  const [imgBusy, setImgBusy] = useState(false);
+
+  async function loadImages() {
+    try {
+      const [row] = await fetchImageStatus([product.sku]);
+      setImg(row ?? null);
+    } catch {
+      setImg(null);
+    }
+  }
+
+  async function pushImages() {
+    if (!img || img.missingCount === 0) return;
+    if (
+      !(await confirmDialog({
+        title: 'Dołożyć zdjęcia do BaseLinkera?',
+        tone: 'warn',
+        confirmLabel: 'Dołóż zdjęcia',
+        message: `Do produktu ${product.sku} w BaseLinkerze zostanie dołożonych ${img.missingCount} zdjęć z katalogu.\n\nObecne zdjęcia w BaseLinkerze (${img.blCount}) zostają bez zmian — nic nie jest usuwane, nowe trafiają na koniec.`,
+      }))
+    )
+      return;
+    setImgBusy(true);
+    try {
+      const r = await pushImagesToBaselinker([product.sku]);
+      const row = r.results[0];
+      if (row?.status === 'ok') showToast(`Dołożono ${row.added} zdjęć do BaseLinkera`, 'ok', 5000);
+      else if (row?.status === 'warning') showToast(row.reason || 'Sprawdź produkt w BaseLinkerze', 'warn', 9000);
+      else showToast(row?.reason || 'Nic nie dołożono', row?.status === 'error' ? 'error' : 'warn', 7000);
+      invalidateBaselinkerProduct(product.sku);
+      await load(true);
+      await loadImages();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Błąd wysyłki zdjęć', 'error', 6000);
+    } finally {
+      setImgBusy(false);
+    }
+  }
 
   async function importThis() {
     if (
@@ -141,8 +183,13 @@ export function BaselinkerProductPanel({ product }: { product: Product }) {
     try {
       const fresh = await fetchBaselinkerProduct(product.sku, force);
       setData(fresh);
-      if (fresh.found) markBaselinkerLinked(product.sku, fresh.id ?? 0);
-      else markBaselinkerUnlinked(product.sku);
+      if (fresh.found) {
+        markBaselinkerLinked(product.sku, fresh.id ?? 0);
+        void loadImages();
+      } else {
+        markBaselinkerUnlinked(product.sku);
+        setImg(null);
+      }
     } catch (err) {
       setData(null);
       setError(err instanceof Error ? err.message : 'Błąd');
@@ -237,7 +284,19 @@ export function BaselinkerProductPanel({ product }: { product: Product }) {
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-300">Zdjęć: {data.imageCount ?? 0}</span>
+            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-300">
+              Zdjęć w BL: {data.imageCount ?? 0}
+              {img ? ` · w katalogu: ${img.oursCount}` : ''}
+            </span>
+            {img && img.state === 'synced' && (
+              <span className="rounded-md bg-emerald-500/15 px-2 py-0.5 text-emerald-300">zdjęcia w BL aktualne</span>
+            )}
+            {img && (img.state === 'none' || img.state === 'partial') && (
+              <span className="rounded-md bg-amber-500/15 px-2 py-0.5 text-amber-300">
+                brak w BL: {img.missingCount}
+                {img.blOnly > 0 ? ` · inne w BL: ${img.blOnly}` : ''}
+              </span>
+            )}
             <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-300">
               Opis: {data.descriptionLength ? `${data.descriptionLength} zn.` : 'brak'}
             </span>
@@ -280,6 +339,18 @@ export function BaselinkerProductPanel({ product }: { product: Product }) {
                 {pushing === 'price' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                 Synchronizuj cenę
               </button>
+              {img && img.missingCount > 0 && (
+                <button
+                  type="button"
+                  disabled={imgBusy || pushing !== null}
+                  onClick={() => void pushImages()}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+                  title="Dokłada brakujące zdjęcia z katalogu do BaseLinkera. Istniejących zdjęć w BL nie usuwa."
+                >
+                  {imgBusy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  Dołóż zdjęcia ({img.missingCount})
+                </button>
+              )}
               <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Pomijaj w grupowej:</span>
               <label
                 className="flex cursor-pointer items-center gap-1.5 text-xs text-slate-400"

@@ -183,5 +183,38 @@ export const refreshBaselinkerLinks = () =>
 export const fetchImportCandidates = () => call<ImportCandidates>({ action: 'import-candidates' });
 export const importToBaselinker = (skus: string[]) =>
   call<{ results: ImportResultRow[] }>({ action: 'import', skus }).then((r) => r.results);
+export type ImageSyncState = 'synced' | 'partial' | 'none' | 'not-in-bl' | 'no-local';
+
+export interface ImageStatusRow {
+  sku: string;
+  state: ImageSyncState;
+  blId: number | null;
+  oursCount: number;
+  blCount: number;
+  missingCount: number;
+  /** Zdjęcia w BL, których nie ma w katalogu (zostają — nic nie usuwamy). */
+  blOnly: number;
+  ours: string[];
+  bl: string[];
+  missing: string[];
+}
+
+export interface ImagePushRow {
+  sku: string;
+  status: 'ok' | 'skipped' | 'error' | 'warning';
+  reason?: string;
+  added?: number;
+  trimmed?: number;
+  before?: number;
+  after?: number;
+}
+
+export const fetchImageStatus = (skus: string[]) =>
+  call<{ items: ImageStatusRow[] }>({ action: 'images-status', skus }).then((r) => r.items);
+export const pushImagesToBaselinker = (skus: string[]) =>
+  call<{ requested: number; ok: number; added: number; results: ImagePushRow[] }>({
+    action: 'images-push',
+    skus,
+  });
 export const fetchBaselinkerHistory = () =>
   call<{ rows: BaselinkerLogRow[] }>({ action: 'history' }).then((r) => r.rows);

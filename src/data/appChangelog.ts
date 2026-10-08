@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-08',
+    title: 'BaseLinker: sprawdzanie i dokładanie zdjęć (pojedynczo i hurtowo)',
+    description:
+      'Na karcie produktu w panelu BaseLinker widać teraz, ile zdjęć jest w BL i w katalogu oraz ile brakuje; przycisk „Dołóż zdjęcia” dokłada brakujące na koniec galerii BL. Hurtowo: Zdjęcia do poprawy → „Zdjęcia → BaseLinker” (sprawdź wszystkie powiązane produkty, zaznacz i dołóż). Zdjęcia, które już są w BaseLinkerze, nigdy nie są usuwane ani podmieniane — po zapisie sprawdzamy, czy żadne nie zniknęło. Wymaga wdrożenia funkcji baselinker w Supabase.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-08',
     title: 'Katalog: sekcja „Zdjęcia do poprawy” i dodatkowe zdjęcia także w sklepie',
     description:
       'Nowa sekcja (menu boczne, „Więcej” na telefonie, zakładka „Do poprawy”) wylicza produkty, których zdjęcie główne jest mniejsze niż 500×500 px. Przycisk „Skanuj zdjęcia” mierzy zdjęcia i zapamiętuje wymiary w przeglądarce; z listy można zaznaczyć wiele produktów i poprawić je hurtowo (powiększenie albo kwadrat), z kopią do przywrócenia na karcie produktu. Dodatkowe (nie główne) zdjęcia można teraz wgrywać do każdego produktu — wcześniej produkty ze „Sklepu” pozwalały tylko na zdjęcie główne.',
