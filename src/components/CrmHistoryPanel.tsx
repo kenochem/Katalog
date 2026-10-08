@@ -483,6 +483,7 @@ export function CrmHistoryPanel({
               const r = rid ? wapro.get(rid) : undefined;
               return r ? (
                 <p className="mt-1 text-xs text-slate-400">
+                  {r.wapro_docs ? `Dokumenty: ${r.wapro_docs} · ` : ""}
                   WAPRO:{" "}
                   {r.status === "done"
                     ? `utworzono ${r.wapro_order_number || r.wapro_order_id}${

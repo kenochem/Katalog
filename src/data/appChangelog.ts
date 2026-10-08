@@ -15,7 +15,7 @@ export const APP_CHANGELOG: AppChangelogEntry[] = [
     date: '2026-10-07',
     title: 'CRM: stan realizacji zamówienia z WAPRO w historii',
     description:
-      'Agent na serwerze co ok. 10 minut sprawdza w WAPRO, co się stało z utworzonymi zamówieniami ZO. W historii CRM przy numerze ZO widać teraz: czeka na realizację, zrealizowane w X% (częściowo), zrealizowane albo usunięte w WAPRO. Wymaga migracji migration-wapro-order-state.sql i nowej wersji agenta.',
+      'Agent na serwerze co ok. 10 minut sprawdza w WAPRO, co się stało z utworzonymi zamówieniami ZO. W historii CRM przy numerze ZO widać teraz: czeka na realizację, zrealizowane w X% (częściowo), zrealizowane albo usunięte w WAPRO. Po realizacji w szczegółach zamówienia pojawiają się też numery powiązanych dokumentów (WZ, faktura). Wymaga migracji migration-wapro-order-state.sql, migration-wapro-order-docs.sql i nowej wersji agenta.',
     tag: 'nowość',
   },
   {

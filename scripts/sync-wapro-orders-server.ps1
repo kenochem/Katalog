@@ -165,8 +165,15 @@ function Update-OrderStates {
     if (((Get-Date) - (Get-Item $stamp).LastWriteTime).TotalMinutes -lt 10) { return }
   }
   try {
-    $uri = '{0}/rest/v1/wapro_order_requests?status=eq.done&wapro_order_id=not.is.null&or=(wapro_state.is.null,wapro_state.in.(new,partial))&select=id,wapro_order_id&order=requested_at.desc&limit=100' -f $script:SupabaseUrl
-    $raw = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
+    $since = (Get-Date).AddDays(-30).ToString('yyyy-MM-dd')
+    $uri = '{0}/rest/v1/wapro_order_requests?status=eq.done&wapro_order_id=not.is.null&or=(wapro_state.is.null,wapro_state.in.(new,partial),and(wapro_state.eq.realized,wapro_docs.is.null,requested_at.gte.{1}))&select=id,wapro_order_id&order=requested_at.desc&limit=100' -f $script:SupabaseUrl, $since
+    try {
+      $raw = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
+    } catch {
+      # brak kolumny wapro_docs (migration-wapro-order-docs.sql) - sam stan realizacji
+      $uri = '{0}/rest/v1/wapro_order_requests?status=eq.done&wapro_order_id=not.is.null&or=(wapro_state.is.null,wapro_state.in.(new,partial))&select=id,wapro_order_id&order=requested_at.desc&limit=100' -f $script:SupabaseUrl
+      $raw = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
+    }
     $rows = @()
     foreach ($x in @($raw)) { foreach ($y in @($x)) { if ($y -and $y.id -and ($y.id -is [string])) { $rows += $y } } }
     Set-Content -Path $stamp -Value (Get-Date -Format 'o')
@@ -191,6 +198,32 @@ WHERE z.ID_ZAMOWIENIA IN ($idList);
       $p = $line.Trim().Split('|')
       if ($p.Count -ge 6) { $found[$p[1]] = $p }
     }
+    # dokumenty wydania/sprzedazy powiazane z pozycjami zamowienia (WZ, faktura)
+    $docs = @{}
+    $qD = @"
+SET NOCOUNT ON;
+SELECT DISTINCT 'DOC|' + CAST(pz.ID_ZAMOWIENIA AS varchar(20)) + '|' + ISNULL(RTRIM(dm.NUMER), '') + '|' + ISNULL(RTRIM(dh.NUMER), '')
+FROM dbo.POZYCJA_ZAMOWIENIA pz
+JOIN dbo.POZYCJA_DOKUMENTU_MAGAZYNOWEGO pd ON pd.ID_POZ_ZAM = pz.ID_POZYCJI_ZAMOWIENIA
+LEFT JOIN dbo.DOKUMENT_MAGAZYNOWY dm ON dm.ID_DOK_MAGAZYNOWEGO = pd.ID_DOK_MAGAZYNOWEGO
+LEFT JOIN dbo.DOKUMENT_HANDLOWY dh ON dh.ID_DOKUMENTU_HANDLOWEGO = CASE WHEN ISNULL(pd.ID_DOK_HANDLOWEGO, 0) > 0 THEN pd.ID_DOK_HANDLOWEGO ELSE dm.ID_DOKUMENTU_HANDLOWEGO END
+WHERE pz.ID_ZAMOWIENIA IN ($idList);
+"@
+    $rD = Invoke-SqlFile $qD
+    Remove-SqlFile $rD
+    if ($rD.Code -eq 0) {
+      foreach ($line in (Get-Lines $rD.Text 'DOC|')) {
+        $dp = $line.Trim().Split('|')
+        if ($dp.Count -lt 4) { continue }
+        $parts = @()
+        if ($dp[2]) { $parts += $dp[2] }
+        if ($dp[3] -and ($dp[3] -ne $dp[2])) { $parts += $dp[3] }
+        if ($parts.Count -eq 0) { continue }
+        if ($docs.ContainsKey($dp[1])) { $docs[$dp[1]] = ($docs[$dp[1]] + ', ' + ($parts -join ', ')) } else { $docs[$dp[1]] = ($parts -join ', ') }
+      }
+    } else {
+      Write-Log ('Odczyt dokumentow powiazanych: blad SQL ({0})' -f $rD.Code)
+    }
     $now = (Get-Date).ToUniversalTime().ToString('o')
     $changed = 0
     foreach ($row in $rows) {
@@ -213,7 +246,9 @@ WHERE z.ID_ZAMOWIENIA IN ($idList);
       }
       # STAN_REALIZ z WAPRO: Z = zrealizowane, N = nie (potwierdzone na danych)
       if ($p[2] -eq 'Z') { $state = 'realized'; $pct = 100 }
-      Set-RequestStatus ([string]$row.id) @{ wapro_state = $state; wapro_realized_pct = $pct; wapro_raw = ('{0}/{1}' -f $p[2], $p[3]); wapro_checked_at = $now }
+      $upd = @{ wapro_state = $state; wapro_realized_pct = $pct; wapro_raw = ('{0}/{1}' -f $p[2], $p[3]); wapro_checked_at = $now }
+      if ($docs.ContainsKey($key)) { $upd['wapro_docs'] = $docs[$key] }
+      Set-RequestStatus ([string]$row.id) $upd
       if ($state -ne 'new') { $changed++ }
     }
     Write-Log ('Odczyt realizacji ZO: sprawdzono {0}, zmian {1}' -f $rows.Count, $changed)

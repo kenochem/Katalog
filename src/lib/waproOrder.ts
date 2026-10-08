@@ -12,6 +12,8 @@ export type WaproOrderRequest = {
   /** Stan realizacji ZO odczytany z WAPRO (agent, co ~10 min). */
   wapro_state?: 'new' | 'partial' | 'realized' | 'deleted' | null;
   wapro_realized_pct?: number | null;
+  /** Numery dokumentów (WZ, faktura) powiązanych z ZO — odczyt z WAPRO. */
+  wapro_docs?: string | null;
 };
 
 export type WaproOrderPayloadItem = {
@@ -152,16 +154,18 @@ export async function getWaproOrderRequests(
   if (!supabase || ids.length === 0) return out;
   const base = 'id, status, requested_at, finished_at, message, wapro_order_id, wapro_order_number';
   let rows: unknown[] | null = null;
-  const full = await supabase
-    .from('wapro_order_requests')
-    .select(`${base}, wapro_state, wapro_realized_pct`)
-    .in('id', ids);
-  if (!full.error) {
-    rows = full.data;
-  } else {
-    // brak kolumn stanu (migration-wapro-order-state.sql jeszcze nie wykonana) - pokaz sam numer ZO
-    const basic = await supabase.from('wapro_order_requests').select(base).in('id', ids);
-    rows = basic.data;
+  const tiers = [
+    `${base}, wapro_state, wapro_realized_pct, wapro_docs`,
+    `${base}, wapro_state, wapro_realized_pct`,
+    base,
+  ];
+  // brak kolumn (migracje state / docs jeszcze niewykonane) - schodzimy do prostszego zapytania
+  for (const cols of tiers) {
+    const res = await supabase.from('wapro_order_requests').select(cols).in('id', ids);
+    if (!res.error) {
+      rows = res.data as unknown[];
+      break;
+    }
   }
   for (const r of (rows || []) as WaproOrderRequest[]) out.set(r.id, r);
   return out;
