@@ -100,7 +100,14 @@ export function CatalogCommandPalette({
   const [queryForHits, setQueryForHits] = useState(search);
   const commitTimer = useRef<number | null>(null);
 
+  // Ostatnia wartość wysłana do rodzica. Gdy `search` wraca z rodzica jako ta sama
+  // (już nieaktualna, bo użytkownik dopisał dalej) wartość, NIE nadpisujemy pola —
+  // inaczej tekst wpisywany w środku frazy gubił znaki, a kursor skakał na koniec.
+  const lastSent = useRef(search);
+
   useEffect(() => {
+    if (search === lastSent.current) return;
+    lastSent.current = search;
     setDraft(search);
     setQueryForHits(search);
     if (commitTimer.current !== null) {
@@ -109,21 +116,34 @@ export function CatalogCommandPalette({
     }
   }, [search]);
 
+  function sendToParent(next: string) {
+    lastSent.current = next;
+    setQueryForHits(next);
+    onSearchChange(next);
+  }
+
   function scheduleCommit(next: string) {
     if (commitTimer.current !== null) {
       window.clearTimeout(commitTimer.current);
       commitTimer.current = null;
     }
     if (next.trim().length < 2) {
-      setQueryForHits(next);
-      onSearchChange(next);
+      sendToParent(next);
       return;
     }
     commitTimer.current = window.setTimeout(() => {
       commitTimer.current = null;
-      setQueryForHits(next);
-      onSearchChange(next);
+      sendToParent(next);
     }, COMMIT_DELAY_MS);
+  }
+
+  /** Przycisk „Szukaj” / Enter: zatwierdź od razu, bez czekania na opóźnienie. */
+  function commitNow() {
+    if (commitTimer.current !== null) {
+      window.clearTimeout(commitTimer.current);
+      commitTimer.current = null;
+    }
+    sendToParent(draft);
   }
 
   function setDraftAndSchedule(next: string) {
@@ -137,8 +157,7 @@ export function CatalogCommandPalette({
       commitTimer.current = null;
     }
     setDraft('');
-    setQueryForHits('');
-    onSearchChange('');
+    sendToParent('');
   }
 
   const query = draft;
@@ -388,6 +407,7 @@ export function CatalogCommandPalette({
         runRow(activeIndex);
         return;
       }
+      commitNow();
       close();
       inputRef.current?.blur();
     }
@@ -400,6 +420,8 @@ export function CatalogCommandPalette({
         <input
           ref={inputRef}
           type="search"
+          inputMode="search"
+          enterKeyHint="search"
           value={query}
           onChange={(e) => {
             setDraftAndSchedule(e.target.value);
@@ -433,6 +455,22 @@ export function CatalogCommandPalette({
             Ctrl+K
           </kbd>
         )}
+        {query ? (
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              commitNow();
+              close();
+              inputRef.current?.blur();
+            }}
+            className="shrink-0 rounded-lg bg-brand-600 px-2.5 py-1 text-xs font-bold text-white hover:bg-brand-500"
+            aria-label="Szukaj — zatwierdź i zamknij klawiaturę"
+            title="Szukaj"
+          >
+            Szukaj
+          </button>
+        ) : null}
       </div>
 
       {showOverlay &&

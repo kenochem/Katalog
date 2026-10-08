@@ -12,6 +12,13 @@ export interface AppChangelogEntry {
  */
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
+    date: '2026-10-08',
+    title: 'Wyszukiwarka: edycja w środku frazy i przycisk „Szukaj”',
+    description:
+      'Naprawiony błąd, przez który na telefonie nie dało się normalnie dopisać znaku między już wpisanymi słowami (pole nadpisywało się starszą wartością i kursor skakał na koniec). Gdy coś wpisano, obok „X” jest teraz stały przycisk „Szukaj”, który od razu zatwierdza frazę i chowa klawiaturę (to samo robi Enter / „Szukaj” na klawiaturze telefonu).',
+    tag: 'poprawka',
+  },
+  {
     date: '2026-10-07',
     title: 'CRM: stan realizacji zamówienia z WAPRO w historii',
     description:

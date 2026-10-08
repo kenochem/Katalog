@@ -18,7 +18,14 @@ export function SearchBar({ value, onChange, placeholder, onScanClick }: SearchB
   const [draft, setDraft] = useState(value);
   const commitTimer = useRef<number | null>(null);
 
+  // Ostatnia wartość wysłana do rodzica — gdy wraca jako ta sama (już nieaktualna,
+  // bo użytkownik dopisał dalej), nie nadpisujemy pola: inaczej przy edycji w środku
+  // frazy tekst gubił znaki, a kursor skakał na koniec.
+  const lastSent = useRef(value);
+
   useEffect(() => {
+    if (value === lastSent.current) return;
+    lastSent.current = value;
     setDraft(value);
   }, [value]);
 
@@ -33,12 +40,14 @@ export function SearchBar({ value, onChange, placeholder, onScanClick }: SearchB
     clearCommitTimer();
     commitTimer.current = window.setTimeout(() => {
       commitTimer.current = null;
+      lastSent.current = next;
       onChange(next);
     }, COMMIT_DELAY_MS);
   }
 
   function commitNow(next: string) {
     clearCommitTimer();
+    lastSent.current = next;
     onChange(next);
   }
 
@@ -77,7 +86,7 @@ export function SearchBar({ value, onChange, placeholder, onScanClick }: SearchB
           }}
           placeholder={placeholder ?? 'Nazwa, SKU lub EAN...'}
           className={`w-full rounded-xl border border-slate-700 bg-slate-900 py-2.5 pl-11 text-base text-slate-100 placeholder:text-slate-500 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 sm:py-3 ${
-            focused || draft ? 'pr-20' : 'pr-10'
+            focused || draft ? 'pr-28' : 'pr-10'
           }`}
           autoComplete="off"
           // iOS: bez auto-zoom przy focus (font >= 16px już jest)
@@ -98,7 +107,7 @@ export function SearchBar({ value, onChange, placeholder, onScanClick }: SearchB
               <X className="h-4 w-4" />
             </button>
           ) : null}
-          {focused ? (
+          {focused || draft ? (
             <button
               type="submit"
               onMouseDown={(e) => e.preventDefault()}
