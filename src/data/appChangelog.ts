@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-08',
+    title: 'Katalog: sekcja „Zdjęcia do poprawy” i dodatkowe zdjęcia także w sklepie',
+    description:
+      'Nowa sekcja (menu boczne, „Więcej” na telefonie, zakładka „Do poprawy”) wylicza produkty, których zdjęcie główne jest mniejsze niż 500×500 px. Przycisk „Skanuj zdjęcia” mierzy zdjęcia i zapamiętuje wymiary w przeglądarce; z listy można zaznaczyć wiele produktów i poprawić je hurtowo (powiększenie albo kwadrat), z kopią do przywrócenia na karcie produktu. Dodatkowe (nie główne) zdjęcia można teraz wgrywać do każdego produktu — wcześniej produkty ze „Sklepu” pozwalały tylko na zdjęcie główne.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-08',
     title: 'Katalog: „Przygotuj pod BaseLinker (min. 500×500)” przy zdjęciu produktu',
     description:
       'Na karcie produktu, pod „Wytnij białe tło”, jest nowy przycisk. Pokazuje rozmiar obecnego zdjęcia i podgląd przed/po: zdjęcie mniejsze niż 500×500 px jest powiększane z zachowaniem proporcji albo (tryb „Kwadrat”) dopełniane tłem do kwadratu; większe zostaje bez zmian. Przezroczystość (wycięte tło) zostaje zachowana. Wynik zapisuje się jako zdjęcie główne, z kopią do przywrócenia.',

@@ -66,6 +66,7 @@ import {
 import { ProductCard } from './components/ProductCard';
 import { CatalogGridCard } from './components/CatalogGridCard';
 import { SearchBar } from './components/SearchBar';
+import { CatalogSmallImagesView } from './components/CatalogSmallImagesView';
 import { ProductGrid } from './components/ProductGrid';
 import { InstallAppHint, resetInstallHint } from './components/InstallAppHint';
 import { LoginGate } from './components/LoginGate';
@@ -511,6 +512,7 @@ export default function App() {
     if (!roleCan(role, 'viewProgress') && view === 'progress') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'catalog-decisions') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'catalog-hidden') setView(fallback);
+    if (!roleCan(role, 'viewProgress') && view === 'small-images') setView(fallback);
     if (!roleCan(role, 'manageFavorites') && view === 'favorites') setView(fallback);
     if (!roleCan(role, 'manageKits') && view === 'kits') setView(fallback);
     if (!canViewOpsModule(role) && view === 'ops') setView(fallback);
@@ -1996,6 +1998,15 @@ export default function App() {
               onOpenKnowledgeWeak={(cat) => openKnowledgeGaps(cat ?? 'Wszystkie')}
             />
           </Suspense>
+        ) : view === 'small-images' && isCatalogProduct() ? (
+          <InlineErrorBoundary label="Zdjęcia do poprawy">
+            <CatalogSmallImagesView
+              products={activeProducts}
+              onProductClick={setSelectedProduct}
+              onImageUpdated={handleImageUpdated}
+              canEdit={roleCan(role, 'uploadImage')}
+            />
+          </InlineErrorBoundary>
         ) : (
           <InlineErrorBoundary label="Bez zdjęć">
             <MissingImagesView

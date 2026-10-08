@@ -385,11 +385,9 @@ export function ProductDetail({
       void handleUpload(file);
       return;
     }
-    if (detail.catalog !== 'shop') {
-      void handleUploadExtra(file);
-      return;
-    }
-    void handleUpload(file);
+    // Przeciągnięty plik na produkt, który ma już zdjęcie główne, dodaje zdjęcie dodatkowe
+    // (we wszystkich katalogach, także w sklepie).
+    void handleUploadExtra(file);
   }
 
   async function handleSetAsPrimary() {
@@ -1401,7 +1399,7 @@ export function ProductDetail({
             <HubProductPhotosPanel
               busy={uploading || uploadingExtra}
               hasPrimary={hasPrimary}
-              allowExtra={detail.catalog !== 'shop'}
+              allowExtra
               displayImage={displayImage}
               isPrimarySelected={isPrimarySelected}
               hasImageRevert={hasImageRevert}
@@ -1771,7 +1769,7 @@ export function ProductDetail({
               </button>
             )}
 
-            {hasPrimary && detail.catalog !== 'shop' && (
+            {hasPrimary && (
               <div className="flex gap-2">
                 <input
                   ref={extraFileRef}

@@ -106,6 +106,7 @@ export type View =
   | 'collections'
   | 'kits'
   | 'missing-images'
+  | 'small-images'
   | 'catalog-decisions'
   | 'catalog-hidden'
   | 'progress'
