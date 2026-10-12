@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-12',
+    title: 'Numeracja wersji aplikacji (v1.x.y) i statystyki dziennika zmian',
+    description:
+      'Każdy dzień zmian ma teraz numer wersji liczony automatycznie z dziennika: dzień z nowością podbija środkową cyfrę (1.9.0), dzień z samymi poprawkami ostatnią (1.9.1); duże przebudowy można oznaczyć jako nową główną wersję. Aktualna wersja jest przy napisie „Menu” w menu bocznym (kliknięcie otwiera dziennik zmian), a w dzienniku zmian widać numer przy każdym dniu oraz podsumowanie: liczbę wydań i zmian z podziałem na nowości, poprawki i wydajność.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-12',
     title: 'Zdjęcia: koniec dubli głównego zdjęcia w galerii i w porównaniu z BaseLinkerem',
     description:
       'Gdy produkt ma własne zdjęcie główne (np. po wycięciu tła), oryginał ze sklepu nie jest już pokazywany w galerii ani liczony jako osobne zdjęcie przy porównaniu z BaseLinkerem. Wcześniej ten sam obraz widać było dwa razy, a jedno z nich oznaczało się jako „brak w BL” (dotyczyło ok. 1000 produktów ze Sklepu). Wymaga ponownego wdrożenia funkcji baselinker w Supabase.',

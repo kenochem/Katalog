@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight, Wrench, Sparkle, Gauge } from 'lucide-react';
 import { APP_CHANGELOG, type AppChangelogEntry } from '../data/appChangelog';
+import { APP_VERSION, CHANGELOG_STATS, VERSION_BY_DATE } from '../lib/appVersion';
 
 const TAG_STYLE: Record<
   NonNullable<AppChangelogEntry['tag']>,
@@ -182,8 +183,40 @@ export function CatalogChangelogView() {
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            Aktualna wersja
+          </p>
+          <p className="text-2xl font-bold tabular-nums text-brand-300">v{APP_VERSION}</p>
+        </div>
+        <div className="h-10 w-px bg-slate-800" />
+        <dl className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-slate-400">
+          <div>
+            <dt className="inline text-slate-500">Wydań: </dt>
+            <dd className="inline font-semibold text-slate-200">{CHANGELOG_STATS.releases}</dd>
+          </div>
+          <div>
+            <dt className="inline text-slate-500">Zmian: </dt>
+            <dd className="inline font-semibold text-slate-200">{CHANGELOG_STATS.entries}</dd>
+          </div>
+          <div>
+            <dt className="inline text-brand-300/80">Nowości: </dt>
+            <dd className="inline font-semibold text-brand-300">{CHANGELOG_STATS.nowosci}</dd>
+          </div>
+          <div>
+            <dt className="inline text-amber-300/80">Poprawek: </dt>
+            <dd className="inline font-semibold text-amber-300">{CHANGELOG_STATS.poprawki}</dd>
+          </div>
+          <div>
+            <dt className="inline text-sky-300/80">Wydajność: </dt>
+            <dd className="inline font-semibold text-sky-300">{CHANGELOG_STATS.wydajnosc}</dd>
+          </div>
+        </dl>
+      </div>
       <p className="text-sm text-slate-500">
-        Co ostatnio zmieniło się w katalogu — nowe funkcje i poprawki, pogrupowane dniami.
+        Co zmieniło się w katalogu — każdy dzień zmian to osobna wersja (nowość podbija środkową cyfrę,
+        same poprawki ostatnią).
       </p>
 
       <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
@@ -224,7 +257,10 @@ export function CatalogChangelogView() {
                   ) : (
                     <ChevronRight className="h-4 w-4 shrink-0 text-slate-500" />
                   )}
-                  <span className="flex-1 text-sm font-semibold text-slate-100">
+                  <span className="flex flex-1 flex-wrap items-center gap-2 text-sm font-semibold text-slate-100">
+                    <span className="rounded-md bg-brand-500/15 px-1.5 py-0.5 text-xs font-bold tabular-nums text-brand-300">
+                      v{VERSION_BY_DATE.get(day.date) ?? ''}
+                    </span>
                     {formatEntryDate(day.date)}
                   </span>
                   <span className="shrink-0 text-xs text-slate-500">

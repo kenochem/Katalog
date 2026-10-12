@@ -31,6 +31,7 @@ import {
   scheduleSaveUserPreferences,
 } from '../lib/userPreferences';
 import { NavTab } from './NavTab';
+import { APP_VERSION } from '../lib/appVersion';
 
 type SidebarItem = {
   id: View;
@@ -395,8 +396,16 @@ export function LeftSidebarNav({
       }}
     >
       <div className="flex items-center justify-between gap-2 px-1">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+        <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
           Menu
+          <button
+            type="button"
+            onClick={() => setView('new-products')}
+            className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold normal-case tracking-normal tabular-nums text-slate-500 hover:text-brand-600 dark:bg-slate-800/70 dark:text-slate-400 dark:hover:text-brand-300"
+            title="Wersja aplikacji — zobacz dziennik zmian"
+          >
+            v{APP_VERSION}
+          </button>
         </span>
         <div className="flex items-center gap-1">
           {customizing && (
