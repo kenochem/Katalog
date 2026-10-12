@@ -257,6 +257,70 @@ WHERE pz.ID_ZAMOWIENIA IN ($idList);
   }
 }
 
+# ------------------------------------------------------------------ rezerwacje (R) z WAPRO (raz na ~5 min)
+# Jedno zapytanie zbiorcze (NOLOCK, tylko odczyt): ARTYKUL.ZAREZERWOWANO = suma rezerwacji z otwartych zamowien
+# (sprawdzone: zgodne z programem i z suma z POZYCJA_ZAMOWIENIA). Do bazy trafiaja tylko zmiany.
+function Update-Reserved {
+  $stamp = Join-Path $SyncDir 'reserved-sync.stamp'
+  if (Test-Path $stamp) {
+    if (((Get-Date) - (Get-Item $stamp).LastWriteTime).TotalMinutes -lt 5) { return }
+  }
+  try {
+    Set-Content -Path $stamp -Value (Get-Date -Format 'o')
+    $q = @"
+SET NOCOUNT ON;
+SELECT 'RZ|' + UPPER(LTRIM(RTRIM(INDEKS_KATALOGOWY))) + '|' + REPLACE(CAST(CAST(SUM(ISNULL(ZAREZERWOWANO, 0)) AS DECIMAL(18, 3)) AS varchar(32)), ',', '.')
+FROM dbo.ARTYKUL WITH (NOLOCK)
+WHERE ID_MAGAZYNU = $idMag AND ISNULL(ZAREZERWOWANO, 0) > 0
+  AND INDEKS_KATALOGOWY IS NOT NULL AND LTRIM(RTRIM(INDEKS_KATALOGOWY)) <> ''
+GROUP BY UPPER(LTRIM(RTRIM(INDEKS_KATALOGOWY)));
+"@
+    $r = Invoke-SqlFile $q
+    Remove-SqlFile $r
+    if ($r.Code -ne 0) { Write-Log ('Rezerwacje: blad SQL ({0})' -f $r.Code); return }
+    $fresh = @{}
+    foreach ($line in (Get-Lines $r.Text 'RZ|')) {
+      $p = $line.Trim().Split('|')
+      if ($p.Count -lt 3) { continue }
+      $n = ConvertTo-Num $p[2]
+      if ($null -ne $n -and $n -gt 0) { $fresh[$p[1]] = $n }
+    }
+
+    # obecny stan w Supabase (tylko produkty z rezerwacja > 0) - wymaga migration-product-reserved.sql
+    $current = @{}
+    for ($from = 0; $from -lt 20000; $from += 1000) {
+      $uri = '{0}/rest/v1/products?select=sku,stock_reserved&stock_reserved=gt.0&order=sku&limit=1000&offset={1}' -f $script:SupabaseUrl, $from
+      $raw = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
+      $got = 0
+      foreach ($x in @($raw)) { foreach ($y in @($x)) {
+        if ($y -and $y.sku -and ($y.sku -is [string])) { $current[([string]$y.sku).ToUpperInvariant()] = (ConvertTo-Num $y.stock_reserved); $got++ }
+      } }
+      if ($got -lt 1000) { break }
+    }
+
+    $changes = New-Object System.Collections.Generic.List[object]
+    foreach ($k in $fresh.Keys) {
+      if (-not $current.ContainsKey($k) -or [Math]::Abs([double]$current[$k] - [double]$fresh[$k]) -gt 0.0005) { $changes.Add(@($k, $fresh[$k])) }
+    }
+    foreach ($k in $current.Keys) { if (-not $fresh.ContainsKey($k)) { $changes.Add(@($k, 0.0)) } }
+
+    $done = 0
+    foreach ($c in $changes) {
+      try {
+        $body = [System.Text.Encoding]::UTF8.GetBytes((@{ stock_reserved = $c[1] } | ConvertTo-Json -Compress))
+        $u = '{0}/rest/v1/products?sku=eq.{1}' -f $script:SupabaseUrl, [uri]::EscapeDataString([string]$c[0])
+        Invoke-RestMethod -Uri $u -Headers $script:JsonHeaders -Method Patch -Body $body -ContentType 'application/json; charset=utf-8' | Out-Null
+        $done++
+      } catch {
+        Write-Log ('Rezerwacje: nie zapisano {0}: {1}' -f $c[0], $_.Exception.Message)
+      }
+    }
+    Write-Log ('Rezerwacje R: w WAPRO {0} SKU, zmian zapisanych {1}/{2}' -f $fresh.Count, $done, $changes.Count)
+  } catch {
+    Write-Log ('Rezerwacje nieudane (migracja migration-product-reserved.sql wykonana?): {0}' -f $_.Exception.Message)
+  }
+}
+
 # ------------------------------------------------------------------ pobranie zlecen
 if ($RequestId) {
   $pendingUri = '{0}/rest/v1/wapro_order_requests?id=eq.{1}&select=id,seq,payload,requested_at' -f $script:SupabaseUrl, $RequestId
@@ -277,7 +341,7 @@ try {
   if ($OnlyIfPending) { Write-Log ('Brak tabeli wapro_order_requests lub blad: {0}' -f $_.Exception.Message); exit 0 }
   throw
 }
-if (-not $DryRun -and -not $RequestId) { Update-OrderStates }
+if (-not $DryRun -and -not $RequestId) { Update-OrderStates; Update-Reserved }
 if ($pending.Count -eq 0) {
   if (-not $OnlyIfPending) { Write-Log 'Brak zlecen do przetworzenia' }
   exit 0

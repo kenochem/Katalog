@@ -20,6 +20,7 @@ import { showToast } from '../lib/toast';
 import { getProductDisplayCategory } from '../lib/catalogCategory';
 import { AddToCollectionMenu } from './AddToCollectionMenu';
 import { BaselinkerTag, WaproMagTag } from './BaselinkerTag';
+import { useReservedQty } from '../lib/reservedStock';
 
 interface ProductCardProps {
   product: Product;
@@ -67,6 +68,7 @@ export const ProductCard = memo(
     onCollectionsChange,
   }: ProductCardProps) {
   const showImage = !hideImages && hasDisplayableProductImage(product);
+  const reservedQty = useReservedQty(product.isGroup ? undefined : product.sku);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -282,6 +284,15 @@ export const ProductCard = memo(
             }`}
           >
             {formatStock(product.stock ?? 0)}
+            {reservedQty > 0 && (
+              <span
+                className={`ml-1 rounded bg-amber-400 font-bold text-amber-950 ${
+                  compact ? 'px-1 text-[9px]' : 'px-1.5 text-[11px]'
+                }`}
+              >
+                R {formatStock(reservedQty)}
+              </span>
+            )}
           </span>
         )}
       </div>

@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-12',
+    title: 'Zarezerwowane sztuki (R) przy stanie produktu',
+    description:
+      'Obok stanu na kafelku produktu i w szczegółach pojawia się pomarańczowy znacznik „R 3” — liczba sztuk zarezerwowanych w otwartych zamówieniach w WAPRO (w tym zamówieniach z BaseLinkera). W szczegółach widać też, ile zostaje dostępne. Dane odczytuje co ok. 5 minut agent zamówień na serwerze, jednym lekkim zapytaniem tylko do odczytu, więc WAPRO nie jest obciążane. Wymaga migracji migration-product-reserved.sql i nowej wersji agenta.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-12',
     title: 'Numeracja wersji aplikacji (v1.x.y) i statystyki dziennika zmian',
     description:
       'Każdy dzień zmian ma teraz numer wersji liczony automatycznie z dziennika: dzień z nowością podbija środkową cyfrę (1.9.0), dzień z samymi poprawkami ostatnią (1.9.1); duże przebudowy można oznaczyć jako nową główną wersję. Aktualna wersja jest przy napisie „Menu” w menu bocznym (kliknięcie otwiera dziennik zmian), a w dzienniku zmian widać numer przy każdym dniu oraz podsumowanie: liczbę wydań i zmian z podziałem na nowości, poprawki i wydajność.',

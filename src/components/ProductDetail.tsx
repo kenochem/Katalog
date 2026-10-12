@@ -33,6 +33,7 @@ import {
 import { formatLocationCode, parseLocationCode } from '../lib/warehouseLocation';
 import { RemoveBackgroundModal } from './RemoveBackgroundModal';
 import { PrepareImageModal } from './PrepareImageModal';
+import { useReservedQty } from '../lib/reservedStock';
 import type { PrepareResult } from '../lib/imagePrepare';
 import { ContextHelp } from './ContextHelp';
 import {
@@ -132,6 +133,7 @@ export function ProductDetail({
   const [stockSaving, setStockSaving] = useState(false);
   const [removeBgOpen, setRemoveBgOpen] = useState(false);
   const [blMissing, setBlMissing] = useState<string[]>([]);
+  const reservedQty = useReservedQty(detail?.sku ?? product.sku);
   const isMissingInBl = (url: string) => {
     const base = url.split('?')[0].toLowerCase();
     return blMissing.some((m) => m.split('?')[0].toLowerCase() === base);
@@ -788,6 +790,14 @@ export function ProductDetail({
                   )}
                   <span className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-semibold ${stockTone}`}>
                     Stan: {detail.stock <= 0 ? 'Brak' : formatStock(detail.stock)}
+                    {reservedQty > 0 && (
+                      <span
+                        className="rounded bg-amber-400 px-1.5 text-xs font-bold text-amber-950"
+                        title={`Zarezerwowane w zamówieniach: ${formatStock(reservedQty)} · dostępne: ${formatStock(Math.max(0, (detail.stock ?? 0) - reservedQty))}`}
+                      >
+                        R {formatStock(reservedQty)}
+                      </span>
+                    )}
                   </span>
                   {showPrices &&
                     (detail.priceSaleGross != null || detail.priceSaleNet != null) && (
@@ -1619,8 +1629,10 @@ export function ProductDetail({
                 )}
                 <Badge
                   label={`Stan: ${formatStock(detail.stock ?? 0)}${
-                    detail.stockManual ? ' · ręczny' : ''
-                  }`}
+                    reservedQty > 0
+                      ? ` · R ${formatStock(reservedQty)} (dostępne ${formatStock(Math.max(0, (detail.stock ?? 0) - reservedQty))})`
+                      : ''
+                  }${detail.stockManual ? ' · ręczny' : ''}`}
                   muted={detail.stock > 0}
                   warning={detail.stock <= 0}
                 />
