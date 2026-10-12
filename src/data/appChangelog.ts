@@ -12,10 +12,17 @@ export interface AppChangelogEntry {
  */
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
+    date: '2026-10-12',
+    title: 'Zdjęcia: koniec dubli głównego zdjęcia w galerii i w porównaniu z BaseLinkerem',
+    description:
+      'Gdy produkt ma własne zdjęcie główne (np. po wycięciu tła), oryginał ze sklepu nie jest już pokazywany w galerii ani liczony jako osobne zdjęcie przy porównaniu z BaseLinkerem. Wcześniej ten sam obraz widać było dwa razy, a jedno z nich oznaczało się jako „brak w BL” (dotyczyło ok. 1000 produktów ze Sklepu). Wymaga ponownego wdrożenia funkcji baselinker w Supabase.',
+    tag: 'poprawka',
+  },
+  {
     date: '2026-10-08',
     title: 'BaseLinker: sprawdzanie i dokładanie zdjęć (pojedynczo i hurtowo)',
     description:
-      'Na karcie produktu w panelu BaseLinker widać teraz, ile zdjęć jest w BL i w katalogu oraz ile brakuje; przycisk „Dołóż zdjęcia” dokłada brakujące na koniec galerii BL. Hurtowo: Zdjęcia do poprawy → „Zdjęcia → BaseLinker” (sprawdź wszystkie powiązane produkty, zaznacz i dołóż). Zdjęcia, które już są w BaseLinkerze, nigdy nie są usuwane ani podmieniane — po zapisie sprawdzamy, czy żadne nie zniknęło. Zdjęcia brakujące w BL są wyróżnione w galerii produktu (pomarańczowa ramka „brak w BL”). Produkty ze „Sklepu” pokazują teraz w galerii wszystkie unikalne zdjęcia z importu (kopie hpeciai i duplikaty są pomijane), a liczniki zdjęć nie liczą już podwójnie. Gdy produkt ma własne zdjęcie główne (np. po wycięciu tła), oryginał ze sklepu nie jest już pokazywany ani liczony jako osobne zdjęcie (dotyczyło ok. 1000 produktów). Wymaga wdrożenia funkcji baselinker w Supabase.',
+      'Na karcie produktu w panelu BaseLinker widać teraz, ile zdjęć jest w BL i w katalogu oraz ile brakuje; przycisk „Dołóż zdjęcia” dokłada brakujące na koniec galerii BL. Hurtowo: Zdjęcia do poprawy → „Zdjęcia → BaseLinker” (sprawdź wszystkie powiązane produkty, zaznacz i dołóż). Zdjęcia, które już są w BaseLinkerze, nigdy nie są usuwane ani podmieniane — po zapisie sprawdzamy, czy żadne nie zniknęło. Zdjęcia brakujące w BL są wyróżnione w galerii produktu (pomarańczowa ramka „brak w BL”). Produkty ze „Sklepu” pokazują teraz w galerii wszystkie unikalne zdjęcia z importu (kopie hpeciai i duplikaty są pomijane), a liczniki zdjęć nie liczą już podwójnie. Wymaga wdrożenia funkcji baselinker w Supabase.',
     tag: 'nowość',
   },
   {
