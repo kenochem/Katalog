@@ -456,8 +456,11 @@ function ourImageUrls(row: Record<string, unknown>): string[] {
     seenKeys.add(key);
     urls.push(t);
   };
+  // Gdy jest wlasne zdjecie glowne (np. po wycieciu tla / przeskalowaniu), `image_url` to oryginal
+  // tego samego zdjecia sprzed obrobki — nie traktujemy go jako osobnego (tak jak galeria w katalogu).
+  const hasCustom = typeof row.custom_image_url === 'string' && /^https?:\/\//i.test(row.custom_image_url.trim());
   push(row.custom_image_url);
-  push(row.image_url);
+  if (!hasCustom) push(row.image_url);
   if (Array.isArray(row.extra_images)) for (const u of row.extra_images) push(u);
   return urls;
 }

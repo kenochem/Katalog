@@ -793,8 +793,14 @@ export function getProductImages(product: Product): string[] {
   // Sklep: galeria z importu zawiera te same zdjęcia dwa razy (wp-content + hpeciai) —
   // collectProductImageCandidates odrzuca kopie hpeciai i duplikaty, więc pokazujemy
   // zdjęcie główne + unikalne dodatkowe (tak jak w katalogu akcesoriów).
+  // Gdy jest własne zdjęcie główne (np. po wycięciu tła), oryginał z `imageUrl` jest tym samym
+  // zdjęciem sprzed obróbki — nie pokazujemy go drugi raz (tak samo jak w katalogu akcesoriów).
   if (product.catalog === 'shop') {
-    return collectProductImageCandidates(product);
+    if (!primary) return [];
+    return collectProductImageCandidates({
+      customImageUrl: primary,
+      extraImageUrls: product.extraImageUrls,
+    });
   }
   const extras = product.extraImageUrls || [];
   if (!primary) return extras;
