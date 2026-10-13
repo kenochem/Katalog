@@ -12,11 +12,13 @@ interface Props {
   item: LabelQueueItem;
   /** Czy na etykiecie jest włączona cena jednostkowa (wtedy brak pojemności jest ostrzeżeniem). */
   unitPriceEnabled: boolean;
+  /** Stan dopasowania nazwy do etykiety (jedna linia): ucięta / bardzo drobna czcionka. */
+  nameStatus?: { overflow: boolean; tiny: boolean; px: number };
   onChanged: () => void;
 }
 
 /** Jedna pozycja listy „Do wydruku”: ilość kopii + edycja nazwy, pojemności i ceny promocyjnej. */
-export function LabelItemRow({ item, unitPriceEnabled, onChanged }: Props) {
+export function LabelItemRow({ item, unitPriceEnabled, nameStatus, onChanged }: Props) {
   const [editing, setEditing] = useState(false);
   const pack = item.pack ?? parsePackFromText(item.displayName);
   const sale =
@@ -44,6 +46,16 @@ export function LabelItemRow({ item, unitPriceEnabled, onChanged }: Props) {
             )}
             {customName && (
               <span className="rounded bg-slate-700 px-1 font-sans text-[10px] text-slate-200">własna nazwa</span>
+            )}
+            {nameStatus?.overflow && (
+              <span className="rounded bg-red-600/90 px-1 font-sans text-[10px] font-bold text-white">
+                nazwa ucięta — skróć
+              </span>
+            )}
+            {nameStatus && !nameStatus.overflow && nameStatus.tiny && (
+              <span className="rounded bg-amber-500/20 px-1 font-sans text-[10px] text-amber-300">
+                nazwa bardzo drobna — rozważ skrócenie
+              </span>
             )}
             {unitPriceEnabled && !pack && (
               <span className="rounded bg-amber-500/20 px-1 font-sans text-[10px] text-amber-300">

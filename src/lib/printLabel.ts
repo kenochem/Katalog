@@ -50,33 +50,71 @@ function barcodeSvgMarkup(raw: string, height: number, fontSize: number): string
   return svg.outerHTML;
 }
 
-/** Jedna etykieta: jasny prostokąt z zielonym akcentem, najważniejsze dane produktu. */
+const MM_PX = 3.7795; // px na mm (96 dpi)
+
+/** Odstępy wewnętrzne etykiety w mm (lewy większy — zielony pasek akcentu). */
+function labelPadding(cfg: LabelConfig) {
+  return cfg.h <= 32
+    ? { top: 1.3, right: 2, bottom: 1.2, left: 3.4 }
+    : { top: 2.2, right: 3, bottom: 2, left: 4.2 };
+}
+
+/** Bazowy rozmiar czcionki (px) zależny od wysokości etykiety i ustawienia „Czcionka”. */
+function labelBase(cfg: LabelConfig): number {
+  const h = cfg.h;
+  const base = h <= 26 ? 7.2 : h <= 32 ? 8.5 : h <= 40 ? 10 : h <= 50 ? 11.2 : 12.5;
+  return base * cfg.fontScale;
+}
+
+let measureCtx: CanvasRenderingContext2D | null | undefined;
+function textWidthAt100(text: string): number {
+  if (measureCtx === undefined) {
+    measureCtx = document.createElement('canvas').getContext('2d');
+  }
+  if (!measureCtx) return text.length * 58; // zapas, gdy brak canvas
+  measureCtx.font = '800 100px Arial, Helvetica, sans-serif';
+  return measureCtx.measureText(text).width;
+}
+
+/**
+ * Nazwa zawsze w JEDNEJ linii: dobieramy czcionkę tak, żeby cała nazwa zmieściła się w szerokości etykiety
+ * (od maksymalnej do minimalnej czytelnej). Gdy nie mieści się nawet na minimum — `overflow` (nazwa zostanie ucięta).
+ */
+export function fitLabelName(
+  text: string,
+  cfg: LabelConfig,
+): { px: number; overflow: boolean; tiny: boolean } {
+  const pad = labelPadding(cfg);
+  const availPx = (cfg.w - pad.left - pad.right) * MM_PX;
+  const base = labelBase(cfg);
+  const maxPx = base * 1.6;
+  const minPx = Math.max(6.2, base * 0.82);
+  const w100 = textWidthAt100(text.trim() || ' ');
+  const fit = (availPx / w100) * 100 * 0.985;
+  // „tiny” — mieści się, ale czcionka jest już bardzo drobna (warto skrócić nazwę)
+  const tinyBelow = Math.max(7.2, base * 0.98);
+  if (fit >= maxPx) return { px: maxPx, overflow: false, tiny: false };
+  if (fit >= minPx) return { px: fit, overflow: false, tiny: fit < tinyBelow };
+  return { px: minPx, overflow: true, tiny: true };
+}
+
+/**
+ * Jedna etykieta: nazwa od samej góry (jedna linia), pod nią kod kreskowy po lewej i cena po prawej,
+ * na dole SKU / lokalizacja / pojemność. Jasny prostokąt z zielonym akcentem.
+ */
 function labelMarkup(item: LabelQueueItem, cfg: LabelConfig): string {
   const f = cfg.fields;
   const code = (item.ean || item.sku || '').trim();
-  const small = cfg.h < 38;
-  const barcodeH = Math.max(14, Math.round(cfg.h * (small ? 0.3 : 0.34)));
-  const barcode = f.barcode ? barcodeSvgMarkup(code, barcodeH, small ? 10 : 12) : '';
+  const base = labelBase(cfg);
 
-  const topLeft = f.brand ? '<span class="brand">KENOCHEM</span>' : '<span></span>';
-  const loc =
-    f.location && item.locationCode?.trim()
-      ? `<span class="loc">${escapeHtml(item.locationCode)}</span>`
-      : '';
-  const top = f.brand || loc ? `<div class="top">${topLeft}${loc}</div>` : '';
-
+  // --- nazwa (jedna linia, auto-dopasowanie)
   const shownName = (item.labelName || '').trim() || item.displayName;
-  const name = f.name ? `<div class="name">${escapeHtml(shownName)}</div>` : '';
+  const nameFit = fitLabelName(shownName, cfg);
+  const name = f.name
+    ? `<div class="nm" style="font-size:${nameFit.px.toFixed(2)}px">${escapeHtml(shownName)}</div>`
+    : '';
 
-  const chips: string[] = [];
-  if (f.sku && item.sku) chips.push(`<span class="chip mono">SKU ${escapeHtml(item.sku)}</span>`);
-  if (f.manufacturer && item.manufacturer)
-    chips.push(`<span class="chip">${escapeHtml(item.manufacturer)}</span>`);
-  if (f.category && item.category) chips.push(`<span class="chip">${escapeHtml(item.category)}</span>`);
-  if (f.stock && item.stock != null) chips.push(`<span class="chip">stan ${escapeHtml(formatStock(item.stock))}</span>`);
-  const meta = chips.length ? `<div class="meta">${chips.join('')}</div>` : '';
-
-  // ceny: zwykła, netto pod brutto, wariant wyprzedażowy (stara przekreślona, nowa na czerwono)
+  // --- ceny: zwykła, netto pod brutto, wariant wyprzedażowy
   const sale =
     item.salePrice != null &&
     item.priceGross != null &&
@@ -85,42 +123,65 @@ function labelMarkup(item: LabelQueueItem, cfg: LabelConfig): string {
     item.salePrice < item.priceGross;
   const shelfGross = sale ? (item.salePrice as number) : item.priceGross;
   const vat = item.vatRate ?? 23;
-  let price = '';
+  const lines: string[] = [];
   if (f.price && shelfGross != null && Number.isFinite(shelfGross)) {
     const net = sale || item.priceNet == null ? shelfGross / (1 + vat / 100) : item.priceNet;
-    const old = sale ? `<span class="old">${escapeHtml(formatPricePln(item.priceGross as number))}</span>` : '';
-    const promo = sale ? '<span class="promo">PROMOCJA</span>' : '';
-    const netLine = f.priceNet
-      ? `<small class="net">netto ${escapeHtml(formatPricePln(Math.round(net * 100) / 100))}</small>`
-      : '';
-    price = `<div class="price${sale ? ' sale' : ''}">${promo}${old}<span class="now">${escapeHtml(
-      formatPricePln(shelfGross),
-    )}</span><small>brutto</small>${netLine}</div>`;
+    if (sale) {
+      lines.push(
+        `<div class="saleRow"><span class="promo">PROMOCJA</span><span class="old">${escapeHtml(
+          formatPricePln(item.priceGross as number),
+        )}</span></div>`,
+      );
+    }
+    lines.push(`<div class="now${sale ? ' sale' : ''}">${escapeHtml(formatPricePln(shelfGross))}</div>`);
+    lines.push(
+      f.priceNet
+        ? `<div class="sub">netto ${escapeHtml(formatPricePln(Math.round(net * 100) / 100))}</div>`
+        : '<div class="sub">brutto</div>',
+    );
   }
 
-  // cena jednostkowa (obowiązek: za 1 l / 1 kg / 1 szt.) liczona od ceny z półki
-  let unit = '';
+  // --- cena jednostkowa (obowiązek: za 1 l / 1 kg / 1 szt.) liczona od ceny z półki
+  const pack = item.pack ?? parsePackFromText(item.displayName);
   if (f.unitPrice) {
-    const pack = item.pack ?? parsePackFromText(item.displayName);
     const up = unitPrice(shelfGross, pack);
     if (up) {
-      unit = `<div class="unit${sale ? ' sale' : ''}">${escapeHtml(formatPack(pack))} &middot; cena za ${escapeHtml(
-        up.label,
-      )}: <b>${escapeHtml(formatPricePln(up.value))}</b></div>`;
+      lines.push(
+        `<div class="unit${sale ? ' sale' : ''}"><b>${escapeHtml(formatPricePln(up.value))}</b> / ${escapeHtml(up.label).replace(' ', '&nbsp;')}</div>`,
+      );
     }
   }
+  const right = lines.length ? `<div class="right">${lines.join('')}</div>` : '';
 
-  const bcBlock = barcode ? `<div class="bc">${barcode}</div>` : '';
+  // --- kod kreskowy (lewa kolumna)
+  const barcode = f.barcode ? barcodeSvgMarkup(code, 40, 12) : '';
+  const left = barcode ? `<div class="left">${barcode}</div>` : '<div class="left"></div>';
+
+  // --- dolny pasek: SKU, lokalizacja, pojemność, reszta
+  const chips: string[] = [];
+  if (f.sku && item.sku) chips.push(`<span class="chip mono">${escapeHtml(item.sku)}</span>`);
+  if (f.location && item.locationCode?.trim())
+    chips.push(`<span class="chip loc">${escapeHtml(item.locationCode)}</span>`);
+  if (f.unitPrice && pack) chips.push(`<span class="chip">${escapeHtml(formatPack(pack))}</span>`);
+  if (f.manufacturer && item.manufacturer) chips.push(`<span class="chip">${escapeHtml(item.manufacturer)}</span>`);
+  if (f.category && item.category) chips.push(`<span class="chip">${escapeHtml(item.category)}</span>`);
+  if (f.stock && item.stock != null)
+    chips.push(`<span class="chip">stan ${escapeHtml(formatStock(item.stock))}</span>`);
+  if (f.brand) chips.push('<span class="chip brand">KENOCHEM</span>');
+  const bottom = chips.length ? `<div class="bottom">${chips.join('')}</div>` : '';
+
+  void base;
   return `<div class="label">
-    ${top}
-    <div class="body"><div class="info">${name}${meta}</div>${price}</div>
-    ${unit}
-    ${bcBlock}
+    ${name}
+    <div class="mid">${left}${right}</div>
+    ${bottom}
   </div>`;
 }
 
 function labelCss(cfg: LabelConfig, preview: boolean): string {
-  const base = (cfg.h >= 60 ? 12.5 : cfg.h >= 45 ? 11.5 : cfg.h >= 35 ? 10.5 : 9) * cfg.fontScale;
+  const base = labelBase(cfg);
+  const pad = labelPadding(cfg);
+  const compact = cfg.h <= 32;
   const pageRule =
     cfg.mode === 'roll'
       ? `@page { size: ${cfg.w}mm ${cfg.h}mm; margin: 0; }`
@@ -128,7 +189,7 @@ function labelCss(cfg: LabelConfig, preview: boolean): string {
   const sheetRule =
     cfg.mode === 'roll'
       ? '.sheet { display: block; }'
-      : `.sheet { display: flex; flex-wrap: wrap; gap: 3mm; ${preview ? 'padding: 4mm;' : ''} }`;
+      : `.sheet { display: flex; flex-wrap: wrap; gap: ${compact ? 2 : 3}mm; ${preview ? 'padding: 4mm;' : ''} }`;
   const labelPage =
     cfg.mode === 'roll'
       ? '.label { page-break-after: always; break-after: page; border-radius: 0; border: none !important; }'
@@ -141,35 +202,32 @@ function labelCss(cfg: LabelConfig, preview: boolean): string {
     ${sheetRule}
     .label {
       position: relative; width: ${cfg.w}mm; height: ${cfg.h}mm; background: #fff; overflow: hidden;
-      padding: 2.2mm 3mm 2mm 4.2mm; display: flex; flex-direction: column; gap: 1mm;
-      ${cfg.border ? 'border: 0.25mm solid #b9c6bb;' : ''} border-radius: 2mm;
+      padding: ${pad.top}mm ${pad.right}mm ${pad.bottom}mm ${pad.left}mm; display: flex; flex-direction: column;
+      gap: ${compact ? 0.5 : 1}mm;
+      ${cfg.border ? 'border: 0.25mm solid #b9c6bb;' : ''} border-radius: ${compact ? 1.4 : 2}mm;
       page-break-inside: avoid; break-inside: avoid;
     }
-    .label::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 1.8mm; background: #33b33b; }
-    .top { display: flex; justify-content: space-between; align-items: center; gap: 2mm; }
-    .brand { font-size: ${(base * 0.78).toFixed(1)}px; font-weight: 800; letter-spacing: 0.16em; color: #237a29; }
-    .loc { font-family: Consolas, "Courier New", monospace; font-weight: 800; font-size: ${(base * 1.05).toFixed(1)}px;
-      background: #e8f5e9; color: #14532d; border-radius: 1mm; padding: 0.3mm 1.6mm; letter-spacing: 0.04em; }
-    .body { display: flex; gap: 2mm; align-items: flex-start; justify-content: space-between; flex: 1 1 auto; min-height: 0; }
-    .info { min-width: 0; flex: 1 1 auto; }
-    .name { font-weight: 700; font-size: ${(base * 1.22).toFixed(1)}px; line-height: 1.18;
-      display: -webkit-box; -webkit-line-clamp: ${cfg.h >= 45 ? 3 : 2}; -webkit-box-orient: vertical; overflow: hidden; }
-    .meta { display: flex; flex-wrap: wrap; gap: 0.8mm 1.2mm; margin-top: 1mm; }
-    .chip { font-size: ${(base * 0.82).toFixed(1)}px; color: #334155; background: #f1f5f2; border-radius: 0.8mm; padding: 0.2mm 1.2mm; }
-    .chip.mono { font-family: Consolas, "Courier New", monospace; font-weight: 700; color: #0f172a; }
-    .price { display: flex; flex-direction: column; align-items: flex-end; text-align: right; line-height: 1.05; white-space: nowrap; }
-    .price .now { font-weight: 800; font-size: ${(base * 1.9).toFixed(1)}px; color: #14532d; }
-    .price small { font-size: ${(base * 0.7).toFixed(1)}px; font-weight: 600; color: #64748b; margin-top: 0.4mm; }
-    .price small.net { margin-top: 0; color: #475569; font-weight: 700; }
-    .price .old { font-size: ${(base * 1.05).toFixed(1)}px; color: #64748b; text-decoration: line-through; text-decoration-thickness: 0.35mm; font-weight: 600; }
-    .price .promo { font-size: ${(base * 0.68).toFixed(1)}px; font-weight: 800; letter-spacing: 0.08em; color: #fff; background: #dc2626; border-radius: 0.8mm; padding: 0.2mm 1.4mm; margin-bottom: 0.6mm; }
-    .price.sale .now { color: #dc2626; }
-    .unit { font-size: ${(base * 0.88).toFixed(1)}px; color: #334155; background: #f1f5f2; border-radius: 0.8mm; padding: 0.4mm 1.4mm; }
-    .unit b { color: #0f172a; }
+    .label::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: ${compact ? 1.4 : 1.8}mm; background: #33b33b; }
+    .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 800; line-height: 1.12; letter-spacing: -0.01em; flex: 0 0 auto; }
+    .mid { display: flex; flex: 1 1 auto; min-height: 0; gap: 1.6mm; justify-content: space-between; align-items: stretch; }
+    .left { flex: 1 1 52%; min-width: 0; display: flex; align-items: center; justify-content: flex-start; }
+    .left svg { max-width: 100%; max-height: 100%; height: auto; display: block; }
+    .nocode { font-family: monospace; font-size: ${base.toFixed(1)}px; margin: 0; }
+    .right { flex: 0 1 46%; min-width: 0; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; text-align: right; line-height: 1.05; white-space: nowrap; }
+    .now { font-weight: 800; font-size: ${(base * 2.55).toFixed(1)}px; color: #14532d; letter-spacing: -0.02em; }
+    .now.sale { color: #dc2626; }
+    .sub { font-size: ${(base * 0.95).toFixed(1)}px; color: #475569; font-weight: 700; }
+    .unit { font-size: ${(base * 0.98).toFixed(1)}px; color: #334155; margin-top: 0.3mm; }
+    .unit b { color: #0f172a; font-weight: 800; }
     .unit.sale b { color: #dc2626; }
-    .bc { text-align: center; margin-top: auto; }
-    .bc svg { max-width: 100%; height: auto; max-height: ${Math.round(cfg.h * 0.4)}mm; display: block; margin: 0 auto; }
-    .nocode { font-family: monospace; font-size: ${base}px; margin: 0; text-align: center; }
+    .saleRow { display: flex; align-items: center; gap: 1.2mm; margin-bottom: 0.2mm; }
+    .promo { font-size: ${(base * 0.7).toFixed(1)}px; font-weight: 800; letter-spacing: 0.06em; color: #fff; background: #dc2626; border-radius: 0.7mm; padding: 0.15mm 1.1mm; }
+    .old { font-size: ${(base * 1.1).toFixed(1)}px; color: #64748b; text-decoration: line-through; text-decoration-thickness: 0.3mm; font-weight: 700; }
+    .bottom { display: flex; gap: 0.8mm; align-items: center; flex: 0 0 auto; overflow: hidden; white-space: nowrap; }
+    .chip { font-size: ${(base * 0.92).toFixed(1)}px; color: #334155; background: #f1f5f2; border-radius: 0.7mm; padding: 0.1mm 1mm; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; }
+    .chip.mono { font-family: Consolas, "Courier New", monospace; font-weight: 700; color: #0f172a; }
+    .chip.loc { font-family: Consolas, "Courier New", monospace; font-weight: 800; background: #e8f5e9; color: #14532d; }
+    .chip.brand { font-weight: 800; letter-spacing: 0.14em; color: #237a29; background: transparent; }
     ${labelPage}
   `;
 }

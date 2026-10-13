@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-13',
+    title: 'Etykiety 65 × 25 mm: nazwa na górze w jednej linii, cena pod spodem',
+    description:
+      'Nowy domyślny rozmiar etykiety 65 × 25 mm (pod listwy cenowe) i przebudowany układ: bez napisu KENOCHEM u góry, nazwa produktu od samej góry zawsze w jednej linii (czcionka dobiera się automatycznie do szerokości etykiety), pod nią kod kreskowy po lewej i cena po prawej (netto pod brutto, wariant promocyjny na czerwono, cena za 1 l / 1 kg pod spodem), na dole SKU, lokalizacja i pojemność. Gdy nazwa jest za długa na jedną linię, lista „Do wydruku” pokazuje ostrzeżenie „nazwa ucięta — skróć” (nazwę skracasz ołówkiem tylko na etykiecie). Logo KENOCHEM można nadal włączyć w konfiguracji. Uwaga: ustawienia etykiet zaczynają od nowych domyślnych.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-13',
     title: 'Etykiety: cena jednostkowa (1 l / 1 kg / 1 szt.), netto, wariant wyprzedażowy i własna nazwa',
     description:
       'Konfigurator etykiet ma teraz: cenę jednostkową (obowiązek na półce) — pojemność lub wagę opakowania rozpoznaje z nazwy (np. 500 ml, 5 l, 750 g), można ją poprawić ręcznie, a etykieta pokazuje cenę za 1 l / 1 kg / 1 szt.; cenę netto pod brutto; wariant wyprzedażowy (przy produkcie wpisujesz cenę promocyjną: stara cena jest przekreślona, nowa na czerwono ze znaczkiem PROMOCJA, cena jednostkowa liczy się od ceny promocyjnej); oraz edycję nazwy produktu tylko na etykiecie (gdy oryginalna się nie mieści). Edycja nazwy, pojemności i ceny promocyjnej jest pod ikoną ołówka przy produkcie na liście „Do wydruku”.',

@@ -15,7 +15,7 @@ import {
   type LabelConfig,
   type LabelFields,
 } from '../lib/labelConfig';
-import { buildLabelsDocument, printShelfLabels } from '../lib/printLabel';
+import { buildLabelsDocument, fitLabelName, printShelfLabels } from '../lib/printLabel';
 import { showToast } from '../lib/toast';
 import { LabelItemRow } from './LabelItemRow';
 
@@ -265,6 +265,7 @@ export function LabelStudioView({ products, queue, onQueueChange }: Props) {
                     key={item.id}
                     item={item}
                     unitPriceEnabled={cfg.fields.unitPrice}
+                    nameStatus={fitLabelName((item.labelName || '').trim() || item.displayName, cfg)}
                     onChanged={onQueueChange}
                   />
                 ))}
