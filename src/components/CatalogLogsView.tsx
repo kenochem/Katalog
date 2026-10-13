@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  Activity,
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
@@ -31,6 +32,9 @@ import {
   type ProductSyncChangeField,
 } from '../lib/productSyncChanges';
 import { formatPricePln, formatStock } from '../lib/format';
+import { useAuth } from '../lib/auth';
+import { roleCan } from '../lib/roles';
+import { AdminAuditSection } from './AdminAuditSection';
 
 const PRICE_FIELDS = new Set<ProductSyncChangeField>([
   'price_purchase_net',
@@ -182,7 +186,7 @@ function FriendlySyncBlock({
   );
 }
 
-export function CatalogLogsView({ userId }: CatalogLogsViewProps) {
+function CatalogSystemLogs({ userId }: CatalogLogsViewProps) {
   const [logs, setLogs] = useState<CatalogLogEntry[]>(() => listCatalogLogs(userId));
   const [latest, setLatest] = useState<StockSyncRequest | null>(null);
   const [query, setQuery] = useState('');
@@ -548,5 +552,48 @@ export function CatalogLogsView({ userId }: CatalogLogsViewProps) {
         </div>
       </div>
     </section>
+  );
+}
+
+/** Logi: synchronizacje i zdarzenia + (dla uprawnionych) dziennik aktywności użytkowników. */
+export function CatalogLogsView({ userId }: CatalogLogsViewProps) {
+  const { role } = useAuth();
+  const canAudit = roleCan(role, 'manageUsers');
+  const [tab, setTab] = useState<'system' | 'activity'>('system');
+
+  if (!canAudit) return <CatalogSystemLogs userId={userId} />;
+
+  return (
+    <div className="space-y-4">
+      <div className="mx-auto flex max-w-6xl gap-2">
+        {(
+          [
+            ['system', 'Synchronizacja i zdarzenia', ListTree],
+            ['activity', 'Aktywność użytkowników', Activity],
+          ] as const
+        ).map(([key, label, Icon]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setTab(key)}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold transition sm:flex-none sm:px-5 ${
+              tab === key
+                ? 'border-brand-500 bg-brand-500/15 text-brand-300'
+                : 'border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+            }`}
+          >
+            <Icon className="h-4 w-4" />
+            {label}
+          </button>
+        ))}
+      </div>
+      {tab === 'system' ? (
+        <CatalogSystemLogs userId={userId} />
+      ) : (
+        <div className="mx-auto max-w-6xl">
+          <AdminAuditSection />
+        </div>
+      )}
+    </div>
   );
 }

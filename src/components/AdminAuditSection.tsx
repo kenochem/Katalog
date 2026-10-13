@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Download, Loader2, RefreshCw, Search } from 'lucide-react';
+import { Download, ExternalLink, Loader2, RefreshCw, Search } from 'lucide-react';
 import {
   AUDIT_ACTION_LABELS,
   fetchAuditLog,
@@ -40,6 +40,15 @@ function deviceLabel(e: AuditEntry): string {
   const d = e.device;
   if (!d) return '';
   return [d.browser, d.os, d.type, d.pwa ? 'PWA' : ''].filter(Boolean).join(' · ');
+}
+
+/** Adres karty produktu (otwiera katalog i od razu produkt) — do nowej karty przeglądarki. */
+function productUrl(sku: string): string {
+  return `${window.location.origin}${window.location.pathname}?sku=${encodeURIComponent(sku)}`;
+}
+
+function hasProductLink(e: AuditEntry): boolean {
+  return e.entityType === 'product' && Boolean(e.entityId) && e.action !== 'product.delete';
 }
 
 function fmtWhen(iso: string): string {
@@ -244,10 +253,11 @@ export function AdminAuditSection() {
           const changeCount = e.changes ? Object.keys(e.changes).length : 0;
           return (
             <li key={e.id}>
+              <div className="flex items-stretch">
               <button
                 type="button"
                 onClick={() => setOpenId(open ? null : e.id)}
-                className="flex w-full flex-col gap-1 px-3 py-2.5 text-left hover:bg-slate-800/40 sm:flex-row sm:items-center sm:gap-3"
+                className="flex min-w-0 flex-1 flex-col gap-1 px-3 py-2.5 text-left hover:bg-slate-800/40 sm:flex-row sm:items-center sm:gap-3"
               >
                 <span className="shrink-0 text-xs tabular-nums text-slate-500 sm:w-40">
                   {fmtWhen(e.createdAt)}
@@ -276,6 +286,20 @@ export function AdminAuditSection() {
                   <span className="shrink-0 text-xs text-slate-500">{e.summary}</span>
                 )}
               </button>
+              {hasProductLink(e) && (
+                <a
+                  href={productUrl(e.entityId)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex shrink-0 items-center gap-1 border-l border-slate-800 px-3 text-xs font-medium text-brand-300 hover:bg-slate-800/60 hover:text-brand-200"
+                  title="Otwórz produkt w nowej karcie"
+                  aria-label={`Otwórz produkt ${e.entityId} w nowej karcie`}
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Produkt</span>
+                </a>
+              )}
+              </div>
               {open && (
                 <div className="space-y-1 border-t border-slate-800 bg-slate-950/50 px-3 py-2.5 text-xs">
                   <p className="text-slate-500">

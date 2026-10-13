@@ -698,6 +698,35 @@ export default function App() {
 
   const catalogKits = useMemo(() => kits, [kits]);
 
+  // Link do produktu (?sku=ABC123), np. z dziennika aktywności: po załadowaniu katalogu otwiera kartę produktu
+  const deepLinkDone = useRef(false);
+  useEffect(() => {
+    if (deepLinkDone.current || loading) return;
+    let sku = '';
+    try {
+      sku = new URLSearchParams(window.location.search).get('sku') ?? '';
+    } catch {
+      /* ignore */
+    }
+    if (!sku.trim()) {
+      deepLinkDone.current = true;
+      return;
+    }
+    if (allProducts.length === 0) return; // katalog jeszcze się ładuje / brak logowania
+    deepLinkDone.current = true;
+    const key = sku.trim().toUpperCase();
+    const found = allProducts.find((p) => p.sku.toUpperCase() === key);
+    if (found) setSelectedProduct(found);
+    else showToast(`Nie znaleziono produktu ${key} (mógł zostać usunięty)`, 'warn', 6000);
+    try {
+      const u = new URL(window.location.href);
+      u.searchParams.delete('sku');
+      window.history.replaceState(null, '', `${u.pathname}${u.search}${u.hash}`);
+    } catch {
+      /* ignore */
+    }
+  }, [loading, allProducts]);
+
   const catalogCacheRef = useRef(catalogCache);
   catalogCacheRef.current = catalogCache;
   const supabaseHydratedRef = useRef<Record<string, boolean>>({});

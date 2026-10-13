@@ -2,7 +2,6 @@ import { useState, type ReactNode } from 'react';
 import {
   ArrowLeft,
   Calculator,
-  Activity,
   Link2,
   Database,
   FileSpreadsheet,
@@ -15,11 +14,10 @@ import { roleCan } from '../lib/roles';
 import { ROLE_LABELS } from '../lib/roles';
 import { AdminUsersSection } from './AdminUsersSection';
 import { AdminPermissionsSection } from './AdminPermissionsSection';
-import { AdminAuditSection } from './AdminAuditSection';
 import { AdminBaselinkerSection } from './AdminBaselinkerSection';
 import { ContextHelp } from './ContextHelp';
 
-type AdminTab = 'users' | 'permissions' | 'operations' | 'audit' | 'baselinker';
+type AdminTab = 'users' | 'permissions' | 'operations' | 'baselinker';
 
 type AdminHubPanelProps = {
   onBack?: () => void;
@@ -50,7 +48,6 @@ export function AdminHubPanel({
   const showUsers = roleCan(role, 'manageUsers');
   const showMatrix = roleCan(role, 'viewRoleMatrix');
   const showOperations = product === 'ops';
-  const showAudit = roleCan(role, 'manageUsers');
   const showBaselinker = roleCan(role, 'manageBaselinker');
   const canEditMatrix = roleCan(role, 'editRoleMatrix');
 
@@ -115,14 +112,6 @@ export function AdminHubPanel({
               label="Uprawnienia"
             />
           )}
-          {showAudit && (
-            <TabButton
-              active={tab === 'audit'}
-              onClick={() => setTab('audit')}
-              icon={<Activity className="h-4 w-4" />}
-              label="Aktywność"
-            />
-          )}
           {showBaselinker && (
             <TabButton
               active={tab === 'baselinker'}
@@ -145,8 +134,6 @@ export function AdminHubPanel({
       {tab === 'users' && showUsers && <AdminUsersSection />}
 
       {tab === 'operations' && showOperations && <OpsAdminSection />}
-
-      {tab === 'audit' && showAudit && <AdminAuditSection />}
 
       {tab === 'baselinker' && showBaselinker && <AdminBaselinkerSection />}
 

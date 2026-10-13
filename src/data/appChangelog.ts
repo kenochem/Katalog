@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-13',
+    title: 'Aktywność użytkowników przeniesiona do Logów; link do edytowanego produktu',
+    description:
+      'Dziennik aktywności (kto, co i kiedy zmienił, IP i urządzenie przy logowaniu) jest teraz w sekcji „Logi” jako zakładka „Aktywność użytkowników” — zniknął z Administracji, bo tam nie pasował. Widoczny nadal tylko dla osób z uprawnieniem zarządzania kontami. Przy każdym wpisie dotyczącym produktu (edycja, zmiana ceny, stanu, zdjęć, kategorii) jest przycisk „Produkt”, który otwiera ten produkt w nowej karcie. Działa też zwykły link z adresem ?sku=KOD — po zalogowaniu i załadowaniu katalogu otwiera kartę produktu (dla usuniętego produktu pokaże komunikat).',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-13',
     title: 'Promocje: kampanie wewnętrzne (bez BaseLinkera) i czytelniejsza tabela cen',
     description:
       'Przy tworzeniu kampanii wybierasz rodzaj: „Promocja do sklepu internetowego” (ceny idą do BaseLinkera, osobna grupa cenowa) albo „Kampania wewnętrzna” (np. wyprzedaż na półce — tylko katalog i etykiety, bez łączenia z BaseLinkerem; start i koniec wg dat działają tak samo). Na liście kampanii widać rodzaj przy każdej. Tabela cen jest przebudowana: pole ceny promocyjnej nie nachodzi już na inne kolumny (z oznaczeniem zł i komunikatem „musi być niższa od zwykłej”), obniżka jest czerwoną plakietką z procentem, a marża po promocji plakietką w kolorze (zielona / żółta „niska marża” / czerwona „poniżej kosztu”) z zyskiem na sztuce; podsumowanie pod tabelą to czytelne plakietki. Wymaga migracji migration-promotions-channel.sql i ponownego wdrożenia funkcji baselinker.',
