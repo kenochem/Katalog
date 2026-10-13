@@ -30,8 +30,10 @@ import {
   fetchPromoItems,
   refreshLivePromos,
   savePromoItems,
+  setInternalPromoState,
   updatePromoCampaign,
   type PromoCampaign,
+  type PromoChannel,
   type PromoItem,
   type PromoStatus,
 } from '../lib/promotions';
@@ -79,6 +81,30 @@ function formatWhen(iso: string | null): string {
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
+
+interface RunResult {
+  errors: number;
+  done: number;
+  skipped: number;
+  message: string;
+}
+
+/** Start kampanii: sklep internetowy → ceny do BaseLinkera; wewnętrzna → tylko status (bez BL). */
+async function runStart(c: { id: string; channel: PromoChannel }): Promise<RunResult> {
+  if (c.channel === 'internal') {
+    await setInternalPromoState(c.id, 'active');
+    return { errors: 0, done: 0, skipped: 0, message: 'wewnętrzna' };
+  }
+  return promoApplyBaselinker(c.id);
+}
+
+async function runEnd(c: { id: string; channel: PromoChannel }): Promise<RunResult> {
+  if (c.channel === 'internal') {
+    await setInternalPromoState(c.id, 'ended');
+    return { errors: 0, done: 0, skipped: 0, message: 'wewnętrzna' };
+  }
+  return promoEndBaselinker(c.id);
+}
 
 /** Zaokrągla cenę do końcówki ,90 (najbliższej), ale tylko jeśli nadal jest niższa od ceny zwykłej. */
 function endingNinety(price: number, regular: number | null): number {
@@ -132,14 +158,25 @@ export function PromotionsView({ products, canEdit, canSeeMargins, onOpenLabels 
         title: 'Zakończyć promocję teraz?',
         tone: 'warn',
         confirmLabel: 'Zakończ',
-        message: `„${c.name}” zostanie zakończona: w BaseLinkerze w grupie promocyjnej wróci cena zwykła, a znaczniki PROMOCJA znikną z katalogu.`,
+        message:
+          c.channel === 'internal'
+            ? `„${c.name}” zostanie zakończona: znaczniki PROMOCJA znikną z katalogu.`
+            : `„${c.name}” zostanie zakończona: w BaseLinkerze w grupie promocyjnej wróci cena zwykła, a znaczniki PROMOCJA znikną z katalogu.`,
       }))
     )
       return;
     setBusy(c.id);
     try {
-      const r = await promoEndBaselinker(c.id);
-      showToast(r.errors ? `Błąd: ${r.message}` : `Promocja zakończona (${r.done} pozycji przywróconych)`, r.errors ? 'error' : 'ok', 6000);
+      const r = await runEnd(c);
+      showToast(
+        r.errors
+          ? `Błąd: ${r.message}`
+          : c.channel === 'internal'
+            ? 'Promocja wewnętrzna zakończona'
+            : `Promocja zakończona (${r.done} pozycji przywróconych w BaseLinkerze)`,
+        r.errors ? 'error' : 'ok',
+        6000,
+      );
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Nie udało się zakończyć promocji', 'error', 7000);
     } finally {
@@ -152,9 +189,13 @@ export function PromotionsView({ products, canEdit, canSeeMargins, onOpenLabels 
   async function startNow(c: PromoCampaign) {
     setBusy(c.id);
     try {
-      const r = await promoApplyBaselinker(c.id);
+      const r = await runStart(c);
       showToast(
-        r.errors ? `Błąd: ${r.message}` : `Promocja uruchomiona: ${r.done} cen wysłanych do BaseLinkera${r.skipped ? `, pominięto ${r.skipped} (brak w BL)` : ''}`,
+        r.errors
+          ? `Błąd: ${r.message}`
+          : c.channel === 'internal'
+            ? 'Promocja wewnętrzna uruchomiona'
+            : `Promocja uruchomiona: ${r.done} cen wysłanych do BaseLinkera${r.skipped ? `, pominięto ${r.skipped} (brak w BL)` : ''}`,
         r.errors ? 'error' : 'ok',
         7000,
       );
@@ -292,9 +333,18 @@ export function PromotionsView({ products, canEdit, canSeeMargins, onOpenLabels 
                     {formatWhen(c.startsAt)} → {c.endsAt ? formatWhen(c.endsAt) : 'bezterminowo'}
                   </p>
                 </button>
-                <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${STATUS_STYLE[c.status]}`}>
-                  {PROMO_STATUS_LABEL[c.status]}
-                </span>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${STATUS_STYLE[c.status]}`}>
+                    {PROMO_STATUS_LABEL[c.status]}
+                  </span>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                      c.channel === 'internal' ? 'bg-slate-800 text-slate-300' : 'bg-blue-600/20 text-blue-300'
+                    }`}
+                  >
+                    {c.channel === 'internal' ? 'wewnętrzna' : 'sklep (BaseLinker)'}
+                  </span>
+                </div>
               </div>
               <p className="mt-2 text-sm text-slate-300">
                 {c.itemCount} {c.itemCount === 1 ? 'produkt' : 'produktów'}
@@ -386,6 +436,7 @@ function PromoEditor({
 }) {
   const [id, setId] = useState<string | null>(campaign?.id ?? null);
   const [status, setStatus] = useState<PromoStatus>(campaign?.status ?? 'draft');
+  const [channel, setChannel] = useState<PromoChannel>(campaign?.channel ?? 'baselinker');
   const [name, setName] = useState(campaign?.name ?? '');
   const [note, setNote] = useState(campaign?.note ?? '');
   const [startsAt, setStartsAt] = useState(toLocalInput(campaign?.startsAt ?? null));
@@ -527,6 +578,7 @@ function PromoEditor({
 
   async function persist(): Promise<string | null> {
     const input = {
+      channel,
       name: name.trim() || 'Nowa promocja',
       note,
       startsAt: fromLocalInput(startsAt),
@@ -590,12 +642,18 @@ function PromoEditor({
       await updatePromoCampaign(cid, { status: 'scheduled' });
       setStatus('scheduled');
       if (startsNow) {
-        const r = await promoApplyBaselinker(cid);
+        const r = await runStart({ id: cid, channel });
         if (r.errors) {
           showToast(`Zatwierdzono, ale wysyłka do BaseLinkera nie udała się: ${r.message}`, 'error', 9000);
         } else {
           setStatus('active');
-          showToast(`Promocja uruchomiona: ${r.done} cen wysłanych do BaseLinkera${r.skipped ? `, pominięto ${r.skipped} (brak w BL)` : ''}`, 'ok', 7000);
+          showToast(
+            channel === 'internal'
+              ? 'Promocja wewnętrzna uruchomiona — znaczniki widać już w katalogu'
+              : `Promocja uruchomiona: ${r.done} cen wysłanych do BaseLinkera${r.skipped ? `, pominięto ${r.skipped} (brak w BL)` : ''}`,
+            'ok',
+            7000,
+          );
         }
       } else {
         showToast('Kampania zatwierdzona — ruszy automatycznie w dniu startu', 'ok', 6000);
@@ -656,6 +714,39 @@ function PromoEditor({
 
       {/* dane kampanii */}
       <section className="grid gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 md:grid-cols-4">
+        <div className="md:col-span-4">
+          <span className="mb-1 block text-xs text-slate-400">Rodzaj kampanii</span>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {(
+              [
+                ['baselinker', 'Promocja do sklepu internetowego', 'Ceny promocyjne trafiają do BaseLinkera (osobna grupa cenowa), po końcu wraca cena zwykła.'],
+                ['internal', 'Kampania wewnętrzna', 'Tylko katalog i etykiety (np. wyprzedaż na półce). Bez łączenia z BaseLinkerem.'],
+              ] as const
+            ).map(([key, title, hint]) => (
+              <button
+                key={key}
+                type="button"
+                disabled={locked}
+                onClick={() => setChannel(key)}
+                className={`rounded-xl border px-3 py-2 text-left transition ${
+                  channel === key
+                    ? 'border-red-500 bg-red-500/10'
+                    : 'border-slate-700 bg-slate-950/40 hover:border-slate-600'
+                } disabled:cursor-default disabled:opacity-80`}
+              >
+                <span className="flex items-center gap-2 text-sm font-semibold text-slate-100">
+                  <span
+                    className={`inline-block h-3.5 w-3.5 rounded-full border-2 ${
+                      channel === key ? 'border-red-400 bg-red-500' : 'border-slate-500'
+                    }`}
+                  />
+                  {title}
+                </span>
+                <span className="mt-0.5 block text-xs text-slate-400">{hint}</span>
+              </button>
+            ))}
+          </div>
+        </div>
         <label className="md:col-span-2">
           <span className="mb-1 block text-xs text-slate-400">Nazwa kampanii</span>
           <input
@@ -890,11 +981,11 @@ function PromoEditor({
           <p className="py-6 text-center text-sm text-slate-500">Dodaj produkty powyżej.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[40rem] text-sm">
+            <table className="w-full min-w-[46rem] text-sm">
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wide text-slate-500">
                   {!locked && (
-                    <th className="w-8 pb-1">
+                    <th className="w-8 pb-2">
                       <input
                         type="checkbox"
                         checked={allSelected}
@@ -904,13 +995,13 @@ function PromoEditor({
                       />
                     </th>
                   )}
-                  <th className="pb-1">Produkt</th>
-                  <th className="pb-1 text-right">Zwykła brutto</th>
-                  {canSeeMargins && <th className="pb-1 text-right">Zakup netto</th>}
-                  <th className="pb-1 text-right">Promo brutto</th>
-                  <th className="pb-1 text-right">Obniżka</th>
-                  {canSeeMargins && <th className="pb-1 text-right">Marża po</th>}
-                  <th className="w-8 pb-1" />
+                  <th className="pb-2">Produkt</th>
+                  <th className="w-28 pb-2 pr-3 text-right">Zwykła brutto</th>
+                  {canSeeMargins && <th className="w-24 pb-2 pr-3 text-right">Zakup netto</th>}
+                  <th className="w-36 pb-2 pr-3 text-right">Cena promo brutto</th>
+                  <th className="w-24 pb-2 pr-2 text-center">Obniżka</th>
+                  {canSeeMargins && <th className="w-32 pb-2 pr-2 text-center">Marża po promocji</th>}
+                  <th className="w-8 pb-2" />
                 </tr>
               </thead>
               <tbody>
@@ -919,18 +1010,20 @@ function PromoEditor({
                   const bad = !(it.promoGross > 0) || (reg > 0 && it.promoGross >= reg);
                   const disc = reg > 0 ? (1 - it.promoGross / reg) * 100 : null;
                   const m = itemMargin(it);
-                  const mTone =
-                    m == null
-                      ? 'text-slate-400'
-                      : m <= 0
-                        ? 'font-bold text-red-400'
-                        : minMarginNum != null && m < minMarginNum
-                          ? 'text-amber-300'
-                          : 'text-emerald-300';
+                  const profit = it.purchaseNet != null ? it.promoGross / (1 + it.vat / 100) - it.purchaseNet : null;
+                  const mState: 'none' | 'loss' | 'low' | 'ok' =
+                    m == null ? 'none' : m <= 0 ? 'loss' : minMarginNum != null && m < minMarginNum ? 'low' : 'ok';
+                  const mPill = {
+                    none: 'bg-slate-800 text-slate-400',
+                    loss: 'bg-red-600 text-white',
+                    low: 'bg-amber-500/25 text-amber-200',
+                    ok: 'bg-emerald-500/20 text-emerald-300',
+                  }[mState];
+                  const mHint = { none: '', loss: 'poniżej kosztu', low: 'niska marża', ok: '' }[mState];
                   return (
-                    <tr key={it.sku} className="border-t border-slate-800/70">
+                    <tr key={it.sku} className={`border-t border-slate-800/70 align-middle ${bad ? 'bg-red-500/5' : ''}`}>
                       {!locked && (
-                        <td className="py-1.5">
+                        <td className="py-2">
                           <input
                             type="checkbox"
                             checked={sel.has(it.sku)}
@@ -946,46 +1039,78 @@ function PromoEditor({
                           />
                         </td>
                       )}
-                      <td className="py-1.5 pr-2">
-                        <span className="block max-w-[18rem] truncate text-slate-100">{it.productName}</span>
+                      <td className="py-2 pr-3">
+                        <span className="block max-w-[20rem] truncate text-slate-100">{it.productName}</span>
                         <span className="font-mono text-[11px] text-brand-400">{it.sku}</span>
-                        {it.blState === 'skipped' && (
+                        {channel === 'baselinker' && it.blState === 'skipped' && (
                           <span className="ml-1 rounded bg-amber-500/20 px-1 text-[10px] text-amber-300">
                             {it.blError || 'pominięto'}
                           </span>
                         )}
                       </td>
-                      <td className="py-1.5 text-right tabular-nums text-slate-300">
+                      <td className="py-2 pr-3 text-right tabular-nums text-slate-300">
                         {it.regularGross != null ? formatPricePln(it.regularGross) : '—'}
                       </td>
                       {canSeeMargins && (
-                        <td className="py-1.5 text-right tabular-nums text-slate-400">
+                        <td className="py-2 pr-3 text-right tabular-nums text-slate-400">
                           {it.purchaseNet != null ? formatPricePln(it.purchaseNet) : 'brak'}
                         </td>
                       )}
-                      <td className="py-1.5 text-right">
+                      <td className="py-2 pr-3 text-right">
                         {locked ? (
                           <span className="font-bold tabular-nums text-red-300">{formatPricePln(it.promoGross)}</span>
                         ) : (
-                          <input
-                            type="number"
-                            min={0}
-                            step="0.01"
-                            value={Number.isFinite(it.promoGross) ? it.promoGross : ''}
-                            onChange={(e) => setPrice(it.sku, Number(e.target.value))}
-                            className={`input-field w-24 text-right text-sm font-semibold tabular-nums ${
-                              bad ? '!border-red-500' : ''
-                            }`}
-                          />
+                          <div className="ml-auto" style={{ width: '8.5rem' }}>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                min={0}
+                                step="0.01"
+                                value={Number.isFinite(it.promoGross) ? it.promoGross : ''}
+                                onChange={(e) => setPrice(it.sku, Number(e.target.value))}
+                                style={{ width: '100%', paddingRight: '2rem' }}
+                                className={`input-field text-right text-sm font-bold tabular-nums ${
+                                  bad ? '!border-red-500' : ''
+                                }`}
+                              />
+                              <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-500">
+                                zł
+                              </span>
+                            </div>
+                            {bad && (
+                              <span className="mt-0.5 block text-[10px] font-semibold text-red-400">
+                                musi być niższa od zwykłej
+                              </span>
+                            )}
+                          </div>
                         )}
                       </td>
-                      <td className={`py-1.5 text-right tabular-nums ${bad ? 'text-red-400' : 'text-slate-300'}`}>
-                        {disc != null ? `−${disc.toFixed(1).replace('.', ',')}%` : '—'}
+                      <td className="py-2 pr-2 text-center">
+                        {disc != null && !bad ? (
+                          <span className="rounded-full bg-red-600/90 px-2 py-0.5 text-xs font-bold tabular-nums text-white">
+                            −{disc.toFixed(1).replace('.', ',')}%
+                          </span>
+                        ) : (
+                          <span className="text-slate-600">—</span>
+                        )}
                       </td>
                       {canSeeMargins && (
-                        <td className={`py-1.5 text-right tabular-nums ${mTone}`}>{formatMarginPercent(m)}</td>
+                        <td className="py-2 pr-2 text-center">
+                          <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-bold tabular-nums ${mPill}`}>
+                            {formatMarginPercent(m)}
+                          </span>
+                          {(mHint || profit != null) && (
+                            <span
+                              className={`mt-0.5 block text-[10px] ${
+                                mState === 'loss' ? 'font-bold text-red-400' : mState === 'low' ? 'text-amber-300' : 'text-slate-500'
+                              }`}
+                            >
+                              {mHint || (profit != null ? `zysk ${formatPricePln(round2(profit))}/szt.` : '')}
+                            </span>
+                          )}
+                        </td>
                       )}
-                      <td className="py-1.5 text-right">
+                      <td className="py-2 text-right">
                         {!locked && (
                           <button
                             type="button"
@@ -1006,24 +1131,38 @@ function PromoEditor({
         )}
 
         {items.length > 0 && (
-          <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 rounded-xl bg-slate-950/60 px-3 py-2 text-sm">
-            <span className="text-slate-300">
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-slate-950/60 px-3 py-2.5 text-sm">
+            <span className="rounded-full bg-slate-800 px-3 py-1 text-slate-200">
               Średnia obniżka:{' '}
-              <b className="tabular-nums text-slate-100">
+              <b className="tabular-nums text-white">
                 {stats.avgDiscount != null ? `${stats.avgDiscount.toFixed(1).replace('.', ',')}%` : '—'}
               </b>
             </span>
             {canSeeMargins && (
-              <span className="text-slate-300">
-                Średnia marża po promocji: <b className="tabular-nums text-slate-100">{formatMarginPercent(stats.avgMargin)}</b>
+              <span className="rounded-full bg-slate-800 px-3 py-1 text-slate-200">
+                Średnia marża po promocji:{' '}
+                <b className="tabular-nums text-white">{formatMarginPercent(stats.avgMargin)}</b>
               </span>
             )}
-            {stats.invalid > 0 && <span className="font-semibold text-red-400">Błędne ceny: {stats.invalid}</span>}
+            {stats.invalid > 0 && (
+              <span className="rounded-full bg-red-600 px-3 py-1 font-bold text-white">
+                Błędna cena: {stats.invalid} (musi być niższa od zwykłej)
+              </span>
+            )}
             {canSeeMargins && stats.belowCost > 0 && (
-              <span className="font-bold text-red-400">Poniżej kosztu: {stats.belowCost}</span>
+              <span className="rounded-full bg-red-600 px-3 py-1 font-bold text-white">
+                Sprzedaż poniżej kosztu: {stats.belowCost}
+              </span>
             )}
             {canSeeMargins && stats.belowMin > 0 && (
-              <span className="font-semibold text-amber-300">Poniżej min. marży: {stats.belowMin}</span>
+              <span className="rounded-full bg-amber-500/25 px-3 py-1 font-semibold text-amber-200">
+                Poniżej minimalnej marży: {stats.belowMin}
+              </span>
+            )}
+            {stats.invalid === 0 && stats.belowCost === 0 && stats.belowMin === 0 && (
+              <span className="rounded-full bg-emerald-500/20 px-3 py-1 font-semibold text-emerald-300">
+                Ceny w porządku
+              </span>
             )}
           </div>
         )}
@@ -1062,8 +1201,9 @@ function PromoEditor({
           Etykiety promocyjne
         </button>
         <p className="text-xs text-slate-500">
-          Start i koniec wg dat uruchamia się automatycznie (agent sprawdza co kilka minut). Ceny trafiają do osobnej
-          grupy cenowej w BaseLinkerze.
+          {channel === 'internal'
+            ? 'Kampania wewnętrzna: start i koniec wg dat uruchamia się automatycznie (agent sprawdza co kilka minut). Nic nie jest wysyłane do BaseLinkera — promocja widoczna w katalogu i na etykietach.'
+            : 'Start i koniec wg dat uruchamia się automatycznie (agent sprawdza co kilka minut). Ceny trafiają do osobnej grupy cenowej w BaseLinkerze.'}
         </p>
       </div>
     </div>

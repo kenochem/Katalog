@@ -651,11 +651,22 @@ async function promoSend(groupId: string, rows: { blId: number; price: number }[
 }
 
 async function promoApply(admin: Admin, campaignId: string, userLabel: string): Promise<PromoResult> {
+  const { data: camp } = await admin.from('promo_campaigns').select('*').eq('id', campaignId).maybeSingle();
+  if (!camp) throw new Error('Nie znaleziono kampanii');
+  if (camp.channel === 'internal') {
+    // kampania wewnętrzna: bez BaseLinkera — tylko zmiana statusu (znaczniki w katalogu, etykiety)
+    const nowIso = new Date().toISOString();
+    const { count } = await admin.from('promo_items').select('id', { count: 'exact', head: true }).eq('campaign_id', campaignId);
+    await admin.from('promo_items').update({ bl_state: 'skipped', bl_error: '' }).eq('campaign_id', campaignId);
+    await admin
+      .from('promo_campaigns')
+      .update({ status: 'active', applied_at: nowIso, last_error: '', updated_at: nowIso })
+      .eq('id', campaignId);
+    return { campaignId, action: 'apply', total: count ?? 0, done: count ?? 0, skipped: 0, errors: 0, message: 'kampania wewnętrzna' };
+  }
   const settings = await loadSettings(admin);
   const groupId = settings.promoPriceGroupId;
   if (!groupId) throw new Error('Wybierz grupę cenową dla promocji (Administracja → BaseLinker → ustawienia).');
-  const { data: camp } = await admin.from('promo_campaigns').select('*').eq('id', campaignId).maybeSingle();
-  if (!camp) throw new Error('Nie znaleziono kampanii');
   const { data: items } = await admin.from('promo_items').select('*').eq('campaign_id', campaignId);
   const list = (items ?? []) as Record<string, unknown>[];
   const links = await promoLinks(admin, list.map((i) => String(i.sku).toUpperCase()));
@@ -698,11 +709,20 @@ async function promoApply(admin: Admin, campaignId: string, userLabel: string): 
 }
 
 async function promoEnd(admin: Admin, campaignId: string, userLabel: string): Promise<PromoResult> {
+  const { data: camp } = await admin.from('promo_campaigns').select('*').eq('id', campaignId).maybeSingle();
+  if (!camp) throw new Error('Nie znaleziono kampanii');
+  if (camp.channel === 'internal') {
+    const nowIso = new Date().toISOString();
+    const { count } = await admin.from('promo_items').select('id', { count: 'exact', head: true }).eq('campaign_id', campaignId);
+    await admin
+      .from('promo_campaigns')
+      .update({ status: 'ended', ended_at: nowIso, last_error: '', updated_at: nowIso })
+      .eq('id', campaignId);
+    return { campaignId, action: 'end', total: count ?? 0, done: count ?? 0, skipped: 0, errors: 0, message: 'kampania wewnętrzna' };
+  }
   const settings = await loadSettings(admin);
   const groupId = settings.promoPriceGroupId;
   if (!groupId) throw new Error('Wybierz grupę cenową dla promocji (Administracja → BaseLinker → ustawienia).');
-  const { data: camp } = await admin.from('promo_campaigns').select('*').eq('id', campaignId).maybeSingle();
-  if (!camp) throw new Error('Nie znaleziono kampanii');
   const { data: items } = await admin.from('promo_items').select('*').eq('campaign_id', campaignId);
   const list = (items ?? []) as Record<string, unknown>[];
   const skus = list.map((i) => String(i.sku).toUpperCase());

@@ -12,11 +12,20 @@ export const PROMO_STATUS_LABEL: Record<PromoStatus, string> = {
   ended: 'Zakończona',
 };
 
+/** baselinker = cena idzie do sklepu internetowego (grupa cenowa BL); internal = kampania wewnętrzna (katalog i etykiety). */
+export type PromoChannel = 'baselinker' | 'internal';
+
+export const PROMO_CHANNEL_LABEL: Record<PromoChannel, string> = {
+  baselinker: 'Sklep internetowy (BaseLinker)',
+  internal: 'Wewnętrzna (bez BaseLinkera)',
+};
+
 export interface PromoCampaign {
   id: string;
   name: string;
   note: string;
   status: PromoStatus;
+  channel: PromoChannel;
   startsAt: string | null;
   endsAt: string | null;
   minMargin: number | null;
@@ -60,6 +69,7 @@ function mapCampaign(r: Record<string, unknown>, itemCount: number): PromoCampai
     name: String(r.name ?? ''),
     note: String(r.note ?? ''),
     status: (['draft', 'scheduled', 'active', 'ended'].includes(String(r.status)) ? r.status : 'draft') as PromoStatus,
+    channel: r.channel === 'internal' ? 'internal' : 'baselinker',
     startsAt: r.starts_at ? String(r.starts_at) : null,
     endsAt: r.ends_at ? String(r.ends_at) : null,
     minMargin: r.min_margin != null ? Number(r.min_margin) : null,
@@ -112,6 +122,7 @@ export async function fetchPromoItems(campaignId: string): Promise<PromoItem[]> 
 }
 
 export interface PromoCampaignInput {
+  channel?: PromoChannel;
   name: string;
   note?: string;
   startsAt: string | null;
@@ -131,21 +142,30 @@ async function currentUserLabel(): Promise<{ id: string | null; label: string }>
 
 export async function createPromoCampaign(input: PromoCampaignInput): Promise<PromoCampaign> {
   const who = await currentUserLabel();
-  const { data, error } = await db()
+  const base = {
+    name: input.name.trim() || 'Nowa promocja',
+    note: input.note ?? '',
+    starts_at: input.startsAt,
+    ends_at: input.endsAt,
+    min_margin: input.minMargin,
+    created_by: who.id,
+    created_by_label: who.label,
+  };
+  const channel = input.channel ?? 'baselinker';
+  let res = await db()
     .from('promo_campaigns')
-    .insert({
-      name: input.name.trim() || 'Nowa promocja',
-      note: input.note ?? '',
-      starts_at: input.startsAt,
-      ends_at: input.endsAt,
-      min_margin: input.minMargin,
-      created_by: who.id,
-      created_by_label: who.label,
-    })
+    .insert({ ...base, channel })
     .select('*')
     .single();
-  if (error) fail(error);
-  return mapCampaign(data as Record<string, unknown>, 0);
+  if (res.error && /channel/i.test(res.error.message)) {
+    // kolumna channel nie istnieje (migration-promotions-channel.sql niewykonana)
+    if (channel === 'internal') {
+      throw new Error('Kampanie wewnętrzne wymagają migracji: uruchom w Supabase plik migration-promotions-channel.sql');
+    }
+    res = await db().from('promo_campaigns').insert(base).select('*').single();
+  }
+  if (res.error) fail(res.error);
+  return mapCampaign(res.data as Record<string, unknown>, 0);
 }
 
 export async function updatePromoCampaign(
@@ -159,7 +179,15 @@ export async function updatePromoCampaign(
   if (patch.endsAt !== undefined) row.ends_at = patch.endsAt;
   if (patch.minMargin !== undefined) row.min_margin = patch.minMargin;
   if (patch.status !== undefined) row.status = patch.status;
-  const { error } = await db().from('promo_campaigns').update(row).eq('id', id);
+  if (patch.channel !== undefined) row.channel = patch.channel;
+  let { error } = await db().from('promo_campaigns').update(row).eq('id', id);
+  if (error && /channel/i.test(error.message)) {
+    if (patch.channel === 'internal') {
+      throw new Error('Kampanie wewnętrzne wymagają migracji: uruchom w Supabase plik migration-promotions-channel.sql');
+    }
+    delete row.channel;
+    ({ error } = await db().from('promo_campaigns').update(row).eq('id', id));
+  }
   if (error) fail(error);
 }
 
@@ -189,6 +217,17 @@ export async function savePromoItems(campaignId: string, items: PromoItem[]): Pr
   }
 }
 
+/** Kampania wewnętrzna: start/koniec bez BaseLinkera (tylko status w bazie). */
+export async function setInternalPromoState(id: string, state: 'active' | 'ended'): Promise<void> {
+  const nowIso = new Date().toISOString();
+  const row =
+    state === 'active'
+      ? { status: 'active', applied_at: nowIso, last_error: '', updated_at: nowIso }
+      : { status: 'ended', ended_at: nowIso, last_error: '', updated_at: nowIso };
+  const { error } = await db().from('promo_campaigns').update(row).eq('id', id);
+  if (error) fail(error);
+}
+
 export async function deletePromoCampaign(id: string): Promise<void> {
   const { error } = await db().from('promo_campaigns').delete().eq('id', id);
   if (error) fail(error);
@@ -201,6 +240,7 @@ export async function duplicatePromoCampaign(id: string): Promise<PromoCampaign>
   const copy = await createPromoCampaign({
     name: `${String(src.name)} (kopia)`,
     note: String(src.note ?? ''),
+    channel: src.channel === 'internal' ? 'internal' : 'baselinker',
     startsAt: null,
     endsAt: null,
     minMargin: src.min_margin != null ? Number(src.min_margin) : null,

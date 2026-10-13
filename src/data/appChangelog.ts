@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-13',
+    title: 'Promocje: kampanie wewnętrzne (bez BaseLinkera) i czytelniejsza tabela cen',
+    description:
+      'Przy tworzeniu kampanii wybierasz rodzaj: „Promocja do sklepu internetowego” (ceny idą do BaseLinkera, osobna grupa cenowa) albo „Kampania wewnętrzna” (np. wyprzedaż na półce — tylko katalog i etykiety, bez łączenia z BaseLinkerem; start i koniec wg dat działają tak samo). Na liście kampanii widać rodzaj przy każdej. Tabela cen jest przebudowana: pole ceny promocyjnej nie nachodzi już na inne kolumny (z oznaczeniem zł i komunikatem „musi być niższa od zwykłej”), obniżka jest czerwoną plakietką z procentem, a marża po promocji plakietką w kolorze (zielona / żółta „niska marża” / czerwona „poniżej kosztu”) z zyskiem na sztuce; podsumowanie pod tabelą to czytelne plakietki. Wymaga migracji migration-promotions-channel.sql i ponownego wdrożenia funkcji baselinker.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-13',
     title: 'Centrum promocji: kampanie cenowe z datami i wysyłką do BaseLinkera',
     description:
       'Nowa sekcja „Promocje” (menu, „Więcej” na telefonie, wyszukiwarka poleceń). Tworzysz kampanię (nazwa, start i koniec albo bezterminowo), dobierasz produkty wyszukiwarką i filtrami (kategoria, tylko z BaseLinkera), ustawiasz ceny promocyjne ręcznie albo regułą dla wielu naraz: obniżka o %, marża docelowa, stała cena, końcówka ,90. Kalkulator pokazuje obniżkę i marżę po promocji, ostrzega o sprzedaży poniżej kosztu i poniżej minimalnej marży. „Zatwierdź i uruchom” wysyła ceny do osobnej grupy cenowej w BaseLinkerze; start i koniec według dat wykonuje się automatycznie (agent sprawdza co kilka minut), a po końcu w grupie promocyjnej wraca cena zwykła. W katalogu aktywne promocje mają czerwony znacznik PROMOCJA z procentem, cenę promocyjną z przekreśloną zwykłą i filtr „W promocji”; z kampanii można jednym kliknięciem wydrukować etykiety promocyjne. Kampanie można duplikować i kończyć ręcznie. Nowe uprawnienie „Promocje: kampanie i ceny promocyjne”. Wymaga migracji migration-promotions.sql, wyboru grupy cenowej dla promocji w Administracja → BaseLinker → ustawienia, wdrożenia funkcji baselinker i nowej wersji agenta zamówień.',
