@@ -34,6 +34,7 @@ import { formatLocationCode, parseLocationCode } from '../lib/warehouseLocation'
 import { RemoveBackgroundModal } from './RemoveBackgroundModal';
 import { PrepareImageModal } from './PrepareImageModal';
 import { useReservedQty } from '../lib/reservedStock';
+import { useLivePromo } from '../lib/promotions';
 import type { PrepareResult } from '../lib/imagePrepare';
 import { ContextHelp } from './ContextHelp';
 import {
@@ -134,6 +135,7 @@ export function ProductDetail({
   const [removeBgOpen, setRemoveBgOpen] = useState(false);
   const [blMissing, setBlMissing] = useState<string[]>([]);
   const reservedQty = useReservedQty(detail?.sku ?? product.sku);
+  const livePromo = useLivePromo(detail?.isGroup ? undefined : (detail?.sku ?? product.sku));
   const isMissingInBl = (url: string) => {
     const base = url.split('?')[0].toLowerCase();
     return blMissing.some((m) => m.split('?')[0].toLowerCase() === base);
@@ -810,6 +812,24 @@ export function ProductDetail({
                         </span>
                       </span>
                     )}
+                  {livePromo && (
+                    <span
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-2.5 py-1 text-xs font-bold text-white"
+                      title={livePromo.campaign ? `Kampania: ${livePromo.campaign}` : undefined}
+                    >
+                      PROMOCJA {formatPricePln(livePromo.promoGross)}
+                      {livePromo.regularGross != null && (
+                        <span className="font-medium text-white/80 line-through">
+                          {formatPricePln(livePromo.regularGross)}
+                        </span>
+                      )}
+                      {livePromo.endsAt && (
+                        <span className="font-medium text-white/90">
+                          do {new Date(livePromo.endsAt).toLocaleDateString('pl-PL')}
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-2">

@@ -40,7 +40,8 @@ export type CapabilityId =
   | 'admin.viewRoleMatrix'
   | 'admin.editRoleMatrix'
   | 'admin.manageBaselinker'
-  | 'crm.sendWaproOrder';
+  | 'crm.sendWaproOrder'
+  | 'catalog.managePromotions';
 
 export interface CapabilityDef {
   id: CapabilityId;
@@ -264,6 +265,16 @@ export const CAPABILITY_REGISTRY: CapabilityDef[] = [
     roleAction: 'manageTalk',
     moduleId: 'comms',
     requires: ['module.comms', 'comms.useTalk'],
+  },
+  {
+    id: 'catalog.managePromotions',
+    label: 'Promocje: kampanie i ceny promocyjne',
+    description:
+      'Centrum promocji: tworzenie kampanii cenowych, ustawianie cen promocyjnych na okres czasu i wysyłka do BaseLinkera',
+    group: 'catalog',
+    roleAction: 'managePromotions',
+    moduleId: 'catalog',
+    requires: ['module.catalog', 'catalog.viewPrices'],
   },
   {
     id: 'crm.sendWaproOrder',

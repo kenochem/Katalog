@@ -28,6 +28,8 @@ export interface BaselinkerSettings {
   stockAuto: boolean;
   priceAuto: boolean;
   priceGroupId: string;
+  /** Grupa cenowa BL na ceny promocyjne (Centrum promocji). */
+  promoPriceGroupId: string;
   skipManualStock: boolean;
   maxAutoChanges: number;
   excludePrefixes: string[];
@@ -218,3 +220,18 @@ export const pushImagesToBaselinker = (skus: string[]) =>
   });
 export const fetchBaselinkerHistory = () =>
   call<{ rows: BaselinkerLogRow[] }>({ action: 'history' }).then((r) => r.rows);
+
+export interface PromoActionResult {
+  campaignId: string;
+  action: 'apply' | 'end';
+  total: number;
+  done: number;
+  skipped: number;
+  errors: number;
+  message: string;
+}
+
+export const promoApplyBaselinker = (campaignId: string) =>
+  call<PromoActionResult>({ action: 'promo-apply', campaignId });
+export const promoEndBaselinker = (campaignId: string) =>
+  call<PromoActionResult>({ action: 'promo-end', campaignId });

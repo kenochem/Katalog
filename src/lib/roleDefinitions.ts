@@ -69,7 +69,8 @@ export type RoleAction =
   | 'editRoleMatrix'
   | 'viewOps'
   | 'manageBaselinker'
-  | 'sendWaproOrder';
+  | 'sendWaproOrder'
+  | 'managePromotions';
 
 export const ROLE_ACTION_LABELS: Record<RoleAction, string> = {
   editStock: 'Edycja stanów',
@@ -94,6 +95,7 @@ export const ROLE_ACTION_LABELS: Record<RoleAction, string> = {
   viewOps: 'Operacje / kalkulatory',
   manageBaselinker: 'BaseLinker: synchronizacja i import',
   sendWaproOrder: 'CRM: wysyłka zamówień do WAPRO',
+  managePromotions: 'Promocje: kampanie i ceny promocyjne',
 };
 
 export const ROLE_ACTIONS: RoleAction[] = Object.keys(
@@ -123,6 +125,7 @@ const ALL_FALSE: Record<RoleAction, boolean> = {
   viewOps: false,
   manageBaselinker: false,
   sendWaproOrder: false,
+  managePromotions: false,
 };
 
 /** Domyślna macierz — później można nadpisać z DB. */
@@ -183,6 +186,7 @@ export const DEFAULT_ROLE_MATRIX: Record<AppRole, Record<RoleAction, boolean>> =
     viewOps: true,
     manageBaselinker: false,
     sendWaproOrder: false,
+    managePromotions: false,
   },
   admin: {
     editStock: true,
@@ -207,5 +211,6 @@ export const DEFAULT_ROLE_MATRIX: Record<AppRole, Record<RoleAction, boolean>> =
     viewOps: true,
     manageBaselinker: true,
     sendWaproOrder: true,
+    managePromotions: true,
   },
 };

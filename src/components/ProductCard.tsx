@@ -21,6 +21,7 @@ import { getProductDisplayCategory } from '../lib/catalogCategory';
 import { AddToCollectionMenu } from './AddToCollectionMenu';
 import { BaselinkerTag, WaproMagTag } from './BaselinkerTag';
 import { useReservedQty } from '../lib/reservedStock';
+import { useLivePromo } from '../lib/promotions';
 
 interface ProductCardProps {
   product: Product;
@@ -69,6 +70,11 @@ export const ProductCard = memo(
   }: ProductCardProps) {
   const showImage = !hideImages && hasDisplayableProductImage(product);
   const reservedQty = useReservedQty(product.isGroup ? undefined : product.sku);
+  const promo = useLivePromo(product.isGroup ? undefined : product.sku);
+  const promoPct =
+    promo && promo.regularGross && promo.regularGross > promo.promoGross
+      ? Math.round((1 - promo.promoGross / promo.regularGross) * 100)
+      : null;
   // stan REALNY (dostępny) = stan WAPRO − zarezerwowane; R pokazujemy obok
   const availableQty = Math.max(0, (product.stock ?? 0) - reservedQty);
   const [uploading, setUploading] = useState(false);
@@ -174,6 +180,16 @@ export const ProductCard = memo(
         />
 
         <div className="absolute left-2 top-2 z-[3] flex max-w-[calc(100%-1rem)] flex-col items-start gap-1">
+          {promo && (
+            <span
+              className={`rounded-md bg-red-600 font-extrabold uppercase tracking-wide text-white shadow ${
+                compact ? 'px-1.5 py-0.5 text-[9px]' : 'px-2 py-0.5 text-[11px]'
+              }`}
+              title={promo.campaign ? `Promocja: ${promo.campaign}` : 'Promocja'}
+            >
+              Promocja{promoPct ? ` −${promoPct}%` : ''}
+            </span>
+          )}
           {!product.isGroup && product.sku ? (
             <div className="flex max-w-full items-center gap-1">
               <button
@@ -347,8 +363,19 @@ export const ProductCard = memo(
               compact ? 'text-[11px]' : cozy ? 'text-sm' : 'text-xs'
             }`}
           >
-            {formatPricePln(customerPrice)}
-            {margin != null && !compact && (
+            {promo ? (
+              <>
+                <span className="font-bold text-red-400">{formatPricePln(promo.promoGross)}</span>
+                {promo.regularGross != null && (
+                  <span className="ml-1.5 font-medium text-slate-500 line-through">
+                    {formatPricePln(promo.regularGross)}
+                  </span>
+                )}
+              </>
+            ) : (
+              formatPricePln(customerPrice)
+            )}
+            {margin != null && !compact && !promo && (
               <span className="ml-1.5 font-medium text-slate-500">
                 {formatMarginPercent(margin)}
               </span>

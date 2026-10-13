@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-13',
+    title: 'Centrum promocji: kampanie cenowe z datami i wysyłką do BaseLinkera',
+    description:
+      'Nowa sekcja „Promocje” (menu, „Więcej” na telefonie, wyszukiwarka poleceń). Tworzysz kampanię (nazwa, start i koniec albo bezterminowo), dobierasz produkty wyszukiwarką i filtrami (kategoria, tylko z BaseLinkera), ustawiasz ceny promocyjne ręcznie albo regułą dla wielu naraz: obniżka o %, marża docelowa, stała cena, końcówka ,90. Kalkulator pokazuje obniżkę i marżę po promocji, ostrzega o sprzedaży poniżej kosztu i poniżej minimalnej marży. „Zatwierdź i uruchom” wysyła ceny do osobnej grupy cenowej w BaseLinkerze; start i koniec według dat wykonuje się automatycznie (agent sprawdza co kilka minut), a po końcu w grupie promocyjnej wraca cena zwykła. W katalogu aktywne promocje mają czerwony znacznik PROMOCJA z procentem, cenę promocyjną z przekreśloną zwykłą i filtr „W promocji”; z kampanii można jednym kliknięciem wydrukować etykiety promocyjne. Kampanie można duplikować i kończyć ręcznie. Nowe uprawnienie „Promocje: kampanie i ceny promocyjne”. Wymaga migracji migration-promotions.sql, wyboru grupy cenowej dla promocji w Administracja → BaseLinker → ustawienia, wdrożenia funkcji baselinker i nowej wersji agenta zamówień.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-13',
     title: 'Etykiety: wyraźna promocja, czytelny kalkulator marży, mniejsza cena za 1 l',
     description:
       'Etykieta promocyjna jest teraz mocno wyróżniona: czerwona ramka i pasek, jasnoczerwone tło ceny, duży znaczek PROMOCJA, czarna naklejka z procentem obniżki (np. −23%), stara cena przekreślona grubą czerwoną linią i nowa cena na czerwono. Pole ceny promocyjnej ma czytelną ramkę z cenami wyjściowymi (sprzedaż brutto i netto, zakup netto, marża obecna), progami opłacalności (cena bez straty i przy marży 10%), przyciskami szybkiej obniżki (−10% do −30%) oraz bieżącym wyliczeniem po wpisaniu ceny: cena netto, obniżka, marża po promocji, zysk na sztuce i ostrzeżenia (niska marża / sprzedaż poniżej kosztu). Cena za 1 l / 1 kg na etykiecie ma mniejszą czcionkę.',

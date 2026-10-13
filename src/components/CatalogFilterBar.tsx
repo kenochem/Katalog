@@ -41,6 +41,7 @@ const STOCK_OPTS = [
   { id: 'low' as const, label: `Niski stan (≤${LOW_STOCK_MAX})` },
   { id: 'out' as const, label: 'Brak na stanie' },
   { id: 'reserved' as const, label: 'Z rezerwacją (R)' },
+  { id: 'promo' as const, label: 'W promocji' },
 ];
 
 const IMAGE_OPTS = [

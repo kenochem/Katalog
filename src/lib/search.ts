@@ -5,6 +5,7 @@ import { getProductSearchIndex, searchIndexedProducts } from './productSearchInd
 import { effectiveManufacturer } from './waproManufacturers';
 import { getProductDisplayCategory } from './catalogCategory';
 import { getAvailableQty, getReservedQty } from './reservedStock';
+import { getLivePromo } from './promotions';
 import type { Product } from '../types';
 
 export type CatalogSort =
@@ -15,7 +16,7 @@ export type CatalogSort =
   | 'stock-desc'
   | 'stock-asc';
 
-export type StockFilter = 'all' | 'in-stock' | 'low' | 'out' | 'reserved';
+export type StockFilter = 'all' | 'in-stock' | 'low' | 'out' | 'reserved' | 'promo';
 export type ImageFilter = 'all' | 'with' | 'without';
 export type KnowledgeFilter = 'all' | 'weak' | 'good';
 export type WaproMagFilter = 'all' | 'needs-media';
@@ -107,6 +108,8 @@ export function applyCatalogFilters(
     result = result.filter((p) => getAvailableQty(p) <= 0);
   } else if (opts.stockFilter === 'reserved') {
     result = result.filter((p) => !p.isGroup && getReservedQty(p.sku) > 0);
+  } else if (opts.stockFilter === 'promo') {
+    result = result.filter((p) => !p.isGroup && getLivePromo(p.sku) != null);
   }
 
   if (opts.imageFilter === 'with') {

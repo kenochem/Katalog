@@ -64,7 +64,9 @@ import { CatalogGridCard } from './components/CatalogGridCard';
 import { SearchBar } from './components/SearchBar';
 import { CatalogSmallImagesView } from './components/CatalogSmallImagesView';
 import { LabelStudioView } from './components/LabelStudioView';
+import { PromotionsView } from './components/PromotionsView';
 import { useReservedVersion } from './lib/reservedStock';
+import { useLivePromosVersion } from './lib/promotions';
 import { ProductGrid } from './components/ProductGrid';
 import { InstallAppHint, resetInstallHint } from './components/InstallAppHint';
 import { LoginGate } from './components/LoginGate';
@@ -496,6 +498,7 @@ export default function App() {
     if (!roleCan(role, 'viewProgress') && view === 'catalog-decisions') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'catalog-hidden') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'small-images') setView(fallback);
+    if (!roleCan(role, 'viewPrices') && view === 'promotions') setView(fallback);
     if (!roleCan(role, 'manageFavorites') && view === 'favorites') setView(fallback);
     if (!roleCan(role, 'manageKits') && view === 'kits') setView(fallback);
     if (!canViewOpsModule(role) && view === 'ops') setView(fallback);
@@ -1068,6 +1071,7 @@ export default function App() {
 
   // filtry/sortowanie po stanie liczą stan dostępny (stan − rezerwacje) — przelicz po odświeżeniu rezerwacji
   const reservedVersion = useReservedVersion();
+  const promosVersion = useLivePromosVersion();
 
   const filtered = useMemo(() => {
     const catalogForFavorites = view === 'favorites' ? allProducts : products;
@@ -1087,7 +1091,7 @@ export default function App() {
       waproMagFilter,
       visibilityFilter,
     });
-  }, [products, allProducts, debouncedSearch, category, manufacturer, sort, stockFilter, imageFilter, knowledgeFilter, baselinkerFilter, waproMagFilter, visibilityFilter, view, favoriteSet, reservedVersion]);
+  }, [products, allProducts, debouncedSearch, category, manufacturer, sort, stockFilter, imageFilter, knowledgeFilter, baselinkerFilter, waproMagFilter, visibilityFilter, view, favoriteSet, reservedVersion, promosVersion]);
 
   const favoriteCount = useMemo(
     () => allProducts.reduce((n, p) => n + (favoriteSet.has(p.id) ? 1 : 0), 0),
@@ -1955,6 +1959,15 @@ export default function App() {
               onOpenKnowledgeWeak={(cat) => openKnowledgeGaps(cat ?? 'Wszystkie')}
             />
           </Suspense>
+        ) : view === 'promotions' && isCatalogProduct() ? (
+          <InlineErrorBoundary label="Promocje">
+            <PromotionsView
+              products={activeAllProducts}
+              canEdit={roleCan(role, 'managePromotions')}
+              canSeeMargins={roleCan(role, 'viewPrices')}
+              onOpenLabels={() => setView('labels')}
+            />
+          </InlineErrorBoundary>
         ) : view === 'small-images' && isCatalogProduct() ? (
           <InlineErrorBoundary label="Zdjęcia do poprawy">
             <CatalogSmallImagesView

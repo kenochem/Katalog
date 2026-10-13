@@ -429,6 +429,27 @@ export function AdminBaselinkerSection() {
             </label>
             <label className="block">
               <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Grupa cenowa BaseLinker dla promocji (Centrum promocji)
+              </span>
+              <select
+                value={draft.promoPriceGroupId ?? ''}
+                onChange={(e) => setDraft({ ...draft, promoPriceGroupId: e.target.value })}
+                className="input-field text-sm"
+              >
+                <option value="">— nie wysyłaj promocji do BL —</option>
+                {asList(config?.priceGroups).map((g, i) => (
+                  <option key={i} value={String(g.price_group_id)}>
+                    {String(g.name ?? g.price_group_id)} ({String(g.price_group_id)}
+                    {g.currency ? `, ${String(g.currency)}` : ''})
+                  </option>
+                ))}
+              </select>
+              <span className="mt-1 block text-[11px] text-slate-500">
+                Osobna grupa (inna niż zwykła). W czasie promocji dostaje cenę promocyjną, po jej końcu wraca cena zwykła.
+              </span>
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Limit zmian w jednym automatycznym przebiegu
               </span>
               <input

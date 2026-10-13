@@ -21,6 +21,7 @@ import {
   Settings2,
   Sparkles,
   Star,
+  Tag,
   TrendingUp,
 } from 'lucide-react';
 import type { View } from '../types';
@@ -67,6 +68,7 @@ const DEFAULT_ORDER: View[] = [
   'catalog-hidden',
   'missing-images',
   'small-images',
+  'promotions',
   'labels',
   'admin',
   'warehouse',
@@ -309,6 +311,13 @@ export function LeftSidebarNav({
         label: 'Zdjęcia do poprawy',
         available: isCatalogProduct && roleCan(role, 'viewProgress'),
         onClick: () => setView('small-images'),
+      },
+      {
+        id: 'promotions',
+        icon: <Tag className="h-4 w-4" />,
+        label: 'Promocje',
+        available: isCatalogProduct && roleCan(role, 'viewPrices'),
+        onClick: () => setView('promotions'),
       },
       {
         id: 'labels',

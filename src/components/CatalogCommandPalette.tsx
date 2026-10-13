@@ -18,6 +18,7 @@ import {
   ScrollText,
   History,
   Sparkles,
+  Tag,
   Star,
   FolderOpen,
   TrendingUp,
@@ -207,6 +208,12 @@ export function CatalogCommandPalette({
         label: 'Widok: Nowe produkty',
         icon: <Sparkles className="h-4 w-4" />,
         run: wrap(() => onNavigate('new-products')),
+      },
+      {
+        id: 'nav-promotions',
+        label: 'Widok: Promocje (Centrum promocji)',
+        icon: <Tag className="h-4 w-4" />,
+        run: wrap(() => onNavigate('promotions')),
       },
       {
         id: 'nav-updates',

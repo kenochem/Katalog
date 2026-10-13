@@ -17,6 +17,9 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
  *   history                                   — ostatnie wysylki (admin)
  *   images-status {skus}                      — porownanie zdjec katalog vs BL (kazdy zalogowany, odczyt)
  *   images-push   {skus}                      — DOKLADA brakujace zdjecia do BL (nigdy nie usuwa; admin)
+ *   promo-apply   {campaignId}                — wysyla ceny promocyjne kampanii do osobnej grupy cenowej BL
+ *   promo-end     {campaignId}                — konczy kampanie: w grupie promocyjnej wraca cena zwykla
+ *   promo-tick                                — start/koniec kampanii wg dat (wywoluje agent WAPRO co kilka minut)
  */
 
 const corsHeaders: Record<string, string> = {
@@ -43,6 +46,8 @@ interface SyncSettings {
   stockAuto: boolean;
   priceAuto: boolean;
   priceGroupId: string;
+  /** Grupa cenowa BL, w ktorej trzymamy ceny promocyjne (Centrum promocji). */
+  promoPriceGroupId: string;
   skipManualStock: boolean;
   maxAutoChanges: number;
   excludePrefixes: string[];
@@ -56,6 +61,7 @@ const DEFAULT_SETTINGS: SyncSettings = {
   stockAuto: false,
   priceAuto: false,
   priceGroupId: '',
+  promoPriceGroupId: '',
   skipManualStock: true,
   maxAutoChanges: 400,
   excludePrefixes: [],
@@ -605,6 +611,184 @@ async function existingBlSkus(): Promise<{ exact: Set<string>; norm: Set<string>
   return { exact, norm };
 }
 
+// ---------------------------------------------------------------------------------------------
+// Centrum promocji: ceny promocyjne do OSOBNEJ grupy cenowej BL; po koncu promocji wraca cena zwykla
+// ---------------------------------------------------------------------------------------------
+
+interface PromoResult {
+  campaignId: string;
+  action: 'apply' | 'end';
+  total: number;
+  done: number;
+  skipped: number;
+  errors: number;
+  message: string;
+}
+
+async function promoLinks(admin: Admin, skus: string[]): Promise<Map<string, number>> {
+  const links = new Map<string, number>();
+  for (let i = 0; i < skus.length; i += 200) {
+    const { data } = await admin.from('baselinker_links').select('sku,bl_product_id').in('sku', skus.slice(i, i + 200));
+    for (const r of data ?? []) links.set(String(r.sku).toUpperCase(), Number(r.bl_product_id));
+  }
+  return links;
+}
+
+async function promoSend(groupId: string, rows: { blId: number; price: number }[]): Promise<string> {
+  let error = '';
+  for (let i = 0; i < rows.length; i += 500) {
+    const chunk = rows.slice(i, i + 500);
+    const products: Record<string, Record<string, number>> = {};
+    for (const r of chunk) products[String(r.blId)] = { [groupId]: r.price };
+    try {
+      await bl('updateInventoryProductsPrices', { inventory_id: INVENTORY_ID, products });
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+      break;
+    }
+  }
+  return error;
+}
+
+async function promoApply(admin: Admin, campaignId: string, userLabel: string): Promise<PromoResult> {
+  const settings = await loadSettings(admin);
+  const groupId = settings.promoPriceGroupId;
+  if (!groupId) throw new Error('Wybierz grupę cenową dla promocji (Administracja → BaseLinker → ustawienia).');
+  const { data: camp } = await admin.from('promo_campaigns').select('*').eq('id', campaignId).maybeSingle();
+  if (!camp) throw new Error('Nie znaleziono kampanii');
+  const { data: items } = await admin.from('promo_items').select('*').eq('campaign_id', campaignId);
+  const list = (items ?? []) as Record<string, unknown>[];
+  const links = await promoLinks(admin, list.map((i) => String(i.sku).toUpperCase()));
+
+  const rows: { blId: number; price: number; id: string }[] = [];
+  let skipped = 0;
+  for (const it of list) {
+    const blId = links.get(String(it.sku).toUpperCase());
+    const price = Number(it.promo_gross);
+    if (!blId || !Number.isFinite(price) || price <= 0) {
+      skipped++;
+      await admin.from('promo_items').update({ bl_state: 'skipped', bl_error: blId ? 'zła cena' : 'produktu nie ma w BaseLinkerze' }).eq('id', it.id);
+      continue;
+    }
+    rows.push({ blId, price: Math.round(price * 100) / 100, id: String(it.id) });
+  }
+  const error = await promoSend(groupId, rows);
+  const nowIso = new Date().toISOString();
+  if (error) {
+    await admin.from('promo_campaigns').update({ last_error: error, updated_at: nowIso }).eq('id', campaignId);
+    await admin.from('baselinker_sync_log').insert({
+      trigger: 'manual', user_label: userLabel, field: 'promo', requested: list.length, updated: 0, skipped,
+      status: 'error', note: `Promocja „${camp.name}”: ${error}`,
+    });
+    return { campaignId, action: 'apply', total: list.length, done: 0, skipped, errors: rows.length, message: error };
+  }
+  for (let i = 0; i < rows.length; i += 200) {
+    await admin.from('promo_items').update({ bl_state: 'applied', bl_error: '' }).in('id', rows.slice(i, i + 200).map((r) => r.id));
+  }
+  await admin
+    .from('promo_campaigns')
+    .update({ status: 'active', applied_at: nowIso, last_error: '', updated_at: nowIso })
+    .eq('id', campaignId);
+  await admin.from('baselinker_sync_log').insert({
+    trigger: 'manual', user_label: userLabel, field: 'promo', requested: list.length, updated: rows.length, skipped,
+    status: skipped ? 'warning' : 'ok', note: `Promocja „${camp.name}” — ceny wysłane do BaseLinker (${rows.length})`,
+    sample: rows.slice(0, 20).map((r) => ({ blId: r.blId, value: r.price })),
+  });
+  return { campaignId, action: 'apply', total: list.length, done: rows.length, skipped, errors: 0, message: 'ok' };
+}
+
+async function promoEnd(admin: Admin, campaignId: string, userLabel: string): Promise<PromoResult> {
+  const settings = await loadSettings(admin);
+  const groupId = settings.promoPriceGroupId;
+  if (!groupId) throw new Error('Wybierz grupę cenową dla promocji (Administracja → BaseLinker → ustawienia).');
+  const { data: camp } = await admin.from('promo_campaigns').select('*').eq('id', campaignId).maybeSingle();
+  if (!camp) throw new Error('Nie znaleziono kampanii');
+  const { data: items } = await admin.from('promo_items').select('*').eq('campaign_id', campaignId);
+  const list = (items ?? []) as Record<string, unknown>[];
+  const skus = list.map((i) => String(i.sku).toUpperCase());
+  const links = await promoLinks(admin, skus);
+
+  // cena zwykla: aktualna z katalogu, a gdy jej brak — zapamietana przy dodaniu do kampanii
+  const current = new Map<string, number>();
+  for (let i = 0; i < skus.length; i += 200) {
+    const { data } = await admin
+      .from('products')
+      .select('sku,price_sale_gross,price_sale_net,vat:product_meta->>vatRate')
+      .in('sku', skus.slice(i, i + 200));
+    for (const r of data ?? []) {
+      const g = ourGrossPrice(r);
+      if (g != null) current.set(String(r.sku).toUpperCase(), g);
+    }
+  }
+
+  const rows: { blId: number; price: number; id: string }[] = [];
+  let skipped = 0;
+  for (const it of list) {
+    const sku = String(it.sku).toUpperCase();
+    const blId = links.get(sku);
+    const price = current.get(sku) ?? Number(it.regular_gross);
+    if (!blId || !Number.isFinite(price) || price <= 0 || it.bl_state !== 'applied') {
+      skipped++;
+      continue;
+    }
+    rows.push({ blId, price: Math.round(price * 100) / 100, id: String(it.id) });
+  }
+  const error = await promoSend(groupId, rows);
+  const nowIso = new Date().toISOString();
+  if (error) {
+    await admin.from('promo_campaigns').update({ last_error: error, updated_at: nowIso }).eq('id', campaignId);
+    await admin.from('baselinker_sync_log').insert({
+      trigger: 'manual', user_label: userLabel, field: 'promo', requested: list.length, updated: 0, skipped,
+      status: 'error', note: `Koniec promocji „${camp.name}”: ${error}`,
+    });
+    return { campaignId, action: 'end', total: list.length, done: 0, skipped, errors: rows.length, message: error };
+  }
+  for (let i = 0; i < rows.length; i += 200) {
+    await admin.from('promo_items').update({ bl_state: 'restored', bl_error: '' }).in('id', rows.slice(i, i + 200).map((r) => r.id));
+  }
+  await admin
+    .from('promo_campaigns')
+    .update({ status: 'ended', ended_at: nowIso, last_error: '', updated_at: nowIso })
+    .eq('id', campaignId);
+  await admin.from('baselinker_sync_log').insert({
+    trigger: 'manual', user_label: userLabel, field: 'promo', requested: list.length, updated: rows.length, skipped,
+    status: 'ok', note: `Koniec promocji „${camp.name}” — w grupie promocyjnej wróciła cena zwykła (${rows.length})`,
+  });
+  return { campaignId, action: 'end', total: list.length, done: rows.length, skipped, errors: 0, message: 'ok' };
+}
+
+/** Start zatwierdzonych kampanii i koniec tych, którym minęła data — wywoływane cyklicznie przez agenta. */
+async function promoTick(admin: Admin, userLabel: string): Promise<PromoResult[]> {
+  const nowIso = new Date().toISOString();
+  const out: PromoResult[] = [];
+  const { data: toStart } = await admin
+    .from('promo_campaigns')
+    .select('id,starts_at')
+    .eq('status', 'scheduled')
+    .or(`starts_at.is.null,starts_at.lte.${nowIso}`);
+  for (const c of toStart ?? []) {
+    try {
+      out.push(await promoApply(admin, String(c.id), userLabel));
+    } catch (e) {
+      await admin.from('promo_campaigns').update({ last_error: e instanceof Error ? e.message : String(e) }).eq('id', c.id);
+    }
+  }
+  const { data: toEnd } = await admin
+    .from('promo_campaigns')
+    .select('id')
+    .eq('status', 'active')
+    .not('ends_at', 'is', null)
+    .lte('ends_at', nowIso);
+  for (const c of toEnd ?? []) {
+    try {
+      out.push(await promoEnd(admin, String(c.id), userLabel));
+    } catch (e) {
+      await admin.from('promo_campaigns').update({ last_error: e instanceof Error ? e.message : String(e) }).eq('id', c.id);
+    }
+  }
+  return out;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -623,6 +807,7 @@ Deno.serve(async (req) => {
     let userLabel = 'agent WAPRO';
     let isAdmin = false;
     let canManage = isSystem;
+    let canPromo = isSystem;
     let userRole = isSystem ? 'system' : '';
     if (!isSystem) {
       const userClient = createClient(supabaseUrl, anonKey, {
@@ -643,11 +828,13 @@ Deno.serve(async (req) => {
       isAdmin = prof.role === 'admin';
       userRole = String(prof.role ?? '');
       canManage = isAdmin;
+      canPromo = isAdmin;
       if (!canManage) {
         // Uprawnienie „manageBaselinker” nadawane roli w Administracja → Uprawnienia (app_role_matrix).
         const { data: mx } = await admin.from('app_role_matrix').select('matrix').eq('id', 'default').maybeSingle();
         const row = ((mx?.matrix ?? {}) as Record<string, Record<string, unknown>>)[userRole];
         canManage = row?.manageBaselinker === true;
+        canPromo = row?.managePromotions === true || canManage;
       }
       userLabel = String(prof.display_name || prof.email || '');
     }
@@ -655,6 +842,9 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const action = String(body.action ?? '');
 
+    const needPromo = () => {
+      if (!canPromo && !canManage) throw Object.assign(new Error('Brak uprawnienia do zarządzania promocjami'), { status: 403 });
+    };
     const needAdmin = () => {
       if (!canManage) throw Object.assign(new Error('Brak uprawnienia do zarządzania BaseLinkerem (Administracja → Uprawnienia)'), { status: 403 });
     };
@@ -848,6 +1038,35 @@ Deno.serve(async (req) => {
       return json({ requested: skus.length, ok: okCount, added, results });
     }
 
+    // ---- promocje -------------------------------------------------------------------------
+    if (action === 'promo-apply' || action === 'promo-end') {
+      needPromo();
+      const campaignId = String(body.campaignId ?? '').trim();
+      if (!campaignId) return json({ error: 'Brak campaignId' }, 400);
+      const res =
+        action === 'promo-apply'
+          ? await promoApply(admin, campaignId, userLabel)
+          : await promoEnd(admin, campaignId, userLabel);
+      if (userId) {
+        await admin.from('audit_log').insert({
+          user_id: userId,
+          user_label: userLabel,
+          user_role: userRole,
+          app: 'baselinker',
+          action: action === 'promo-apply' ? 'promo.apply' : 'promo.end',
+          entity_type: 'promo_campaign',
+          entity_id: campaignId,
+          summary: `${action === 'promo-apply' ? 'Start promocji' : 'Koniec promocji'}: ${res.done}/${res.total} pozycji (pominięto ${res.skipped})`,
+        });
+      }
+      return json(res);
+    }
+    if (action === 'promo-tick') {
+      needPromo();
+      const results = await promoTick(admin, userLabel);
+      return json({ ok: true, results });
+    }
+
     // ---- config --------------------------------------------------------------------------
     if (action === 'config') {
       needAdmin();
@@ -881,6 +1100,7 @@ Deno.serve(async (req) => {
         stockAuto: Boolean(incoming.stockAuto),
         priceAuto: Boolean(incoming.priceAuto),
         priceGroupId: String(incoming.priceGroupId ?? '').trim(),
+        promoPriceGroupId: String(incoming.promoPriceGroupId ?? '').trim(),
         skipManualStock: incoming.skipManualStock !== false,
         maxAutoChanges: Math.min(5000, Math.max(1, Math.round(Number(incoming.maxAutoChanges) || 400))),
         excludePrefixes: (incoming.excludePrefixes ?? []).map((s) => String(s).toUpperCase().trim()).filter(Boolean),

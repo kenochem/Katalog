@@ -336,6 +336,31 @@ GROUP BY UPPER(LTRIM(RTRIM(INDEKS_KATALOGOWY)));
   }
 }
 
+# ------------------------------------------------------------------ promocje (Centrum promocji): start / koniec wg dat
+# Funkcja baselinker (action promo-tick) sama sprawdza kampanie: zatwierdzone z data startu <= teraz -> wysyla ceny
+# promocyjne do grupy cenowej BL; aktywne z data konca <= teraz -> przywraca cene zwykla. Wywolanie co ~3 min.
+function Update-Promotions {
+  $stamp = Join-Path $SyncDir 'promo-tick.stamp'
+  if (Test-Path $stamp) {
+    if (((Get-Date) - (Get-Item $stamp).LastWriteTime).TotalMinutes -lt 3) { return }
+  }
+  try {
+    Set-Content -Path $stamp -Value (Get-Date -Format 'o')
+    $blHeaders = @{ apikey = $ServiceKey; Authorization = "Bearer $ServiceKey"; 'Content-Type' = 'application/json' }
+    $blBody = [System.Text.Encoding]::UTF8.GetBytes((@{ action = 'promo-tick' } | ConvertTo-Json -Compress))
+    $res = Invoke-RestMethod -Uri ('{0}/functions/v1/baselinker' -f $script:SupabaseUrl) -Headers $blHeaders -Method Post -Body $blBody -ContentType 'application/json; charset=utf-8'
+    $n = @($res.results).Count
+    if ($n -gt 0) {
+      foreach ($r in @($res.results)) {
+        Write-Log ('Promocje: {0} kampanii {1}: {2}/{3} pozycji, pominieto {4}, {5}' -f $r.action, $r.campaignId, $r.done, $r.total, $r.skipped, $r.message)
+      }
+    }
+  } catch {
+    # brak tabel promocji / funkcja niewdrozona - nie przeszkadza reszcie agenta
+    Write-Log ('Promocje (tick) nieudane: {0}' -f $_.Exception.Message)
+  }
+}
+
 # ------------------------------------------------------------------ pobranie zlecen
 if ($RequestId) {
   $pendingUri = '{0}/rest/v1/wapro_order_requests?id=eq.{1}&select=id,seq,payload,requested_at' -f $script:SupabaseUrl, $RequestId
@@ -356,7 +381,7 @@ try {
   if ($OnlyIfPending) { Write-Log ('Brak tabeli wapro_order_requests lub blad: {0}' -f $_.Exception.Message); exit 0 }
   throw
 }
-if (-not $DryRun -and -not $RequestId) { Update-OrderStates; Update-Reserved }
+if (-not $DryRun -and -not $RequestId) { Update-OrderStates; Update-Reserved; Update-Promotions }
 if ($pending.Count -eq 0) {
   if (-not $OnlyIfPending) { Write-Log 'Brak zlecen do przetworzenia' }
   exit 0
