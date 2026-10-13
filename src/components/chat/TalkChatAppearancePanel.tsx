@@ -180,7 +180,7 @@ export function TalkChatAppearancePanel({ onClose, userId }: TalkChatAppearanceP
                 onClick={() => patch({ accentColor: c.id })}
                 className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-[11px] transition ${
                   appearance.accentColor === c.id
-                    ? 'border-brand-500/50 bg-brand-500/10 text-brand-900 dark:text-brand-100'
+                    ? 'border-brand-500/50 bg-brand-500/10 text-brand-900 dark:text-brand-200'
                     : 'border-slate-400 bg-white text-slate-900 hover:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100'
                 }`}
               >
@@ -525,7 +525,7 @@ function OptionCard({
       onClick={onClick}
       className={`rounded-xl border px-3 py-2.5 text-left transition ${
         active
-          ? 'border-brand-500/60 bg-brand-50 text-brand-900 dark:bg-brand-500/15 dark:text-brand-100'
+          ? 'border-brand-500/60 bg-brand-50 text-brand-900 dark:bg-brand-500/15 dark:text-brand-200'
           : 'border-slate-300 bg-white text-slate-900 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
       }`}
     >
@@ -542,7 +542,7 @@ function ToggleChip({ active, label, onClick }: { active: boolean; label: string
       onClick={onClick}
       className={`flex-1 rounded-xl border px-3 py-2 text-xs font-medium ${
         active
-          ? 'border-brand-500/60 bg-brand-50 text-brand-900 dark:bg-brand-500/15 dark:text-brand-100'
+          ? 'border-brand-500/60 bg-brand-50 text-brand-900 dark:bg-brand-500/15 dark:text-brand-200'
           : 'border-slate-400 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
       }`}
     >

@@ -16,6 +16,7 @@ import {
   Printer,
   Search,
   ScrollText,
+  History,
   Sparkles,
   Star,
   FolderOpen,
@@ -203,9 +204,15 @@ export function CatalogCommandPalette({
       },
       {
         id: 'nav-new-products',
-        label: 'Widok: Nowości',
+        label: 'Widok: Nowe produkty',
         icon: <Sparkles className="h-4 w-4" />,
         run: wrap(() => onNavigate('new-products')),
+      },
+      {
+        id: 'nav-updates',
+        label: 'Widok: Aktualizacje (dziennik zmian)',
+        icon: <History className="h-4 w-4" />,
+        run: wrap(() => onNavigate('updates')),
       },
     ];
     if (canFavorites) {

@@ -452,7 +452,7 @@ export function CrmMapRoutesView({
               )}
             </div>
             {routeResult && (
-              <div className="mt-2 space-y-1 rounded-xl border border-brand-300 bg-brand-50 px-3 py-2 text-xs text-brand-900 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-100">
+              <div className="mt-2 space-y-1 rounded-xl border border-brand-300 bg-brand-50 px-3 py-2 text-xs text-brand-900 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-200">
                 <p className="font-semibold">
                   {formatDistance(routeResult.distanceM)} ·{' '}
                   {formatDuration(routeResult.durationS)}

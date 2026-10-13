@@ -115,6 +115,7 @@ export type View =
   | 'warehouse'
   | 'logs'
   | 'new-products'
+  | 'updates'
   | 'history'
   | 'admin'
   | 'crm'

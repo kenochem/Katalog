@@ -206,7 +206,7 @@ export function CatalogNewProductsView({
       <div className="flex items-start justify-between gap-3 rounded-xl border border-brand-500/40 bg-brand-500/10 px-4 py-3">
         <div className="flex items-start gap-2">
           <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-brand-400" />
-          <p className="text-sm text-brand-950 dark:text-brand-100">
+          <p className="text-sm text-brand-950 dark:text-brand-200">
             {products === null ? (
               'Wczytuję nowe produkty…'
             ) : products.length === 0 ? (

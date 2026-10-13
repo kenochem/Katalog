@@ -164,7 +164,7 @@ function FilterTrigger({
       onClick={onClick}
       className={`catalog-filter-trigger inline-flex min-w-0 max-w-[min(100%,14rem)] items-center gap-1.5 rounded-xl border px-3 py-2 text-left text-xs font-medium transition sm:max-w-none ${
         open
-          ? 'border-brand-500/50 bg-brand-50 text-brand-900 dark:bg-brand-500/15 dark:text-brand-100'
+          ? 'border-brand-500/50 bg-brand-50 text-brand-900 dark:bg-brand-500/15 dark:text-brand-200'
           : active
             ? 'border-brand-500/35 bg-brand-50 text-brand-900 dark:bg-brand-500/10 dark:text-brand-200'
             : 'border-slate-700 bg-slate-900/60 text-slate-300 hover:border-slate-600 hover:bg-slate-800/80'
@@ -365,7 +365,7 @@ export function CatalogFilterBar({
         onClick={() => pickManufacturer(name)}
         className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-left text-sm transition ${
           selected
-            ? 'border-brand-500/50 bg-brand-50 font-semibold text-brand-900 ring-1 ring-brand-500/25 dark:bg-brand-500/15 dark:text-brand-100'
+            ? 'border-brand-500/50 bg-brand-50 font-semibold text-brand-900 ring-1 ring-brand-500/25 dark:bg-brand-500/15 dark:text-brand-200'
             : 'border-slate-700/80 bg-slate-800/40 text-slate-200 hover:border-slate-600 hover:bg-slate-800'
         }`}
       >
@@ -399,7 +399,7 @@ export function CatalogFilterBar({
         onClick={() => pickCategory(cat)}
         className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-left text-sm transition ${
           selected
-            ? 'border-brand-500/50 bg-brand-50 font-semibold text-brand-900 ring-1 ring-brand-500/25 dark:bg-brand-500/15 dark:text-brand-100'
+            ? 'border-brand-500/50 bg-brand-50 font-semibold text-brand-900 ring-1 ring-brand-500/25 dark:bg-brand-500/15 dark:text-brand-200'
             : 'border-slate-700/80 bg-slate-800/40 text-slate-200 hover:border-slate-600 hover:bg-slate-800'
         }`}
       >
@@ -485,7 +485,7 @@ export function CatalogFilterBar({
               }}
               className={`flex w-full items-center px-3 py-2 text-left text-sm transition ${
                 current === opt.id
-                  ? 'bg-brand-50 font-semibold text-brand-900 dark:bg-brand-500/15 dark:text-brand-100'
+                  ? 'bg-brand-50 font-semibold text-brand-900 dark:bg-brand-500/15 dark:text-brand-200'
                   : 'text-slate-200 hover:bg-slate-800'
               }`}
             >

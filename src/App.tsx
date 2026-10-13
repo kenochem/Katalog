@@ -166,9 +166,14 @@ const LibraryView = lazy(() =>
 const CatalogLogsView = lazy(() =>
   import('./components/CatalogLogsView').then((m) => ({ default: m.CatalogLogsView })),
 );
-const CatalogNewsHubView = lazy(() =>
-  import('./components/CatalogNewsHubView').then((m) => ({
-    default: m.CatalogNewsHubView,
+const CatalogNewProductsView = lazy(() =>
+  import('./components/CatalogNewProductsView').then((m) => ({
+    default: m.CatalogNewProductsView,
+  })),
+);
+const CatalogChangelogView = lazy(() =>
+  import('./components/CatalogChangelogView').then((m) => ({
+    default: m.CatalogChangelogView,
   })),
 );
 const CatalogHiddenView = lazy(() =>
@@ -223,14 +228,8 @@ function loadSavedSort(): CatalogSort {
 }
 
 function loadSavedCatalogListFilter(): CatalogListFilter {
-  const cached = getCachedCatalogPreferences().catalogListFilter;
-  if (cached === 'all' || cached === 'shop' || cached === 'accessories') return cached;
-  try {
-    const v = localStorage.getItem(CATALOG_LIST_FILTER_KEY);
-    if (v === 'all' || v === 'shop' || v === 'accessories') return v;
-  } catch {
-    /* ignore */
-  }
+  // Przełącznik Akcesoria / Produkty został usunięty z filtrów — lista zawsze pokazuje „Wszystkie”
+  // (zapisane wcześniej ustawienie nie może zostać „zawieszone” bez możliwości zmiany).
   return 'all';
 }
 
@@ -358,21 +357,7 @@ export default function App() {
           /* ignore */
         }
       }
-      if (
-        c?.catalogListFilter === 'all' ||
-        c?.catalogListFilter === 'shop' ||
-        c?.catalogListFilter === 'accessories'
-      ) {
-        setCatalogListFilter(c.catalogListFilter);
-        try {
-          localStorage.setItem(CATALOG_LIST_FILTER_KEY, c.catalogListFilter);
-          if (c.catalogListFilter !== 'all') {
-            localStorage.setItem(CATALOG_STORAGE_KEY, c.catalogListFilter);
-          }
-        } catch {
-          /* ignore */
-        }
-      }
+      // zapisany w chmurze podział Akcesoria / Produkty jest ignorowany — filtr został usunięty z interfejsu
     });
   }, [mode, user?.id]);
 
@@ -657,20 +642,6 @@ export default function App() {
     () => [...(catalogCache.accessories ?? []), ...(catalogCache.shop ?? [])],
     [catalogCache],
   );
-
-  const catalogKindCounts = useMemo(() => {
-    let accessories = 0;
-    let shop = 0;
-    for (const p of allProducts) {
-      if (resolveProductCatalogKind(p) === 'accessories') accessories += 1;
-      else shop += 1;
-    }
-    return {
-      all: allProducts.length,
-      accessories,
-      shop,
-    };
-  }, [allProducts]);
 
   const locationsMigratedRef = useRef(false);
   const favoritesSyncEpoch = useRef(0);
@@ -1851,11 +1822,7 @@ export default function App() {
             catalogProducts={products}
             catalogLabel={catalogExportLabel}
             useHubFilters={isCatalogProduct()}
-            catalogFilter={showsCatalogSwitcher() ? catalogListFilter : undefined}
-            onCatalogFilterChange={
-              showsCatalogSwitcher() ? setCatalogFilter : undefined
-            }
-            catalogKindCounts={showsCatalogSwitcher() ? catalogKindCounts : undefined}
+            // podział Akcesoria / Produkty w filtrach usunięty (nikt z niego nie korzystał) — zawsze „Wszystkie”
             showCatalogKindBadge={catalogListFilter === 'all'}
             shopLoading={shopLoading}
             canAddProduct={roleCan(role, 'addProduct')}
@@ -1903,7 +1870,7 @@ export default function App() {
           </Suspense>
         ) : view === 'new-products' && isCatalogProduct() ? (
           <Suspense fallback={<ViewFallback />}>
-            <CatalogNewsHubView
+            <CatalogNewProductsView
               gridDensity={gridDensity}
               hideImages={!roleCan(role, 'viewImages')}
               showPrices={roleCan(role, 'viewPrices')}
@@ -1911,6 +1878,10 @@ export default function App() {
               collectionUserKey={collectionUserKey || undefined}
               onCollectionsChange={() => setCollectionsRevision((r) => r + 1)}
             />
+          </Suspense>
+        ) : view === 'updates' && isCatalogProduct() ? (
+          <Suspense fallback={<ViewFallback />}>
+            <CatalogChangelogView />
           </Suspense>
         ) : view === 'library' ? (
           <Suspense fallback={<ViewFallback />}>

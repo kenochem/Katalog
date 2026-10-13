@@ -9,6 +9,7 @@ import {
   EyeOff,
   FolderOpen,
   GripVertical,
+  History,
   Home,
   ImageOff,
   Layers,
@@ -57,6 +58,7 @@ const DEFAULT_ORDER: View[] = [
   'logs',
   'history',
   'new-products',
+  'updates',
   'favorites',
   'collections',
   'kits',
@@ -229,11 +231,18 @@ export function LeftSidebarNav({
       {
         id: 'new-products',
         icon: <Sparkles className="h-4 w-4" />,
-        label: 'Nowości',
+        label: 'Nowe produkty',
         count: newProductsCount,
         highlight: newProductsCount > 0,
         available: isCatalogProduct,
         onClick: () => setView('new-products'),
+      },
+      {
+        id: 'updates',
+        icon: <History className="h-4 w-4" />,
+        label: 'Aktualizacje',
+        available: isCatalogProduct,
+        onClick: () => setView('updates'),
       },
       {
         id: 'favorites',
@@ -400,7 +409,7 @@ export function LeftSidebarNav({
           Menu
           <button
             type="button"
-            onClick={() => setView('new-products')}
+            onClick={() => setView('updates')}
             className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold normal-case tracking-normal tabular-nums text-slate-500 hover:text-brand-600 dark:bg-slate-800/70 dark:text-slate-400 dark:hover:text-brand-300"
             title="Wersja aplikacji — zobacz dziennik zmian"
           >

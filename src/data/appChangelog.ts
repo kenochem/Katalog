@@ -13,6 +13,20 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-13',
+    title: 'Menu: osobne sekcje „Nowe produkty” i „Aktualizacje”',
+    description:
+      'Dotychczasowe „Nowości” zostały rozdzielone w menu bocznym (i w „Więcej” na telefonie) na dwie osobne sekcje: „Nowe produkty” (produkty dopisane z WAPRO) oraz „Aktualizacje” (dziennik zmian aplikacji z numerami wersji). Numer wersji obok napisu „Menu” otwiera teraz od razu Aktualizacje. Dostępne też w wyszukiwarce poleceń.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-13',
+    title: 'Filtry: usunięty podział Akcesoria / Produkty; poprawiony kontrast zaznaczonych pozycji',
+    description:
+      'Z paska filtrów zniknął przełącznik Wszystkie / Akcesoria / Produkty (nikt z niego nie korzystał, a zajmował miejsce) — lista zawsze pokazuje wszystkie produkty. Poprawiony kontrast w ciemnych motywach: zaznaczone pozycje w menu filtrów (np. „Z rezerwacją (R)”), filtry, czat i mapa tras miały ciemnozielony tekst na ciemnym tle — teraz są jasne i czytelne.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-13',
     title: 'Katalog: stan realny (dostępny) i filtr „Z rezerwacją (R)”',
     description:
       'Na kafelku i w szczegółach produktu główną liczbą jest teraz stan realny: stan WAPRO minus zarezerwowane w otwartych zamówieniach (jak „Ilość dost.” w WAPRO), a obok pomarańczowe „R n” z liczbą zarezerwowanych; pełny stan WAPRO widać w podpowiedzi. Filtry stanu („Na stanie”, „Niski stan”, „Brak na stanie”) i sortowanie po stanie liczą stan realny. Nowy filtr stanu „Z rezerwacją (R)” pokazuje tylko produkty z rezerwacjami. Tryb edycji stanu nadal pokazuje pełny stan WAPRO.',
