@@ -15,6 +15,12 @@ import {
 } from '../lib/syncNotifications';
 import { parseWaproSyncMessage } from '../lib/waproSkuMatch';
 import { DatabaseSyncIcon } from './DatabaseSyncIcon';
+import type { Product } from '../types';
+import { roleCan } from '../lib/roles';
+import { refreshBaselinkerLinks } from '../lib/baselinkerApi';
+import { refreshLiveLinks } from '../lib/baselinkerLive';
+import { hasBaselinkerLink } from '../lib/baselinkerLink';
+import { isWaproSkeletonProduct } from '../lib/productMeta';
 
 interface RefreshControlsProps {
   loading: boolean;
@@ -23,6 +29,34 @@ interface RefreshControlsProps {
   /** Zakres sync WAPRO (domyślnie oba katalogi). */
   catalog?: StockSyncScope;
   className?: string;
+  /** Pokaż przycisk weryfikacji BaseLinker (znaczniki B / W). */
+  showBaselinkerVerify?: boolean;
+  /** Produkty do podsumowania po weryfikacji (ile B / W). */
+  products?: Product[];
+}
+
+/** Logo przycisku: niebieskie „B” i pomarańczowe „W” — takie same jak znaczniki na kafelkach. */
+function BaselinkerVerifyIcon({ spinning }: { spinning: boolean }) {
+  return (
+    <span className="relative inline-flex h-5 w-6 items-center" aria-hidden>
+      <span
+        className={`absolute left-0 top-0 flex h-[18px] w-[18px] items-center justify-center rounded-[5px] text-[11px] font-extrabold leading-none text-white shadow ${
+          spinning ? 'animate-pulse' : ''
+        }`}
+        style={{ backgroundColor: '#2563eb', boxShadow: '0 0 0 1px rgba(37,99,235,0.45)' }}
+      >
+        B
+      </span>
+      <span
+        className={`absolute bottom-0 right-0 flex h-[14px] w-[14px] items-center justify-center rounded-[4px] text-[9px] font-extrabold leading-none text-white ring-2 ring-slate-900 ${
+          spinning ? 'animate-pulse' : ''
+        }`}
+        style={{ backgroundColor: '#f97316' }}
+      >
+        W
+      </span>
+    </span>
+  );
 }
 
 /**
@@ -36,9 +70,12 @@ export function RefreshControls({
   canRequestStockSync,
   catalog = 'all',
   className = '',
+  showBaselinkerVerify = false,
+  products,
 }: RefreshControlsProps) {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [syncBusy, setSyncBusy] = useState(false);
+  const [blBusy, setBlBusy] = useState(false);
   const scope: StockSyncScope = catalog;
   const scopeLabel = stockSyncScopeLabel(scope);
   const userId = user?.id;
@@ -130,10 +167,60 @@ export function RefreshControls({
     }
   }
 
-  const busy = loading || syncBusy;
+  const busy = loading || syncBusy || blBusy;
+
+  /**
+   * Weryfikacja znaczników BaseLinker: administrator (uprawnienie manageBaselinker) odświeża powiązania
+   * z żywą listą produktów w BL; pozostali — pobierają aktualne powiązania z bazy.
+   */
+  async function onVerifyBaselinker() {
+    setBlBusy(true);
+    try {
+      let serverNote = '';
+      if (roleCan(role, 'manageBaselinker')) {
+        const r = await refreshBaselinkerLinks();
+        if (r.skipped) serverNote = ' (powiązania odświeżone niedawno)';
+        else if (typeof r.bl === 'number')
+          serverNote = ` · w BaseLinkerze: ${r.bl} produktów${r.removed ? `, usunięte powiązania: ${r.removed}` : ''}`;
+      }
+      await refreshLiveLinks(true);
+      let counts = '';
+      if (products && products.length) {
+        let b = 0;
+        let w = 0;
+        for (const p of products) {
+          if (p.isGroup) continue;
+          if (hasBaselinkerLink(p)) b++;
+          else if (isWaproSkeletonProduct(p)) w++;
+        }
+        counts = `B (wystawione): ${b} · W (do uzupełnienia, brak w BL): ${w}`;
+      }
+      showToast(
+        `BaseLinker zweryfikowany. ${counts}${serverNote}`.trim(),
+        'ok',
+        9000,
+      );
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Nie udało się zweryfikować BaseLinkera', 'error', 7000);
+    } finally {
+      setBlBusy(false);
+    }
+  }
 
   return (
     <div className={`flex items-center gap-0.5 ${className}`}>
+      {showBaselinkerVerify && (
+        <button
+          type="button"
+          onClick={() => void onVerifyBaselinker()}
+          disabled={busy}
+          className="mr-1 rounded-lg p-2.5 hover:bg-slate-800 disabled:opacity-60 sm:p-2"
+          title="Weryfikacja BaseLinker — odśwież znaczniki B (wystawione w BL) i W (do uzupełnienia)"
+          aria-label="Weryfikuj produkty w BaseLinkerze"
+        >
+          <BaselinkerVerifyIcon spinning={blBusy} />
+        </button>
+      )}
       <button
         type="button"
         onClick={onRefresh}

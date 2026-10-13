@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-13',
+    title: 'Przycisk weryfikacji BaseLinker (znaczniki B i W) obok odświeżania',
+    description:
+      'W nagłówku, na lewo od strzałek odświeżania, jest nowy przycisk z logo niebieskiego „B” i pomarańczowego „W”. Odświeża powiązania produktów z BaseLinkerem (administrator z uprawnieniem BaseLinker pobiera przy tym aktualną listę z BL, pozostali — aktualne powiązania z bazy) i pokazuje podsumowanie: ile produktów ma znacznik B (wystawione w BL) i ile W (z Mag, do uzupełnienia, bez oferty w BL).',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-13',
     title: 'Menu: osobne sekcje „Nowe produkty” i „Aktualizacje”',
     description:
       'Dotychczasowe „Nowości” zostały rozdzielone w menu bocznym (i w „Więcej” na telefonie) na dwie osobne sekcje: „Nowe produkty” (produkty dopisane z WAPRO) oraz „Aktualizacje” (dziennik zmian aplikacji z numerami wersji). Numer wersji obok napisu „Menu” otwiera teraz od razu Aktualizacje. Dostępne też w wyszukiwarce poleceń.',

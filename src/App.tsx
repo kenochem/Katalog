@@ -1528,6 +1528,8 @@ export default function App() {
                 <RefreshControls
                   loading={loading}
                   onRefresh={loadData}
+                  showBaselinkerVerify={mode === 'signed_in'}
+                  products={allProducts}
                   catalog={syncScope}
                   canRequestStockSync={
                     mode === 'signed_in' && roleCan(role, 'editStock')
@@ -1639,6 +1641,8 @@ export default function App() {
               <RefreshControls
                 loading={loading}
                 onRefresh={loadData}
+                showBaselinkerVerify={mode === 'signed_in'}
+                products={allProducts}
                 catalog={syncScope}
                 canRequestStockSync={
                   mode === 'signed_in' && roleCan(role, 'editStock')
