@@ -23,6 +23,10 @@ import {
   type SystemData,
 } from '../lib/systemStatus';
 
+import { useAuth } from '../lib/auth';
+import { useSystemAlerts } from '../lib/systemAlerts';
+import { AlertsPanel, AvailabilityPanel, QuickActionsPanel } from './SystemStatusExtras';
+
 const PAGE = 80;
 const REFRESH_MS = 60_000;
 
@@ -79,6 +83,8 @@ export function SystemStatusView() {
   const [limit, setLimit] = useState(PAGE);
   const [openId, setOpenId] = useState<string | null>(null);
   const [, setTick] = useState(0);
+  const { displayLabel } = useAuth();
+  const { alerts, refresh: refreshAlerts } = useSystemAlerts(true);
 
   const load = useCallback(
     async (silent = false) => {
@@ -191,6 +197,8 @@ export function SystemStatusView() {
         </div>
       )}
 
+      <AlertsPanel alerts={alerts} who={displayLabel} onChanged={() => void refreshAlerts()} />
+
       {/* karty */}
       {loading && !data ? (
         <div className="flex justify-center py-12 text-slate-500">
@@ -241,6 +249,9 @@ export function SystemStatusView() {
           })}
         </div>
       )}
+
+      <QuickActionsPanel beats={data?.beats ?? []} onDone={() => void load(true)} />
+      <AvailabilityPanel />
 
       {/* strumień zdarzeń */}
       <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-4">

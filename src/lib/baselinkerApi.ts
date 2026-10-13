@@ -235,3 +235,8 @@ export const promoApplyBaselinker = (campaignId: string) =>
   call<PromoActionResult>({ action: 'promo-apply', campaignId });
 export const promoEndBaselinker = (campaignId: string) =>
   call<PromoActionResult>({ action: 'promo-end', campaignId });
+
+export const pingBaselinker = () =>
+  call<{ ok: boolean; ms: number; inventories: number; inventoryId: number | null }>({ action: 'ping' });
+export const promoTickBaselinker = () =>
+  call<{ ok: boolean; results: unknown[] }>({ action: 'promo-tick' });

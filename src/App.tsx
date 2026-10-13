@@ -76,6 +76,7 @@ import { requestWaproStockSync, getLatestStockSync, type StockSyncScope } from '
 import {
   getDeferredInstall,
 } from './lib/pwaInstall';
+import { SystemAlertBanner } from './components/SystemAlertBanner';
 import { useAuth } from './lib/auth';
 import { isSupabaseConfigured } from './lib/supabase';
 import { roleCan, ROLE_LABELS } from './lib/roles';
@@ -1727,6 +1728,9 @@ export default function App() {
             : ''
         }`}
       >
+        {roleCan(role, 'manageUsers') && (
+          <SystemAlertBanner who={displayLabel} onOpenStatus={() => setView('logs')} />
+        )}
         {(!embeddedInHub || !hubOverlay) &&
           (view === 'catalog' || view === 'favorites') && (
           <CatalogStickySearchBar active className={embeddedInHub ? '' : 'lg:hidden'}>

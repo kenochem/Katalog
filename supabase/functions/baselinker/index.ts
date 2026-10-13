@@ -868,6 +868,14 @@ Deno.serve(async (req) => {
     const needAdmin = () => {
       if (!canManage) throw Object.assign(new Error('Brak uprawnienia do zarządzania BaseLinkerem (Administracja → Uprawnienia)'), { status: 403 });
     };
+    if (action === 'ping') {
+      needAdmin();
+      if (!TOKEN) return json({ error: 'Brak sekretu BASELINKER_TOKEN w Supabase.' }, 500);
+      const t0 = Date.now();
+      const inv = await bl('getInventories', {});
+      const list = (inv.inventories ?? []) as unknown[];
+      return json({ ok: true, ms: Date.now() - t0, inventories: list.length, inventoryId: INVENTORY_ID || null });
+    }
     if (action === 'refresh-links' && (!TOKEN || !INVENTORY_ID)) {
       return json({ skipped: true, reason: 'BaseLinker nieskonfigurowany' });
     }

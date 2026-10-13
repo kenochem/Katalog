@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-13',
+    title: 'Alarmy systemowe, historia dostępności agentów i szybkie akcje w Logach',
+    description:
+      'Czerwony pasek u góry aplikacji (dla administratorów) pojawia się, gdy agent na serwerze WAPRO milczy dłużej niż 30 min, wystąpiły błędy w ostatniej godzinie, synchronizacja z BaseLinkerem się nie udała, zamówienie do WAPRO utknęło ponad 15 min albo kończy się/psuje promocja — z przyciskami „Szczegóły” i „Przyjąłem” (zapisuje kto przyjął). Ostrzeżenia i informacje widać w Logi → Status systemów, w sekcji „Aktywne alarmy”; alarm sam znika, gdy problem ustąpi. Opcjonalnie powiadomienia na Discord (sekret DISCORD_ALERTS_WEBHOOK). Nowy wykres „Dostępność agentów”: pasek ostatnich 24 h (każdy kwadrat = 15 min, zielony = agent działał, czerwony = cisza) oraz ostatnie 7 dni i procent dostępności. Nowa sekcja „Szybkie akcje”: synchronizacja stanów i cen teraz, odświeżenie sprzedaży, sprawdzenie promocji, odświeżenie powiązań BaseLinker oraz „Test połączeń” (baza, agenci, API BaseLinker z czasem odpowiedzi). Wymaga migracji migration-system-alerts.sql, wdrożenia funkcji system-alerts i baselinker oraz nowych wersji obu agentów.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-13',
     title: 'Logi: „Status systemów” — karty z alarmami i wspólny strumień zdarzeń z serwera',
     description:
       'Sekcja Logi ma nową, domyślną zakładkę „Status systemów”. U góry karty integracji (stany i ceny, sprzedaż, zamówienia → WAPRO, rezerwacje, BaseLinker, promocje) z kolorem, informacją „ostatnio X min temu” i alarmem, gdy agent na serwerze WAPRO milczy dłużej niż 10 min (ostrzeżenie) lub 30 min (problem); nad kartami podsumowanie „Wszystko działa” albo lista tego, co wymaga uwagi. Niżej strumień zdarzeń z serwera z filtrami (źródło, tylko błędy i ostrzeżenia, okres, szukanie) i szczegółami po rozwinięciu. Wcześniej strona pokazywała głównie lokalne wpisy po ręcznych synchronizacjach, bo automatyczne przebiegi agenta nie zapisywały nic w bazie — teraz każdy przebieg (także automatyczny), odczyt rezerwacji, zamówienia, wysyłki do BaseLinkera i promocje trafiają do jednego strumienia. Dotychczasowa strona to zakładka „Zmiany produktów i raporty”. Wymaga migracji migration-system-status.sql i nowych wersji obu agentów.',

@@ -1798,6 +1798,12 @@ function Send-AgentAlive([string]$Agent) {
     }
     Set-Content -Path $stamp -Value (Get-Date -Format 'o')
     Send-AgentSignal -Agent $Agent -HeartbeatOnly
+    # historia dostepnosci: jeden wiersz na agenta na 15-minutowy przedzial (wykres w Logi -> Status systemow)
+    $d = (Get-Date).ToUniversalTime()
+    $bucket = $d.Date.AddHours($d.Hour).AddMinutes(15 * [Math]::Floor($d.Minute / 15)).ToString('o')
+    $uh = @{ apikey = $ServiceKey; Authorization = "Bearer $ServiceKey"; 'Content-Type' = 'application/json'; Prefer = 'resolution=merge-duplicates,return=minimal' }
+    $ub = [System.Text.Encoding]::UTF8.GetBytes((@{ agent = $Agent; bucket = $bucket } | ConvertTo-Json -Compress))
+    Invoke-RestMethod -Uri ('{0}/rest/v1/agent_uptime?on_conflict=agent,bucket' -f $SupabaseUrl) -Headers $uh -Method Post -Body $ub -ContentType 'application/json; charset=utf-8' | Out-Null
   } catch { }
 }
 if (-not $DiagnoseSku) { Send-AgentAlive 'stock' }
