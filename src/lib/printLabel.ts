@@ -127,10 +127,11 @@ function labelMarkup(item: LabelQueueItem, cfg: LabelConfig): string {
   if (f.price && shelfGross != null && Number.isFinite(shelfGross)) {
     const net = sale || item.priceNet == null ? shelfGross / (1 + vat / 100) : item.priceNet;
     if (sale) {
+      const pct = Math.round((1 - shelfGross / (item.priceGross as number)) * 100);
       lines.push(
-        `<div class="saleRow"><span class="promo">PROMOCJA</span><span class="old">${escapeHtml(
-          formatPricePln(item.priceGross as number),
-        )}</span></div>`,
+        `<div class="saleRow"><span class="promo">PROMOCJA</span>${
+          pct > 0 ? `<span class="pct">-${pct}%</span>` : ''
+        }<span class="old">${escapeHtml(formatPricePln(item.priceGross as number))}</span></div>`,
       );
     }
     // im więcej cyfr w cenie (np. 129,00 zł), tym mniejsza czcionka — żeby nie wchodziła na kod kreskowy
@@ -178,7 +179,7 @@ function labelMarkup(item: LabelQueueItem, cfg: LabelConfig): string {
   const bottom = chips.length ? `<div class="bottom">${chips.join('')}</div>` : '';
 
   void base;
-  return `<div class="label">
+  return `<div class="label${sale ? ' sale' : ''}">
     ${name}
     <div class="mid">${left}${right}</div>
     ${bottom}
@@ -225,12 +226,16 @@ function labelCss(cfg: LabelConfig, preview: boolean): string {
     .now { font-weight: 800; font-size: ${(base * 2.55).toFixed(1)}px; color: #14532d; letter-spacing: -0.02em; }
     .now.sale { color: #dc2626; }
     .sub { font-size: ${(base * 0.95).toFixed(1)}px; color: #475569; font-weight: 700; }
-    .unit { font-size: ${(base * 0.98).toFixed(1)}px; color: #334155; margin-top: 0.3mm; }
+    .unit { font-size: ${(base * 0.78).toFixed(1)}px; color: #334155; margin-top: 0.3mm; }
     .unit b { color: #0f172a; font-weight: 800; }
     .unit.sale b { color: #dc2626; }
-    .saleRow { display: flex; align-items: center; gap: 1.2mm; margin-bottom: 0.2mm; }
-    .promo { font-size: ${(base * 0.7).toFixed(1)}px; font-weight: 800; letter-spacing: 0.06em; color: #fff; background: #dc2626; border-radius: 0.7mm; padding: 0.15mm 1.1mm; }
-    .old { font-size: ${(base * 1.1).toFixed(1)}px; color: #64748b; text-decoration: line-through; text-decoration-thickness: 0.3mm; font-weight: 700; }
+    .saleRow { display: flex; align-items: center; gap: 1mm; margin-bottom: 0.3mm; }
+    .label.sale { border: 0.45mm solid #dc2626; }
+    .label.sale::before { background: #dc2626; width: ${compact ? 2 : 2.6}mm; }
+    .label.sale .right { background: #fef2f2; border-radius: 1mm; padding: 0.5mm 1.4mm; }
+    .pct { font-size: ${(base * 0.95).toFixed(1)}px; font-weight: 800; color: #fff; background: #111827; border-radius: 0.7mm; padding: 0.2mm 1.1mm; }
+    .promo { font-size: ${(base * 0.92).toFixed(1)}px; font-weight: 800; letter-spacing: 0.05em; color: #fff; background: #dc2626; border-radius: 0.7mm; padding: 0.2mm 1.3mm; }
+    .old { font-size: ${(base * (cfg.h <= 26 ? 1.25 : 1.45)).toFixed(1)}px; color: #1f2937; text-decoration: line-through; text-decoration-color: #dc2626; text-decoration-thickness: 0.55mm; font-weight: 800; }
     .bottom { display: flex; gap: 0.8mm; align-items: center; flex: 0 0 auto; overflow: hidden; white-space: nowrap; }
     .chip { font-size: ${(base * 0.92).toFixed(1)}px; color: #334155; background: #f1f5f2; border-radius: 0.7mm; padding: 0.1mm 1mm; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; }
     .chip.mono { font-family: Consolas, "Courier New", monospace; font-weight: 700; color: #0f172a; }

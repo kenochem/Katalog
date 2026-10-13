@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { Minus, Pencil, Plus, Trash2 } from 'lucide-react';
+import type { Product } from '../types';
+import { formatMarginPercent, formatPricePln, marginPercent } from '../lib/format';
 import {
   removeFromLabelQueue,
   setLabelQty,
   updateLabelItem,
   type LabelQueueItem,
 } from '../lib/labelQueue';
-import type { Product } from '../types';
-import { formatMarginPercent, formatPricePln, marginPercent } from '../lib/format';
 import { PACK_UNITS, formatPack, labelNameFor, parsePackFromText, type PackUnit } from '../lib/labelPack';
 
 interface Props {
@@ -23,8 +23,28 @@ interface Props {
   onChanged: () => void;
 }
 
+const QUICK_DISCOUNTS = [10, 15, 20, 25, 30];
+
+function money(v: number | null | undefined): string {
+  return v == null || !Number.isFinite(v) ? '—' : formatPricePln(Math.round(v * 100) / 100);
+}
+
+function marginClass(m: number | null): string {
+  if (m == null) return 'text-slate-300';
+  if (m <= 0) return 'text-red-400';
+  if (m < 10) return 'text-amber-300';
+  return 'text-emerald-300';
+}
+
 /** Jedna pozycja listy „Do wydruku”: ilość kopii + edycja nazwy, pojemności i ceny promocyjnej. */
-export function LabelItemRow({ item, unitPriceEnabled, nameStatus, product, showMargins = false, onChanged }: Props) {
+export function LabelItemRow({
+  item,
+  unitPriceEnabled,
+  nameStatus,
+  product,
+  showMargins = false,
+  onChanged,
+}: Props) {
   const [editing, setEditing] = useState(false);
   const pack = item.pack ?? parsePackFromText(item.displayName);
   const sale =
@@ -47,17 +67,22 @@ export function LabelItemRow({ item, unitPriceEnabled, nameStatus, product, show
       ? Number(product.pricePurchaseNet)
       : null;
   const marginNow = marginPercent(purchaseNet, netNow);
-  const promoValid = item.salePrice != null && grossNow != null && item.salePrice > 0 && item.salePrice < grossNow;
   const promoNet = item.salePrice != null && item.salePrice > 0 ? item.salePrice / (1 + vat / 100) : null;
   const marginPromo = promoNet != null ? marginPercent(purchaseNet, promoNet) : null;
   const profitPromo = promoNet != null && purchaseNet != null ? promoNet - purchaseNet : null;
-  const discountPct = promoValid && grossNow ? ((grossNow - (item.salePrice as number)) / grossNow) * 100 : null;
-  const marginTone = (m: number | null) =>
-    m == null ? 'text-slate-400' : m <= 0 ? 'text-red-400' : m < 10 ? 'text-amber-300' : 'text-emerald-300';
+  const discountPct = sale && grossNow ? ((grossNow - (item.salePrice as number)) / grossNow) * 100 : null;
+  // progi: cena brutto, poniżej której tracimy (marża 0%) i przy marży 10%
+  const breakEvenGross = purchaseNet != null ? purchaseNet * (1 + vat / 100) : null;
+  const tenPctGross = purchaseNet != null ? (purchaseNet / 0.9) * (1 + vat / 100) : null;
 
   function patch(p: Partial<LabelQueueItem>) {
     updateLabelItem(item.id, p);
     onChanged();
+  }
+
+  function setPromoFromDiscount(pct: number) {
+    if (grossNow == null) return;
+    patch({ salePrice: Math.round(grossNow * (1 - pct / 100) * 100) / 100 });
   }
 
   return (
@@ -153,9 +178,9 @@ export function LabelItemRow({ item, unitPriceEnabled, nameStatus, product, show
       </div>
 
       {editing && (
-        <div className="mt-2 grid gap-2 border-t border-slate-800 pt-2 sm:grid-cols-2">
+        <div className="mt-2 grid gap-3 border-t border-slate-800 pt-3 sm:grid-cols-2">
           <label className="sm:col-span-2">
-            <span className="mb-0.5 flex items-center justify-between text-[11px] text-slate-500">
+            <span className="mb-0.5 flex items-center justify-between text-xs text-slate-400">
               Nazwa na etykiecie
               {customName && (
                 <button type="button" onClick={() => patch({ labelName: '' })} className="text-brand-300 hover:underline">
@@ -170,13 +195,13 @@ export function LabelItemRow({ item, unitPriceEnabled, nameStatus, product, show
               maxLength={120}
               className="input-field text-sm"
             />
-            <span className="mt-0.5 block text-[10px] text-slate-600">
+            <span className="mt-0.5 block text-[11px] text-slate-500">
               Oryginał: {item.displayName} (na etykiecie ucinamy wszystko od myślnika)
             </span>
           </label>
 
-          <div>
-            <span className="mb-0.5 block text-[11px] text-slate-500">
+          <div className="sm:col-span-2">
+            <span className="mb-0.5 block text-xs text-slate-400">
               Pojemność / waga opakowania
               {pack && !item.pack ? ` (rozpoznano: ${formatPack(pack)})` : ''}
             </span>
@@ -196,12 +221,12 @@ export function LabelItemRow({ item, unitPriceEnabled, nameStatus, product, show
                   });
                 }}
                 placeholder="np. 500"
-                className="input-field w-24 text-sm"
+                className="input-field w-28 text-sm"
               />
               <select
                 value={pack?.unit ?? 'ml'}
                 onChange={(e) => patch({ pack: { qty: pack?.qty ?? 1, unit: e.target.value as PackUnit } })}
-                className="input-field w-20 text-sm"
+                className="input-field w-24 text-sm"
               >
                 {PACK_UNITS.map((u) => (
                   <option key={u.id} value={u.id}>
@@ -212,92 +237,142 @@ export function LabelItemRow({ item, unitPriceEnabled, nameStatus, product, show
             </div>
           </div>
 
-          <div className="sm:col-span-2">
-            <div className="mb-2 grid grid-cols-2 gap-x-3 gap-y-1 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-[12px] sm:grid-cols-4">
-              <div>
-                <span className="block text-[10px] uppercase tracking-wide text-slate-500">Sprzedaż brutto</span>
-                <span className="font-semibold tabular-nums text-slate-100">
-                  {grossNow != null ? formatPricePln(grossNow) : '—'}
-                </span>
+          {/* ---- cena promocyjna: ceny wyjściowe + marża ---- */}
+          <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-3 sm:col-span-2">
+            <p className="mb-2 text-sm font-semibold text-slate-100">Cena promocyjna</p>
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="rounded-lg bg-slate-900/80 p-2">
+                <span className="block text-[11px] uppercase tracking-wide text-slate-400">Sprzedaż brutto</span>
+                <span className="text-base font-bold tabular-nums text-slate-50">{money(grossNow)}</span>
               </div>
-              <div>
-                <span className="block text-[10px] uppercase tracking-wide text-slate-500">Sprzedaż netto</span>
-                <span className="font-semibold tabular-nums text-slate-100">
-                  {netNow != null ? formatPricePln(Math.round(netNow * 100) / 100) : '—'}
-                </span>
+              <div className="rounded-lg bg-slate-900/80 p-2">
+                <span className="block text-[11px] uppercase tracking-wide text-slate-400">Sprzedaż netto</span>
+                <span className="text-base font-bold tabular-nums text-slate-50">{money(netNow)}</span>
               </div>
-              {showMargins && (
+              {showMargins ? (
                 <>
-                  <div>
-                    <span className="block text-[10px] uppercase tracking-wide text-slate-500">Zakup netto</span>
-                    <span className="font-semibold tabular-nums text-slate-100">
-                      {purchaseNet != null ? formatPricePln(purchaseNet) : 'brak'}
+                  <div className="rounded-lg bg-slate-900/80 p-2">
+                    <span className="block text-[11px] uppercase tracking-wide text-slate-400">Zakup netto</span>
+                    <span className="text-base font-bold tabular-nums text-slate-50">
+                      {purchaseNet != null ? money(purchaseNet) : 'brak'}
                     </span>
                   </div>
-                  <div>
-                    <span className="block text-[10px] uppercase tracking-wide text-slate-500">Marża obecna</span>
-                    <span className={`font-semibold tabular-nums ${marginTone(marginNow)}`}>
+                  <div className="rounded-lg bg-slate-900/80 p-2">
+                    <span className="block text-[11px] uppercase tracking-wide text-slate-400">Marża obecna</span>
+                    <span className={`text-base font-bold tabular-nums ${marginClass(marginNow)}`}>
                       {formatMarginPercent(marginNow)}
                     </span>
                   </div>
                 </>
+              ) : (
+                <div className="col-span-2 flex items-center rounded-lg bg-slate-900/80 p-2 text-xs text-slate-400">
+                  Cena zakupu i marża są widoczne dla ról z uprawnieniem „Ceny i marża”.
+                </div>
               )}
             </div>
-            <span className="mb-0.5 block text-[11px] text-slate-500">
-              Cena promocyjna brutto (wariant wyprzedażowy)
-            </span>
-            <div className="flex items-center gap-1.5">
-              <input
-                type="number"
-                min={0}
-                step="0.01"
-                value={item.salePrice ?? ''}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  patch({ salePrice: e.target.value !== '' && Number.isFinite(v) && v > 0 ? v : null });
-                }}
-                placeholder="puste = bez promocji"
-                className="input-field w-40 text-sm"
-              />
-              {item.salePrice != null && (
-                <button type="button" onClick={() => patch({ salePrice: null })} className="text-[11px] text-brand-300 hover:underline">
-                  usuń
-                </button>
-              )}
-            </div>
-            {item.salePrice != null && item.priceGross != null && item.salePrice >= item.priceGross && (
-              <span className="mt-0.5 block text-[10px] text-amber-300">
-                Cena promocyjna musi być niższa od obecnej, inaczej etykieta jest bez promocji.
-              </span>
+
+            {showMargins && purchaseNet != null && (
+              <p className="mt-2 text-xs text-slate-300">
+                Progi (brutto):{' '}
+                <span className="text-red-300">
+                  bez straty ≥ <b className="tabular-nums">{money(breakEvenGross)}</b>
+                </span>
+                {' · '}
+                <span className="text-amber-200">
+                  marża 10% ≥ <b className="tabular-nums">{money(tenPctGross)}</b>
+                </span>
+              </p>
             )}
-            {promoValid && promoNet != null && (
-              <div className="mt-1.5 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-[12px] text-slate-300">
-                Po promocji: <b className="tabular-nums">{formatPricePln(item.salePrice as number)}</b> brutto ·{' '}
-                <span className="tabular-nums">{formatPricePln(Math.round(promoNet * 100) / 100)}</span> netto
-                {discountPct != null && (
-                  <span className="text-slate-400"> (obniżka {discountPct.toFixed(1).replace('.', ',')}%)</span>
+
+            <div className="mt-3">
+              <span className="mb-1 block text-xs font-medium text-slate-300">Wpisz cenę promocyjną brutto</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={item.salePrice ?? ''}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    patch({ salePrice: e.target.value !== '' && Number.isFinite(v) && v > 0 ? v : null });
+                  }}
+                  placeholder="np. 29,90"
+                  className="input-field w-36 text-base font-semibold"
+                />
+                <span className="text-sm text-slate-400">zł brutto</span>
+                {item.salePrice != null && (
+                  <button
+                    type="button"
+                    onClick={() => patch({ salePrice: null })}
+                    className="text-xs text-brand-300 hover:underline"
+                  >
+                    usuń promocję
+                  </button>
                 )}
+              </div>
+              {grossNow != null && (
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] text-slate-400">Szybka obniżka:</span>
+                  {QUICK_DISCOUNTS.map((pct) => (
+                    <button
+                      key={pct}
+                      type="button"
+                      onClick={() => setPromoFromDiscount(pct)}
+                      className="rounded-md border border-slate-700 bg-slate-900 px-2 py-0.5 text-xs font-semibold text-slate-200 hover:border-red-400 hover:text-red-300"
+                    >
+                      −{pct}%
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {item.salePrice != null && item.priceGross != null && item.salePrice >= item.priceGross && (
+              <p className="mt-2 text-xs text-amber-300">
+                Cena promocyjna musi być niższa od obecnej ({money(grossNow)}), inaczej etykieta jest bez promocji.
+              </p>
+            )}
+
+            {sale && promoNet != null && (
+              <div className="mt-3 rounded-lg border border-slate-700 bg-slate-900/90 p-3">
+                <p className="text-sm text-slate-200">
+                  Po promocji: <b className="text-base tabular-nums text-red-300">{money(item.salePrice)}</b> brutto ·{' '}
+                  <b className="tabular-nums">{money(promoNet)}</b> netto
+                  {discountPct != null && (
+                    <span className="ml-1 rounded bg-red-600 px-1.5 py-0.5 text-xs font-bold text-white">
+                      −{discountPct.toFixed(1).replace('.', ',')}%
+                    </span>
+                  )}
+                </p>
                 {showMargins &&
                   (purchaseNet != null ? (
-                    <div className="mt-0.5">
+                    <p className="mt-1.5 text-sm text-slate-200">
                       Marża po promocji:{' '}
-                      <b className={`tabular-nums ${marginTone(marginPromo)}`}>{formatMarginPercent(marginPromo)}</b>
+                      <b className={`text-lg tabular-nums ${marginClass(marginPromo)}`}>
+                        {formatMarginPercent(marginPromo)}
+                      </b>
                       {profitPromo != null && (
-                        <span className="text-slate-400">
+                        <span className="text-slate-300">
                           {' '}
-                          · zysk {formatPricePln(Math.round(profitPromo * 100) / 100)} / szt.
+                          · zysk <b className="tabular-nums">{money(profitPromo)}</b> / szt.
                         </span>
                       )}
-                      {marginPromo != null && marginPromo <= 0 && (
-                        <span className="ml-1 font-semibold text-red-400">— sprzedaż poniżej kosztu!</span>
+                      {marginNow != null && marginPromo != null && (
+                        <span className="text-slate-400"> (było {formatMarginPercent(marginNow)})</span>
                       )}
-                      {marginPromo != null && marginPromo > 0 && marginPromo < 10 && (
-                        <span className="ml-1 text-amber-300">— niska marża</span>
-                      )}
-                    </div>
+                    </p>
                   ) : (
-                    <div className="mt-0.5 text-amber-300">Brak ceny zakupu — nie da się policzyć marży.</div>
+                    <p className="mt-1.5 text-sm text-amber-300">
+                      Brak ceny zakupu w katalogu — nie da się policzyć marży.
+                    </p>
                   ))}
+                {showMargins && marginPromo != null && marginPromo <= 0 && (
+                  <p className="mt-1 text-sm font-bold text-red-400">Uwaga: sprzedaż poniżej kosztu!</p>
+                )}
+                {showMargins && marginPromo != null && marginPromo > 0 && marginPromo < 10 && (
+                  <p className="mt-1 text-sm font-semibold text-amber-300">Niska marża (poniżej 10%).</p>
+                )}
               </div>
             )}
           </div>

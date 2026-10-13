@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-13',
+    title: 'Etykiety: wyraźna promocja, czytelny kalkulator marży, mniejsza cena za 1 l',
+    description:
+      'Etykieta promocyjna jest teraz mocno wyróżniona: czerwona ramka i pasek, jasnoczerwone tło ceny, duży znaczek PROMOCJA, czarna naklejka z procentem obniżki (np. −23%), stara cena przekreślona grubą czerwoną linią i nowa cena na czerwono. Pole ceny promocyjnej ma czytelną ramkę z cenami wyjściowymi (sprzedaż brutto i netto, zakup netto, marża obecna), progami opłacalności (cena bez straty i przy marży 10%), przyciskami szybkiej obniżki (−10% do −30%) oraz bieżącym wyliczeniem po wpisaniu ceny: cena netto, obniżka, marża po promocji, zysk na sztuce i ostrzeżenia (niska marża / sprzedaż poniżej kosztu). Cena za 1 l / 1 kg na etykiecie ma mniejszą czcionkę.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-13',
     title: 'Etykiety: ceny wyjściowe i marża przy cenie promocyjnej; kod kreskowy dalej od ceny',
     description:
       'Przy ustalaniu ceny promocyjnej (ołówek przy produkcie na liście „Do wydruku”) widać teraz cenę sprzedaży brutto i netto, a dla osób z uprawnieniem „Ceny i marża” także cenę zakupu netto i obecną marżę. Po wpisaniu ceny promocyjnej brutto pokazuje się: cena netto po promocji, procent obniżki, marża po promocji i zysk na sztuce — z ostrzeżeniem „niska marża” (poniżej 10%) i „sprzedaż poniżej kosztu”. Na etykiecie kod kreskowy jest węższy i przesunięty w lewo, a cena z większą liczbą cyfr (np. 129,00 zł) zmniejsza się automatycznie, żeby nie wchodzić na kod.',
