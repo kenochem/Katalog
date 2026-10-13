@@ -6,6 +6,8 @@ import {
   updateLabelItem,
   type LabelQueueItem,
 } from '../lib/labelQueue';
+import type { Product } from '../types';
+import { formatMarginPercent, formatPricePln, marginPercent } from '../lib/format';
 import { PACK_UNITS, formatPack, labelNameFor, parsePackFromText, type PackUnit } from '../lib/labelPack';
 
 interface Props {
@@ -14,16 +16,44 @@ interface Props {
   unitPriceEnabled: boolean;
   /** Stan dopasowania nazwy do etykiety (jedna linia): ucięta / bardzo drobna czcionka. */
   nameStatus?: { overflow: boolean; tiny: boolean; px: number };
+  /** Produkt z katalogu — do pokazania cen sprzedaży, zakupu i marży przy ustalaniu ceny promocyjnej. */
+  product?: Product;
+  /** Pokaż cenę zakupu i marżę (uprawnienie „Ceny i marża”). */
+  showMargins?: boolean;
   onChanged: () => void;
 }
 
 /** Jedna pozycja listy „Do wydruku”: ilość kopii + edycja nazwy, pojemności i ceny promocyjnej. */
-export function LabelItemRow({ item, unitPriceEnabled, nameStatus, onChanged }: Props) {
+export function LabelItemRow({ item, unitPriceEnabled, nameStatus, product, showMargins = false, onChanged }: Props) {
   const [editing, setEditing] = useState(false);
   const pack = item.pack ?? parsePackFromText(item.displayName);
   const sale =
     item.salePrice != null && item.priceGross != null && item.salePrice > 0 && item.salePrice < item.priceGross;
   const customName = (item.labelName || '').trim();
+
+  // ceny wyjściowe i marża (przed i po promocji)
+  const vat = item.vatRate ?? 23;
+  const grossNow = item.priceGross ?? null;
+  const netNow =
+    product?.priceSaleNet != null && Number.isFinite(Number(product.priceSaleNet))
+      ? Number(product.priceSaleNet)
+      : item.priceNet != null
+        ? item.priceNet
+        : grossNow != null
+          ? grossNow / (1 + vat / 100)
+          : null;
+  const purchaseNet =
+    product?.pricePurchaseNet != null && Number.isFinite(Number(product.pricePurchaseNet))
+      ? Number(product.pricePurchaseNet)
+      : null;
+  const marginNow = marginPercent(purchaseNet, netNow);
+  const promoValid = item.salePrice != null && grossNow != null && item.salePrice > 0 && item.salePrice < grossNow;
+  const promoNet = item.salePrice != null && item.salePrice > 0 ? item.salePrice / (1 + vat / 100) : null;
+  const marginPromo = promoNet != null ? marginPercent(purchaseNet, promoNet) : null;
+  const profitPromo = promoNet != null && purchaseNet != null ? promoNet - purchaseNet : null;
+  const discountPct = promoValid && grossNow ? ((grossNow - (item.salePrice as number)) / grossNow) * 100 : null;
+  const marginTone = (m: number | null) =>
+    m == null ? 'text-slate-400' : m <= 0 ? 'text-red-400' : m < 10 ? 'text-amber-300' : 'text-emerald-300';
 
   function patch(p: Partial<LabelQueueItem>) {
     updateLabelItem(item.id, p);
@@ -182,10 +212,39 @@ export function LabelItemRow({ item, unitPriceEnabled, nameStatus, onChanged }: 
             </div>
           </div>
 
-          <div>
+          <div className="sm:col-span-2">
+            <div className="mb-2 grid grid-cols-2 gap-x-3 gap-y-1 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-[12px] sm:grid-cols-4">
+              <div>
+                <span className="block text-[10px] uppercase tracking-wide text-slate-500">Sprzedaż brutto</span>
+                <span className="font-semibold tabular-nums text-slate-100">
+                  {grossNow != null ? formatPricePln(grossNow) : '—'}
+                </span>
+              </div>
+              <div>
+                <span className="block text-[10px] uppercase tracking-wide text-slate-500">Sprzedaż netto</span>
+                <span className="font-semibold tabular-nums text-slate-100">
+                  {netNow != null ? formatPricePln(Math.round(netNow * 100) / 100) : '—'}
+                </span>
+              </div>
+              {showMargins && (
+                <>
+                  <div>
+                    <span className="block text-[10px] uppercase tracking-wide text-slate-500">Zakup netto</span>
+                    <span className="font-semibold tabular-nums text-slate-100">
+                      {purchaseNet != null ? formatPricePln(purchaseNet) : 'brak'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] uppercase tracking-wide text-slate-500">Marża obecna</span>
+                    <span className={`font-semibold tabular-nums ${marginTone(marginNow)}`}>
+                      {formatMarginPercent(marginNow)}
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
             <span className="mb-0.5 block text-[11px] text-slate-500">
               Cena promocyjna brutto (wariant wyprzedażowy)
-              {item.priceGross != null ? ` · obecna ${item.priceGross.toFixed(2).replace('.', ',')} zł` : ''}
             </span>
             <div className="flex items-center gap-1.5">
               <input
@@ -210,6 +269,36 @@ export function LabelItemRow({ item, unitPriceEnabled, nameStatus, onChanged }: 
               <span className="mt-0.5 block text-[10px] text-amber-300">
                 Cena promocyjna musi być niższa od obecnej, inaczej etykieta jest bez promocji.
               </span>
+            )}
+            {promoValid && promoNet != null && (
+              <div className="mt-1.5 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-[12px] text-slate-300">
+                Po promocji: <b className="tabular-nums">{formatPricePln(item.salePrice as number)}</b> brutto ·{' '}
+                <span className="tabular-nums">{formatPricePln(Math.round(promoNet * 100) / 100)}</span> netto
+                {discountPct != null && (
+                  <span className="text-slate-400"> (obniżka {discountPct.toFixed(1).replace('.', ',')}%)</span>
+                )}
+                {showMargins &&
+                  (purchaseNet != null ? (
+                    <div className="mt-0.5">
+                      Marża po promocji:{' '}
+                      <b className={`tabular-nums ${marginTone(marginPromo)}`}>{formatMarginPercent(marginPromo)}</b>
+                      {profitPromo != null && (
+                        <span className="text-slate-400">
+                          {' '}
+                          · zysk {formatPricePln(Math.round(profitPromo * 100) / 100)} / szt.
+                        </span>
+                      )}
+                      {marginPromo != null && marginPromo <= 0 && (
+                        <span className="ml-1 font-semibold text-red-400">— sprzedaż poniżej kosztu!</span>
+                      )}
+                      {marginPromo != null && marginPromo > 0 && marginPromo < 10 && (
+                        <span className="ml-1 text-amber-300">— niska marża</span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="mt-0.5 text-amber-300">Brak ceny zakupu — nie da się policzyć marży.</div>
+                  ))}
+              </div>
             )}
           </div>
         </div>

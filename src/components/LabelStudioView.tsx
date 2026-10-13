@@ -18,6 +18,8 @@ import {
 import { buildLabelsDocument, fitLabelName, printShelfLabels } from '../lib/printLabel';
 import { showToast } from '../lib/toast';
 import { LabelItemRow } from './LabelItemRow';
+import { useAuth } from '../lib/auth';
+import { roleCan } from '../lib/roles';
 import { labelNameFor } from '../lib/labelPack';
 
 const PAGE = 60;
@@ -49,6 +51,9 @@ interface Props {
 
 /** Studio etykiet: wybór produktów, ilości, konfiguracja wyglądu, podgląd na żywo i druk. */
 export function LabelStudioView({ products, queue, onQueueChange }: Props) {
+  const { role } = useAuth();
+  const canSeeMargins = roleCan(role, 'viewPrices');
+  const productById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
   const [cfg, setCfg] = useState<LabelConfig>(loadLabelConfig);
   const [search, setSearch] = useState('');
   const [onlyEan, setOnlyEan] = useState(false);
@@ -266,6 +271,8 @@ export function LabelStudioView({ products, queue, onQueueChange }: Props) {
                     key={item.id}
                     item={item}
                     unitPriceEnabled={cfg.fields.unitPrice}
+                    product={productById.get(item.id.split('::')[0])}
+                    showMargins={canSeeMargins}
                     nameStatus={fitLabelName(labelNameFor(item), cfg)}
                     onChanged={onQueueChange}
                   />

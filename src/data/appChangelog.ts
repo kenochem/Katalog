@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-13',
+    title: 'Etykiety: ceny wyjściowe i marża przy cenie promocyjnej; kod kreskowy dalej od ceny',
+    description:
+      'Przy ustalaniu ceny promocyjnej (ołówek przy produkcie na liście „Do wydruku”) widać teraz cenę sprzedaży brutto i netto, a dla osób z uprawnieniem „Ceny i marża” także cenę zakupu netto i obecną marżę. Po wpisaniu ceny promocyjnej brutto pokazuje się: cena netto po promocji, procent obniżki, marża po promocji i zysk na sztuce — z ostrzeżeniem „niska marża” (poniżej 10%) i „sprzedaż poniżej kosztu”. Na etykiecie kod kreskowy jest węższy i przesunięty w lewo, a cena z większą liczbą cyfr (np. 129,00 zł) zmniejsza się automatycznie, żeby nie wchodzić na kod.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-13',
     title: 'Etykiety: nazwa ucinana od myślnika; domyślny rozmiar 65 × 30 mm',
     description:
       'Na etykiecie liczy się tylko nazwa główna: wszystko od myślnika (razem z myślnikiem) jest ucinane, np. „Aroma Patyczki zapachowe 50ml - Drewno Cedrowe” → „Aroma Patyczki zapachowe 50ml”. Myślnik wewnątrz słowa (np. CAR-WASH) zostaje. Własna nazwa wpisana ręcznie ołówkiem jest używana bez zmian. Domyślny rozmiar etykiety to teraz 65 × 30 mm (65 × 25 nadal na liście); ustawienia etykiet zaczynają od nowych domyślnych.',

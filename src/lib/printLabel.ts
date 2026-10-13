@@ -133,7 +133,14 @@ function labelMarkup(item: LabelQueueItem, cfg: LabelConfig): string {
         )}</span></div>`,
       );
     }
-    lines.push(`<div class="now${sale ? ' sale' : ''}">${escapeHtml(formatPricePln(shelfGross))}</div>`);
+    // im więcej cyfr w cenie (np. 129,00 zł), tym mniejsza czcionka — żeby nie wchodziła na kod kreskowy
+    const digits = formatPricePln(shelfGross).replace(/\D/g, '').length;
+    const priceScale = digits <= 4 ? 1 : digits === 5 ? 0.88 : 0.76;
+    lines.push(
+      `<div class="now${sale ? ' sale' : ''}" style="font-size:${(base * 2.55 * priceScale).toFixed(1)}px">${escapeHtml(
+        formatPricePln(shelfGross),
+      )}</div>`,
+    );
     lines.push(
       f.priceNet
         ? `<div class="sub">netto ${escapeHtml(formatPricePln(Math.round(net * 100) / 100))}</div>`
@@ -210,10 +217,11 @@ function labelCss(cfg: LabelConfig, preview: boolean): string {
     .label::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: ${compact ? 1.4 : 1.8}mm; background: #33b33b; }
     .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 800; line-height: 1.12; letter-spacing: -0.01em; flex: 0 0 auto; }
     .mid { display: flex; flex: 1 1 auto; min-height: 0; gap: 1.6mm; justify-content: space-between; align-items: stretch; }
-    .left { flex: 1 1 52%; min-width: 0; display: flex; align-items: center; justify-content: flex-start; }
+    /* kod kreskowy: węższy i przesunięty ok. 2,5 mm w lewo (bliżej zielonego paska), żeby cena miała miejsce */
+    .left { flex: 0 1 44%; min-width: 0; margin-left: -2.5mm; display: flex; align-items: center; justify-content: flex-start; }
     .left svg { max-width: 100%; max-height: 100%; height: auto; display: block; }
     .nocode { font-family: monospace; font-size: ${base.toFixed(1)}px; margin: 0; }
-    .right { flex: 0 1 46%; min-width: 0; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; text-align: right; line-height: 1.05; white-space: nowrap; }
+    .right { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; text-align: right; line-height: 1.05; white-space: nowrap; }
     .now { font-weight: 800; font-size: ${(base * 2.55).toFixed(1)}px; color: #14532d; letter-spacing: -0.02em; }
     .now.sale { color: #dc2626; }
     .sub { font-size: ${(base * 0.95).toFixed(1)}px; color: #475569; font-weight: 700; }
