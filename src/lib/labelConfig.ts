@@ -8,7 +8,8 @@ export interface LabelSizePreset {
 }
 
 export const LABEL_SIZE_PRESETS: LabelSizePreset[] = [
-  { id: '65x25', label: '65 × 25 mm (listwy cenowe)', w: 65, h: 25 },
+  { id: '65x30', label: '65 × 30 mm (listwy cenowe)', w: 65, h: 30 },
+  { id: '65x25', label: '65 × 25 mm', w: 65, h: 25 },
   { id: '100x50', label: '100 × 50 mm', w: 100, h: 50 },
   { id: '100x70', label: '100 × 70 mm', w: 100, h: 70 },
   { id: '70x40', label: '70 × 40 mm', w: 70, h: 40 },
@@ -60,9 +61,9 @@ export interface LabelConfig {
 }
 
 export const DEFAULT_LABEL_CONFIG: LabelConfig = {
-  sizeId: '65x25',
+  sizeId: '65x30',
   w: 65,
-  h: 25,
+  h: 30,
   mode: 'sheet',
   fields: {
     brand: false,
@@ -81,8 +82,8 @@ export const DEFAULT_LABEL_CONFIG: LabelConfig = {
   border: true,
 };
 
-// v2: nowy układ (65×25, nazwa u góry w jednej linii, bez logo) — stare ustawienia nie są przenoszone
-const KEY = 'katalog-label-config-v2';
+// v3: domyślnie 65×30 (v2: nowy układ — nazwa u góry w jednej linii, bez logo); stare ustawienia nie są przenoszone
+const KEY = 'katalog-label-config-v3';
 
 export function loadLabelConfig(): LabelConfig {
   try {

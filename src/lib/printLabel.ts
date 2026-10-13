@@ -2,7 +2,7 @@ import JsBarcode from 'jsbarcode';
 import type { LabelQueueItem } from './labelQueue';
 import { loadLabelConfig, type LabelConfig } from './labelConfig';
 import { formatPricePln, formatStock } from './format';
-import { formatPack, parsePackFromText, unitPrice } from './labelPack';
+import { formatPack, labelNameFor, parsePackFromText, unitPrice } from './labelPack';
 import { showToast } from './toast';
 
 function escapeHtml(s: string): string {
@@ -108,7 +108,7 @@ function labelMarkup(item: LabelQueueItem, cfg: LabelConfig): string {
   const base = labelBase(cfg);
 
   // --- nazwa (jedna linia, auto-dopasowanie)
-  const shownName = (item.labelName || '').trim() || item.displayName;
+  const shownName = labelNameFor(item);
   const nameFit = fitLabelName(shownName, cfg);
   const name = f.name
     ? `<div class="nm" style="font-size:${nameFit.px.toFixed(2)}px">${escapeHtml(shownName)}</div>`

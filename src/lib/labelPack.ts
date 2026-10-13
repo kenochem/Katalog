@@ -72,3 +72,22 @@ export function formatPack(pack: PackSize | null | undefined): string {
   const q = Number.isInteger(pack.qty) ? String(pack.qty) : String(pack.qty).replace('.', ',');
   return `${q} ${pack.unit === 'szt' ? 'szt.' : pack.unit}`;
 }
+
+/**
+ * Nazwa na etykiecie: liczy się tylko nazwa główna (początek). Wszystko od myślnika — razem z myślnikiem —
+ * to elementy tłumaczące (np. „Aroma Patyczki 50ml - Drewno Cedrowe”), więc jest ucinane.
+ * Myślnik wewnątrz słowa (np. „CAR-WASH”) zostaje; ucinamy po „ - ”, „ -x” oraz po półpauzie / pauzie.
+ */
+export function shortLabelName(name: string | undefined | null): string {
+  const raw = String(name || '').trim();
+  const m = /\s+[-\u2010-\u2015\u2212]\s*|[\u2013\u2014\u2015]/.exec(raw);
+  if (!m || m.index <= 0) return raw;
+  const head = raw.slice(0, m.index).trim().replace(/[\s,;:]+$/, '');
+  return head || raw;
+}
+
+/** Nazwa wyświetlana na etykiecie: własna (ręcznie wpisana) albo skrócona nazwa produktu. */
+export function labelNameFor(item: { labelName?: string; displayName: string }): string {
+  const custom = (item.labelName || '').trim();
+  return custom || shortLabelName(item.displayName);
+}

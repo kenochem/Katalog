@@ -6,7 +6,7 @@ import {
   updateLabelItem,
   type LabelQueueItem,
 } from '../lib/labelQueue';
-import { PACK_UNITS, formatPack, parsePackFromText, type PackUnit } from '../lib/labelPack';
+import { PACK_UNITS, formatPack, labelNameFor, parsePackFromText, type PackUnit } from '../lib/labelPack';
 
 interface Props {
   item: LabelQueueItem;
@@ -34,7 +34,7 @@ export function LabelItemRow({ item, unitPriceEnabled, nameStatus, onChanged }: 
     <li className="rounded-lg border border-slate-800 bg-slate-950/40 px-2.5 py-1.5">
       <div className="flex items-center gap-2.5">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm text-slate-100">{customName || item.displayName}</p>
+          <p className="truncate text-sm text-slate-100">{labelNameFor(item)}</p>
           <p className="flex flex-wrap items-center gap-x-1.5 font-mono text-[11px] text-brand-400">
             <span>
               {item.sku}
@@ -136,11 +136,13 @@ export function LabelItemRow({ item, unitPriceEnabled, nameStatus, onChanged }: 
             <input
               value={item.labelName ?? ''}
               onChange={(e) => patch({ labelName: e.target.value })}
-              placeholder={item.displayName}
+              placeholder={labelNameFor({ displayName: item.displayName })}
               maxLength={120}
               className="input-field text-sm"
             />
-            <span className="mt-0.5 block text-[10px] text-slate-600">Oryginał: {item.displayName}</span>
+            <span className="mt-0.5 block text-[10px] text-slate-600">
+              Oryginał: {item.displayName} (na etykiecie ucinamy wszystko od myślnika)
+            </span>
           </label>
 
           <div>

@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-13',
+    title: 'Etykiety: nazwa ucinana od myślnika; domyślny rozmiar 65 × 30 mm',
+    description:
+      'Na etykiecie liczy się tylko nazwa główna: wszystko od myślnika (razem z myślnikiem) jest ucinane, np. „Aroma Patyczki zapachowe 50ml - Drewno Cedrowe” → „Aroma Patyczki zapachowe 50ml”. Myślnik wewnątrz słowa (np. CAR-WASH) zostaje. Własna nazwa wpisana ręcznie ołówkiem jest używana bez zmian. Domyślny rozmiar etykiety to teraz 65 × 30 mm (65 × 25 nadal na liście); ustawienia etykiet zaczynają od nowych domyślnych.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-13',
     title: 'Etykiety 65 × 25 mm: nazwa na górze w jednej linii, cena pod spodem',
     description:
       'Nowy domyślny rozmiar etykiety 65 × 25 mm (pod listwy cenowe) i przebudowany układ: bez napisu KENOCHEM u góry, nazwa produktu od samej góry zawsze w jednej linii (czcionka dobiera się automatycznie do szerokości etykiety), pod nią kod kreskowy po lewej i cena po prawej (netto pod brutto, wariant promocyjny na czerwono, cena za 1 l / 1 kg pod spodem), na dole SKU, lokalizacja i pojemność. Gdy nazwa jest za długa na jedną linię, lista „Do wydruku” pokazuje ostrzeżenie „nazwa ucięta — skróć” (nazwę skracasz ołówkiem tylko na etykiecie). Logo KENOCHEM można nadal włączyć w konfiguracji. Uwaga: ustawienia etykiet zaczynają od nowych domyślnych.',
