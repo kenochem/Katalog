@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-13',
+    title: 'Logi: „Status systemów” — karty z alarmami i wspólny strumień zdarzeń z serwera',
+    description:
+      'Sekcja Logi ma nową, domyślną zakładkę „Status systemów”. U góry karty integracji (stany i ceny, sprzedaż, zamówienia → WAPRO, rezerwacje, BaseLinker, promocje) z kolorem, informacją „ostatnio X min temu” i alarmem, gdy agent na serwerze WAPRO milczy dłużej niż 10 min (ostrzeżenie) lub 30 min (problem); nad kartami podsumowanie „Wszystko działa” albo lista tego, co wymaga uwagi. Niżej strumień zdarzeń z serwera z filtrami (źródło, tylko błędy i ostrzeżenia, okres, szukanie) i szczegółami po rozwinięciu. Wcześniej strona pokazywała głównie lokalne wpisy po ręcznych synchronizacjach, bo automatyczne przebiegi agenta nie zapisywały nic w bazie — teraz każdy przebieg (także automatyczny), odczyt rezerwacji, zamówienia, wysyłki do BaseLinkera i promocje trafiają do jednego strumienia. Dotychczasowa strona to zakładka „Zmiany produktów i raporty”. Wymaga migracji migration-system-status.sql i nowych wersji obu agentów.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-13',
     title: 'Aktywność użytkowników przeniesiona do Logów; link do edytowanego produktu',
     description:
       'Dziennik aktywności (kto, co i kiedy zmienił, IP i urządzenie przy logowaniu) jest teraz w sekcji „Logi” jako zakładka „Aktywność użytkowników” — zniknął z Administracji, bo tam nie pasował. Widoczny nadal tylko dla osób z uprawnieniem zarządzania kontami. Przy każdym wpisie dotyczącym produktu (edycja, zmiana ceny, stanu, zdjęć, kategorii) jest przycisk „Produkt”, który otwiera ten produkt w nowej karcie. Działa też zwykły link z adresem ?sku=KOD — po zalogowaniu i załadowaniu katalogu otwiera kartę produktu (dla usuniętego produktu pokaże komunikat).',

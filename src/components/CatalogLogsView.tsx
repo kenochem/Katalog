@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Activity,
+  Gauge,
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
@@ -35,6 +36,7 @@ import { formatPricePln, formatStock } from '../lib/format';
 import { useAuth } from '../lib/auth';
 import { roleCan } from '../lib/roles';
 import { AdminAuditSection } from './AdminAuditSection';
+import { SystemStatusView } from './SystemStatusView';
 
 const PRICE_FIELDS = new Set<ProductSyncChangeField>([
   'price_purchase_net',
@@ -559,19 +561,18 @@ function CatalogSystemLogs({ userId }: CatalogLogsViewProps) {
 export function CatalogLogsView({ userId }: CatalogLogsViewProps) {
   const { role } = useAuth();
   const canAudit = roleCan(role, 'manageUsers');
-  const [tab, setTab] = useState<'system' | 'activity'>('system');
+  const [tab, setTab] = useState<'status' | 'system' | 'activity'>('status');
 
-  if (!canAudit) return <CatalogSystemLogs userId={userId} />;
+  const tabs = [
+    ['status', 'Status systemów', Gauge],
+    ['system', 'Zmiany produktów i raporty', ListTree],
+    ...(canAudit ? ([['activity', 'Aktywność użytkowników', Activity]] as const) : []),
+  ] as const;
 
   return (
     <div className="space-y-4">
-      <div className="mx-auto flex max-w-6xl gap-2">
-        {(
-          [
-            ['system', 'Synchronizacja i zdarzenia', ListTree],
-            ['activity', 'Aktywność użytkowników', Activity],
-          ] as const
-        ).map(([key, label, Icon]) => (
+      <div className="mx-auto flex max-w-6xl flex-wrap gap-2">
+        {tabs.map(([key, label, Icon]) => (
           <button
             key={key}
             type="button"
@@ -587,7 +588,9 @@ export function CatalogLogsView({ userId }: CatalogLogsViewProps) {
           </button>
         ))}
       </div>
-      {tab === 'system' ? (
+      {tab === 'status' ? (
+        <SystemStatusView />
+      ) : tab === 'system' || !canAudit ? (
         <CatalogSystemLogs userId={userId} />
       ) : (
         <div className="mx-auto max-w-6xl">

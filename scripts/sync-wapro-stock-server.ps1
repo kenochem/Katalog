@@ -1757,6 +1757,51 @@ $jsonHeaders = $headers + @{
   Prefer         = 'return=representation'
 }
 
+# --- Sygnaly dla strony Logi -> Status systemow: zdarzenia + "agent zyje" (kazdy przebieg, takze automatyczny).
+# Wymaga migration-system-status.sql; blad zapisu NIGDY nie przerywa synchronizacji.
+function Send-AgentSignal {
+  param(
+    [string]$Agent,
+    [string]$Level = 'info',
+    [string]$Source = '',
+    [string]$Kind = '',
+    [string]$Message = '',
+    [hashtable]$Details = $null,
+    [switch]$HeartbeatOnly
+  )
+  try {
+    $h = @{ apikey = $ServiceKey; Authorization = "Bearer $ServiceKey"; 'Content-Type' = 'application/json' }
+    $now = (Get-Date).ToUniversalTime().ToString('o')
+    if (-not $HeartbeatOnly) {
+      $ev = @{ source = $Source; kind = $Kind; level = $Level; message = $Message; details = @{} }
+      if ($Details) { $ev['details'] = $Details }
+      $b = [System.Text.Encoding]::UTF8.GetBytes(($ev | ConvertTo-Json -Compress -Depth 5))
+      Invoke-RestMethod -Uri ('{0}/rest/v1/system_events' -f $SupabaseUrl) -Headers ($h + @{ Prefer = 'return=minimal' }) -Method Post -Body $b -ContentType 'application/json; charset=utf-8' | Out-Null
+    }
+    $hb = @{ agent = $Agent; last_run_at = $now; updated_at = $now }
+    if (-not $HeartbeatOnly) {
+      $hb['last_status'] = $(if ($Level -eq 'error') { 'error' } else { 'ok' })
+      $hb['message'] = $Message
+      if ($Level -ne 'error') { $hb['last_ok_at'] = $now }
+    }
+    $b2 = [System.Text.Encoding]::UTF8.GetBytes(($hb | ConvertTo-Json -Compress))
+    Invoke-RestMethod -Uri ('{0}/rest/v1/agent_heartbeats?on_conflict=agent' -f $SupabaseUrl) -Headers ($h + @{ Prefer = 'resolution=merge-duplicates,return=minimal' }) -Method Post -Body $b2 -ContentType 'application/json; charset=utf-8' | Out-Null
+  } catch { }
+}
+
+# sygnal "zyje" nie czesciej niz co ~4 min (zadanie chodzi co 2 min)
+function Send-AgentAlive([string]$Agent) {
+  try {
+    $stamp = Join-Path $SyncDir ('agent-alive-{0}.stamp' -f $Agent)
+    if (Test-Path $stamp) {
+      if (((Get-Date) - (Get-Item $stamp).LastWriteTime).TotalMinutes -lt 4) { return }
+    }
+    Set-Content -Path $stamp -Value (Get-Date -Format 'o')
+    Send-AgentSignal -Agent $Agent -HeartbeatOnly
+  } catch { }
+}
+if (-not $DiagnoseSku) { Send-AgentAlive 'stock' }
+
 # --- Zlecenia sync (stany + sprzedaż zbiorcza) ---
 $pendingIds = @()
 $salesSyncPendingIds = @()
@@ -2375,6 +2420,15 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
 
   Write-Log ('Koniec. {0}' -f $msg)
 
+  # zdarzenie dla strony Logi -> Status systemow (takze dla przebiegow automatycznych, bez zlecenia z aplikacji)
+  $warnN = 0
+  [void][int]::TryParse([string]$warnings, [ref]$warnN)
+  Send-AgentSignal -Agent 'stock' -Source 'stock' `
+    -Kind $(if ($pendingIds.Count -gt 0) { 'sync-manual' } else { 'sync-auto' }) `
+    -Level $(if ($warnN -gt 0) { 'warning' } else { 'success' }) `
+    -Message $msg `
+    -Details @{ scope = [string]$syncScope; updated = [string]$updated; unchanged = [string]$unchanged; warnings = $warnN }
+
   if ($pendingIds.Count -gt 0) {
     $doneAt = (Get-Date).ToUniversalTime().ToString('o')
     foreach ($id in $pendingIds) {
@@ -2409,8 +2463,10 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
     Write-Log 'Sprzedaz: uruchamiam odswiezenie danych sprzedazy po syncu stanow'
     try {
       Invoke-SyncWaproSalesBulk -SupabaseUrl $SupabaseUrl -Headers $headers -JsonHeaders $jsonHeaders -SyncDirPath $SyncDir -PendingIds $salesSyncPendingIds | Out-Null
+      Send-AgentSignal -Agent 'stock' -Source 'sales' -Kind 'sales-sync' -Level 'success' -Message 'Odswiezono dane sprzedazy (zbiorczo po syncu stanow)'
     } catch {
       Write-Log ('Bulk sprzedaz po sync stanow BLAD: {0}' -f $_.Exception.Message)
+      Send-AgentSignal -Agent 'stock' -Source 'sales' -Kind 'sales-error' -Level 'error' -Message ('Sprzedaz: ' + $_.Exception.Message)
     }
   } elseif ($hasSalesRequest) {
     Write-Log ('Sync sprzedazy odroczony ({0} pending): ostatni przebieg {1:N0} min temu, minimalny odstep 20 min (lub WAPRO_RUN_SALES_AFTER_STOCK=0)' -f $salesSyncPendingIds.Count, $salesAgeMin)
@@ -2418,6 +2474,7 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
 }
 catch {
   Write-Log ('BLAD: {0}' -f $_.Exception.Message)
+  Send-AgentSignal -Agent 'stock' -Source 'stock' -Kind 'sync-error' -Level 'error' -Message ([string]$_.Exception.Message)
   Write-Log ('BLAD type: {0}' -f $_.Exception.GetType().FullName)
   if ($_.InvocationInfo) {
     Write-Log ('BLAD line: {0}' -f $_.InvocationInfo.ScriptLineNumber)

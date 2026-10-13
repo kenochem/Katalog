@@ -147,6 +147,51 @@ if ($idUser -le 0) {
 $headers = @{ apikey = $ServiceKey; Authorization = "Bearer $ServiceKey"; Accept = 'application/json' }
 $script:JsonHeaders = $headers + @{ 'Content-Type' = 'application/json'; Prefer = 'return=minimal' }
 
+# --- Sygnaly dla strony Logi -> Status systemow: zdarzenia + "agent zyje".
+# Wymaga migration-system-status.sql; blad zapisu NIGDY nie przerywa pracy agenta.
+function Send-AgentSignal {
+  param(
+    [string]$Agent,
+    [string]$Level = 'info',
+    [string]$Source = '',
+    [string]$Kind = '',
+    [string]$Message = '',
+    [hashtable]$Details = $null,
+    [switch]$HeartbeatOnly
+  )
+  try {
+    $h = @{ apikey = $ServiceKey; Authorization = "Bearer $ServiceKey"; 'Content-Type' = 'application/json' }
+    $now = (Get-Date).ToUniversalTime().ToString('o')
+    if (-not $HeartbeatOnly) {
+      $ev = @{ source = $Source; kind = $Kind; level = $Level; message = $Message; details = @{} }
+      if ($Details) { $ev['details'] = $Details }
+      $b = [System.Text.Encoding]::UTF8.GetBytes(($ev | ConvertTo-Json -Compress -Depth 5))
+      Invoke-RestMethod -Uri ('{0}/rest/v1/system_events' -f $script:SupabaseUrl) -Headers ($h + @{ Prefer = 'return=minimal' }) -Method Post -Body $b -ContentType 'application/json; charset=utf-8' | Out-Null
+    }
+    $hb = @{ agent = $Agent; last_run_at = $now; updated_at = $now }
+    if (-not $HeartbeatOnly) {
+      $hb['last_status'] = $(if ($Level -eq 'error') { 'error' } else { 'ok' })
+      $hb['message'] = $Message
+      if ($Level -ne 'error') { $hb['last_ok_at'] = $now }
+    }
+    $b2 = [System.Text.Encoding]::UTF8.GetBytes(($hb | ConvertTo-Json -Compress))
+    Invoke-RestMethod -Uri ('{0}/rest/v1/agent_heartbeats?on_conflict=agent' -f $script:SupabaseUrl) -Headers ($h + @{ Prefer = 'resolution=merge-duplicates,return=minimal' }) -Method Post -Body $b2 -ContentType 'application/json; charset=utf-8' | Out-Null
+  } catch { }
+}
+
+# sygnal "zyje" nie czesciej niz co ~2 min (zadanie chodzi co minute)
+function Send-AgentAlive([string]$Agent) {
+  try {
+    $stamp = Join-Path $SyncDir ('agent-alive-{0}.stamp' -f $Agent)
+    if (Test-Path $stamp) {
+      if (((Get-Date) - (Get-Item $stamp).LastWriteTime).TotalMinutes -lt 2) { return }
+    }
+    Set-Content -Path $stamp -Value (Get-Date -Format 'o')
+    Send-AgentSignal -Agent $Agent -HeartbeatOnly
+  } catch { }
+}
+Send-AgentAlive 'orders'
+
 function Get-Initial([string]$text) {
   # pierwsza litera/cyfra (bez polskich znakow), wielka; brak -> X
   if (-not $text) { return 'X' }
@@ -252,6 +297,9 @@ WHERE pz.ID_ZAMOWIENIA IN ($idList);
       if ($state -ne 'new') { $changed++ }
     }
     Write-Log ('Odczyt realizacji ZO: sprawdzono {0}, zmian {1}' -f $rows.Count, $changed)
+    if ($changed -gt 0) {
+      Send-AgentSignal -Agent 'orders' -Source 'orders' -Kind 'order-states' -Level 'info' -Message ('Odczyt realizacji ZO z WAPRO: sprawdzono {0}, zmian {1}' -f $rows.Count, $changed) -Details @{ checked = $rows.Count; changed = $changed }
+    }
   } catch {
     Write-Log ('Odczyt realizacji ZO nieudany (migracja migration-wapro-order-state.sql wykonana?): {0}' -f $_.Exception.Message)
   }
@@ -316,6 +364,9 @@ GROUP BY UPPER(LTRIM(RTRIM(INDEKS_KATALOGOWY)));
       }
     }
     Write-Log ('Rezerwacje R: w WAPRO {0} SKU, zmian zapisanych {1}/{2}' -f $fresh.Count, $done, $changes.Count)
+    if ($changes.Count -gt 0) {
+      Send-AgentSignal -Agent 'orders' -Source 'reserved' -Kind 'reserved-sync' -Level $(if ($done -lt $changes.Count) { 'warning' } else { 'success' }) -Message ('Rezerwacje (R): w WAPRO {0} SKU, zapisano zmian {1} z {2}' -f $fresh.Count, $done, $changes.Count) -Details @{ withReserved = $fresh.Count; written = $done; changes = $changes.Count }
+    }
 
     # BaseLinker dostaje stan DOSTEPNY (stan - rezerwacje), wiec zmiana rezerwacji = nowa liczba dla BL.
     # Funkcja sama respektuje ustawienia (automat stanow, limit, pomijane SKU); bez automatu nic nie wysyla.
@@ -353,6 +404,7 @@ function Update-Promotions {
     if ($n -gt 0) {
       foreach ($r in @($res.results)) {
         Write-Log ('Promocje: {0} kampanii {1}: {2}/{3} pozycji, pominieto {4}, {5}' -f $r.action, $r.campaignId, $r.done, $r.total, $r.skipped, $r.message)
+        Send-AgentSignal -Agent 'orders' -Source 'promotions' -Kind ('promo-' + [string]$r.action) -Level $(if ([int]$r.errors -gt 0) { 'error' } else { 'success' }) -Message ('Promocje: {0} kampanii: {1}/{2} pozycji, pominieto {3}, {4}' -f $r.action, $r.done, $r.total, $r.skipped, $r.message) -Details @{ campaignId = [string]$r.campaignId; action = [string]$r.action }
       }
     }
   } catch {
