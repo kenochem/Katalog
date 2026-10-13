@@ -313,6 +313,27 @@ export function CatalogChangelogView() {
               </div>
             );
           })}
+
+          {/* Początek historii: przeskok (kropki) i kamień milowy — utworzenie katalogu */}
+          <div className="flex flex-col items-center gap-1.5 py-2" aria-hidden>
+            <span className="h-1 w-1 rounded-full bg-slate-700" />
+            <span className="h-1 w-1 rounded-full bg-slate-700" />
+            <span className="h-1 w-1 rounded-full bg-slate-700" />
+            <span className="h-1 w-1 rounded-full bg-slate-700" />
+          </div>
+          <div className="rounded-xl border border-dashed border-slate-700 bg-slate-900/30 px-4 py-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-md bg-slate-800 px-1.5 py-0.5 text-xs font-bold tabular-nums text-slate-300">
+                start
+              </span>
+              <span className="text-sm font-semibold text-slate-100">7 lipca 2026</span>
+              <span className="text-sm text-slate-400">— utworzenie katalogu</span>
+            </div>
+            <p className="mt-1 text-xs text-slate-500">
+              Data powstania systemu. Zapis aktualizacji w tym dzienniku zaczyna się
+              {days.length ? ` ${formatEntryDate(days[days.length - 1].date)}` : ''}.
+            </p>
+          </div>
         </div>
       )}
     </div>

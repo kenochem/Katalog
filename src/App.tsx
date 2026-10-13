@@ -5,8 +5,6 @@ import {
   ImageOff,
   Loader2,
   Star,
-  Printer,
-  Trash2,
   LayoutGrid,
   Rows2,
   Square,
@@ -59,14 +57,13 @@ import {
 import { showToast } from './lib/toast';
 import {
   getLabelQueue,
-  removeFromLabelQueue,
-  clearLabelQueue,
   type LabelQueueItem,
 } from './lib/labelQueue';
 import { ProductCard } from './components/ProductCard';
 import { CatalogGridCard } from './components/CatalogGridCard';
 import { SearchBar } from './components/SearchBar';
 import { CatalogSmallImagesView } from './components/CatalogSmallImagesView';
+import { LabelStudioView } from './components/LabelStudioView';
 import { useReservedVersion } from './lib/reservedStock';
 import { ProductGrid } from './components/ProductGrid';
 import { InstallAppHint, resetInstallHint } from './components/InstallAppHint';
@@ -1904,29 +1901,10 @@ export default function App() {
             />
           </Suspense>
         ) : view === 'labels' ? (
-          <LabelsView
+          <LabelStudioView
+            products={activeAllProducts}
             queue={labelQueue}
-            onRefresh={refreshLabelQueue}
-            onRemove={(id) => {
-              removeFromLabelQueue(id);
-              refreshLabelQueue();
-              showToast('Usunięto z kolejki', 'info', 1800);
-            }}
-            onClear={() => {
-              clearLabelQueue();
-              refreshLabelQueue();
-              showToast('Wyczyszczono kolejkę etykiet', 'info');
-            }}
-            onPrintAll={() => {
-              void import('./lib/printLabel').then(({ printShelfLabels }) => {
-                printShelfLabels(labelQueue);
-              });
-            }}
-            onPrintOne={(item) => {
-              void import('./lib/printLabel').then(({ printShelfLabels }) => {
-                printShelfLabels([item]);
-              });
-            }}
+            onQueueChange={refreshLabelQueue}
           />
         ) : view === 'admin' && canAccessAdminPanel(role) && !embeddedInHub ? (
           <Suspense fallback={<ViewFallback />}>
@@ -2769,106 +2747,6 @@ function CatalogView({
           )}
         />
         </div>
-      )}
-    </div>
-  );
-}
-
-function LabelsView({
-  queue,
-  onRefresh,
-  onRemove,
-  onClear,
-  onPrintAll,
-  onPrintOne,
-}: {
-  queue: LabelQueueItem[];
-  onRefresh: () => void;
-  onRemove: (id: string) => void;
-  onClear: () => void;
-  onPrintAll: () => void;
-  onPrintOne: (item: LabelQueueItem) => void;
-}) {
-  useEffect(() => {
-    onRefresh();
-  }, [onRefresh]);
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-100">Etykiety półkowe</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Kolejka do druku kodów kreskowych (EAN / SKU) i adresu regału
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={!queue.length}
-            onClick={onPrintAll}
-            className="flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-500 disabled:opacity-50"
-          >
-            <Printer className="h-4 w-4" />
-            Drukuj wszystkie ({queue.length})
-          </button>
-          <button
-            type="button"
-            disabled={!queue.length}
-            onClick={onClear}
-            className="flex items-center gap-2 rounded-xl border border-slate-700 px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-800 disabled:opacity-50"
-          >
-            <Trash2 className="h-4 w-4" />
-            Wyczyść
-          </button>
-        </div>
-      </div>
-
-      {!queue.length ? (
-        <div className="rounded-2xl border border-dashed border-slate-700 py-16 text-center">
-          <Printer className="mx-auto h-12 w-12 text-slate-600" />
-          <p className="mt-3 text-slate-400">Kolejka pusta</p>
-          <p className="mt-1 text-sm text-slate-500">
-            Otwórz produkt → „Do kolejki druku”, potem wróć tutaj.
-          </p>
-        </div>
-      ) : (
-        <ul className="space-y-2">
-          {queue.map((item) => (
-            <li
-              key={item.id}
-              className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/80 px-3 py-2"
-            >
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-slate-100">{item.displayName}</p>
-                <p className="font-mono text-xs text-brand-400">
-                  {item.sku}
-                  {item.ean && item.ean !== item.sku ? ` · ${item.ean}` : ''}
-                </p>
-                {item.locationCode ? (
-                  <p className="font-mono text-xs font-semibold text-emerald-400">{item.locationCode}</p>
-                ) : (
-                  <p className="text-[10px] text-slate-600">Brak lokalizacji — ustaw w Magazyn / produkcie</p>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => onPrintOne(item)}
-                className="rounded-lg border border-brand-500/40 bg-brand-500/10 px-3 py-1.5 text-xs font-medium text-brand-300 hover:bg-brand-500/20"
-              >
-                Drukuj
-              </button>
-              <button
-                type="button"
-                onClick={() => onRemove(item.id)}
-                className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-red-400"
-                aria-label="Usuń z kolejki"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </li>
-          ))}
-        </ul>
       )}
     </div>
   );

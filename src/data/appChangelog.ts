@@ -13,6 +13,20 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-13',
+    title: 'Studio etykiet: wybór produktów, konfiguracja i jasna etykieta do druku',
+    description:
+      'Sekcja „Etykiety” w menu to teraz pełne narzędzie: wyszukiwanie i zaznaczanie wielu produktów naraz (także „dodaj wszystkie wyniki”), ilość kopii przy każdym, podgląd na żywo i druk. Ustawiasz rozmiar (100×50, 100×70, 70×40, 60×40, 50×30 lub własny), papier (arkusz A4 albo drukarka etykiet), co ma być na etykiecie (logo, nazwa, SKU, kod kreskowy EAN/SKU, producent, kategoria, cena brutto, lokalizacja, stan), wielkość czcionki i ramkę — ustawienia są pamiętane. Etykieta to jasny prostokąt z zielonym akcentem i najważniejszymi danymi produktu.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-13',
+    title: 'Aktualizacje: oznaczony początek historii (7 lipca 2026 — utworzenie katalogu)',
+    description:
+      'Na końcu dziennika zmian, za kropkowanym przeskokiem, widać kamień milowy: 7 lipca 2026 — utworzenie katalogu (data powstania systemu). Pierwszy szczegółowy wpis w dzienniku pochodzi z 16 września 2026.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-13',
     title: 'Przycisk weryfikacji BaseLinker (znaczniki B i W) obok odświeżania',
     description:
       'W nagłówku, na lewo od strzałek odświeżania, jest nowy przycisk z logo niebieskiego „B” i pomarańczowego „W”. Odświeża powiązania produktów z BaseLinkerem (administrator z uprawnieniem BaseLinker pobiera przy tym aktualną listę z BL, pozostali — aktualne powiązania z bazy) i pokazuje podsumowanie: ile produktów ma znacznik B (wystawione w BL) i ile W (z Mag, do uzupełnienia, bez oferty w BL).',
