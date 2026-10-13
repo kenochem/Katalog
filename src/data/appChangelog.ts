@@ -12,6 +12,13 @@ export interface AppChangelogEntry {
  */
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
+    date: '2026-10-13',
+    title: 'BaseLinker: do BL idzie stan dostępny (stan − rezerwacje), bez wirtualnych sztuk',
+    description:
+      'BaseLinker liczy swoje rezerwacje osobno (np. „23 (+3)”), a my wysyłaliśmy pełny stan z WAPRO (26), przez co przy rezerwacjach w BL pojawiały się dodatkowe, wirtualne sztuki. Teraz porównanie, ręczna i automatyczna wysyłka stanów oraz import nowych produktów używają stanu dostępnego: stan WAPRO minus zarezerwowane (to samo co „Ilość dost. w mag.” w WAPRO). Panel BaseLinker na karcie produktu porównuje stan dostępny z BL; zmiana rezerwacji w WAPRO wysyła nową wartość do BL (jeśli automat stanów jest włączony). Wymaga wdrożenia funkcji baselinker w Supabase i nowej wersji agenta zamówień.',
+    tag: 'poprawka',
+  },
+  {
     date: '2026-10-12',
     title: 'Zarezerwowane sztuki (R) przy stanie produktu',
     description:

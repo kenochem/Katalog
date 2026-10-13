@@ -316,6 +316,21 @@ GROUP BY UPPER(LTRIM(RTRIM(INDEKS_KATALOGOWY)));
       }
     }
     Write-Log ('Rezerwacje R: w WAPRO {0} SKU, zmian zapisanych {1}/{2}' -f $fresh.Count, $done, $changes.Count)
+
+    # BaseLinker dostaje stan DOSTEPNY (stan - rezerwacje), wiec zmiana rezerwacji = nowa liczba dla BL.
+    # Funkcja sama respektuje ustawienia (automat stanow, limit, pomijane SKU); bez automatu nic nie wysyla.
+    if ($changes.Count -gt 0) {
+      try {
+        $blSkus = @($changes | ForEach-Object { [string]$_[0] } | Select-Object -First 400)
+        $blHeaders = @{ apikey = $ServiceKey; Authorization = "Bearer $ServiceKey"; 'Content-Type' = 'application/json' }
+        $blBody = [System.Text.Encoding]::UTF8.GetBytes((@{ action = 'push'; skus = $blSkus; fields = @('stock') } | ConvertTo-Json -Compress))
+        $blRes = Invoke-RestMethod -Uri ('{0}/functions/v1/baselinker' -f $script:SupabaseUrl) -Headers $blHeaders -Method Post -Body $blBody -ContentType 'application/json; charset=utf-8'
+        if ($blRes.skipped) { Write-Log ('BaseLinker (rezerwacje): pominieto - {0}' -f $blRes.reason) }
+        else { Write-Log ('BaseLinker (rezerwacje): wyslano stan dostepny dla {0} SKU' -f $blSkus.Count) }
+      } catch {
+        Write-Log ('BaseLinker (rezerwacje): blad wysylki: {0}' -f $_.Exception.Message)
+      }
+    }
   } catch {
     Write-Log ('Rezerwacje nieudane (migracja migration-product-reserved.sql wykonana?): {0}' -f $_.Exception.Message)
   }

@@ -170,7 +170,12 @@ function isExcluded(sku: string, s: SyncSettings): boolean {
 interface OurProduct {
   sku: string;
   name: string;
+  /** Pelny stan z WAPRO (wlacznie z zarezerwowanym). */
   stock: number;
+  /** Zarezerwowane w otwartych zamowieniach WAPRO (products.stock_reserved). */
+  reserved: number;
+  /** Stan DOSTEPNY = stock - reserved — taki idzie do BaseLinkera (BL liczy swoje rezerwacje osobno, "23 (+3)"). */
+  available: number;
   stockManual: boolean;
   skipStock: boolean;
   skipPrice: boolean;
@@ -197,11 +202,42 @@ function mapOur(r: Record<string, unknown>): OurProduct {
     sku: String(r.sku ?? '').toUpperCase(),
     name: String(r.display_name || r.name || ''),
     stock: Number(r.stock ?? 0),
+    reserved: 0,
+    available: Math.max(0, Math.floor(Number(r.stock ?? 0))),
     stockManual: r.stock_manual === true,
     skipStock: r.skip_stock === 'true',
     skipPrice: r.skip_price === 'true',
     priceGross: ourGrossPrice(r),
   };
+}
+
+/**
+ * Zarezerwowane sztuki (products.stock_reserved, zasila agent WAPRO). Osobne zapytanie — brak kolumny
+ * (migracja niewykonana) nie psuje reszty: wtedy zwracamy pusta mape i idzie caly stan jak dotad.
+ */
+async function loadReservedMap(admin: Admin, skus?: string[]): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  try {
+    for (let from = 0; from < 20000; from += 1000) {
+      let q = admin.from('products').select('sku,stock_reserved').gt('stock_reserved', 0).order('sku').range(from, from + 999);
+      if (skus?.length) q = q.in('sku', skus);
+      const { data, error } = await q;
+      if (error) return out;
+      for (const r of data ?? []) {
+        const n = Number((r as Record<string, unknown>).stock_reserved);
+        if (Number.isFinite(n) && n > 0) out.set(String((r as Record<string, unknown>).sku).toUpperCase(), n);
+      }
+      if (!data || data.length < 1000) break;
+    }
+  } catch {
+    /* ignoruj */
+  }
+  return out;
+}
+
+function applyReserved(o: OurProduct, reserved: Map<string, number>): void {
+  o.reserved = reserved.get(o.sku) ?? 0;
+  o.available = Math.max(0, Math.floor(o.stock - o.reserved));
 }
 
 async function loadOurAll(admin: Admin): Promise<OurProduct[]> {
@@ -212,6 +248,8 @@ async function loadOurAll(admin: Admin): Promise<OurProduct[]> {
     for (const r of data ?? []) out.push(mapOur(r));
     if (!data || data.length < 1000) break;
   }
+  const reserved = await loadReservedMap(admin);
+  for (const o of out) applyReserved(o, reserved);
   return out;
 }
 
@@ -392,11 +430,13 @@ function buildImport(row: Record<string, unknown>, ctx: ImportCtx) {
   if (manufacturerId == null) warnings.push(`brak producenta w BaseLinkerze (${manName || 'nie przypisano'})`);
 
   // stan (stan wlasny typu 999999 nie jest przenoszony)
-  const stockRaw = Math.max(0, Math.floor(Number(row.stock ?? 0)));
+  const stockTotal = Math.max(0, Math.floor(Number(row.stock ?? 0)));
   const ownStock =
-    meta.baselinkerSkipStock === true || (ctx.settings.skipStockAbove > 0 && stockRaw >= ctx.settings.skipStockAbove);
+    meta.baselinkerSkipStock === true || (ctx.settings.skipStockAbove > 0 && stockTotal >= ctx.settings.skipStockAbove);
   if (ownStock) warnings.push('stan wlasny — w BaseLinkerze ustawiono 0');
-  const stock = ownStock ? 0 : stockRaw;
+  // do BL idzie stan DOSTEPNY (stan - zarezerwowane); BL liczy swoje rezerwacje osobno ("23 (+3)")
+  const reservedQty = Math.max(0, Number(row.stock_reserved ?? 0) || 0);
+  const stock = ownStock ? 0 : Math.max(0, Math.floor(stockTotal - reservedQty));
 
   const payload: Record<string, unknown> = {
     inventory_id: INVENTORY_ID,
@@ -924,7 +964,7 @@ Deno.serve(async (req) => {
           excluded++;
           continue;
         }
-        const want = Math.max(0, Math.floor(o.stock));
+        const want = o.available; // dostepny = stan - zarezerwowane (BL liczy swoje rezerwacje osobno)
         if (blStock !== want) {
           if (skipStockFor(o, settings)) skippedStock++;
           else stockDiffs.push({ sku: o.sku, name: o.name, ours: want, bl: blStock, blId: b.id, manual: o.stockManual });
@@ -1033,6 +1073,10 @@ Deno.serve(async (req) => {
           if (!our.has(m.sku)) our.set(m.sku, m);
         }
       }
+      if (fields.includes('stock')) {
+        const reservedMap = await loadReservedMap(admin, skus);
+        for (const o of our.values()) applyReserved(o, reservedMap);
+      }
 
       const results: Record<string, unknown> = {};
       const noLink: string[] = [];
@@ -1057,7 +1101,7 @@ Deno.serve(async (req) => {
               skipped++;
               continue;
             }
-            payload.push([String(blId), Math.max(0, Math.floor(o.stock)), sku]);
+            payload.push([String(blId), o.available, sku]);
           } else {
             if (o.priceGross == null || (isSystem && o.skipPrice)) {
               skipped++;
@@ -1159,6 +1203,7 @@ Deno.serve(async (req) => {
 
       const rows: Record<string, unknown>[] = [];
       const seen = new Set<string>();
+      const reservedAll = await loadReservedMap(admin);
       for (let from = 0; ; from += 1000) {
         const { data, error } = await admin
           .from('products')
@@ -1173,7 +1218,10 @@ Deno.serve(async (req) => {
           const meta = (r.product_meta ?? {}) as Record<string, unknown>;
           if (meta.catalogHidden === true) continue;
           // opis ocenia osobny zbior (bez pobierania tresci)
-          const built = buildImport({ ...r, description: withDesc.has(sku) ? 'x' : '' }, ctx);
+          const built = buildImport(
+            { ...r, description: withDesc.has(sku) ? 'x' : '', stock_reserved: reservedAll.get(sku) ?? 0 },
+            ctx,
+          );
           rows.push({
             sku,
             name: built.name,
@@ -1218,6 +1266,7 @@ Deno.serve(async (req) => {
         if (!bySku.has(k)) bySku.set(k, r);
       }
 
+      const reservedForImport = await loadReservedMap(admin, skus);
       const results: Record<string, unknown>[] = [];
       const links: Record<string, unknown>[] = [];
       for (const sku of skus) {
@@ -1230,7 +1279,7 @@ Deno.serve(async (req) => {
           results.push({ sku, status: 'blocked', message: 'SKU juz istnieje w katalogu BaseLinkera — import zablokowany' });
           continue;
         }
-        const built = buildImport(row, ctx);
+        const built = buildImport({ ...row, stock_reserved: reservedForImport.get(sku) ?? 0 }, ctx);
         if (built.blockers.length) {
           results.push({ sku, status: 'error', message: built.blockers.join(', ') });
           continue;

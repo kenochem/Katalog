@@ -20,6 +20,7 @@ import { updateProduct } from '../../lib/products';
 import { mergeProductMeta } from '../../lib/productMeta';
 import { showToast } from '../../lib/toast';
 import { formatPricePln } from '../../lib/format';
+import { useReservedQty } from '../../lib/reservedStock';
 
 function Cell({
   label,
@@ -214,7 +215,10 @@ export function BaselinkerProductPanel({
   }, [product.sku]);
 
   const ourGross = product.priceSaleGross;
-  const stockSame = data?.found ? Number(data.stock ?? 0) === Math.max(0, Math.floor(product.stock ?? 0)) : null;
+  // do BL idzie stan DOSTEPNY (stan WAPRO - zarezerwowane); BL pokazuje rezerwacje osobno, np. „23 (+3)”
+  const reservedQty = useReservedQty(product.sku);
+  const ourAvailable = Math.max(0, Math.floor((product.stock ?? 0) - reservedQty));
+  const stockSame = data?.found ? Number(data.stock ?? 0) === ourAvailable : null;
   const priceSame =
     data?.found && data.priceGross != null && ourGross != null
       ? Math.abs(Number(data.priceGross) - Number(ourGross)) < 0.01
@@ -279,8 +283,8 @@ export function BaselinkerProductPanel({
         <>
           <div className="grid grid-cols-3 gap-2">
             <Cell
-              label="Stan (kat. → BL)"
-              ours={String(Math.max(0, Math.floor(product.stock ?? 0)))}
+              label={reservedQty > 0 ? `Dostępne (kat. → BL), R ${reservedQty}` : 'Stan (kat. → BL)'}
+              ours={String(ourAvailable)}
               bl={String(data.stock ?? 0)}
               same={stockSame}
             />
