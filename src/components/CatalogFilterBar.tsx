@@ -40,6 +40,7 @@ const STOCK_OPTS = [
   { id: 'in-stock' as const, label: 'Na stanie' },
   { id: 'low' as const, label: `Niski stan (≤${LOW_STOCK_MAX})` },
   { id: 'out' as const, label: 'Brak na stanie' },
+  { id: 'reserved' as const, label: 'Z rezerwacją (R)' },
 ];
 
 const IMAGE_OPTS = [

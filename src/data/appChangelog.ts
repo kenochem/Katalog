@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-13',
+    title: 'Katalog: stan realny (dostępny) i filtr „Z rezerwacją (R)”',
+    description:
+      'Na kafelku i w szczegółach produktu główną liczbą jest teraz stan realny: stan WAPRO minus zarezerwowane w otwartych zamówieniach (jak „Ilość dost.” w WAPRO), a obok pomarańczowe „R n” z liczbą zarezerwowanych; pełny stan WAPRO widać w podpowiedzi. Filtry stanu („Na stanie”, „Niski stan”, „Brak na stanie”) i sortowanie po stanie liczą stan realny. Nowy filtr stanu „Z rezerwacją (R)” pokazuje tylko produkty z rezerwacjami. Tryb edycji stanu nadal pokazuje pełny stan WAPRO.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-13',
     title: 'BaseLinker: do BL idzie stan dostępny (stan − rezerwacje), bez wirtualnych sztuk',
     description:
       'BaseLinker liczy swoje rezerwacje osobno (np. „23 (+3)”), a my wysyłaliśmy pełny stan z WAPRO (26), przez co przy rezerwacjach w BL pojawiały się dodatkowe, wirtualne sztuki. Teraz porównanie, ręczna i automatyczna wysyłka stanów oraz import nowych produktów używają stanu dostępnego: stan WAPRO minus zarezerwowane (to samo co „Ilość dost. w mag.” w WAPRO). Panel BaseLinker na karcie produktu porównuje stan dostępny z BL; zmiana rezerwacji w WAPRO wysyła nową wartość do BL (jeśli automat stanów jest włączony). Wymaga wdrożenia funkcji baselinker w Supabase i nowej wersji agenta zamówień.',

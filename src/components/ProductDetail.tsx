@@ -629,10 +629,12 @@ export function ProductDetail({
   const customerPriceEstimated =
     detail.priceSaleGross == null && detail.priceSaleNet != null && customerPrice != null;
   const canDeleteProduct = roleCan(role, 'deleteProduct');
+  // stan REALNY (dostępny) = stan WAPRO − zarezerwowane; R pokazujemy obok
+  const availableStock = Math.max(0, (detail.stock ?? 0) - reservedQty);
   const stockTone =
-    detail.stock <= 0
+    availableStock <= 0
       ? 'bg-red-600 text-white border-red-500'
-      : detail.stock <= 5
+      : availableStock <= 5
         ? 'bg-amber-500 text-amber-950 border-amber-400'
         : 'bg-emerald-600 text-white border-emerald-500';
 
@@ -789,11 +791,11 @@ export function ProductDetail({
                     </button>
                   )}
                   <span className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-semibold ${stockTone}`}>
-                    Stan: {detail.stock <= 0 ? 'Brak' : formatStock(detail.stock)}
+                    Stan: {availableStock <= 0 ? 'Brak' : formatStock(availableStock)}
                     {reservedQty > 0 && (
                       <span
                         className="rounded bg-amber-400 px-1.5 text-xs font-bold text-amber-950"
-                        title={`Zarezerwowane w zamówieniach: ${formatStock(reservedQty)} · dostępne: ${formatStock(Math.max(0, (detail.stock ?? 0) - reservedQty))}`}
+                        title={`Zarezerwowane w zamówieniach: ${formatStock(reservedQty)} · dostępne: ${formatStock(availableStock)} · stan WAPRO: ${formatStock(detail.stock ?? 0)}`}
                       >
                         R {formatStock(reservedQty)}
                       </span>
@@ -1628,13 +1630,13 @@ export function ProductDetail({
                   <Badge label="Brak EAN" muted />
                 )}
                 <Badge
-                  label={`Stan: ${formatStock(detail.stock ?? 0)}${
+                  label={`Stan: ${formatStock(availableStock)}${
                     reservedQty > 0
-                      ? ` · R ${formatStock(reservedQty)} (dostępne ${formatStock(Math.max(0, (detail.stock ?? 0) - reservedQty))})`
+                      ? ` · R ${formatStock(reservedQty)} (stan WAPRO ${formatStock(detail.stock ?? 0)})`
                       : ''
                   }${detail.stockManual ? ' · ręczny' : ''}`}
-                  muted={detail.stock > 0}
-                  warning={detail.stock <= 0}
+                  muted={availableStock > 0}
+                  warning={availableStock <= 0}
                 />
                 {formatLocationCode(
                   resolveProductLocation(detail.id, detail.warehouseLocation),

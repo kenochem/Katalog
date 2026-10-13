@@ -67,6 +67,7 @@ import { ProductCard } from './components/ProductCard';
 import { CatalogGridCard } from './components/CatalogGridCard';
 import { SearchBar } from './components/SearchBar';
 import { CatalogSmallImagesView } from './components/CatalogSmallImagesView';
+import { useReservedVersion } from './lib/reservedStock';
 import { ProductGrid } from './components/ProductGrid';
 import { InstallAppHint, resetInstallHint } from './components/InstallAppHint';
 import { LoginGate } from './components/LoginGate';
@@ -1097,6 +1098,9 @@ export default function App() {
     return () => window.clearTimeout(t);
   }, [products]);
 
+  // filtry/sortowanie po stanie liczą stan dostępny (stan − rezerwacje) — przelicz po odświeżeniu rezerwacji
+  const reservedVersion = useReservedVersion();
+
   const filtered = useMemo(() => {
     const catalogForFavorites = view === 'favorites' ? allProducts : products;
     const base =
@@ -1115,7 +1119,7 @@ export default function App() {
       waproMagFilter,
       visibilityFilter,
     });
-  }, [products, allProducts, debouncedSearch, category, manufacturer, sort, stockFilter, imageFilter, knowledgeFilter, baselinkerFilter, waproMagFilter, visibilityFilter, view, favoriteSet]);
+  }, [products, allProducts, debouncedSearch, category, manufacturer, sort, stockFilter, imageFilter, knowledgeFilter, baselinkerFilter, waproMagFilter, visibilityFilter, view, favoriteSet, reservedVersion]);
 
   const favoriteCount = useMemo(
     () => allProducts.reduce((n, p) => n + (favoriteSet.has(p.id) ? 1 : 0), 0),

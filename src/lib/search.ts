@@ -4,6 +4,7 @@ import { isCatalogHiddenProduct, isWaproSkeletonProduct } from './productMeta';
 import { getProductSearchIndex, searchIndexedProducts } from './productSearchIndex';
 import { effectiveManufacturer } from './waproManufacturers';
 import { getProductDisplayCategory } from './catalogCategory';
+import { getAvailableQty, getReservedQty } from './reservedStock';
 import type { Product } from '../types';
 
 export type CatalogSort =
@@ -14,7 +15,7 @@ export type CatalogSort =
   | 'stock-desc'
   | 'stock-asc';
 
-export type StockFilter = 'all' | 'in-stock' | 'low' | 'out';
+export type StockFilter = 'all' | 'in-stock' | 'low' | 'out' | 'reserved';
 export type ImageFilter = 'all' | 'with' | 'without';
 export type KnowledgeFilter = 'all' | 'weak' | 'good';
 export type WaproMagFilter = 'all' | 'needs-media';
@@ -51,12 +52,12 @@ export function sortProducts(products: Product[], sort: CatalogSort): Product[] 
       return list.sort((a, b) => comparePl(a.sku, b.sku));
     case 'stock-desc':
       return list.sort((a, b) => {
-        const d = (b.stock ?? 0) - (a.stock ?? 0);
+        const d = getAvailableQty(b) - getAvailableQty(a);
         return d !== 0 ? d : comparePl(a.displayName, b.displayName);
       });
     case 'stock-asc':
       return list.sort((a, b) => {
-        const d = (a.stock ?? 0) - (b.stock ?? 0);
+        const d = getAvailableQty(a) - getAvailableQty(b);
         return d !== 0 ? d : comparePl(a.displayName, b.displayName);
       });
     case 'name-asc':
@@ -94,15 +95,18 @@ export function applyCatalogFilters(
     result = result.filter((p) => effectiveManufacturer(p) === manufacturer);
   }
 
+  // Filtry stanu liczą stan REALNY (dostępny = stan − zarezerwowane), jak „Ilość dost.” w WAPRO.
   if (opts.stockFilter === 'in-stock') {
-    result = result.filter((p) => (p.stock ?? 0) > 0);
+    result = result.filter((p) => getAvailableQty(p) > 0);
   } else if (opts.stockFilter === 'low') {
     result = result.filter((p) => {
-      const s = p.stock ?? 0;
+      const s = getAvailableQty(p);
       return s > 0 && s <= LOW_STOCK_MAX;
     });
   } else if (opts.stockFilter === 'out') {
-    result = result.filter((p) => (p.stock ?? 0) <= 0);
+    result = result.filter((p) => getAvailableQty(p) <= 0);
+  } else if (opts.stockFilter === 'reserved') {
+    result = result.filter((p) => !p.isGroup && getReservedQty(p.sku) > 0);
   }
 
   if (opts.imageFilter === 'with') {

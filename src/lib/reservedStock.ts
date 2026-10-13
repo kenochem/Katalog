@@ -27,6 +27,13 @@ export function getReservedQty(sku: string | undefined | null): number {
   return reserved.get(String(sku).trim().toUpperCase()) ?? 0;
 }
 
+/** Stan REALNY (dostępny) = stan WAPRO − zarezerwowane w otwartych zamówieniach (jak „Ilość dost.” w WAPRO). */
+export function getAvailableQty(p: { sku?: string | null; stock?: number | null; isGroup?: boolean }): number {
+  const stock = Number(p.stock ?? 0);
+  const reservedQty = p.isGroup ? 0 : getReservedQty(p.sku);
+  return Math.max(0, stock - reservedQty);
+}
+
 export async function refreshReserved(force = false): Promise<void> {
   if (!supabase) return;
   if (inflight) return inflight;
@@ -78,6 +85,15 @@ function subscribe(fn: () => void): () => void {
 
 function getVersion(): number {
   return version;
+}
+
+/** Hook: numer wersji rezerwacji — do zależności useMemo (filtry/sortowanie po stanie dostępnym). */
+export function useReservedVersion(): number {
+  const v = useSyncExternalStore(subscribe, getVersion, getVersion);
+  useEffect(() => {
+    startReservedSync();
+  }, []);
+  return v;
 }
 
 /** Hook: odświeża komponent, gdy zmienią się rezerwacje. Zwraca zarezerwowane sztuki dla SKU. */

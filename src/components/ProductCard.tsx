@@ -69,6 +69,8 @@ export const ProductCard = memo(
   }: ProductCardProps) {
   const showImage = !hideImages && hasDisplayableProductImage(product);
   const reservedQty = useReservedQty(product.isGroup ? undefined : product.sku);
+  // stan REALNY (dostępny) = stan WAPRO − zarezerwowane; R pokazujemy obok
+  const availableQty = Math.max(0, (product.stock ?? 0) - reservedQty);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -278,12 +280,17 @@ export const ProductCard = memo(
             className={`pointer-events-none absolute bottom-2 right-2 z-[2] rounded-md font-medium ${
               compact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.5 text-xs'
             } ${
-              product.stock <= 0
+              availableQty <= 0
                 ? 'bg-red-700/90 text-white'
                 : 'bg-black/70 text-white'
             }`}
+            title={
+              reservedQty > 0
+                ? `Dostępne ${formatStock(availableQty)} · zarezerwowane ${formatStock(reservedQty)} · stan WAPRO ${formatStock(product.stock ?? 0)}`
+                : undefined
+            }
           >
-            {formatStock(product.stock ?? 0)}
+            {formatStock(availableQty)}
             {reservedQty > 0 && (
               <span
                 className={`ml-1 rounded bg-amber-400 font-bold text-amber-950 ${
