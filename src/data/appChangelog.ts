@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-13',
+    title: 'Etykiety: cena jednostkowa (1 l / 1 kg / 1 szt.), netto, wariant wyprzedażowy i własna nazwa',
+    description:
+      'Konfigurator etykiet ma teraz: cenę jednostkową (obowiązek na półce) — pojemność lub wagę opakowania rozpoznaje z nazwy (np. 500 ml, 5 l, 750 g), można ją poprawić ręcznie, a etykieta pokazuje cenę za 1 l / 1 kg / 1 szt.; cenę netto pod brutto; wariant wyprzedażowy (przy produkcie wpisujesz cenę promocyjną: stara cena jest przekreślona, nowa na czerwono ze znaczkiem PROMOCJA, cena jednostkowa liczy się od ceny promocyjnej); oraz edycję nazwy produktu tylko na etykiecie (gdy oryginalna się nie mieści). Edycja nazwy, pojemności i ceny promocyjnej jest pod ikoną ołówka przy produkcie na liście „Do wydruku”.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-13',
     title: 'Studio etykiet: wybór produktów, konfiguracja i jasna etykieta do druku',
     description:
       'Sekcja „Etykiety” w menu to teraz pełne narzędzie: wyszukiwanie i zaznaczanie wielu produktów naraz (także „dodaj wszystkie wyniki”), ilość kopii przy każdym, podgląd na żywo i druk. Ustawiasz rozmiar (100×50, 100×70, 70×40, 60×40, 50×30 lub własny), papier (arkusz A4 albo drukarka etykiet), co ma być na etykiecie (logo, nazwa, SKU, kod kreskowy EAN/SKU, producent, kategoria, cena brutto, lokalizacja, stan), wielkość czcionki i ramkę — ustawienia są pamiętane. Etykieta to jasny prostokąt z zielonym akcentem i najważniejszymi danymi produktu.',

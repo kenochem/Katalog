@@ -24,6 +24,8 @@ export interface LabelFields {
   manufacturer: boolean;
   category: boolean;
   price: boolean;
+  priceNet: boolean;
+  unitPrice: boolean;
   location: boolean;
   stock: boolean;
 }
@@ -36,6 +38,8 @@ export const LABEL_FIELD_LABELS: Record<keyof LabelFields, string> = {
   manufacturer: 'Producent',
   category: 'Kategoria',
   price: 'Cena brutto',
+  priceNet: 'Cena netto (pod brutto)',
+  unitPrice: 'Cena za 1 l / 1 kg / 1 szt. (jednostkowa)',
   location: 'Lokalizacja (regał)',
   stock: 'Stan',
 };
@@ -66,7 +70,9 @@ export const DEFAULT_LABEL_CONFIG: LabelConfig = {
     barcode: true,
     manufacturer: false,
     category: false,
-    price: false,
+    price: true,
+    priceNet: false,
+    unitPrice: true,
     location: true,
     stock: false,
   },

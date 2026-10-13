@@ -2,6 +2,7 @@ import JsBarcode from 'jsbarcode';
 import type { LabelQueueItem } from './labelQueue';
 import { loadLabelConfig, type LabelConfig } from './labelConfig';
 import { formatPricePln, formatStock } from './format';
+import { formatPack, parsePackFromText, unitPrice } from './labelPack';
 import { showToast } from './toast';
 
 function escapeHtml(s: string): string {
@@ -64,7 +65,8 @@ function labelMarkup(item: LabelQueueItem, cfg: LabelConfig): string {
       : '';
   const top = f.brand || loc ? `<div class="top">${topLeft}${loc}</div>` : '';
 
-  const name = f.name ? `<div class="name">${escapeHtml(item.displayName)}</div>` : '';
+  const shownName = (item.labelName || '').trim() || item.displayName;
+  const name = f.name ? `<div class="name">${escapeHtml(shownName)}</div>` : '';
 
   const chips: string[] = [];
   if (f.sku && item.sku) chips.push(`<span class="chip mono">SKU ${escapeHtml(item.sku)}</span>`);
@@ -74,15 +76,45 @@ function labelMarkup(item: LabelQueueItem, cfg: LabelConfig): string {
   if (f.stock && item.stock != null) chips.push(`<span class="chip">stan ${escapeHtml(formatStock(item.stock))}</span>`);
   const meta = chips.length ? `<div class="meta">${chips.join('')}</div>` : '';
 
-  const price =
-    f.price && item.priceGross != null && Number.isFinite(item.priceGross)
-      ? `<div class="price">${escapeHtml(formatPricePln(item.priceGross))}<small>brutto</small></div>`
+  // ceny: zwykła, netto pod brutto, wariant wyprzedażowy (stara przekreślona, nowa na czerwono)
+  const sale =
+    item.salePrice != null &&
+    item.priceGross != null &&
+    Number.isFinite(item.salePrice) &&
+    item.salePrice > 0 &&
+    item.salePrice < item.priceGross;
+  const shelfGross = sale ? (item.salePrice as number) : item.priceGross;
+  const vat = item.vatRate ?? 23;
+  let price = '';
+  if (f.price && shelfGross != null && Number.isFinite(shelfGross)) {
+    const net = sale || item.priceNet == null ? shelfGross / (1 + vat / 100) : item.priceNet;
+    const old = sale ? `<span class="old">${escapeHtml(formatPricePln(item.priceGross as number))}</span>` : '';
+    const promo = sale ? '<span class="promo">PROMOCJA</span>' : '';
+    const netLine = f.priceNet
+      ? `<small class="net">netto ${escapeHtml(formatPricePln(Math.round(net * 100) / 100))}</small>`
       : '';
+    price = `<div class="price${sale ? ' sale' : ''}">${promo}${old}<span class="now">${escapeHtml(
+      formatPricePln(shelfGross),
+    )}</span><small>brutto</small>${netLine}</div>`;
+  }
+
+  // cena jednostkowa (obowiązek: za 1 l / 1 kg / 1 szt.) liczona od ceny z półki
+  let unit = '';
+  if (f.unitPrice) {
+    const pack = item.pack ?? parsePackFromText(item.displayName);
+    const up = unitPrice(shelfGross, pack);
+    if (up) {
+      unit = `<div class="unit${sale ? ' sale' : ''}">${escapeHtml(formatPack(pack))} &middot; cena za ${escapeHtml(
+        up.label,
+      )}: <b>${escapeHtml(formatPricePln(up.value))}</b></div>`;
+    }
+  }
 
   const bcBlock = barcode ? `<div class="bc">${barcode}</div>` : '';
   return `<div class="label">
     ${top}
     <div class="body"><div class="info">${name}${meta}</div>${price}</div>
+    ${unit}
     ${bcBlock}
   </div>`;
 }
@@ -125,8 +157,16 @@ function labelCss(cfg: LabelConfig, preview: boolean): string {
     .meta { display: flex; flex-wrap: wrap; gap: 0.8mm 1.2mm; margin-top: 1mm; }
     .chip { font-size: ${(base * 0.82).toFixed(1)}px; color: #334155; background: #f1f5f2; border-radius: 0.8mm; padding: 0.2mm 1.2mm; }
     .chip.mono { font-family: Consolas, "Courier New", monospace; font-weight: 700; color: #0f172a; }
-    .price { text-align: right; font-weight: 800; font-size: ${(base * 1.9).toFixed(1)}px; line-height: 1; white-space: nowrap; color: #14532d; }
-    .price small { display: block; font-size: ${(base * 0.7).toFixed(1)}px; font-weight: 600; color: #64748b; margin-top: 0.6mm; }
+    .price { display: flex; flex-direction: column; align-items: flex-end; text-align: right; line-height: 1.05; white-space: nowrap; }
+    .price .now { font-weight: 800; font-size: ${(base * 1.9).toFixed(1)}px; color: #14532d; }
+    .price small { font-size: ${(base * 0.7).toFixed(1)}px; font-weight: 600; color: #64748b; margin-top: 0.4mm; }
+    .price small.net { margin-top: 0; color: #475569; font-weight: 700; }
+    .price .old { font-size: ${(base * 1.05).toFixed(1)}px; color: #64748b; text-decoration: line-through; text-decoration-thickness: 0.35mm; font-weight: 600; }
+    .price .promo { font-size: ${(base * 0.68).toFixed(1)}px; font-weight: 800; letter-spacing: 0.08em; color: #fff; background: #dc2626; border-radius: 0.8mm; padding: 0.2mm 1.4mm; margin-bottom: 0.6mm; }
+    .price.sale .now { color: #dc2626; }
+    .unit { font-size: ${(base * 0.88).toFixed(1)}px; color: #334155; background: #f1f5f2; border-radius: 0.8mm; padding: 0.4mm 1.4mm; }
+    .unit b { color: #0f172a; }
+    .unit.sale b { color: #dc2626; }
     .bc { text-align: center; margin-top: auto; }
     .bc svg { max-width: 100%; height: auto; max-height: ${Math.round(cfg.h * 0.4)}mm; display: block; margin: 0 auto; }
     .nocode { font-family: monospace; font-size: ${base}px; margin: 0; text-align: center; }

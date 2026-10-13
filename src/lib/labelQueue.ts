@@ -4,6 +4,7 @@ import { resolveProductLocation } from './locationStore';
 import { customerGrossPrice } from './format';
 import { getProductDisplayCategory } from './catalogCategory';
 import { effectiveManufacturer } from './waproManufacturers';
+import { parsePackFromText, type PackSize } from './labelPack';
 
 const QUEUE_KEY = 'katalog-label-queue';
 
@@ -22,6 +23,15 @@ export interface LabelQueueItem {
   manufacturer?: string;
   category?: string;
   stock?: number;
+  /** Cena netto (do wyświetlenia pod brutto). */
+  priceNet?: number | null;
+  vatRate?: number;
+  /** Pojemność / waga opakowania — do ceny jednostkowej (1 l / 1 kg / 1 szt.). Rozpoznana z nazwy, do poprawy ręcznie. */
+  pack?: PackSize | null;
+  /** Własna (skrócona) nazwa na etykiecie; puste = nazwa produktu. */
+  labelName?: string;
+  /** Cena promocyjna brutto — gdy ustawiona, etykieta ma wariant wyprzedażowy (stara cena przekreślona, nowa na czerwono). */
+  salePrice?: number | null;
 }
 
 function readQueue(): LabelQueueItem[] {
@@ -51,10 +61,22 @@ function locationForProduct(product: Product): string {
 
 function extraFields(product: Product): Pick<
   LabelQueueItem,
-  'priceGross' | 'manufacturer' | 'category' | 'stock'
+  'priceGross' | 'priceNet' | 'vatRate' | 'pack' | 'manufacturer' | 'category' | 'stock'
 > {
+  const vat = Number(product.meta?.vatRate);
+  const vatRate = Number.isFinite(vat) && vat >= 0 ? vat : 23;
+  const gross = customerGrossPrice(product.priceSaleGross, product.priceSaleNet, product.meta?.vatRate);
+  const net =
+    product.priceSaleNet != null && Number.isFinite(Number(product.priceSaleNet))
+      ? Number(product.priceSaleNet)
+      : gross != null
+        ? Math.round((gross / (1 + vatRate / 100)) * 100) / 100
+        : null;
   return {
-    priceGross: customerGrossPrice(product.priceSaleGross, product.priceSaleNet, product.meta?.vatRate),
+    priceGross: gross,
+    priceNet: net,
+    vatRate,
+    pack: parsePackFromText(product.displayName) ?? parsePackFromText(product.name),
     manufacturer: effectiveManufacturer(product) || product.manufacturer || undefined,
     category: getProductDisplayCategory(product) || undefined,
     stock: product.stock ?? undefined,
@@ -115,6 +137,13 @@ export function setLabelQty(id: string, qty: number): LabelQueueItem[] {
   const next = readQueue().map((q) =>
     q.id === id ? { ...q, qty: Math.max(1, Math.min(999, Math.round(qty) || 1)) } : q,
   );
+  writeQueue(next);
+  return next;
+}
+
+/** Zmiana pól etykiety jednego produktu (nazwa, pojemność, cena promocyjna…). */
+export function updateLabelItem(id: string, patch: Partial<LabelQueueItem>): LabelQueueItem[] {
+  const next = readQueue().map((q) => (q.id === id ? { ...q, ...patch } : q));
   writeQueue(next);
   return next;
 }

@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Minus, Plus, Printer, Search, Trash2 } from 'lucide-react';
+import { Plus, Printer, Search, Trash2 } from 'lucide-react';
 import type { Product } from '../types';
 import { applyCatalogFilters } from '../lib/search';
 import {
   addProductsToLabelQueue,
   clearLabelQueue,
-  removeFromLabelQueue,
-  setLabelQty,
   type LabelQueueItem,
 } from '../lib/labelQueue';
 import {
@@ -19,6 +17,7 @@ import {
 } from '../lib/labelConfig';
 import { buildLabelsDocument, printShelfLabels } from '../lib/printLabel';
 import { showToast } from '../lib/toast';
+import { LabelItemRow } from './LabelItemRow';
 
 const PAGE = 60;
 
@@ -33,6 +32,9 @@ const SAMPLE_ITEM: LabelQueueItem = {
   manufacturer: 'Aroma Car',
   category: 'Zapachy',
   stock: 26,
+  priceNet: 32.44,
+  vatRate: 23,
+  pack: { qty: 100, unit: 'ml' },
   qty: 1,
 };
 
@@ -259,66 +261,12 @@ export function LabelStudioView({ products, queue, onQueueChange }: Props) {
             ) : (
               <ul className="space-y-1.5">
                 {queue.map((item) => (
-                  <li
+                  <LabelItemRow
                     key={item.id}
-                    className="flex items-center gap-2.5 rounded-lg border border-slate-800 bg-slate-950/40 px-2.5 py-1.5"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm text-slate-100">{item.displayName}</p>
-                      <p className="font-mono text-[11px] text-brand-400">
-                        {item.sku}
-                        {item.ean && item.ean !== item.sku ? ` · ${item.ean}` : ''}
-                        {item.locationCode ? ` · ${item.locationCode}` : ''}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-0.5">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setLabelQty(item.id, (item.qty ?? 1) - 1);
-                          onQueueChange();
-                        }}
-                        className="flex h-7 w-7 items-center justify-center rounded-md bg-slate-800 text-slate-200 hover:bg-slate-700"
-                        aria-label="Mniej kopii"
-                      >
-                        <Minus className="h-3.5 w-3.5" />
-                      </button>
-                      <input
-                        type="number"
-                        min={1}
-                        max={999}
-                        value={item.qty ?? 1}
-                        onChange={(e) => {
-                          setLabelQty(item.id, Number(e.target.value));
-                          onQueueChange();
-                        }}
-                        className="h-7 w-12 rounded-md border border-slate-700 bg-slate-900 text-center text-sm tabular-nums text-slate-100"
-                        aria-label="Liczba etykiet"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setLabelQty(item.id, (item.qty ?? 1) + 1);
-                          onQueueChange();
-                        }}
-                        className="flex h-7 w-7 items-center justify-center rounded-md bg-brand-600 text-white hover:bg-brand-500"
-                        aria-label="Więcej kopii"
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        removeFromLabelQueue(item.id);
-                        onQueueChange();
-                      }}
-                      className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-800 hover:text-red-400"
-                      aria-label="Usuń z wydruku"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </li>
+                    item={item}
+                    unitPriceEnabled={cfg.fields.unitPrice}
+                    onChanged={onQueueChange}
+                  />
                 ))}
               </ul>
             )}
