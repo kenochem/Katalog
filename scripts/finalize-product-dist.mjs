@@ -24,6 +24,9 @@ copyFileSync(
   join(distRoot, 'manifest.webmanifest'),
 );
 
+// Wektory zdjec sklepu (~12 MB) sluza tylko skryptom offline - nie wdrazamy ich do aplikacji.
+rmSync(join(distRoot, 'data', 'shop-embeddings.json'), { force: true });
+
 const productIndex = join(distRoot, `index.${product}.html`);
 const distIndex = join(distRoot, 'index.html');
 if (existsSync(productIndex)) {

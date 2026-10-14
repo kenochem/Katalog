@@ -12,6 +12,13 @@ export interface AppChangelogEntry {
  */
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
+    date: '2026-10-14',
+    title: 'Wydajność: lżejsze wdrożenie, krótki cache plików danych, jedno sprawdzanie alarmów',
+    description:
+      'Audyt wydajności katalogu. Z wdrożenia usunięto nieużywany w aplikacji plik wektorów zdjęć (ok. 12 MB), więc publikacja jest szybsza i lżejsza. Pliki danych z listą produktów mają krótki (2-minutowy) cache w przeglądarce, dzięki czemu kolejne wejścia i odświeżenia są szybsze, a zmiany widać prawie od razu. Baner alarmów i strona Status systemów korzystają teraz z jednego wspólnego sprawdzania zamiast dwóch równoległych. Funkcje katalogu bez zmian.',
+    tag: 'wydajność',
+  },
+  {
     date: '2026-10-13',
     title: 'Alarmy systemowe, historia dostępności agentów i szybkie akcje w Logach',
     description:

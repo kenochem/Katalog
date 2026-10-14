@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 import { supabase } from './supabase';
 
 /** Alerty systemowe (tabela system_alerts; tworzy je funkcja `system-alerts`). */
@@ -56,33 +56,62 @@ export async function runAlertCheck(): Promise<void> {
   }
 }
 
-/** Hook: co ~2 min uruchamia sprawdzenie na serwerze i pobiera aktywne alerty. */
-export function useSystemAlerts(enabled: boolean): { alerts: SystemAlert[]; refresh: () => Promise<void> } {
-  const [alerts, setAlerts] = useState<SystemAlert[]>([]);
+// Jeden wspólny mechanizm dla wszystkich użytkowników hooka (baner + strona Status systemów):
+// jedno sprawdzanie co ~2 min niezależnie od liczby otwartych widoków.
+let sharedAlerts: SystemAlert[] = [];
+const alertListeners = new Set<() => void>();
+let alertTimer: ReturnType<typeof setInterval> | null = null;
+let alertInflight: Promise<void> | null = null;
 
-  const refresh = useCallback(async () => {
-    if (!enabled) return;
+function emitAlerts() {
+  alertListeners.forEach((fn) => fn());
+}
+
+async function refreshSharedAlerts(): Promise<void> {
+  if (alertInflight) return alertInflight;
+  alertInflight = (async () => {
     await runAlertCheck();
-    setAlerts(await fetchActiveAlerts());
-  }, [enabled]);
+    sharedAlerts = await fetchActiveAlerts();
+    emitAlerts();
+  })().finally(() => {
+    alertInflight = null;
+  });
+  return alertInflight;
+}
 
-  useEffect(() => {
-    if (!enabled) {
-      setAlerts([]);
-      return;
+function onAlertsVisible() {
+  if (document.visibilityState === 'visible') void refreshSharedAlerts();
+}
+
+function subscribeAlerts(fn: () => void): () => void {
+  alertListeners.add(fn);
+  if (alertListeners.size === 1) {
+    void refreshSharedAlerts();
+    alertTimer = setInterval(() => void refreshSharedAlerts(), 120_000);
+    document.addEventListener('visibilitychange', onAlertsVisible);
+  }
+  return () => {
+    alertListeners.delete(fn);
+    if (alertListeners.size === 0) {
+      if (alertTimer) clearInterval(alertTimer);
+      alertTimer = null;
+      document.removeEventListener('visibilitychange', onAlertsVisible);
     }
-    void refresh();
-    const t = setInterval(() => void refresh(), 120_000);
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') void refresh();
-    };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => {
-      clearInterval(t);
-      document.removeEventListener('visibilitychange', onVisible);
-    };
-  }, [enabled, refresh]);
+  };
+}
 
+const NO_ALERTS: SystemAlert[] = [];
+
+/** Hook: aktywne alerty (wspólne sprawdzanie na serwerze co ~2 min). */
+export function useSystemAlerts(enabled: boolean): { alerts: SystemAlert[]; refresh: () => Promise<void> } {
+  const alerts = useSyncExternalStore(
+    enabled ? subscribeAlerts : () => () => {},
+    () => (enabled ? sharedAlerts : NO_ALERTS),
+    () => NO_ALERTS,
+  );
+  const refresh = useCallback(async () => {
+    if (enabled) await refreshSharedAlerts();
+  }, [enabled]);
   return { alerts, refresh };
 }
 
