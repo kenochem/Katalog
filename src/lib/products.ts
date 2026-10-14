@@ -2,6 +2,7 @@ import { supabase, isSupabaseConfigured, STORAGE_BUCKET } from './supabase';
 import { logAudit } from './auditLog';
 import { captureProductBefore, recordProductUpdate } from './productAudit';
 import { compressImageFile } from './imageCompress';
+import { getImagePolicy, optimizeImage } from './imageOptimize';
 import { getLocalProducts, saveLocalProduct, mergeProducts, hideProductId, removeLocalProduct, getHiddenProductIds } from './localStore';
 import {
   rowToProduct,
@@ -478,12 +479,27 @@ async function uploadProductImageFile(
   productId: string,
   file: File,
   suffix = '',
+  opts: { skipCompress?: boolean } = {},
 ): Promise<string> {
   // Telefony robia zdjecia 10-50 MP (nieraz kilkanascie MB) - bez skalowania
   // surowy plik szedl prosto na serwer, co na slabszych telefonach potrafilo
   // wywalic upload bledem braku pamieci. Kompresujemy do JPEG max 1600px.
   const originalExt = (file.name.split('.').pop() || 'jpg').toLowerCase();
-  const compressed = await compressImageFile(file);
+  let compressed: Blob = opts.skipCompress ? file : await compressImageFile(file);
+  // Polityka wagi i formatu (tylko JPG/PNG, limit KB, max bok) — nie dla kopii „revert”.
+  if (!opts.skipCompress && suffix !== 'revert') {
+    try {
+      const policy = getImagePolicy();
+      if (policy.autoOnUpload) {
+        const opt = await optimizeImage(compressed, policy);
+        if (!opt.tooSmall && (opt.bytes < compressed.size || compressed.type === 'image/webp')) {
+          compressed = opt.blob;
+        }
+      }
+    } catch (err) {
+      console.warn('Optymalizacja zdjęcia pominięta', err);
+    }
+  }
   const wasCompressed = compressed !== (file as Blob);
   const ext = wasCompressed ? extForBlobType(compressed.type) : originalExt;
   const path = suffix
@@ -548,8 +564,9 @@ function fileToDataUrl(file: File): Promise<string> {
 export async function updateProductImage(
   productId: string,
   file: File,
+  opts: { skipCompress?: boolean } = {},
 ): Promise<string> {
-  const url = await uploadProductImageFile(productId, file);
+  const url = await uploadProductImageFile(productId, file, '', opts);
   const existing = await getExistingProduct(productId);
   await updateProduct(productId, {
     customImageUrl: url,

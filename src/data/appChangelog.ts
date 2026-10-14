@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-14',
+    title: 'Zdjęcia: optymalizacja wagi i formatu (JPG / PNG, limit KB, maks. bok)',
+    description:
+      'W „Zdjęcia do poprawy” jest nowa zakładka „Waga i format”. Skan sprawdza rozmiar i format zdjęć we własnym magazynie (lekko, bez pobierania plików) i pokazuje listę od najcięższych: ponad limit wagi albo w złym formacie (WebP/GIF). Zaznaczone zdjęcia można zoptymalizować hurtowo: zapisują się wyłącznie jako JPG (jakość dobierana tak, żeby plik zmieścił się w limicie) albo PNG dla zdjęć z przezroczystym tłem (opcjonalnie JPG na białym tle — lżejsze), z ograniczonym dłuższym bokiem; gdy limit jest za ciasny, zmniejszamy wymiary, ale nigdy poniżej 500 px krótszego boku. Limit (60–300 KB) i maks. bok (800–2000 px) ustawia się w panelu. Włączona domyślnie opcja automatyczna optymalizuje także każde nowo wgrane zdjęcie. Dla każdej zmienionej fotografii powstaje kopia do przywrócenia na karcie produktu. Zdjęcia, które są już w BaseLinkerze, zmienią się tam dopiero po ponownym wysłaniu.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-14',
     title: 'Grupy produktów: własne ikony dla każdego typu (nypel, trójnik, dysza, zawór…)',
     description:
       'Każdy typ elementu technicznego ma teraz własną, rysowaną ikonę: nypel z gwintowanymi końcami, trójnik, kolanko, redukcja, dysza ze strumieniami, szybkozłącze (wtyk i gniazdo), adapter, zawór, o-ring, zaślepka, manometr, gniazdo, lanca, pistolet, wąż, filtr, sitko, pianownica, zbiornik i zestaw naprawczy. Ikony widać na liście typów w Grupach produktów, przy liczniku pozycji, w panelu „Grupa produktu” na karcie produktu, a także zamiast szarej ikonki „brak zdjęcia” przy pozycjach bez zdjęcia — od razu widać, co to za element.',

@@ -8,6 +8,7 @@ import { getCachedDims, scanImageDims, setCachedDims } from '../lib/imageDims';
 import { confirmDialog } from '../lib/dialog';
 import { showToast } from '../lib/toast';
 import { CatalogBaselinkerImagesPanel } from './CatalogBaselinkerImagesPanel';
+import { CatalogImageWeightPanel } from './CatalogImageWeightPanel';
 
 const PAGE = 100;
 
@@ -28,13 +29,14 @@ interface Props {
 
 /** Narzedzia zdjec: "Za male" (<500x500, hurtowa poprawa) i "BaseLinker" (dokladanie brakujacych zdjec). */
 export function CatalogSmallImagesView(props: Props & { canBaselinker: boolean }) {
-  const [tab, setTab] = useState<'small' | 'bl'>('small');
+  const [tab, setTab] = useState<'small' | 'weight' | 'bl'>('small');
   return (
     <div className="space-y-4">
       <div className="flex gap-1 rounded-xl border border-slate-800 bg-slate-900/60 p-1">
         {(
           [
             ['small', 'Za małe (<500×500)'],
+            ['weight', 'Waga i format'],
             ['bl', 'Zdjęcia → BaseLinker'],
           ] as const
         ).map(([key, label]) => (
@@ -52,6 +54,13 @@ export function CatalogSmallImagesView(props: Props & { canBaselinker: boolean }
       </div>
       {tab === 'small' ? (
         <SmallImagesPanel {...props} />
+      ) : tab === 'weight' ? (
+        <CatalogImageWeightPanel
+          products={props.products}
+          onProductClick={props.onProductClick}
+          onImageUpdated={props.onImageUpdated}
+          canEdit={props.canEdit}
+        />
       ) : (
         <CatalogBaselinkerImagesPanel
           products={props.products}

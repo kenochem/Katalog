@@ -37,7 +37,7 @@ export async function readImageSize(
   }
 }
 
-function canvasHasAlpha(canvas: HTMLCanvasElement): boolean {
+export function canvasHasAlpha(canvas: HTMLCanvasElement): boolean {
   try {
     const side = 160;
     const scale = Math.min(1, side / Math.max(canvas.width, canvas.height));
