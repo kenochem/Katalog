@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-14',
+    title: 'Karta produktu: panel „Grupa produktu” — przypisanie do grupy technicznej bez wychodzenia z produktu',
+    description:
+      'Na karcie produktu (zakładka z informacjami) jest nowy panel „Grupa produktu”: pokazuje, do jakiej grupy należy element (np. Nyple › Zwykły), nazwę katalogową złożoną z parametrów i nazwę z WAPRO. Osoby z prawem edycji produktu mogą tu zatwierdzić propozycję z nazwy, zmienić grupę i parametry (typ, podtyp, gwinty, materiał, kod i otwór dyszy), przypisać do grupy produkt, którego parser nie rozpoznał (np. „Turbo dysza”), cofnąć do propozycji albo wyłączyć produkt z grup. Ten sam edytor jest używany na liście w „Grupy produktach”.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-14',
     title: 'Grupy produktów: elementy techniczne (nyple, trójniki, kolanka, redukcje, dysze) uporządkowane po parametrach',
     description:
       'Nowa sekcja „Grupy produktów” w menu (obok Katalogu). Elementy techniczne są pogrupowane po typie (nyple, trójniki, kolanka, redukcje, dysze — w tym dysze wody z gwintem i bez gwintu) i mają parametry: gwinty na obu końcach (zewnętrzny M / wewnętrzny Ż, rozmiar 1/4″, 3/8″, M22…), materiał, podtyp, kod i rozmiar otworu dyszy, ciśnienie. Filtry „Końcówka 1” i „Końcówka 2” znajdują element łączący dwa gwinty w dowolnej kolejności, jest też filtr „Bez zdjęcia” i licznik braków zdjęć przy każdej grupie. Nazwy z WAPRO nie są zmieniane — przy każdej pozycji widać „WAPRO: …”, a wyszukiwarka katalogu znajduje produkt zarówno po nazwie waprowej, jak i po nazwie katalogowej i aliasach (np. „gz 3/8”, „1/4 żeński”). Parametry są rozpoznawane automatycznie z nazw (ok. 350 pozycji rozpoznanych pewnie, ok. 40 do sprawdzenia) i widoczne jako „propozycja”; zakładka „Do zatwierdzenia” pozwala zatwierdzić je hurtowo („Zatwierdź wszystkie pewne”), poprawić pojedynczo albo wyłączyć pozycję, która nie jest elementem technicznym. Wymaga migracji migration-product-tech.sql.',

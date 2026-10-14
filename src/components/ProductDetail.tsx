@@ -25,6 +25,7 @@ import {
 import { addToLabelQueue } from '../lib/labelQueue';
 import { showToast } from '../lib/toast';
 import { roleCan, type AppRole } from '../lib/roles';
+import { ProductTechPanel } from './product/ProductTechPanel';
 import { canUseCrmModule } from '../app/productAccess';
 import {
   resolveProductLocation,
@@ -1156,6 +1157,10 @@ export function ProductDetail({
 
           {hubStyle && showPrices && !editing && detailTab === 'info' && detail.sku && (
             <BaselinkerProductPanel product={detail} onMissingImages={setBlMissing} />
+          )}
+
+          {hubStyle && detailTab === 'info' && !isGroup && (
+            <ProductTechPanel product={detail} canEdit={roleCan(role, 'editProduct')} />
           )}
 
           {hubStyle && !editing && detailTab === 'info' && (
