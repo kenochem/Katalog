@@ -130,6 +130,9 @@ import {
 } from './components/CatalogDecisionView';
 import { getProductDisplayCategory } from './lib/catalogCategory';
 
+const ProductGroupsView = lazy(() =>
+  import('./components/ProductGroupsView').then((m) => ({ default: m.ProductGroupsView })),
+);
 const KitsView = lazy(() =>
   import('./components/KitsView').then((m) => ({ default: m.KitsView })),
 );
@@ -1992,6 +1995,18 @@ export default function App() {
               onOpenKnowledgeWeak={(cat) => openKnowledgeGaps(cat ?? 'Wszystkie')}
             />
           </Suspense>
+        ) : view === 'groups' && isCatalogProduct() ? (
+          <InlineErrorBoundary label="Grupy produktów">
+            <Suspense fallback={<ViewFallback />}>
+            <ProductGroupsView
+              products={activeAllProducts}
+              canEdit={roleCan(role, 'editProduct')}
+              who={displayLabel}
+              hideImages={!roleCan(role, 'viewImages')}
+              onOpenProduct={setSelectedProduct}
+            />
+            </Suspense>
+          </InlineErrorBoundary>
         ) : view === 'promotions' && isCatalogProduct() ? (
           <InlineErrorBoundary label="Promocje">
             <PromotionsView

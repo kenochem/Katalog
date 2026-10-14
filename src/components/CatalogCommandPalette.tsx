@@ -22,6 +22,7 @@ import {
   Star,
   FolderOpen,
   TrendingUp,
+  Wrench,
   X,
 } from 'lucide-react';
 import type { Product, View } from '../types';
@@ -208,6 +209,12 @@ export function CatalogCommandPalette({
         label: 'Widok: Nowe produkty',
         icon: <Sparkles className="h-4 w-4" />,
         run: wrap(() => onNavigate('new-products')),
+      },
+      {
+        id: 'nav-groups',
+        label: 'Widok: Grupy produktów (nyple, trójniki, dysze…)',
+        icon: <Wrench className="h-4 w-4" />,
+        run: wrap(() => onNavigate('groups')),
       },
       {
         id: 'nav-promotions',

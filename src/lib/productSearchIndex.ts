@@ -1,6 +1,7 @@
 import Fuse from 'fuse.js';
 import type { Product } from '../types';
 import { getProductDisplayCategory } from './catalogCategory';
+import { getTechSearchText } from './techStore';
 
 function normalizeEan(value: string): string {
   return value.replace(/\D/g, '');
@@ -113,7 +114,7 @@ export function getProductSearchIndex(
     // produktu, przez co np. szukanie "sonax" wyciągało ADBL/Cif/Clinex.
     searchBlob.set(
       p.id,
-      [p.displayName, p.name, p.manufacturer, p.category, getProductDisplayCategory(p)]
+      [p.displayName, p.name, p.manufacturer, p.category, getProductDisplayCategory(p), getTechSearchText(p.sku)]
         .filter(Boolean)
         .join(' ')
         .toLowerCase(),

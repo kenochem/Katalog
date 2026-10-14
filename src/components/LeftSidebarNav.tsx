@@ -23,6 +23,7 @@ import {
   Star,
   Tag,
   TrendingUp,
+  Wrench,
 } from 'lucide-react';
 import type { View } from '../types';
 import { canAccessAdminPanel } from '../lib/adminAccess';
@@ -55,6 +56,7 @@ const PREFS_KEY = 'katalog-sidebar-prefs-v1';
 const DEFAULT_ORDER: View[] = [
   'home',
   'catalog',
+  'groups',
   'library',
   'logs',
   'history',
@@ -208,6 +210,13 @@ export function LeftSidebarNav({
         count: productsCount,
         available: true,
         onClick: () => setView('catalog'),
+      },
+      {
+        id: 'groups',
+        icon: <Wrench className="h-4 w-4" />,
+        label: 'Grupy produktów',
+        available: isCatalogProduct,
+        onClick: () => setView('groups'),
       },
       {
         id: 'library',
