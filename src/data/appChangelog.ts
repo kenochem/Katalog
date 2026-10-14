@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-14',
+    title: 'Wyszukiwarka: pełne wyniki (bez ucinania do 100), wiele słów w dowolnej kolejności, polskie znaki i odmiana',
+    description:
+      'Naprawa wyszukiwarki katalogu. Główna przyczyna: lista trafień była ucinana do 100 pozycji po kolejności alfabetycznej, więc przy popularnych frazach (np. „olejek zapach” — 176 trafień) produkty z końca alfabetu, jak olejek zapachowy Denim, w ogóle się nie pokazywały. Teraz wyniki tekstowe są zwracane w całości. Dodatkowo: wyszukiwanie wielowyrazowe działa w dowolnej kolejności słów (każde słowo musi wystąpić w nazwie, np. „zapach denim”), nie trzeba wpisywać polskich znaków („zel do rak” znajdzie „żel do rąk”), nazwy wariantów grupy też są przeszukiwane, a odmienione formy („olejku zapachowego”) są odnajdywane przez dopasowanie rdzenia słowa, gdy dokładne trafienia nie istnieją. Wyszukiwarka poleceń (Ctrl+K) zachowuje własny limit wyników.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-14',
     title: 'Zdjęcia: optymalizacja wagi i formatu (JPG / PNG, limit KB, maks. bok)',
     description:
       'W „Zdjęcia do poprawy” jest nowa zakładka „Waga i format”. Skan sprawdza rozmiar i format zdjęć we własnym magazynie (lekko, bez pobierania plików) i pokazuje listę od najcięższych: ponad limit wagi albo w złym formacie (WebP/GIF). Zaznaczone zdjęcia można zoptymalizować hurtowo: zapisują się wyłącznie jako JPG (jakość dobierana tak, żeby plik zmieścił się w limicie) albo PNG dla zdjęć z przezroczystym tłem (opcjonalnie JPG na białym tle — lżejsze), z ograniczonym dłuższym bokiem; gdy limit jest za ciasny, zmniejszamy wymiary, ale nigdy poniżej 500 px krótszego boku. Limit (60–300 KB) i maks. bok (800–2000 px) ustawia się w panelu. Włączona domyślnie opcja automatyczna optymalizuje także każde nowo wgrane zdjęcie. Dla każdej zmienionej fotografii powstaje kopia do przywrócenia na karcie produktu. Zdjęcia, które są już w BaseLinkerze, zmienią się tam dopiero po ponownym wysłaniu.',

@@ -7,6 +7,15 @@ function normalizeEan(value: string): string {
   return value.replace(/\D/g, '');
 }
 
+/** Małe litery bez polskich ogonków — „zapachowy”, „Żel” i „zel” znajdują się nawzajem. */
+export function foldText(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/ł/g, 'l')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
 function comparePl(a: string, b: string): number {
   return a.localeCompare(b, 'pl', { sensitivity: 'base', numeric: true });
 }
@@ -114,10 +123,20 @@ export function getProductSearchIndex(
     // produktu, przez co np. szukanie "sonax" wyciągało ADBL/Cif/Clinex.
     searchBlob.set(
       p.id,
-      [p.displayName, p.name, p.manufacturer, p.category, getProductDisplayCategory(p), getTechSearchText(p.sku)]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase(),
+      foldText(
+        [
+          p.displayName,
+          p.name,
+          p.manufacturer,
+          p.category,
+          getProductDisplayCategory(p),
+          getTechSearchText(p.sku),
+          // nazwy wariantów (np. zapach „Denim” w grupie „Olejek zapachowy”)
+          p.variants?.map((v) => v.name).join(' '),
+        ]
+          .filter(Boolean)
+          .join(' '),
+      ),
     );
   }
 
@@ -157,8 +176,13 @@ export function searchIndexedProducts(
   if (q.length < 2) return index.list;
 
   const lower = q.toLowerCase();
+  const folded = foldText(q);
+  const tokens = folded.split(/s+/).filter(Boolean);
   const eanQuery = normalizeEan(q);
-  const limit = opts?.limit ?? FUSE_LIMIT;
+  // trafienia tekstowe (nazwa/SKU) zwracamy w całości — wcześniej sztywny limit 100 ucinał listę
+  // alfabetycznie (np. „olejek zapach” gubił zapachy na końcu alfabetu); limit dotyczy tylko Fuse
+  const limit = opts?.limit ?? Number.POSITIVE_INFINITY;
+  const fuseLimit = opts?.limit ?? FUSE_LIMIT;
 
   const exact = index.skuExact.get(lower);
   if (exact) return [exact];
@@ -166,6 +190,7 @@ export function searchIndexedProducts(
   const exactSku: Product[] = [];
   const eanMatches: Product[] = [];
   const textMatches: Product[] = [];
+  const tokenMatches: Product[] = [];
   const prefixSku: Product[] = [];
   const containsSku: Product[] = [];
 
@@ -201,8 +226,14 @@ export function searchIndexedProducts(
     if (variantHandled) continue;
 
     const blob = index.searchBlob.get(p.id);
-    if (blob?.includes(lower)) {
+    if (blob?.includes(folded)) {
       textMatches.push(p);
+      continue;
+    }
+    // kilka słów: każde musi wystąpić gdziekolwiek w nazwie (w dowolnej kolejności i odmianie
+    // zaczynającej się od słowa), np. „olejek zapach” znajdzie „Zapachowy olejek Denim”
+    if (blob && tokens.length > 1 && tokens.every((t) => blob.includes(t))) {
+      tokenMatches.push(p);
       continue;
     }
 
@@ -242,12 +273,27 @@ export function searchIndexedProducts(
   // cokolwiek pasuje wprost, Fuse w ogóle się nie odpala.
   if (exactSku.length) return exactSku.slice(0, limit);
   if (eanMatches.length) return eanMatches.slice(0, limit);
-  if (textMatches.length > 0) {
-    return textMatches.sort((a, b) => comparePl(a.displayName, b.displayName)).slice(0, limit);
+  if (textMatches.length > 0 || tokenMatches.length > 0) {
+    // najpierw dokładna fraza, potem pozostałe trafienia wielowyrazowe
+    const sorted = (list: Product[]) => list.sort((a, b) => comparePl(a.displayName, b.displayName));
+    return [...sorted(textMatches), ...sorted(tokenMatches)].slice(0, limit);
   }
   if (prefixSku.length > 0) return prefixSku.slice(0, limit);
   if (containsSku.length > 0) return containsSku.slice(0, limit);
 
+  // odmiana: „olejku zapachowego” → rdzenie „olejk”, „zapachow” (skracamy końcówki dłuższych słów)
+  const stems = tokens.map((t) => (t.length >= 6 ? t.slice(0, -2) : t.length === 5 ? t.slice(0, -1) : t));
+  if (stems.some((s, i) => s !== tokens[i])) {
+    const stemMatches: Product[] = [];
+    for (const p of index.list) {
+      const blob = index.searchBlob.get(p.id);
+      if (blob && stems.every((s) => blob.includes(s))) stemMatches.push(p);
+    }
+    if (stemMatches.length > 0) {
+      return stemMatches.sort((a, b) => comparePl(a.displayName, b.displayName)).slice(0, limit);
+    }
+  }
+
   index.fuse ??= createProductSearch(index.list);
-  return index.fuse.search(q, { limit }).map((r) => r.item);
+  return index.fuse.search(q, { limit: fuseLimit }).map((r) => r.item);
 }
