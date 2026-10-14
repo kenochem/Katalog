@@ -33,6 +33,10 @@ export function EntryEditor({
   const [orifice, setOrifice] = useState(entry.attrs.orifice ?? '');
   const [series, setSeries] = useState(entry.attrs.series ?? '');
   const [bar, setBar] = useState(entry.attrs.maxBar ? String(entry.attrs.maxBar) : '');
+  const [system, setSystem] = useState(entry.attrs.system ?? '');
+  const [gender, setGender] = useState<string>(entry.attrs.gender ?? '');
+  const [dims, setDims] = useState(entry.attrs.dims ?? '');
+  const [diameter, setDiameter] = useState(entry.attrs.diameterMm ? String(entry.attrs.diameterMm) : '');
   const [nameOverride, setNameOverride] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -45,8 +49,12 @@ export function EntryEditor({
       orifice: orifice.trim() || undefined,
       series: series.trim() || undefined,
       maxBar: bar ? Number(bar) || undefined : undefined,
+      system: system.trim() || undefined,
+      gender: (gender || undefined) as TechAttrs['gender'],
+      dims: dims.trim() || undefined,
+      diameterMm: diameter ? Number(diameter) || undefined : undefined,
     }),
-    [entry.attrs, endsText, material, code, orifice, series, bar],
+    [entry.attrs, endsText, material, code, orifice, series, bar, system, gender, dims, diameter],
   );
   const preview = rebuildDisplayName(type, subtype, attrs);
 
@@ -136,6 +144,32 @@ export function EntryEditor({
             Gwinty / końcówki (np. „GZ3/8 - GW1/4” albo „1/4M - 3/8Ż”)
             <input className={inp} value={endsText} onChange={(e) => setEndsText(e.target.value)} />
           </label>
+          <label className={lab}>
+            System / marka (np. K-Lock, Comet, KEW)
+            <input className={inp} value={system} onChange={(e) => setSystem(e.target.value)} />
+          </label>
+          {(type === 'szybkozlacze' || type === 'adapter' || type === 'gniazdo' || type === 'zaslepka') && (
+            <label className={lab}>
+              Płeć złącza (gdy brak w gwincie)
+              <select className={inp} value={gender} onChange={(e) => setGender(e.target.value)}>
+                <option value="">—</option>
+                <option value="M">Męskie (zewnętrzne)</option>
+                <option value="Ż">Żeńskie (wewnętrzne)</option>
+              </select>
+            </label>
+          )}
+          {type === 'oring' && (
+            <label className={lab}>
+              Wymiary mm (średnica × grubość)
+              <input className={inp} value={dims} onChange={(e) => setDims(e.target.value)} placeholder="7,00 × 2,00" />
+            </label>
+          )}
+          {type === 'manometr' && (
+            <label className={lab}>
+              Średnica tarczy (mm)
+              <input className={inp} value={diameter} onChange={(e) => setDiameter(e.target.value.replace(/D/g, ''))} />
+            </label>
+          )}
           {type === 'dysza' && (
             <>
               <label className={lab}>

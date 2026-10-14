@@ -4,7 +4,19 @@
  * zmieniamy — wynik jest tylko propozycją (albo zatwierdzonym zapisem w `product_tech`).
  */
 
-export type TechType = 'nypel' | 'trojnik' | 'kolanko' | 'redukcja' | 'dysza';
+export type TechType =
+  | 'nypel'
+  | 'trojnik'
+  | 'kolanko'
+  | 'redukcja'
+  | 'dysza'
+  | 'szybkozlacze'
+  | 'adapter'
+  | 'zawor'
+  | 'oring'
+  | 'zaslepka'
+  | 'manometr'
+  | 'gniazdo';
 
 export const TECH_TYPES: { id: TechType; label: string; labelPlural: string; ends: number }[] = [
   { id: 'nypel', label: 'Nypel', labelPlural: 'Nyple', ends: 2 },
@@ -12,6 +24,13 @@ export const TECH_TYPES: { id: TechType; label: string; labelPlural: string; end
   { id: 'kolanko', label: 'Kolanko', labelPlural: 'Kolanka', ends: 2 },
   { id: 'redukcja', label: 'Redukcja', labelPlural: 'Redukcje', ends: 2 },
   { id: 'dysza', label: 'Dysza', labelPlural: 'Dysze', ends: 1 },
+  { id: 'szybkozlacze', label: 'Szybkozłącze', labelPlural: 'Szybkozłącza', ends: 0 },
+  { id: 'adapter', label: 'Adapter', labelPlural: 'Adaptery', ends: 2 },
+  { id: 'zawor', label: 'Zawór', labelPlural: 'Zawory', ends: 0 },
+  { id: 'oring', label: 'Uszczelka', labelPlural: 'Uszczelki i o-ringi', ends: 0 },
+  { id: 'zaslepka', label: 'Zaślepka', labelPlural: 'Zaślepki i korki', ends: 1 },
+  { id: 'manometr', label: 'Manometr', labelPlural: 'Manometry', ends: 1 },
+  { id: 'gniazdo', label: 'Gniazdo', labelPlural: 'Gniazda', ends: 0 },
 ];
 
 export const TECH_TYPE_LABEL: Record<TechType, string> = Object.fromEntries(
@@ -22,7 +41,7 @@ export const TECH_TYPE_PLURAL: Record<TechType, string> = Object.fromEntries(
   TECH_TYPES.map((t) => [t.id, t.labelPlural]),
 ) as Record<TechType, string>;
 
-export type Material = 'stal' | 'mosiadz' | 'inox' | 'ocynk' | 'plastik';
+export type Material = 'stal' | 'mosiadz' | 'inox' | 'ocynk' | 'plastik' | 'miedz';
 
 export const MATERIAL_LABEL: Record<Material, string> = {
   stal: 'Stal',
@@ -30,6 +49,7 @@ export const MATERIAL_LABEL: Record<Material, string> = {
   inox: 'Inox (nierdzewna)',
   ocynk: 'Ocynk',
   plastik: 'Plastik',
+  miedz: 'Miedź',
 };
 
 /** Przymiotniki wg rodzaju rzeczownika: [męski, nijaki, żeński]. */
@@ -39,8 +59,22 @@ const MATERIAL_ADJ: Record<Material, [string, string, string]> = {
   inox: ['nierdzewny', 'nierdzewne', 'nierdzewna'],
   ocynk: ['ocynkowany', 'ocynkowane', 'ocynkowana'],
   plastik: ['plastikowy', 'plastikowe', 'plastikowa'],
+  miedz: ['miedziany', 'miedziane', 'miedziana'],
 };
-const TYPE_GENDER: Record<TechType, 0 | 1 | 2> = { nypel: 0, trojnik: 0, kolanko: 1, redukcja: 2, dysza: 2 };
+const TYPE_GENDER: Record<TechType, 0 | 1 | 2> = {
+  nypel: 0,
+  trojnik: 0,
+  kolanko: 1,
+  redukcja: 2,
+  dysza: 2,
+  szybkozlacze: 1,
+  adapter: 0,
+  zawor: 0,
+  oring: 2,
+  zaslepka: 2,
+  manometr: 0,
+  gniazdo: 1,
+};
 
 /** Podtypy (zależne od typu). */
 export const TECH_SUBTYPES: Record<TechType, { id: string; label: string }[]> = {
@@ -77,6 +111,39 @@ export const TECH_SUBTYPES: Record<TechType, { id: string; label: string }[]> = 
     { id: 'dwupozycyjna', label: 'Dwupozycyjna' },
     { id: 'inna', label: 'Inna' },
   ],
+  szybkozlacze: [
+    { id: 'zwykle', label: 'Zwykłe' },
+    { id: 'wodne', label: 'Wodne' },
+    { id: 'do-lancy', label: 'Do lancy' },
+    { id: 'na-waz', label: 'Na wąż' },
+  ],
+  adapter: [
+    { id: 'zwykly', label: 'Zwykły' },
+    { id: 'klock', label: 'K-Lock' },
+    { id: 'ssawki', label: 'Ssawki odkurzacza' },
+  ],
+  zawor: [
+    { id: 'zwrotny', label: 'Zwrotny' },
+    { id: 'kulowy', label: 'Kulowy' },
+    { id: 'ssacy', label: 'Ssący' },
+    { id: 'bypass', label: 'By-pass' },
+    { id: 'bezpieczenstwa', label: 'Bezpieczeństwa' },
+    { id: 'cisnieniowy', label: 'Ciśnieniowy / regulacji ciśnienia' },
+    { id: 'plywakowy', label: 'Pływakowy' },
+    { id: 'dozujacy', label: 'Dozujący / dozownika' },
+    { id: 'regulacyjny', label: 'Regulacji (chemii, pianownicy)' },
+    { id: 'inny', label: 'Inny' },
+  ],
+  oring: [
+    { id: 'oring', label: 'O-ring' },
+    { id: 'uszczelka', label: 'Uszczelka' },
+  ],
+  zaslepka: [
+    { id: 'zaslepka', label: 'Zaślepka' },
+    { id: 'korek', label: 'Korek' },
+  ],
+  manometr: [{ id: 'zwykly', label: 'Zwykły' }],
+  gniazdo: [{ id: 'zwykle', label: 'Zwykłe' }],
 };
 
 export function subtypeLabel(type: TechType, subtype: string): string {
@@ -121,7 +188,7 @@ function threadAliases(t: Thread): string[] {
 
 const L = 'A-ZĄĆĘŁŃÓŚŹŻ';
 const THREAD_RE = new RegExp(
-  `(?<![${L}0-9/.,])(GZ|GW|G)?\\s?(M)?\\s?(\\d+\\s?/\\s?\\d+|\\d+)\\s?(GZ|GW|M|F|Ż)?(?![${L}0-9/]|[.,]\\d)`,
+  `(?<![${L}0-9/.,])(GZ|GW|TR|G)?\\s?(M)?\\s?(\\d+\\s?/\\s?\\d+|\\d+)\\s?(GZ|GW|M|F|Ż|WEW|ZEW)?(?![${L}0-9/]|[.,]\\d)`,
   'g',
 );
 
@@ -144,11 +211,17 @@ export function parseThreadToken(text: string): Thread | null {
 
 function buildThread(m: RegExpExecArray): Thread {
   const [, pre, metricM, num, suf] = m;
-  const { size, valid } = normalizeSize(num, Boolean(metricM));
+  const norm = normalizeSize(num, Boolean(metricM));
+  let { size, valid } = norm;
+  if (pre === 'TR') {
+    // K-Lock: TR22, TR18
+    size = `TR${num.replace(/\s/g, '')}`;
+    valid = ['18', '22'].includes(num.replace(/\s/g, ''));
+  }
   let gender: ThreadGender = null;
   const g = (suf || pre || '').toUpperCase();
-  if (g === 'GZ' || (g === 'M' && suf)) gender = 'M';
-  else if (g === 'GW' || g === 'F' || g === 'Ż') gender = 'Ż';
+  if (g === 'GZ' || g === 'ZEW' || (g === 'M' && suf)) gender = 'M';
+  else if (g === 'GW' || g === 'F' || g === 'Ż' || g === 'WEW') gender = 'Ż';
   return { size, gender, valid };
 }
 
@@ -157,7 +230,7 @@ export function parseThreads(text: string): Thread[] {
   // „3x1/4F” → „1/4F - 1/4F - 1/4F”
   const s = text
     .toUpperCase()
-    .replace(/(?<![\d/])([1-6])\s?X\s?((?:GZ|GW|G)?\s?M?\s?\d+(?:\/\d+)?\s?(?:GZ|GW|M|F|Ż)?)/g, (_m, n: string, tok: string) =>
+    .replace(/(?<![\d/])([1-6])\s?X\s?((?:GZ|GW|TR|G)?\s?M?\s?\d+(?:\/\d+)?\s?(?:GZ|GW|M|F|Ż)?)/g, (_m, n: string, tok: string) =>
       Array(Number(n)).fill(tok.trim()).join(' - ') + ' ',
     );
   const out: Thread[] = [];
@@ -189,6 +262,14 @@ export interface TechAttrs {
   swivel?: boolean;
   nut?: boolean;
   long?: boolean;
+  /** Płeć złącza podana słownie („męskie”, „damskie”) — gdy nie ma gwintu z oznaczeniem. */
+  gender?: ThreadGender;
+  /** System / marka (K-Lock, Comet, KEW, Karcher…). */
+  system?: string;
+  /** O-ringi: wymiary w mm (średnica wewn. × grubość). */
+  dims?: string;
+  /** Manometry: średnica tarczy w mm. */
+  diameterMm?: number;
 }
 
 export type TechConfidence = 'ok' | 'review';
@@ -209,6 +290,31 @@ const TYPE_START: { type: TechType; re: RegExp }[] = [
   { type: 'kolanko', re: /^(?:\S+\s+)?KOLAN(?:KO|KA|O)\b/ },
   { type: 'redukcja', re: /^(?:\S+\s+)?REDUKCJ/ },
   { type: 'dysza', re: /^(?:\S+\s+)?DYSZA\b/ },
+  { type: 'szybkozlacze', re: /^(?:\S+\s+)?SZYBKOZ[ŁL][ĄA]CZ/ },
+  { type: 'adapter', re: /^(?:\S+\s+)?ADAPTER\b/ },
+  { type: 'zawor', re: /^(?:\S+\s+)?ZAW[ÓO]R(?![A-ZĄĆĘŁŃÓŚŹŻ])/ },
+  { type: 'oring', re: /^(?:\S+\s+)?(?:O-?RING|USZCZELK)/ },
+  { type: 'zaslepka', re: /^(?:\S+\s+)?(?:ZAŚLEPKA|ZASLEPKA|KOREK)\b/ },
+  { type: 'manometr', re: /^(?:\S+\s+)?MANOMETR\b/ },
+  { type: 'gniazdo', re: /^(?:\S+\s+)?GNIAZDO\b/ },
+];
+
+const SYSTEMS: [RegExp, string][] = [
+  [/K-?LOCK/, 'K-Lock'],
+  [/\bKEW\b/, 'KEW'],
+  [/COMET/, 'Comet'],
+  [/K[ÄA]RCHER/, 'Karcher'],
+  [/NILFISK/, 'Nilfisk'],
+  [/LAVOR/, 'Lavor'],
+  [/KR[ÄA]NZLE/, 'Kranzle'],
+  [/STIHL/, 'Stihl'],
+  [/PARKSIDE/, 'Parkside'],
+  [/BLACK&DECKER/, 'Black&Decker'],
+  [/\bCAT\b/, 'CAT'],
+  [/PULSAR/, 'Pulsar'],
+  [/\bIPC\b/, 'IPC'],
+  [/\bSEKO\b/, 'Seko'],
+  [/HAWK/, 'Hawk'],
 ];
 
 function detectMaterial(s: string): Material | undefined {
@@ -217,6 +323,7 @@ function detectMaterial(s: string): Material | undefined {
   if (/\bSTAL(OW[AEY])?\b|\bSTEEL\b/.test(s)) return 'stal';
   if (/OCYNK/.test(s)) return 'ocynk';
   if (/PLASTIK|\bPVC\b|TWORZYW/.test(s)) return 'plastik';
+  if (/MIEDŹ|MIEDZ/.test(s)) return 'miedz';
   return undefined;
 }
 
@@ -226,7 +333,7 @@ function cleanForThreads(s: string): { clean: string; code?: string; maxBar?: nu
   let code: string | undefined;
   let orifice: string | undefined;
   clean = clean.replace(/\([^)]*\)/g, ' '); // nawiasy: numery katalogowe, wymiary
-  clean = clean.replace(/(\d{2,3})\s?BAR\b/g, (_, n: string) => {
+  clean = clean.replace(/(?:\d{1,3}\s?-\s?)?(\d{1,3})\s?BAR\b/g, (_, n: string) => {
     maxBar = Number(n);
     return ' ';
   });
@@ -262,6 +369,8 @@ function buildDisplayName(type: TechType, subtype: string, a: TechAttrs): string
     else if (subtype === 'wody') tail.push('bez gwintu');
     return tail.length ? `${head}, ${tail.join(', ')}` : head;
   }
+  const extra = buildExtraDisplayName(type, subtype, a);
+  if (extra) return extra;
   let head = base;
   if (type === 'nypel' && subtype === 'obrotowy') head += ' obrotowy';
   if (type === 'redukcja' && subtype === 'obrotowa') head += ' obrotowa';
@@ -276,11 +385,55 @@ function buildDisplayName(type: TechType, subtype: string, a: TechAttrs): string
   return tail.length ? `${head} ${tail.join(', ')}` : head;
 }
 
+const GENDER_WORD: Record<'M' | 'Ż', string[]> = { M: ['męski', 'męskie', 'męska'], Ż: ['żeński', 'żeńskie', 'żeńska'] };
+
+function buildExtraDisplayName(type: TechType, subtype: string, a: TechAttrs): string | null {
+  const g = type === 'zaslepka' && subtype === 'korek' ? 0 : TYPE_GENDER[type];
+  const mat = a.material ? MATERIAL_ADJ[a.material][g] : '';
+  const ends = a.ends.length ? fmtEnds(a.ends) : '';
+  const gen = a.gender && a.ends.length === 0 ? GENDER_WORD[a.gender][g] : '';
+  const join = (...p: (string | undefined | false)[]) => p.filter(Boolean).join(' ');
+  switch (type) {
+    case 'szybkozlacze': {
+      const sub = subtype === 'wodne' ? 'wodne' : subtype === 'do-lancy' ? 'do lancy' : subtype === 'na-waz' ? 'na wąż' : '';
+      return join('Szybkozłącze', sub, mat, gen, a.system, ends);
+    }
+    case 'adapter':
+      return join('Adapter', subtype === 'ssawki' ? 'ssawki' : '', mat, a.system, ends);
+    case 'zawor': {
+      const SUB: Record<string, string> = {
+        zwrotny: 'zwrotny',
+        kulowy: 'kulowy',
+        ssacy: 'ssący',
+        bypass: 'by-pass',
+        bezpieczenstwa: 'bezpieczeństwa',
+        cisnieniowy: 'ciśnieniowy',
+        plywakowy: 'pływakowy',
+        dozujacy: 'dozujący',
+        regulacyjny: 'regulacyjny',
+      };
+      const sub = SUB[subtype] ?? '';
+      return join('Zawór', sub, mat, a.system, ends);
+    }
+    case 'oring':
+      return join(subtype === 'uszczelka' ? 'Uszczelka' : 'O-ring', a.system, a.dims ? `${a.dims} mm` : '');
+    case 'zaslepka':
+      return join(subtype === 'korek' ? 'Korek' : 'Zaślepka', mat, ends);
+    case 'manometr':
+      return join('Manometr', a.diameterMm ? `Ø${a.diameterMm}` : '', a.maxBar ? `${a.maxBar} bar` : '', ends);
+    case 'gniazdo':
+      return join('Gniazdo', a.system, ends);
+    default:
+      return null;
+  }
+}
+
 /** Rozpoznaje typ i parametry z nazwy WAPRO. Zwraca null, gdy to nie jest element z obsługiwanych typów. */
 export function parseTechName(rawName: string): TechParse | null {
   const name = String(rawName ?? '').trim();
   if (!name) return null;
   const s = name.toUpperCase().replace(/\s+/g, ' ');
+  if (/^(ZESTAW|KOMPLET|USZCZELNIENIE|ELEKTRO)\b/.test(s)) return null;
   const hit = TYPE_START.find((t) => t.re.test(s));
   if (!hit) return null;
   const type = hit.type;
@@ -288,11 +441,31 @@ export function parseTechName(rawName: string): TechParse | null {
 
   const { clean, code, maxBar, orifice } = cleanForThreads(s);
   // tekst po słowie kluczowym typu (żeby nie łapać liczb z marki na początku)
-  const afterType = clean.replace(/^.*?(NYP(?:EL|LE)|TR[ÓO]JNIK|KOLAN(?:KO|KA|O)|REDUKCJ\S*|DYSZA)/, ' ');
-  let ends = parseThreads(afterType);
+  const afterType = clean.replace(
+    /^.*?(NYP(?:EL|LE)|TR[ÓO]JNIK|KOLAN(?:KO|KA|O)|REDUKCJ\S*|DYSZA|SZYBKOZ\S*|ADAPTER|ZAW[ÓO]R|O-?RING|USZCZELK\S*|ZAŚLEPKA|ZASLEPKA|KOREK|MANOMETR|GNIAZDO)/,
+    ' ',
+  );
+  let ends = type === 'oring' ? [] : parseThreads(afterType.replace(/\bD\.?\s?\d{2}\b/g, ' '));
   const material = detectMaterial(s);
 
   const attrs: TechAttrs = { ends, material };
+  const sys = SYSTEMS.find(([re]) => re.test(s));
+  if (sys) attrs.system = sys[1];
+  if (/M[ĘE]SK/.test(s)) attrs.gender = 'M';
+  else if (/DAMSK|[ŻZ]E[ŃN]SK/.test(s)) attrs.gender = 'Ż';
+  if (attrs.gender && ends.length === 1 && ends[0].gender == null) ends[0] = { ...ends[0], gender: attrs.gender };
+  if (type === 'oring') {
+    const dm = /(\d+(?:[.,]\d+)?)\s?X\s?(\d+(?:[.,]\d+)?)/.exec(s);
+    if (dm) attrs.dims = `${dm[1].replace('.', ',')} × ${dm[2].replace('.', ',')}`;
+    else {
+      const single = /(\d+(?:[.,]\d+)?)\s?MM/.exec(s);
+      if (single) attrs.dims = single[1].replace('.', ',');
+    }
+  }
+  if (type === 'manometr') {
+    const dm = /\bD\.?\s?(\d{2})\b/.exec(s) ?? /ŚREDNICA\s?(\d{2})\s?MM/.exec(s);
+    if (dm) attrs.diameterMm = Number(dm[1]);
+  }
   if (code) attrs.code = code;
   if (orifice) attrs.orifice = orifice;
   if (maxBar) attrs.maxBar = maxBar;
@@ -313,6 +486,45 @@ export function parseTechName(rawName: string): TechParse | null {
       break;
     case 'redukcja':
       subtype = /BAYON/.test(s) ? 'bayonet' : attrs.swivel ? 'obrotowa' : attrs.nut ? 'nakretka' : 'zwykla';
+      break;
+    case 'szybkozlacze':
+      subtype = /WODN/.test(s) ? 'wodne' : /LANC/.test(s) ? 'do-lancy' : /NA W[ĄA]Ż?/.test(s) ? 'na-waz' : 'zwykle';
+      break;
+    case 'adapter':
+      subtype = /K-?LOCK/.test(s) ? 'klock' : /SSAWK/.test(s) ? 'ssawki' : 'zwykly';
+      break;
+    case 'zawor':
+      subtype = /ZWROTN/.test(s)
+        ? 'zwrotny'
+        : /KULOW|\bKUL\./.test(s)
+          ? 'kulowy'
+          : /SS[ĄA]C/.test(s)
+            ? 'ssacy'
+            : /BY ?-?PAS/.test(s)
+              ? 'bypass'
+              : /BEZPIECZE[ŃN]STW/.test(s)
+                ? 'bezpieczenstwa'
+                : /CI[ŚS]NIENI/.test(s)
+                  ? 'cisnieniowy'
+                  : /P[ŁL]YWAK/.test(s)
+                    ? 'plywakowy'
+                    : /DOZ(UJ|OWNIK)/.test(s)
+                      ? 'dozujacy'
+                      : /REGULACJI/.test(s)
+                        ? 'regulacyjny'
+                        : 'inny';
+      break;
+    case 'oring':
+      subtype = /^(?:\S+\s+)?USZCZELK/.test(s) ? 'uszczelka' : 'oring';
+      break;
+    case 'zaslepka':
+      subtype = /KOREK/.test(s) ? 'korek' : 'zaslepka';
+      break;
+    case 'manometr':
+      subtype = 'zwykly';
+      break;
+    case 'gniazdo':
+      subtype = 'zwykle';
       break;
     case 'dysza':
       if (/ROTACYJN|ROTJET/.test(s)) subtype = 'rotacyjna';
@@ -336,14 +548,30 @@ export function parseTechName(rawName: string): TechParse | null {
     attrs.threaded = ends.length > 0;
   }
 
+  if (type === 'adapter' && subtype === 'ssawki' && ends.length === 0) {
+    // ssawki odkurzacza: „45w - 32z” = średnice w mm, w = wewnętrzna, z = zewnętrzna
+    const found: Thread[] = [];
+    for (const mm of s.matchAll(/(?<![\d/])(\d{2})\s?([WZ])(?![A-ZĄĆĘŁŃÓŚŹŻ0-9])/g)) {
+      found.push({ size: `Ø${mm[1]}`, gender: mm[2] === 'W' ? 'Ż' : 'M', valid: true });
+    }
+    if (found.length) attrs.ends = ends = found;
+  }
+  if (type === 'szybkozlacze' && attrs.gender && ends.some((e) => e.gender && e.gender !== attrs.gender)) {
+    reasons.push('Płeć w nazwie („męskie/damskie”) nie zgadza się z oznaczeniem gwintu — sprawdź');
+  }
+
   // oczekiwana liczba końcówek
+
   let expected = TECH_TYPES.find((t) => t.id === type)!.ends;
   if (subtype === 'bayonet' || (ends.length === 1 && /ZAKUCI|WĘŻ|WEZ|WTYK/.test(s))) expected = 1;
   if (type === 'trojnik' && ends.length === 1) {
     attrs.ends = ends = [ends[0], ends[0], ends[0]];
     reasons.push('Jedna końcówka w nazwie — przyjęto, że wszystkie trzy są takie same');
   }
-  if (type !== 'dysza' && ends.length !== expected) {
+  if (type === 'zawor' && subtype === 'inny') reasons.push('Nie rozpoznano rodzaju zaworu');
+  if (type === 'oring' && !attrs.dims) reasons.push('Brak wymiarów (średnica × grubość)');
+  if (type === 'manometr' && !attrs.diameterMm) reasons.push('Brak średnicy tarczy');
+  if (type !== 'dysza' && expected > 0 && ends.length !== expected) {
     reasons.push(
       ends.length === 0
         ? 'Nie znaleziono gwintów w nazwie'
@@ -361,6 +589,11 @@ export function parseTechName(rawName: string): TechParse | null {
   if (type === 'kolanko') ['kątownik', 'kolano'].forEach((x) => aliases.add(x));
   if (type === 'trojnik') ['rozdzielacz', 'trójnik'].forEach((x) => aliases.add(x));
   if (type === 'redukcja') ['przejściówka', 'adapter'].forEach((x) => aliases.add(x));
+  if (type === 'szybkozlacze') ['złączka szybka', 'szybkozłączka'].forEach((x) => aliases.add(x));
+  if (type === 'oring') ['uszczelka', 'o-ring', 'oring'].forEach((x) => aliases.add(x));
+  if (type === 'zaslepka') ['korek', 'zaślepka'].forEach((x) => aliases.add(x));
+  if (attrs.system) aliases.add(attrs.system.toLowerCase());
+  if (attrs.dims) aliases.add(attrs.dims.replace(/ × /g, 'x'));
   if (attrs.series) aliases.add(attrs.series.toLowerCase());
   if (attrs.code) aliases.add(attrs.code);
 
@@ -386,6 +619,9 @@ export function rebuildAliases(type: TechType, attrs: TechAttrs): string[] {
   for (const e of attrs.ends) for (const a of threadAliases(e)) aliases.add(a);
   if (attrs.series) aliases.add(attrs.series.toLowerCase());
   if (attrs.code) aliases.add(attrs.code);
+  if (attrs.system) aliases.add(attrs.system.toLowerCase());
+  if (attrs.dims) aliases.add(attrs.dims.replace(/ × /g, 'x'));
   void type;
+
   return [...aliases];
 }

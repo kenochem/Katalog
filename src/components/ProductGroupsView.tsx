@@ -139,6 +139,7 @@ function GroupsTab({
   const [type, setType] = useState<TechType>('nypel');
   const [subtype, setSubtype] = useState('');
   const [material, setMaterial] = useState('');
+  const [system, setSystem] = useState('');
   const [end1, setEnd1] = useState('');
   const [end2, setEnd2] = useState('');
   const [threaded, setThreaded] = useState('');
@@ -173,6 +174,12 @@ function GroupsTab({
     return [...set] as Material[];
   }, [ofType]);
 
+  const systems = useMemo(() => {
+    const set = new Set<string>();
+    for (const e of ofType) if (e.attrs.system) set.add(e.attrs.system);
+    return [...set].sort();
+  }, [ofType]);
+
   const filtered = useMemo(() => {
     const words = q.toLowerCase().split(/\s+/).filter(Boolean);
     return ofType
@@ -180,6 +187,7 @@ function GroupsTab({
         if (onlyApproved && e.state !== 'approved') return false;
         if (subtype && e.subtype !== subtype) return false;
         if (material && e.attrs.material !== material) return false;
+        if (system && e.attrs.system !== system) return false;
         if (noPhoto && e.product.hasImage) return false;
         if (threaded === 'yes' && !(e.attrs.ends.length > 0)) return false;
         if (threaded === 'no' && e.attrs.ends.length > 0) return false;
@@ -199,7 +207,7 @@ function GroupsTab({
         return true;
       })
       .sort((a, b) => numericCompare(a.displayName, b.displayName) || numericCompare(a.product.sku, b.product.sku));
-  }, [ofType, onlyApproved, subtype, material, noPhoto, threaded, end1, end2, q]);
+  }, [ofType, onlyApproved, subtype, material, system, noPhoto, threaded, end1, end2, q]);
 
   const noPhotoCount = filtered.filter((e) => !e.product.hasImage).length;
   const visible = filtered.slice(0, limit);
@@ -211,6 +219,7 @@ function GroupsTab({
     setType(t);
     setSubtype('');
     setMaterial('');
+    setSystem('');
     setEnd1('');
     setEnd2('');
     setThreaded('');
@@ -275,6 +284,16 @@ function GroupsTab({
               {materials.map((m) => (
                 <option key={m} value={m}>
                   {MATERIAL_LABEL[m]}
+                </option>
+              ))}
+            </select>
+          )}
+          {systems.length > 0 && (
+            <select className={sel} value={system} onChange={(e) => setSystem(e.target.value)}>
+              <option value="">Każdy system / marka</option>
+              {systems.map((m) => (
+                <option key={m} value={m}>
+                  {m}
                 </option>
               ))}
             </select>

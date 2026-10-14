@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-14',
+    title: 'Grupy produktów: szybkozłącza, adaptery, zawory, o-ringi, zaślepki, manometry i gniazda',
+    description:
+      'Etap 1 porządkowania elementów technicznych: do nyple, trójników, kolanek, redukcji i dysz doszły szybkozłącza (wodne, do lancy, na wąż, z systemem KEW / K-Lock / Karcher), adaptery (w tym K-Lock TR22 / TR18 i ssawki odkurzaczy), zawory (zwrotne, kulowe, by-pass, bezpieczeństwa, ciśnieniowe, pływakowe i inne), uszczelki i o-ringi (wymiary w mm), zaślepki i korki, manometry (średnica tarczy, zakres, gwint) oraz gniazda. Parser rozpoznaje też płeć złącza z nazw „męskie / damskie”, system lub markę oraz gwinty TR (K-Lock) i pokazuje ostrzeżenie, gdy płeć w nazwie nie zgadza się z oznaczeniem gwintu. W grupach jest nowy filtr „system / marka”, a edytor opisu technicznego ma pola systemu, płci, wymiarów o-ringu i średnicy manometru. Nazwy WAPRO bez zmian.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-14',
     title: 'Karta produktu: panel „Grupa produktu” — przypisanie do grupy technicznej bez wychodzenia z produktu',
     description:
       'Na karcie produktu (zakładka z informacjami) jest nowy panel „Grupa produktu”: pokazuje, do jakiej grupy należy element (np. Nyple › Zwykły), nazwę katalogową złożoną z parametrów i nazwę z WAPRO. Osoby z prawem edycji produktu mogą tu zatwierdzić propozycję z nazwy, zmienić grupę i parametry (typ, podtyp, gwinty, materiał, kod i otwór dyszy), przypisać do grupy produkt, którego parser nie rozpoznał (np. „Turbo dysza”), cofnąć do propozycji albo wyłączyć produkt z grup. Ten sam edytor jest używany na liście w „Grupy produktach”.',
