@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-14',
+    title: 'Grupy produktów: własne ikony dla każdego typu (nypel, trójnik, dysza, zawór…)',
+    description:
+      'Każdy typ elementu technicznego ma teraz własną, rysowaną ikonę: nypel z gwintowanymi końcami, trójnik, kolanko, redukcja, dysza ze strumieniami, szybkozłącze (wtyk i gniazdo), adapter, zawór, o-ring, zaślepka, manometr, gniazdo, lanca, pistolet, wąż, filtr, sitko, pianownica, zbiornik i zestaw naprawczy. Ikony widać na liście typów w Grupach produktów, przy liczniku pozycji, w panelu „Grupa produktu” na karcie produktu, a także zamiast szarej ikonki „brak zdjęcia” przy pozycjach bez zdjęcia — od razu widać, co to za element.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-14',
     title: 'Grupy produktów: lance, pistolety, węże, filtry, sitka, pianownice, zbiorniki i zestawy naprawcze',
     description:
       'Etap 3 porządkowania: do Grup produktów doszły kolejne typy niezależne od kategorii w WAPRO (np. sitka lancy leżały w „Lance”, a szybkozłącza w „Lancach” i „Dyszach” — teraz każdy element trafia do grupy swojego typu). Węże mają podtypy (wysokociśnieniowy, zbrojony, kanalizacyjny, ogrodowy, do natrysku chemii, do odkurzacza, do bębna) oraz rozpoznawaną długość, wymiar (np. 6×1, DN8, Ø38) i ciśnienie; lance — długość (mm, zakres w cm), podtyp pianowa / zwykła; pistolety — myjki, suszące, pianowe; filtry — wody, chemii, odkurzacza, pyłowe; pianownice i zbiorniki — pojemność w litrach. Pozycje o ubogiej nazwie trafiają do „Do sprawdzenia” zamiast być zatwierdzane automatycznie. Nazwy WAPRO bez zmian.',

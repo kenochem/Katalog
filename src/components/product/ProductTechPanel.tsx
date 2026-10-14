@@ -7,6 +7,7 @@ import { showToast } from '../../lib/toast';
 import { TECH_TYPE_PLURAL, TECH_SUBTYPES, parseTechName, subtypeLabel, type TechAttrs, type TechType } from '../../lib/techParser';
 import { deleteTechRecord, getTechRecord, saveTechRecords, useTechVersion } from '../../lib/techStore';
 import { EntryEditor } from '../TechEditor';
+import { TechTypeIcon } from '../TechTypeIcon';
 
 interface Props {
   product: Product;
@@ -111,7 +112,10 @@ export function ProductTechPanel({ product, canEdit, onOpenGroups }: Props) {
 
       {current ? (
         <>
-          <p className="text-sm font-semibold text-slate-100">{current.name}</p>
+          <p className="flex items-center gap-2 text-sm font-semibold text-slate-100">
+            <TechTypeIcon type={current.type} className="h-5 w-5 shrink-0 text-slate-300" />
+            {current.name}
+          </p>
           <p className="mt-0.5 text-xs text-slate-400">
             {TECH_TYPE_PLURAL[current.type]} › {subtypeLabel(current.type, current.subtype)}
             {state.kind === 'proposed' && (

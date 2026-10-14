@@ -20,6 +20,7 @@ import {
   type TechEntry,
 } from '../lib/techStore';
 import { confirmDialog } from '../lib/dialog';
+import { TechTypeIcon } from './TechTypeIcon';
 import { EntryEditor } from './TechEditor';
 import { showToast } from '../lib/toast';
 
@@ -108,13 +109,16 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
   );
 }
 
-function Thumb({ product, hide }: { product: Product; hide?: boolean }) {
+function Thumb({ product, hide, type }: { product: Product; hide?: boolean; type?: TechType }) {
   const url = hide ? null : getProductImage(product);
   return url ? (
     <img src={url} alt="" loading="lazy" className="h-11 w-11 shrink-0 rounded-lg bg-white object-contain" />
   ) : (
-    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-dashed border-slate-600 text-slate-500">
-      <ImageOff className="h-4 w-4" />
+    <span
+      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-dashed border-slate-600 text-slate-500"
+      title="Brak zdjęcia"
+    >
+      {type ? <TechTypeIcon type={type} className="h-6 w-6" /> : <ImageOff className="h-4 w-4" />}
     </span>
   );
 }
@@ -242,11 +246,12 @@ function GroupsTab({
                 active ? 'border-slate-400 bg-slate-800' : 'border-slate-800 bg-slate-900/50 hover:bg-slate-800/60'
               }`}
             >
-              <span className="flex items-center justify-between gap-3 text-sm font-semibold text-slate-100">
-                {t.labelPlural}
+              <span className="flex items-center gap-2.5 text-sm font-semibold text-slate-100">
+                <TechTypeIcon type={t.id} className={`h-6 w-6 shrink-0 ${active ? 'text-slate-50' : 'text-slate-400'}`} />
+                <span className="flex-1">{t.labelPlural}</span>
                 <span className="text-xs font-normal text-slate-400">{c.total}</span>
               </span>
-              <span className="mt-0.5 block text-[11px] text-slate-500">
+              <span className="mt-0.5 block pl-[34px] text-[11px] text-slate-500">
                 {c.noPhoto > 0 ? `${c.noPhoto} bez zdjęcia` : 'wszystkie ze zdjęciem'}
                 {c.proposed > 0 ? ` · ${c.proposed} propozycji` : ''}
               </span>
@@ -338,6 +343,7 @@ function GroupsTab({
         </div>
 
         <p className="text-xs text-slate-400">
+          <TechTypeIcon type={type} className="mr-1.5 inline h-4 w-4 align-text-bottom" />
           {TECH_TYPE_PLURAL[type]}: <b className="text-slate-200">{filtered.length}</b> pozycji
           {noPhotoCount > 0 && (
             <>
@@ -361,7 +367,7 @@ function GroupsTab({
                   onClick={() => onOpenProduct(e.product)}
                   className="flex min-w-0 flex-1 items-center gap-3 text-left"
                 >
-                  <Thumb product={e.product} hide={hideImages} />
+                  <Thumb product={e.product} hide={hideImages} type={e.type} />
                   <span className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-center gap-2">
                       <span className="text-sm font-semibold text-slate-100">{e.displayName}</span>
@@ -586,7 +592,7 @@ function ReviewTab({
                   })
                 }
               />
-              <Thumb product={e.product} hide={hideImages} />
+              <Thumb product={e.product} hide={hideImages} type={e.type} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs text-slate-400">
                   WAPRO: {e.product.name} · <span className="font-mono">{e.product.sku}</span>
