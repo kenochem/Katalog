@@ -16,7 +16,15 @@ export type TechType =
   | 'oring'
   | 'zaslepka'
   | 'manometr'
-  | 'gniazdo';
+  | 'gniazdo'
+  | 'lanca'
+  | 'pistolet'
+  | 'waz'
+  | 'filtr'
+  | 'sitko'
+  | 'pianownica'
+  | 'zbiornik'
+  | 'naprawczy';
 
 export const TECH_TYPES: { id: TechType; label: string; labelPlural: string; ends: number }[] = [
   { id: 'nypel', label: 'Nypel', labelPlural: 'Nyple', ends: 2 },
@@ -31,6 +39,14 @@ export const TECH_TYPES: { id: TechType; label: string; labelPlural: string; end
   { id: 'zaslepka', label: 'Zaślepka', labelPlural: 'Zaślepki i korki', ends: 1 },
   { id: 'manometr', label: 'Manometr', labelPlural: 'Manometry', ends: 1 },
   { id: 'gniazdo', label: 'Gniazdo', labelPlural: 'Gniazda', ends: 0 },
+  { id: 'lanca', label: 'Lanca', labelPlural: 'Lance', ends: 0 },
+  { id: 'pistolet', label: 'Pistolet', labelPlural: 'Pistolety', ends: 0 },
+  { id: 'waz', label: 'Wąż', labelPlural: 'Węże', ends: 0 },
+  { id: 'filtr', label: 'Filtr', labelPlural: 'Filtry', ends: 0 },
+  { id: 'sitko', label: 'Sitko', labelPlural: 'Sitka', ends: 0 },
+  { id: 'pianownica', label: 'Pianownica', labelPlural: 'Pianownice', ends: 0 },
+  { id: 'zbiornik', label: 'Zbiornik', labelPlural: 'Zbiorniki', ends: 0 },
+  { id: 'naprawczy', label: 'Zestaw naprawczy', labelPlural: 'Zestawy naprawcze', ends: 0 },
 ];
 
 export const TECH_TYPE_LABEL: Record<TechType, string> = Object.fromEntries(
@@ -74,6 +90,14 @@ const TYPE_GENDER: Record<TechType, 0 | 1 | 2> = {
   zaslepka: 2,
   manometr: 0,
   gniazdo: 1,
+  lanca: 2,
+  pistolet: 0,
+  waz: 0,
+  filtr: 0,
+  sitko: 1,
+  pianownica: 2,
+  zbiornik: 0,
+  naprawczy: 1,
 };
 
 /** Podtypy (zależne od typu). */
@@ -144,6 +168,36 @@ export const TECH_SUBTYPES: Record<TechType, { id: string; label: string }[]> = 
   ],
   manometr: [{ id: 'zwykly', label: 'Zwykły' }],
   gniazdo: [{ id: 'zwykle', label: 'Zwykłe' }],
+  lanca: [
+    { id: 'zwykla', label: 'Zwykła' },
+    { id: 'pianowa', label: 'Pianowa' },
+  ],
+  pistolet: [
+    { id: 'myjki', label: 'Myjki ciśnieniowej' },
+    { id: 'suszacy', label: 'Suszący / przedmuchujący' },
+    { id: 'pianowy', label: 'Pianowy' },
+  ],
+  waz: [
+    { id: 'wysokocisnieniowy', label: 'Wysokociśnieniowy' },
+    { id: 'zbrojony', label: 'Zbrojony' },
+    { id: 'kanalizacyjny', label: 'Kanalizacyjny' },
+    { id: 'ogrodowy', label: 'Ogrodowy' },
+    { id: 'chemii', label: 'Do natrysku chemii' },
+    { id: 'odkurzacza', label: 'Do odkurzacza' },
+    { id: 'bebna', label: 'Do bębna / zwijaka' },
+    { id: 'inny', label: 'Inny' },
+  ],
+  filtr: [
+    { id: 'wody', label: 'Wody' },
+    { id: 'chemii', label: 'Chemii' },
+    { id: 'odkurzacza', label: 'Odkurzacza' },
+    { id: 'powietrza', label: 'Powietrza / pyłowy' },
+    { id: 'inny', label: 'Inny' },
+  ],
+  sitko: [{ id: 'zwykle', label: 'Zwykłe' }],
+  pianownica: [{ id: 'zwykla', label: 'Zwykła' }],
+  zbiornik: [{ id: 'zwykly', label: 'Zwykły' }],
+  naprawczy: [{ id: 'zwykly', label: 'Zwykły' }],
 };
 
 export function subtypeLabel(type: TechType, subtype: string): string {
@@ -270,6 +324,12 @@ export interface TechAttrs {
   dims?: string;
   /** Manometry: średnica tarczy w mm. */
   diameterMm?: number;
+  /** Węże, lance: długość (np. „25 m”). */
+  length?: string;
+  /** Węże: średnica nominalna (np. DN13, Ø10). */
+  dn?: string;
+  /** Pianownice, zbiorniki: pojemność w litrach. */
+  capacityL?: number;
 }
 
 export type TechConfidence = 'ok' | 'review';
@@ -297,6 +357,14 @@ const TYPE_START: { type: TechType; re: RegExp }[] = [
   { type: 'zaslepka', re: /^(?:\S+\s+)?(?:ZAŚLEPKA|ZASLEPKA|KOREK)\b/ },
   { type: 'manometr', re: /^(?:\S+\s+)?MANOMETR\b/ },
   { type: 'gniazdo', re: /^(?:\S+\s+)?GNIAZDO\b/ },
+  { type: 'naprawczy', re: /^ZESTAW NAP/ },
+  { type: 'lanca', re: /^(?:\S+\s+)?LANC(?:A|E|Y)(?![A-ZĄĆĘŁŃÓŚŹŻ])/ },
+  { type: 'pistolet', re: /^(?:\S+\s+)?PISTOLET(?![A-ZĄĆĘŁŃÓŚŹŻ])/ },
+  { type: 'waz', re: /^(?:\S+\s+)?(?:WĄŻ|WAZ|WĘŻYK|WEZYK)(?![A-ZĄĆĘŁŃÓŚŹŻ])/ },
+  { type: 'filtr', re: /^(?:\S+\s+)?FILTR(?:Y)?(?![A-ZĄĆĘŁŃÓŚŹŻ])/ },
+  { type: 'sitko', re: /^(?:\S+\s+)?(?:SITKO|SITO)(?![A-ZĄĆĘŁŃÓŚŹŻ])/ },
+  { type: 'pianownica', re: /^(?:\S+\s+)?PIANOWNICA(?![A-ZĄĆĘŁŃÓŚŹŻ])/ },
+  { type: 'zbiornik', re: /^(?:\S+\s+)?ZBIORNIK(?![A-ZĄĆĘŁŃÓŚŹŻ])/ },
 ];
 
 const SYSTEMS: [RegExp, string][] = [
@@ -423,6 +491,41 @@ function buildExtraDisplayName(type: TechType, subtype: string, a: TechAttrs): s
       return join('Manometr', a.diameterMm ? `Ø${a.diameterMm}` : '', a.maxBar ? `${a.maxBar} bar` : '', ends);
     case 'gniazdo':
       return join('Gniazdo', a.system, ends);
+    case 'lanca':
+    case 'pistolet':
+    case 'waz':
+    case 'filtr':
+    case 'sitko':
+    case 'pianownica':
+    case 'zbiornik':
+    case 'naprawczy': {
+      const SUB: Record<string, string> = {
+        pianowa: 'pianowa',
+        suszacy: 'suszący',
+        pianowy: 'pianowy',
+        wysokocisnieniowy: 'wysokociśnieniowy',
+        zbrojony: 'zbrojony',
+        kanalizacyjny: 'kanalizacyjny',
+        ogrodowy: 'ogrodowy',
+        bebna: 'do bębna',
+        wody: 'wody',
+
+        chemii: 'chemii',
+        odkurzacza: 'odkurzacza',
+        powietrza: 'powietrza',
+      };
+      return join(
+        TECH_TYPE_LABEL[type],
+        SUB[subtype],
+        mat,
+        a.system,
+        a.length,
+        a.dn,
+        a.capacityL ? a.capacityL + ' l' : '',
+        a.maxBar ? a.maxBar + ' bar' : '',
+        ends,
+      );
+    }
     default:
       return null;
   }
@@ -433,22 +536,65 @@ export function parseTechName(rawName: string): TechParse | null {
   const name = String(rawName ?? '').trim();
   if (!name) return null;
   const s = name.toUpperCase().replace(/\s+/g, ' ');
-  if (/^(ZESTAW|KOMPLET|USZCZELNIENIE|ELEKTRO)\b/.test(s)) return null;
+  if (/^(ZESTAW|KOMPLET|USZCZELNIENIE|ELEKTRO)\b/.test(s) && !/^ZESTAW NAP/.test(s)) return null;
   const hit = TYPE_START.find((t) => t.re.test(s));
   if (!hit) return null;
   const type = hit.type;
   const reasons: string[] = [];
+  let attrsLength: string | undefined;
+  let attrsDn: string | undefined;
+  let attrsCap: number | undefined;
 
   const { clean, code, maxBar, orifice } = cleanForThreads(s);
   // tekst po słowie kluczowym typu (żeby nie łapać liczb z marki na początku)
   const afterType = clean.replace(
-    /^.*?(NYP(?:EL|LE)|TR[ÓO]JNIK|KOLAN(?:KO|KA|O)|REDUKCJ\S*|DYSZA|SZYBKOZ\S*|ADAPTER|ZAW[ÓO]R|O-?RING|USZCZELK\S*|ZAŚLEPKA|ZASLEPKA|KOREK|MANOMETR|GNIAZDO)/,
+    /^.*?(NYP(?:EL|LE)|TR[ÓO]JNIK|KOLAN(?:KO|KA|O)|REDUKCJ\S*|DYSZA|SZYBKOZ\S*|ADAPTER|ZAW[ÓO]R|O-?RING|USZCZELK\S*|ZAŚLEPKA|ZASLEPKA|KOREK|MANOMETR|GNIAZDO|NAPRAWCZY|LANC[AEY]|PISTOLET|WĄŻ|WAZ|WĘŻYK|WEZYK|FILTRY?|SITKO|SITO|PIANOWNICA|ZBIORNIK)/,
     ' ',
   );
-  let ends = type === 'oring' ? [] : parseThreads(afterType.replace(/\bD\.?\s?\d{2}\b/g, ' '));
+  const GENERIC = ['lanca', 'pistolet', 'waz', 'filtr', 'sitko', 'pianownica', 'zbiornik', 'naprawczy'];
+  let genericText = afterType;
+  if (GENERIC.includes(type)) {
+    const lm = /(?<![\d/])(\d+(?:[.,]\d+)?)\s?(M|MB|MTR|CM)(?![A-ZĄĆĘŁŃÓŚŹŻ0-9])/.exec(afterType);
+    if (lm) {
+      attrsLength = lm[1].replace('.', ',') + (lm[2] === 'CM' ? ' cm' : ' m');
+      genericText = genericText.replace(lm[0], ' ');
+    }
+    const dnm = /\bDN\s?(\d+)\b/.exec(s) ?? /\bFI\s?(\d+)\b/.exec(s);
+    if (dnm) attrsDn = /\bDN/.test(dnm[0]) ? 'DN' + dnm[1] : 'Ø' + dnm[1];
+    const cap = /(?<![\d/])(\d+(?:[.,]\d+)?)\s?L(?![A-ZĄĆĘŁŃÓŚŹŻ0-9])/.exec(afterType);
+    if (cap) {
+      attrsCap = Number(cap[1].replace(',', '.'));
+      genericText = genericText.replace(cap[0], ' ');
+    }
+    genericText = genericText.replace(/\b(?:DN|FI)\s?\d+\b/g, ' ');
+    if (type === 'lanca' && !attrsLength) {
+      const rg = /(\d{2,4})\s?-\s?(\d{2,4})\s?CM/.exec(s);
+      const mm = /(?<![\d/])(\d{3,4})\s?MM/.exec(s);
+      if (rg) attrsLength = rg[1] + '–' + rg[2] + ' cm';
+      else if (mm) attrsLength = mm[1] + ' mm';
+    }
+    if (type === 'waz') {
+      // wymiary węża: „6 x 1”, „8 x 2” oraz „8/330 bar”
+      const hx = /(?<![\d/])(\d{1,2})\s?X\s?(\d{1,2})(?![\d/,.])/.exec(genericText);
+      if (hx) {
+        attrsDn = attrsDn ?? hx[1] + '×' + hx[2];
+        genericText = genericText.replace(hx[0], ' ');
+      }
+      const hb = /(?<![\d/])(\d{1,2})\/(\d{3})\s?BAR/.exec(s);
+      if (hb) attrsDn = attrsDn ?? 'Ø' + hb[1];
+      genericText = genericText.replace(/(?<![\d/])\d{1,2}\/(?![\d/])/g, ' ');
+    }
+  }
+  let ends = type === 'oring' ? [] : parseThreads(genericText.replace(/\bD\.?\s?\d{2}\b/g, ' '));
+  // dla elementów „ogólnych” liczby typu 800, 925, 365 to długości lub modele, nie gwinty
+  if (GENERIC.includes(type)) ends = ends.filter((e) => e.valid);
+
   const material = detectMaterial(s);
 
   const attrs: TechAttrs = { ends, material };
+  if (attrsLength) attrs.length = attrsLength;
+  if (attrsDn) attrs.dn = attrsDn;
+  if (attrsCap) attrs.capacityL = attrsCap;
   const sys = SYSTEMS.find(([re]) => re.test(s));
   if (sys) attrs.system = sys[1];
   if (/M[ĘE]SK/.test(s)) attrs.gender = 'M';
@@ -526,6 +672,44 @@ export function parseTechName(rawName: string): TechParse | null {
     case 'gniazdo':
       subtype = 'zwykle';
       break;
+    case 'lanca':
+      subtype = /PIAN/.test(s) ? 'pianowa' : 'zwykla';
+      break;
+    case 'pistolet':
+      subtype = /SUSZ|PRZEDMUCH/.test(s) ? 'suszacy' : /PIAN/.test(s) ? 'pianowy' : 'myjki';
+      break;
+    case 'waz':
+      subtype = /ZBROJ/.test(s)
+        ? 'zbrojony'
+        : /KANALIZ/.test(s)
+          ? 'kanalizacyjny'
+          : /OGROD/.test(s)
+            ? 'ogrodowy'
+            : /ODKURZ/.test(s)
+              ? 'odkurzacza'
+              : /CHEMII/.test(s)
+                ? 'chemii'
+                : /B[ĘE]BN|ZWIJAK/.test(s)
+                  ? 'bebna'
+                  : /WYSOKOCI|\bHD\b|DN ?\d|CI[ŚS]NIEN|MYJNI|MYJK|TERMOPLAST|HDS/.test(s)
+                    ? 'wysokocisnieniowy'
+                    : 'inny';
+      break;
+    case 'filtr':
+      subtype = /WODY/.test(s) ? 'wody' : /CHEMII/.test(s) ? 'chemii' : /ODKURZ/.test(s) ? 'odkurzacza' : /POWIETRZ|PY[ŁL]OW/.test(s) ? 'powietrza' : 'inny';
+      break;
+    case 'sitko':
+      subtype = 'zwykle';
+      break;
+    case 'pianownica':
+      subtype = 'zwykla';
+      break;
+    case 'zbiornik':
+      subtype = 'zwykly';
+      break;
+    case 'naprawczy':
+      subtype = 'zwykly';
+      break;
     case 'dysza':
       if (/ROTACYJN|ROTJET/.test(s)) subtype = 'rotacyjna';
       else if (/KANALIZ/.test(s)) subtype = 'kanalizacyjna';
@@ -569,6 +753,11 @@ export function parseTechName(rawName: string): TechParse | null {
     reasons.push('Jedna końcówka w nazwie — przyjęto, że wszystkie trzy są takie same');
   }
   if (type === 'zawor' && subtype === 'inny') reasons.push('Nie rozpoznano rodzaju zaworu');
+  if (GENERIC.includes(type) && !attrs.system && !attrs.length && !attrs.dn && !attrs.capacityL && !attrs.material && ends.length === 0)
+    reasons.push('Brak rozpoznanych parametrów w nazwie');
+  if ((type === 'waz' && subtype === 'inny') || (type === 'filtr' && subtype === 'inny'))
+    reasons.push(type === 'waz' ? 'Nie rozpoznano rodzaju węża' : 'Nie rozpoznano rodzaju filtra');
+
   if (type === 'oring' && !attrs.dims) reasons.push('Brak wymiarów (średnica × grubość)');
   if (type === 'manometr' && !attrs.diameterMm) reasons.push('Brak średnicy tarczy');
   if (type !== 'dysza' && expected > 0 && ends.length !== expected) {

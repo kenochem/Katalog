@@ -13,6 +13,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-14',
+    title: 'Grupy produktów: lance, pistolety, węże, filtry, sitka, pianownice, zbiorniki i zestawy naprawcze',
+    description:
+      'Etap 3 porządkowania: do Grup produktów doszły kolejne typy niezależne od kategorii w WAPRO (np. sitka lancy leżały w „Lance”, a szybkozłącza w „Lancach” i „Dyszach” — teraz każdy element trafia do grupy swojego typu). Węże mają podtypy (wysokociśnieniowy, zbrojony, kanalizacyjny, ogrodowy, do natrysku chemii, do odkurzacza, do bębna) oraz rozpoznawaną długość, wymiar (np. 6×1, DN8, Ø38) i ciśnienie; lance — długość (mm, zakres w cm), podtyp pianowa / zwykła; pistolety — myjki, suszące, pianowe; filtry — wody, chemii, odkurzacza, pyłowe; pianownice i zbiorniki — pojemność w litrach. Pozycje o ubogiej nazwie trafiają do „Do sprawdzenia” zamiast być zatwierdzane automatycznie. Nazwy WAPRO bez zmian.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-14',
     title: 'Grupy produktów: szybkozłącza, adaptery, zawory, o-ringi, zaślepki, manometry i gniazda',
     description:
       'Etap 1 porządkowania elementów technicznych: do nyple, trójników, kolanek, redukcji i dysz doszły szybkozłącza (wodne, do lancy, na wąż, z systemem KEW / K-Lock / Karcher), adaptery (w tym K-Lock TR22 / TR18 i ssawki odkurzaczy), zawory (zwrotne, kulowe, by-pass, bezpieczeństwa, ciśnieniowe, pływakowe i inne), uszczelki i o-ringi (wymiary w mm), zaślepki i korki, manometry (średnica tarczy, zakres, gwint) oraz gniazda. Parser rozpoznaje też płeć złącza z nazw „męskie / damskie”, system lub markę oraz gwinty TR (K-Lock) i pokazuje ostrzeżenie, gdy płeć w nazwie nie zgadza się z oznaczeniem gwintu. W grupach jest nowy filtr „system / marka”, a edytor opisu technicznego ma pola systemu, płci, wymiarów o-ringu i średnicy manometru. Nazwy WAPRO bez zmian.',
