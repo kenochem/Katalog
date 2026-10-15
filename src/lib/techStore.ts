@@ -57,12 +57,14 @@ function emit() {
 function rowToRecord(r: Record<string, unknown>): TechRecord {
   const attrs = (r.attrs && typeof r.attrs === 'object' ? r.attrs : {}) as TechAttrs;
   if (!Array.isArray(attrs.ends)) attrs.ends = [];
+  // starsze zapisy miały znaczek cali (1/4″) — pokazujemy rozmiary bez niego
+  attrs.ends = attrs.ends.map((e) => ({ ...e, size: String(e.size).replace(/″/g, '') }));
   return {
     sku: String(r.sku).toUpperCase(),
     type: String(r.type) as TechType,
     subtype: String(r.subtype ?? ''),
     attrs,
-    displayName: String(r.display_name ?? ''),
+    displayName: String(r.display_name ?? '').replace(/″/g, ''),
     aliases: Array.isArray(r.aliases) ? (r.aliases as string[]) : [],
     status: r.status === 'rejected' ? 'rejected' : 'approved',
     updatedBy: String(r.updated_by ?? ''),

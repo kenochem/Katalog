@@ -212,7 +212,7 @@ export function subtypeLabel(type: TechType, subtype: string): string {
 export type ThreadGender = 'M' | 'Ż' | null;
 
 export interface Thread {
-  /** np. `1/4″`, `3/8″`, `M22`; przy nierozpoznanym rozmiarze — tekst z nazwy. */
+  /** np. `1/4`, `3/8`, `M22` (bez znaczka cali); przy nierozpoznanym rozmiarze — tekst z nazwy. */
   size: string;
   gender: ThreadGender;
   /** false = rozmiar spoza typowych (prawdopodobna literówka w nazwie, np. 3/18). */
@@ -252,7 +252,7 @@ function normalizeSize(rawNum: string, metric: boolean): { size: string; valid: 
     const n = Number(num);
     return { size: `M${num}`, valid: METRIC_VALID.has(n) };
   }
-  return { size: `${num}″`, valid: INCH_VALID.has(num) };
+  return { size: num, valid: INCH_VALID.has(num) };
 }
 
 export function parseThreadToken(text: string): Thread | null {

@@ -12,6 +12,13 @@ export interface AppChangelogEntry {
  */
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
+    date: '2026-10-15',
+    title: 'Grupy produktów: gwinty bez znaczka cali (3/8 M, 1/4 Ż)',
+    description:
+      'Nazwy katalogowe i filtry gwintów w Grupach produktów nie używają już znaczka cali — zamiast „3/8″ M × 1/4″ Ż” jest „3/8 M × 1/4 Ż”, krócej i czytelniej. Dotyczy też już zatwierdzonych opisów (wyświetlane są w nowej postaci) oraz filtrów „Końcówka 1/2” i edytora.',
+    tag: 'poprawka',
+  },
+  {
     date: '2026-10-14',
     title: 'Wyszukiwarka: pełne wyniki (bez ucinania do 100), wiele słów w dowolnej kolejności, polskie znaki i odmiana',
     description:
