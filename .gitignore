@@ -8,6 +8,7 @@ dist-ops
 dist-talk
 dist-logistics
 dist-calendar
+dist-marketing
 .env
 .env.local
 .env.*

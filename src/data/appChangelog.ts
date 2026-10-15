@@ -13,6 +13,14 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-15',
+    title: 'Suite: nowa aplikacja „Marketing” (szablon, w budowie)',
+    description:
+      'Do Suite doszła nowa aplikacja Kenochem Marketing pod adresem kenochem-marketing.web.app — osobna aplikacja (PWA) jak Katalog, Handel czy Magazyn, z własną ikoną (megafon z falami dźwięku i iskrą), manifestem, kafelkiem w launcherze Suite i tym samym logowaniem. Na razie widoczna tylko dla administratorów i jest szablonem: ekran powitalny z planem modułów (asystent AI na stronie, leady i zgody, wiadomości i remarketing, popupy i widżety, wtyczka do sklepu, analityka) w etapach oraz listą zasad zgodności (zgody, informowanie, że to AI, wypisanie, limity kosztów). Kolejne etapy dopiszemy po ustaleniu priorytetów.',
+    tag: 'nowość',
+  },
+
+  {
+    date: '2026-10-15',
     title: 'Kontrast w jasnym motywie: czytelny kolorowy tekst w całym katalogu',
     description:
       'Naprawa nieczytelnego tekstu w jasnym i ciasteczkowym motywie. Klasy kolorów pisane pod ciemne tło (jasne żółcie, bursztyny, zielenie, błękity, czerwienie, fiolety — odcienie 100–400) były na jasnym tle prawie niewidoczne; teraz w jasnych motywach automatycznie dostają ciemniejsze odpowiedniki w całej aplikacji, a w ciemnych niczego nie zmieniają. Dotyczy m.in. linii „Nowe w tym tygodniu” w profilu, ostrzeżeń, komunikatów statusu i plakietek. W profilu nazwy stopni odznak (brąz/srebro/złoto/diament) i rang mają osobne ciemniejsze kolory na jasnym tle, a na ciemnych tłach nagłówka (zmierzch, zorza, kosmos itd.) tekst jest zawsze jasny — wcześniej nazwa użytkownika była ciemna na ciemnym. Tekst na kolorowych plakietkach (poziom, ranga, „TY”) jest stale ciemny, niezależnie od motywu.',

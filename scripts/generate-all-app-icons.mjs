@@ -11,7 +11,9 @@ const scripts = [
   'node scripts/generate-ops-icons.mjs',
   'node scripts/generate-talk-icons.mjs',
   'node scripts/generate-calendar-icons.mjs',
+  'node scripts/generate-marketing-icons.mjs',
 ];
+
 
 for (const command of scripts) {
   execSync(command, { stdio: 'inherit' });

@@ -69,8 +69,15 @@ const RootApp = lazy(async () => {
     );
     return { default: CalendarProductApp };
   }
+  if (APP_PRODUCT === 'marketing') {
+    const { MarketingProductApp } = await import(
+      './modules/marketing/MarketingProductApp'
+    );
+    return { default: MarketingProductApp };
+  }
   if (APP_PRODUCT === 'stock') {
-    const { StockProductApp } = await import('./modules/stock/StockProductApp');
+    const { StockProductApp }
+ = await import('./modules/stock/StockProductApp');
     return { default: StockProductApp };
   }
   if (APP_PRODUCT === 'suite') {

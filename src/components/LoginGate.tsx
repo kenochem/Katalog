@@ -29,6 +29,7 @@ const APP_ICONS: Record<string, string> = {
   ops: '/icons/ops-app-icon.svg',
   talk: '/icons/talk-app-icon.svg',
   calendar: '/icons/calendar-app-icon.svg',
+  marketing: '/icons/marketing-app-icon.svg',
   logistics: '/icons/app-icon.svg',
 };
 

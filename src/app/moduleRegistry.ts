@@ -11,7 +11,8 @@ export type AppProduct =
   | 'ops'
   | 'talk'
   | 'logistics'
-  | 'calendar';
+  | 'calendar'
+  | 'marketing';
 
 export type HubModuleId = 'catalog' | 'crm' | 'ops' | 'comms' | 'calendar';
 
@@ -32,6 +33,7 @@ function parseAppProduct(): AppProduct {
     case 'talk':
     case 'logistics':
     case 'calendar':
+    case 'marketing':
       return ENV_PRODUCT;
     default:
       return 'suite';
@@ -50,6 +52,7 @@ const MODULES_BY_PRODUCT: Record<AppProduct, readonly HubModuleId[]> = {
   talk: TALK_SUSPENDED ? [] : ['comms'],
   logistics: [],
   calendar: ['calendar'],
+  marketing: [],
 };
 
 export const ENABLED_MODULES: readonly HubModuleId[] =
@@ -135,6 +138,13 @@ export const PRODUCT_BRANDING: Record<AppProduct, ProductBranding> = {
     manifestShortName: 'Kalendarz',
     description: 'Plan firmy, wizyty, dostawy, raporty i wydarzenia',
   },
+  marketing: {
+    appTitle: 'Marketing - Kenochem',
+    headerTitle: 'Marketing',
+    manifestName: 'Kenochem Marketing',
+    manifestShortName: 'Marketing',
+    description: 'Marketing Kenochem: asystent AI, leady i zgody, remarketing',
+  },
 };
 
 export const branding = PRODUCT_BRANDING[APP_PRODUCT];
@@ -148,6 +158,7 @@ export const ALL_APP_PRODUCTS: AppProduct[] = [
   'talk',
   'logistics',
   'calendar',
+  'marketing',
 ];
 
 export const HOSTING_SITE_BY_PRODUCT: Record<AppProduct, string> = {
@@ -159,4 +170,6 @@ export const HOSTING_SITE_BY_PRODUCT: Record<AppProduct, string> = {
   talk: 'kenochem-talk',
   logistics: 'kenochem-logistics',
   calendar: 'kenochem-calendar',
+  marketing: 'kenochem-marketing',
 };
+

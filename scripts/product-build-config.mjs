@@ -8,6 +8,7 @@ export const manifests = {
   talk: 'manifest.talk.webmanifest',
   logistics: 'manifest.logistics.webmanifest',
   calendar: 'manifest.calendar.webmanifest',
+  marketing: 'manifest.marketing.webmanifest',
 };
 
 export const titles = {
@@ -19,6 +20,7 @@ export const titles = {
   talk: 'Talk - Kenochem',
   logistics: 'Logistyka - Kenochem',
   calendar: 'Kalendarz - Kenochem',
+  marketing: 'Marketing - Kenochem',
 };
 
 export const appleShort = {
@@ -30,6 +32,7 @@ export const appleShort = {
   talk: 'Talk',
   logistics: 'Logistyka',
   calendar: 'Kalendarz',
+  marketing: 'Marketing',
 };
 
 export const headIcons = {
@@ -81,6 +84,12 @@ export const headIcons = {
     apple: '/icons/calendar-icon-180.png',
     theme: '#33b33b',
   },
+  marketing: {
+    svg: '/favicon-marketing.svg',
+    png32: '/icons/marketing-favicon-32.png',
+    apple: '/icons/marketing-icon-180.png',
+    theme: '#33b33b',
+  },
 };
 
 export const outDirs = {
@@ -92,7 +101,9 @@ export const outDirs = {
   talk: 'dist-talk',
   logistics: 'dist-logistics',
   calendar: 'dist-calendar',
+  marketing: 'dist-marketing',
 };
+
 
 /** Podmienia tytuł i ikony w HTML (index.base.html → produkt). */
 export function applyProductHead(html, product) {

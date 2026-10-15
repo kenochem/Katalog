@@ -14,7 +14,9 @@ export default defineConfig(({ mode }) => {
     talk: 'dist-talk',
     logistics: 'dist-logistics',
     calendar: 'dist-calendar',
+    marketing: 'dist-marketing',
   };
+
 
   const productHtml = resolve(__dirname, `index.${mode}.html`);
   const htmlInput = existsSync(productHtml)

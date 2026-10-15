@@ -15,7 +15,9 @@ const targets = [
   { target: 'talk', public: 'dist-talk' },
   { target: 'logistics', public: 'dist-logistics' },
   { target: 'calendar', public: 'dist-calendar' },
+  { target: 'marketing', public: 'dist-marketing' },
 ];
+
 
 const headersBlock = [
   {

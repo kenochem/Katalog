@@ -28,6 +28,9 @@
         ],
         "calendar": [
           "kenochem-calendar"
+        ],
+        "marketing": [
+          "kenochem-marketing"
         ]
       }
     }

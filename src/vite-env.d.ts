@@ -11,8 +11,10 @@ interface ImportMetaEnv {
     | 'ops'
     | 'talk'
     | 'logistics'
-    | 'calendar';
+    | 'calendar'
+    | 'marketing';
 }
+
 
 interface ImportMeta {
   readonly env: ImportMetaEnv;

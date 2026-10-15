@@ -3,7 +3,7 @@ import { roleCan } from '../lib/roles';
 
 /** Narzędzia widoczne w launcherze Suite — każde to osobna aplikacja (osobny adres). */
 export interface SuiteTool {
-  id: 'catalog' | 'sell' | 'stock' | 'ops' | 'calendar' | 'logistics';
+  id: 'catalog' | 'sell' | 'stock' | 'ops' | 'calendar' | 'marketing' | 'logistics';
   name: string;
   tagline: string;
   description: string;
@@ -66,6 +66,16 @@ export const SUITE_TOOLS: SuiteTool[] = [
     url: 'https://kenochem-calendar.web.app',
     icon: '/icons/calendar-icon-192.png',
     canSee: signedIn,
+  },
+  {
+    id: 'marketing',
+    name: 'Marketing',
+    tagline: 'Asystent AI, leady, remarketing',
+    description:
+      'Narzędzia marketingowe: asystent AI na stronie, leady i zgody, remarketing. Aplikacja w budowie — na razie widoczna dla administratorów.',
+    url: 'https://kenochem-marketing.web.app',
+    icon: '/icons/marketing-icon-192.png',
+    canSee: (role) => roleCan(role, 'manageUsers'),
   },
   {
     id: 'logistics',

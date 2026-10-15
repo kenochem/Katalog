@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="mktBg" x1="70" y1="60" x2="440" y2="450" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3bd64a"/>
+      <stop offset="0.55" stop-color="#18a83c"/>
+      <stop offset="1" stop-color="#0e7a63"/>
+    </linearGradient>
+    <linearGradient id="mktShine" x1="0" y1="0" x2="0" y2="300" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#mktBg)"/>
+  <rect width="512" height="256" rx="116" fill="url(#mktShine)"/>
+  <!-- megafon -->
+  <rect x="104" y="214" width="78" height="112" rx="22" fill="#ffffff"/>
+  <path d="M168 206 L336 118 a24 24 0 0 1 36 21 V401 a24 24 0 0 1 -36 21 L168 334 Z" fill="#ffffff"/>
+  <path d="M132 322 l26 92 a22 22 0 0 0 21 16 h20 a16 16 0 0 0 15 -21 l-20 -78 Z" fill="#ffffff" fill-opacity="0.92"/>
+  <!-- fale dźwięku -->
+  <path d="M410 206 a76 76 0 0 1 0 100" stroke="#ffffff" stroke-width="24" stroke-linecap="round"/>
+  <path d="M446 168 a128 128 0 0 1 0 176" stroke="#ffffff" stroke-opacity="0.75" stroke-width="22" stroke-linecap="round"/>
+  <!-- iskra -->
+  <path d="M96 128 l9 26 26 9 -26 9 -9 26 -9 -26 -26 -9 26 -9 Z" fill="#ffffff"/>
+</svg>

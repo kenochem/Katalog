@@ -19,6 +19,7 @@ const PWA_ICON_BY_PRODUCT: Record<string, string> = {
   ops: '/icons/ops-icon-192.png',
   talk: '/icons/talk-icon-192.png',
   calendar: '/icons/calendar-icon-192.png',
+  marketing: '/icons/marketing-icon-192.png',
 };
 
 const PWA_ICON = PWA_ICON_BY_PRODUCT[APP_PRODUCT] ?? '/icons/icon-192.png';

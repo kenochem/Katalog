@@ -8,6 +8,7 @@ const products = [
   'ops',
   'talk',
   'calendar',
+  'marketing',
 ];
 
 const iconGenerators = {
@@ -18,7 +19,9 @@ const iconGenerators = {
   ops: 'node scripts/generate-ops-icons.mjs',
   talk: 'node scripts/generate-talk-icons.mjs',
   calendar: 'node scripts/generate-calendar-icons.mjs',
+  marketing: 'node scripts/generate-marketing-icons.mjs',
 };
+
 
 for (const product of products) {
   console.log(`\n-- build: ${product} --`);

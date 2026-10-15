@@ -15,6 +15,7 @@
     "dev:ops": "vite --mode ops",
     "dev:talk": "vite --mode talk",
     "dev:calendar": "vite --mode calendar",
+    "dev:marketing": "vite --mode marketing",
     "build": "npm run build:suite",
     "build:catalog": "node scripts/generate-catalog-icons.mjs && node scripts/prepare-product-build.mjs catalog && tsc -b && vite build --mode catalog && node scripts/finalize-product-dist.mjs catalog",
     "build:suite": "node scripts/generate-all-app-icons.mjs && node scripts/prepare-product-build.mjs suite && tsc -b && vite build --mode suite && node scripts/finalize-product-dist.mjs suite",
@@ -22,6 +23,7 @@
     "build:stock": "node scripts/generate-stock-icons.mjs && node scripts/prepare-product-build.mjs stock && tsc -b && vite build --mode stock && node scripts/finalize-product-dist.mjs stock",
     "build:ops": "node scripts/generate-ops-icons.mjs && node scripts/prepare-product-build.mjs ops && tsc -b && vite build --mode ops && node scripts/finalize-product-dist.mjs ops",
     "build:talk": "node scripts/generate-talk-icons.mjs && node scripts/prepare-product-build.mjs talk && tsc -b && vite build --mode talk && node scripts/finalize-product-dist.mjs talk",
+    "build:marketing": "node scripts/generate-marketing-icons.mjs && node scripts/prepare-product-build.mjs marketing && tsc -b && vite build --mode marketing && node scripts/finalize-product-dist.mjs marketing",
     "build:calendar": "node scripts/generate-calendar-icons.mjs && node scripts/prepare-product-build.mjs calendar && tsc -b && vite build --mode calendar && node scripts/finalize-product-dist.mjs calendar",
     "deploy:talk": "npm run build:talk && npx firebase deploy --only hosting:talk",
     "deploy:chat-push": "npx supabase functions deploy chat-push --no-verify-jwt",
@@ -81,6 +83,7 @@
     "deploy:sell": "npm test && npm run build:sell && npx firebase deploy --only hosting:sell",
     "deploy:suite": "npm run build:suite && npx firebase deploy --only hosting:suite",
     "deploy:calendar": "npm run build:calendar && npx firebase deploy --only hosting:calendar",
+    "deploy:marketing": "npm test && npm run build:marketing && npx firebase deploy --only hosting:marketing",
     "deploy:stock": "npm test && npm run build:stock && npx firebase deploy --only hosting:stock",
     "deploy:products": "npm run deploy"
   },

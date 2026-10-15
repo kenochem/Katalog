@@ -54,4 +54,6 @@ export const PRODUCT_URLS: Record<
   talk: { label: 'Suite', href: 'https://kenochem-f4a5b.web.app' },
   logistics: { label: 'Suite', href: 'https://kenochem-f4a5b.web.app' },
   calendar: { label: 'Suite', href: 'https://kenochem-f4a5b.web.app' },
+  marketing: { label: 'Suite', href: 'https://kenochem-f4a5b.web.app' },
 };
+
