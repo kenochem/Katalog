@@ -71,6 +71,9 @@ export async function fetchMyActivity(userId: string, days = 400): Promise<Activ
   return out;
 }
 
+/** Limit punktów za jedną operację (zatwierdzenie 300 opisów jednym kliknięciem nie daje 300 pkt). */
+export const XP_EVENT_CAP = 25;
+
 function weight(row: ActivityRow): number {
   const n = Number(row.changes?.count?.to);
   return Number.isFinite(n) && n > 0 ? Math.min(n, 5000) : 1;
@@ -94,6 +97,8 @@ export function mondayKey(d: Date): string {
 export interface ProfileStats {
   counts: Record<CategoryId, number>;
   total: number;
+  /** Punkty pracy (XP): każda czynność 1 pkt, akcje zbiorcze max 25 pkt za jedną operację. */
+  xp: number;
   logins: number;
   last30: number;
   last7: number;
@@ -127,6 +132,7 @@ export function computeStats(rows: ActivityRow[]): ProfileStats {
   const perDay = new Map<string, number>();
   const perWeek = new Map<string, number>();
   let logins = 0;
+  let xp = 0;
   let early = 0;
   let late = 0;
   let first: string | null = null;
@@ -144,6 +150,7 @@ export function computeStats(rows: ActivityRow[]): ProfileStats {
     if (!cat) continue;
     const w = weight(r);
     counts[cat] += w;
+    xp += Math.min(w, XP_EVENT_CAP);
     const d = new Date(r.created_at);
     const k = dayKey(d);
     perDay.set(k, (perDay.get(k) ?? 0) + w);
@@ -192,6 +199,7 @@ export function computeStats(rows: ActivityRow[]): ProfileStats {
   return {
     counts,
     total,
+    xp,
     logins,
     last30,
     last7,
@@ -211,29 +219,68 @@ export function computeStats(rows: ActivityRow[]): ProfileStats {
 // Poziomy i odznaki
 // ---------------------------------------------------------------------------------------------
 
-const TITLES: [number, string][] = [
-  [1, 'Nowicjusz'],
-  [3, 'Praktykant'],
-  [5, 'Katalogowiec'],
-  [8, 'Specjalista'],
-  [12, 'Ekspert'],
-  [18, 'Mistrz katalogu'],
-  [25, 'Legenda Kenochem'],
+export const MAX_LEVEL = 120;
+
+export interface RankDef {
+  id: string;
+  name: string;
+  from: number;
+  to: number;
+  color: string;
+  tagline: string;
+}
+
+/** Rangi (etapy): każda obejmuje 20 poziomów; Legenda to poziomy 101–120. */
+export const RANKS: RankDef[] = [
+  { id: 'swiezak', name: 'Świeżak', from: 1, to: 20, color: '#94a3b8', tagline: 'Poznajesz katalog i pierwsze narzędzia' },
+  { id: 'stazysta', name: 'Stażysta', from: 21, to: 40, color: '#4ade80', tagline: 'Pracujesz coraz pewniej i samodzielnie' },
+  { id: 'specjalista', name: 'Specjalista', from: 41, to: 60, color: '#38bdf8', tagline: 'Znasz katalog i dbasz o jakość danych' },
+  { id: 'ekspert', name: 'Ekspert', from: 61, to: 80, color: '#a78bfa', tagline: 'Prowadzisz innych i porządkujesz całe grupy' },
+  { id: 'mistrz', name: 'Mistrz katalogu', from: 81, to: 100, color: '#fbbf24', tagline: 'Twoja praca widoczna jest w całym sklepie' },
+  { id: 'legenda', name: 'Legenda Kenochem', from: 101, to: 120, color: '#f472b6', tagline: 'Absolutny szczyt — nielicznym się udaje' },
 ];
+
+export function rankForLevel(level: number): RankDef {
+  return RANKS.find((r) => level >= r.from && level <= r.to) ?? RANKS[RANKS.length - 1];
+}
+
+/** Łączna liczba punktów potrzebna do osiągnięcia poziomu L (poziom 1 = 0 pkt). */
+export function xpForLevel(level: number): number {
+  if (level <= 1) return 0;
+  return Math.round(25 * (level - 1) ** 1.75);
+}
 
 export interface LevelInfo {
   level: number;
+  rank: RankDef;
+  /** Pozycja w obrębie rangi (1–20). */
+  levelInRank: number;
   title: string;
   xp: number;
   xpIntoLevel: number;
   xpForNext: number;
+  maxed: boolean;
 }
 
-/** Poziom rośnie coraz wolniej: poziom N wymaga 5·(N−1)² punktów (1 punkt = 1 wykonana praca). */
+/**
+ * Poziomy 1–120 w sześciu rangach. Krzywa jest celowo łagodna na początku i coraz stroma:
+ * poziom 20 to ok. 4,3 tys. punktów, 40 → ok. 15 tys., 60 → 32 tys., 80 → 52 tys., 100 → 77 tys.
+ */
 export function levelFromXp(xp: number): LevelInfo {
-  const level = Math.floor(Math.sqrt(xp / 5)) + 1;
-  const base = 5 * (level - 1) ** 2;
-  const next = 5 * level ** 2;
-  const title = [...TITLES].reverse().find(([min]) => level >= min)?.[1] ?? 'Nowicjusz';
-  return { level, title, xp, xpIntoLevel: xp - base, xpForNext: next - base };
+  let level = Math.min(MAX_LEVEL, Math.floor((Math.max(0, xp) / 25) ** (1 / 1.75)) + 1);
+  while (level < MAX_LEVEL && xp >= xpForLevel(level + 1)) level++;
+  while (level > 1 && xp < xpForLevel(level)) level--;
+  const base = xpForLevel(level);
+  const next = level >= MAX_LEVEL ? base : xpForLevel(level + 1);
+  const rank = rankForLevel(level);
+  return {
+    level,
+    rank,
+    levelInRank: level - rank.from + 1,
+    title: rank.name,
+    xp,
+    xpIntoLevel: xp - base,
+    xpForNext: Math.max(1, next - base),
+    maxed: level >= MAX_LEVEL,
+  };
 }

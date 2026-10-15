@@ -13,6 +13,21 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-15',
+    title: 'Ranking pracowników w profilu',
+    description:
+      'Nowa zakładka „Ranking” w „Mój profil”: tabela zespołu z punktami pracy w katalogu za wybrany okres (ten tydzień od poniedziałku, ten miesiąc, cały czas) — miejsce z medalami dla pierwszej trójki, avatar z ramką, nazwa, poziom i ranga, motto, pasek względem lidera, liczba punktów i działań; Twój wiersz jest wyróżniony i widać Twoje miejsce. Punkty liczone są z dziennika aktywności po stronie serwera, a w Ustawieniach można włączyć „Ukryj mnie w rankingu zespołu”. Wymaga migracji migration-catalog-leaderboard.sql.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-15',
+    title: 'Poziomy 1–120 w rangach i nagrody: ramki, animowane tła i nakładki profilu',
+    description:
+      'Nowy system poziomów: 120 poziomów w sześciu rangach po 20 poziomów — Świeżak (1–20), Stażysta (21–40), Specjalista (41–60), Ekspert (61–80), Mistrz katalogu (81–100) i Legenda Kenochem (101–120). Awans jest rozłożony w czasie: poziom 20 to ok. 4,3 tys. punktów pracy, 40 — 15 tys., 60 — 31 tys., 100 — 78 tys.; za operacje zbiorcze (np. zatwierdzenie wielu opisów jednym kliknięciem) liczy się maks. 25 punktów, żeby awansować mogła tylko regularna praca. Poziomy odblokowują kosmetykę profilu: 13 ramek avatara (od klasycznej, przez brąz, srebro i złoto, po neon, tęczę, płomień i diament — część animowana), 12 teł nagłówka (grafit, zmierzch, siatka techniczna, fale, zorza, kosmos, neonowe miasto, złoty blask i tło Legendy) oraz 7 nakładek (iskierki, bąbelki, śnieg, konfetti, żar, świetliki). Część nagród odblokowują osiągnięcia, np. ramka „Klisza” i tło „Taśma filmowa” za Fotografa, „Zębatka” i „Układ scalony” za Porządkowicza grup, „Żar” za Wytrwałego. Nowa zakładka „Poziomy i nagrody” pokazuje poziom, rangi i podgląd wszystkich nagród z wymaganiami; wybrany wygląd widać w nagłówku profilu i w rankingu. Za awans na kolejny poziom przychodzi powiadomienie z informacją o nowych nagrodach. Animacje wyłączają się przy ustawieniu systemu „ogranicz ruch”.',
+    tag: 'nowość',
+  },
+
+  {
+    date: '2026-10-15',
     title: 'Mój profil: podsumowanie tygodnia i powiadomienia (zadania, odznaki, tydzień)',
     description:
       'W zakładce „Statystyki” jest karta „Podsumowanie tygodnia”: liczba działań w tym tygodniu na tle poprzedniego, dni aktywności, najintensywniejsza kategoria pracy, wykonane zadania i nowe odznaki zdobyte w tym tygodniu — z przyciskiem „Kopiuj”, żeby wkleić podsumowanie np. w czacie. W centrum powiadomień (dzwonek) pojawiają się teraz: nowe zadanie przydzielone Tobie przez kogoś innego (sprawdzane co 5 minut), zdobyta odznaka lub nowy stopień oraz podsumowanie poprzedniego tygodnia.',

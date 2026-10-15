@@ -65,11 +65,15 @@ import {
 import { listChatPeers, type ChatPeer } from '../lib/chat';
 import { buildTechEntries, getTechRecord, useTechVersion } from '../lib/techStore';
 import { pushAppNotification } from '../lib/appNotifications';
+import { BACKGROUNDS, FRAMES, OVERLAYS, isUnlocked, unlockedByLevelUp, type Cosmetic } from '../lib/profileCosmetics';
 import { showToast } from '../lib/toast';
 import { UserAvatar } from './UserAvatar';
 import { ACH_ICON, BadgeMedal, TIER_PALETTE } from './BadgeMedal';
 import { AchievementModal, UnlockCelebration, type Unlock } from './AchievementModals';
 import { TechTypeIcon } from './TechTypeIcon';
+import { AvatarFrame, ProfileBanner } from './ProfileCosmetics';
+import { LevelsPanel } from './ProfileLevels';
+import { BoardPanel } from './ProfileBoard';
 
 const ACCENTS: Record<string, { label: string; hex: string }> = {
   sky: { label: 'Niebieski', hex: '#0ea5e9' },
@@ -105,7 +109,7 @@ export function UserProfileView({ products, gridDensity, onGridDensityChange, on
   const userId = profile?.id;
   const avatar = useUserAvatar(userId);
   const fileRef = useRef<HTMLInputElement>(null);
-  const [tab, setTab] = useState<'overview' | 'queue' | 'badges' | 'settings'>('overview');
+  const [tab, setTab] = useState<'overview' | 'queue' | 'badges' | 'levels' | 'board' | 'settings'>('overview');
   const [prefs, setPrefs] = useState<ProfilePreferences>(() => getCachedProfilePreferences());
   const [rows, setRows] = useState<ActivityRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -218,8 +222,42 @@ export function UserProfileView({ products, gridDensity, onGridDensityChange, on
     showToast(err ?? 'Nazwa zaktualizowana', err ? 'error' : 'ok');
   }
 
-  const level = useMemo(() => levelFromXp(stats?.total ?? 0), [stats]);
+  const level = useMemo(() => levelFromXp(stats?.xp ?? 0), [stats]);
+  // wybrana kosmetyka musi być odblokowana (zanim wczytają się statystyki — ufamy zapisanym wyborom)
+  const pick = (list: Cosmetic[], id: string | undefined, fallback: string) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return fallback;
+    return !stats || isUnlocked(c, level.level, states) ? c.id : fallback;
+  };
+  const frame = pick(FRAMES, prefs.frame, 'classic');
+  const bg = pick(BACKGROUNDS, prefs.bg, 'default');
+  const overlay = pick(OVERLAYS, prefs.overlay, 'none');
   const earnedCount = states.filter((s) => s.tier > 0).length;
+
+  useEffect(() => {
+    if (!userId || !stats) return;
+    const cur = level.level;
+    if (prefs.seenLevel == null) {
+      savePrefs({ seenLevel: cur });
+      return;
+    }
+    if (cur > prefs.seenLevel) {
+      const rewards = unlockedByLevelUp(prefs.seenLevel, cur);
+      pushAppNotification({
+        id: `level-${userId}-${cur}`,
+        kind: 'achievement',
+        scope: 'catalog',
+        userId,
+        title: `Awans! Poziom ${cur} — ${level.rank.name}`,
+        body: rewards.length ? 'Nowe nagrody: ' + rewards.map((r) => r.name).join(', ') : 'Gratulacje, tak trzymaj!',
+        actionView: 'profile',
+      });
+      showToast(`Awans na poziom ${cur}!${rewards.length ? ' Odblokowano: ' + rewards.map((r) => r.name).join(', ') : ''}`, 'ok', 7000);
+      savePrefs({ seenLevel: cur });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, stats, level.level]);
+
   const starCount = states.reduce((a, s) => a + s.tier, 0);
   const openTasks = tasks?.mine.filter((t) => t.status === 'open').length ?? 0;
   const pinnedStates = (prefs.pinned ?? [])
@@ -239,17 +277,12 @@ export function UserProfileView({ products, gridDensity, onGridDensityChange, on
   return (
     <section className="mx-auto max-w-5xl space-y-4">
       {/* nagłówek profilu */}
-      <div
-        className="overflow-hidden rounded-3xl border border-slate-800"
-        style={{ background: `linear-gradient(135deg, ${accent.hex}33, transparent 60%)` }}
-      >
+      <ProfileBanner bg={bg} overlay={overlay} accent={accent.hex} className="rounded-3xl border border-slate-800">
         <div className="flex flex-wrap items-center gap-4 p-5">
           <div className="relative">
-            <span className="block rounded-full p-1" style={{ background: accent.hex }}>
-              <span className="block rounded-full bg-slate-950 p-0.5">
-                <UserAvatar name={displayLabel} src={avatar} size="md" className="!h-20 !w-20 !text-xl" />
-              </span>
-            </span>
+            <AvatarFrame frame={frame} accent={accent.hex}>
+              <UserAvatar name={displayLabel} src={avatar} size="md" className="!h-20 !w-20 !text-xl" />
+            </AvatarFrame>
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
@@ -305,8 +338,8 @@ export function UserProfileView({ products, gridDensity, onGridDensityChange, on
               </h2>
             )}
             <p className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-slate-300">
-              <span className="rounded-full px-2.5 py-0.5 text-xs font-semibold text-slate-950" style={{ background: accent.hex }}>
-                {level.title} · poz. {level.level}
+              <span className="rounded-full px-2.5 py-0.5 text-xs font-bold text-slate-950" style={{ background: level.rank.color }}>
+                Poziom {level.level} · {level.rank.name}
               </span>
               <span className="text-slate-400">{ROLE_LABELS[role] ?? role}</span>
               {profile?.email && <span className="text-xs text-slate-500">{profile.email}</span>}
@@ -317,13 +350,13 @@ export function UserProfileView({ products, gridDensity, onGridDensityChange, on
                 <div
                   className="h-full rounded-full transition-all"
                   style={{
-                    width: `${Math.min(100, Math.round((level.xpIntoLevel / level.xpForNext) * 100))}%`,
-                    background: accent.hex,
+                    width: `${level.maxed ? 100 : Math.min(100, Math.round((level.xpIntoLevel / level.xpForNext) * 100))}%`,
+                    background: level.rank.color,
                   }}
                 />
               </div>
               <p className="mt-1 text-[11px] text-slate-400">
-                {level.xpIntoLevel} / {level.xpForNext} punktów do poziomu {level.level + 1} · łącznie {level.xp} punktów pracy
+                {level.maxed ? 'Maksymalny poziom!' : `${level.xpIntoLevel} / ${level.xpForNext} punktów do poziomu ${level.level + 1}`} · łącznie {level.xp} punktów pracy
               </p>
             </div>
           </div>
@@ -357,14 +390,16 @@ export function UserProfileView({ products, gridDensity, onGridDensityChange, on
           <Mini label="Gwiazdki" value={stats ? `${starCount}/${ACHIEVEMENTS.length * 4}` : '—'} />
           <Mini label="Zadania otwarte" value={tasks ? String(openTasks) : '—'} />
         </div>
-      </div>
+      </ProfileBanner>
 
-      <div className="flex gap-1 rounded-xl border border-slate-800 bg-slate-900/60 p-1">
+      <div className="flex gap-1 overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/60 p-1">
         {(
           [
             ['overview', 'Statystyki'],
             ['queue', `Moja kolejka${openTasks > 0 ? ` (${openTasks})` : ''}`],
             ['badges', 'Odznaki'],
+            ['levels', 'Poziomy i nagrody'],
+            ['board', 'Ranking'],
             ['settings', 'Ustawienia'],
           ] as const
         ).map(([key, label]) => (
@@ -372,7 +407,7 @@ export function UserProfileView({ products, gridDensity, onGridDensityChange, on
             key={key}
             type="button"
             onClick={() => setTab(key)}
-            className={`flex-1 rounded-lg px-2 py-2 text-sm font-medium sm:px-3 ${
+            className={`flex-1 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium ${
               tab === key ? 'bg-slate-700 text-slate-50' : 'text-slate-400 hover:bg-slate-800'
             }`}
           >
@@ -427,6 +462,22 @@ export function UserProfileView({ products, gridDensity, onGridDensityChange, on
           />
         ))}
 
+      {tab === 'levels' && (
+        <LevelsPanel
+          level={level}
+          states={states}
+          accent={accent.hex}
+          frame={frame}
+          bg={bg}
+          overlay={overlay}
+          onPick={(kind, id) => savePrefs(kind === 'frame' ? { frame: id } : kind === 'bg' ? { bg: id } : { overlay: id })}
+          card={card}
+          ready={!!stats}
+        />
+      )}
+
+      {tab === 'board' && <BoardPanel meId={userId} card={card} />}
+
       {tab === 'settings' && (
         <div className="grid gap-4 lg:grid-cols-2">
           <div className={card}>
@@ -454,8 +505,12 @@ export function UserProfileView({ products, gridDensity, onGridDensityChange, on
                 />
               ))}
             </div>
+            <label className="mt-3 flex items-center gap-2 text-xs text-slate-300">
+              <input type="checkbox" checked={!!prefs.hideFromBoard} onChange={(e) => savePrefs({ hideFromBoard: e.target.checked })} />
+              Ukryj mnie w rankingu zespołu
+            </label>
             <p className="mt-3 text-[11px] text-slate-500">
-              Gablota w nagłówku pokazuje do 3 przypiętych odznak — przypinasz je w szczegółach odznaki.
+              Gablota w nagłówku pokazuje do 3 przypiętych odznak — przypinasz je w szczegółach odznaki. Ramkę, tło i nakładkę wybierasz w zakładce „Poziomy i nagrody”.
             </p>
           </div>
 

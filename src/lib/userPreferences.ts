@@ -24,6 +24,14 @@ export interface ProfilePreferences {
   seenAch?: Record<string, number>;
   /** Odznaki przypięte do gabloty w nagłówku profilu (max 3). */
   pinned?: string[];
+  /** Ramka avatara, tło nagłówka i nakładka (id z profileCosmetics). */
+  frame?: string;
+  bg?: string;
+  overlay?: string;
+  /** Nie pokazuj mnie w rankingu zespołu. */
+  hideFromBoard?: boolean;
+  /** Ostatnio „obejrzany” poziom — do powiadomień o awansie i nowych nagrodach. */
+  seenLevel?: number;
 }
 
 export interface UserPreferencesPayload {
