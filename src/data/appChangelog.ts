@@ -13,6 +13,14 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-15',
+    title: 'Numeracja wersji: numer wpisu w ciągu dnia jako PATCH (np. 1.13.20)',
+    description:
+      'Zmiana numeracji aktualizacji. Dotąd ostatnia liczba wersji prawie zawsze wynosiła 0, a każdy dzień podnosił środkową. Teraz każdy nowy dzień zmian to kolejna wersja 1.x (jak dotąd), a ostatnia liczba to numer wpisu w tym dniu: najstarszy wpis dnia ma .1, kolejne .2, .3 itd. Wersja aplikacji w menu to najnowszy wpis (np. 1.13.20), nagłówek dnia pokazuje wersję jego ostatniego wpisu, a każdy wpis w Aktualizacjach ma własny numer, więc można się do niego odwołać (np. „poprawione w 1.13.7”). Numer liczy się sam z dziennika zmian, bez ręcznego wpisywania.',
+    tag: 'poprawka',
+  },
+
+  {
+    date: '2026-10-15',
     title: 'Suite: nowa aplikacja „Marketing” (szablon, w budowie)',
     description:
       'Do Suite doszła nowa aplikacja Kenochem Marketing pod adresem kenochem-marketing.web.app — osobna aplikacja (PWA) jak Katalog, Handel czy Magazyn, z własną ikoną (megafon z falami dźwięku i iskrą), manifestem, kafelkiem w launcherze Suite i tym samym logowaniem. Na razie widoczna tylko dla administratorów i jest szablonem: ekran powitalny z planem modułów (asystent AI na stronie, leady i zgody, wiadomości i remarketing, popupy i widżety, wtyczka do sklepu, analityka) w etapach oraz listą zasad zgodności (zgody, informowanie, że to AI, wypisanie, limity kosztów). Kolejne etapy dopiszemy po ustaleniu priorytetów.',

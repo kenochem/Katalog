@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight, Wrench, Sparkle, Gauge } from 'lucide-react';
 import { APP_CHANGELOG, type AppChangelogEntry } from '../data/appChangelog';
-import { APP_VERSION, CHANGELOG_STATS, VERSION_BY_DATE } from '../lib/appVersion';
+import { APP_VERSION, CHANGELOG_STATS, VERSION_BY_DATE, entryVersion } from '../lib/appVersion';
 
 const TAG_STYLE: Record<
   NonNullable<AppChangelogEntry['tag']>,
@@ -292,9 +292,13 @@ export function CatalogChangelogView() {
                           className="rounded-lg border border-slate-800 bg-slate-950/40 p-3"
                         >
                           <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-md bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-slate-400">
+                              v{entryVersion(entry)}
+                            </span>
                             <h3 className="text-sm font-semibold text-slate-100">
                               {entry.title}
                             </h3>
+
                             {tagInfo && TagIcon && (
                               <span
                                 className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${tagInfo.className}`}
