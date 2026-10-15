@@ -709,7 +709,11 @@ export async function fetchKits(): Promise<Kit[]> {
   return (data as KitRow[]).map(rowToKit);
 }
 
-export async function saveKit(kit: Omit<Kit, 'id'> & { id?: string }): Promise<string> {
+/** `opts.action` pozwala oznaczyć zapis inaczej niż zwykłą pracę (np. automatyczna synchronizacja z BaseLinkera). */
+export async function saveKit(
+  kit: Omit<Kit, 'id'> & { id?: string },
+  opts: { action?: string } = {},
+): Promise<string> {
   const id = kit.id || `kit-${Date.now()}`;
   const full: Kit = { ...kit, id } as Kit;
 
@@ -728,8 +732,9 @@ export async function saveKit(kit: Omit<Kit, 'id'> & { id?: string }): Promise<s
   if (error) throw error;
 
   logAudit({
-    action: 'kit.save',
+    action: opts.action ?? 'kit.save',
     entityType: 'kit',
+
     entityId: id,
     entityLabel: String((full as { name?: string }).name ?? ''),
     summary: kit.id ? 'Edycja zestawu' : 'Nowy zestaw',

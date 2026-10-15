@@ -227,17 +227,20 @@ export interface RankDef {
   from: number;
   to: number;
   color: string;
+  /** Ciemniejszy odpowiednik koloru rangi do tekstu na jasnym tle. */
+  textLight: string;
   tagline: string;
 }
 
 /** Rangi (etapy): każda obejmuje 20 poziomów; Legenda to poziomy 101–120. */
 export const RANKS: RankDef[] = [
-  { id: 'swiezak', name: 'Świeżak', from: 1, to: 20, color: '#94a3b8', tagline: 'Poznajesz katalog i pierwsze narzędzia' },
-  { id: 'stazysta', name: 'Stażysta', from: 21, to: 40, color: '#4ade80', tagline: 'Pracujesz coraz pewniej i samodzielnie' },
-  { id: 'specjalista', name: 'Specjalista', from: 41, to: 60, color: '#38bdf8', tagline: 'Znasz katalog i dbasz o jakość danych' },
-  { id: 'ekspert', name: 'Ekspert', from: 61, to: 80, color: '#a78bfa', tagline: 'Prowadzisz innych i porządkujesz całe grupy' },
-  { id: 'mistrz', name: 'Mistrz katalogu', from: 81, to: 100, color: '#fbbf24', tagline: 'Twoja praca widoczna jest w całym sklepie' },
-  { id: 'legenda', name: 'Legenda Kenochem', from: 101, to: 120, color: '#f472b6', tagline: 'Absolutny szczyt — nielicznym się udaje' },
+  { id: 'swiezak', name: 'Świeżak', from: 1, to: 20, color: '#94a3b8', textLight: '#64748b', tagline: 'Poznajesz katalog i pierwsze narzędzia' },
+  { id: 'stazysta', name: 'Stażysta', from: 21, to: 40, color: '#4ade80', textLight: '#15803d', tagline: 'Pracujesz coraz pewniej i samodzielnie' },
+  { id: 'specjalista', name: 'Specjalista', from: 41, to: 60, color: '#38bdf8', textLight: '#0369a1', tagline: 'Znasz katalog i dbasz o jakość danych' },
+  { id: 'ekspert', name: 'Ekspert', from: 61, to: 80, color: '#a78bfa', textLight: '#6d28d9', tagline: 'Prowadzisz innych i porządkujesz całe grupy' },
+  { id: 'mistrz', name: 'Mistrz katalogu', from: 81, to: 100, color: '#fbbf24', textLight: '#b45309', tagline: 'Twoja praca widoczna jest w całym sklepie' },
+  { id: 'legenda', name: 'Legenda Kenochem', from: 101, to: 120, color: '#f472b6', textLight: '#be185d', tagline
+: 'Absolutny szczyt — nielicznym się udaje' },
 ];
 
 export function rankForLevel(level: number): RankDef {

@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { Lock } from 'lucide-react';
 import { MAX_LEVEL, RANKS, xpForLevel, type LevelInfo } from '../lib/profileStats';
 import type { AchievementState } from '../lib/achievements';
@@ -83,7 +84,7 @@ export function LevelsPanel({ level, states, accent, frame, bg, overlay, onPick,
             <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Twój poziom</p>
             <p className="text-4xl font-black tabular-nums text-slate-50">
               {level.level}
-              <span className="ml-2 text-lg font-bold" style={{ color: level.rank.color }}>
+              <span className="rank-text ml-2 text-lg font-bold" style={{ '--c-light': level.rank.textLight, '--c-dark': level.rank.color } as CSSProperties}>
                 {level.rank.name}
               </span>
             </p>
@@ -136,12 +137,13 @@ export function LevelsPanel({ level, states, accent, frame, bg, overlay, onPick,
                 style={current ? { borderColor: r.color, boxShadow: `0 0 0 1px ${r.color}55` } : undefined}
               >
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-bold" style={{ color: reached ? r.color : '#64748b' }}>
+                  <p className="rank-text text-sm font-bold" style={{ '--c-light': reached ? r.textLight : '#64748b', '--c-dark': reached ? r.color : '#64748b' } as CSSProperties}>
                     {r.name}
                   </p>
                   {!reached && <Lock className="h-3.5 w-3.5 text-slate-500" />}
                   {current && (
-                    <span className="rounded-full px-2 py-0.5 text-[10px] font-bold text-slate-950" style={{ background: r.color }}>
+                    <span className="rounded-full px-2 py-0.5 text-[10px] font-bold text-[#0b1220]" style={{ background: r.color }}>
+
                       TY
                     </span>
                   )}

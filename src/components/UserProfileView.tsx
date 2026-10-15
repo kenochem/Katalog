@@ -68,7 +68,7 @@ import { pushAppNotification } from '../lib/appNotifications';
 import { BACKGROUNDS, FRAMES, OVERLAYS, isUnlocked, unlockedByLevelUp, type Cosmetic } from '../lib/profileCosmetics';
 import { showToast } from '../lib/toast';
 import { UserAvatar } from './UserAvatar';
-import { ACH_ICON, BadgeMedal, TIER_PALETTE } from './BadgeMedal';
+import { ACH_ICON, BadgeMedal, TIER_PALETTE, tierTextStyle } from './BadgeMedal';
 import { AchievementModal, UnlockCelebration, type Unlock } from './AchievementModals';
 import { TechTypeIcon } from './TechTypeIcon';
 import { AvatarFrame, ProfileBanner } from './ProfileCosmetics';
@@ -345,7 +345,8 @@ export function UserProfileView({ products, gridDensity, onGridDensityChange, on
               </h2>
             )}
             <p className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-slate-300">
-              <span className="rounded-full px-2.5 py-0.5 text-xs font-bold text-slate-950" style={{ background: level.rank.color }}>
+              <span className="rounded-full px-2.5 py-0.5 text-xs font-bold text-[#0b1220]" style={{ background: level.rank.color }}>
+
                 Poziom {level.level} · {level.rank.name}
               </span>
               <span className="text-slate-400">{ROLE_LABELS[role] ?? role}</span>
@@ -844,7 +845,7 @@ function BadgesPanel({
                     {pinned.includes(s.def.id) && <Pin className="absolute right-2 top-2 h-3.5 w-3.5 text-slate-400" />}
                     <BadgeMedal tier={s.tier} icon={<Icon strokeWidth={1.7} />} size={84} />
                     <p className="mt-2 text-sm font-semibold text-slate-100">{s.def.name}</p>
-                    <p className="text-[11px]" style={{ color: s.tier ? p.star : '#64748b' }}>
+                    <p className="tier-text text-[11px]" style={tierTextStyle(s.tier)}>
                       {TIER_NAMES[s.tier]}
                       {lastDate ? ` · ${new Date(lastDate + 'T12:00:00').toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' })}` : ''}
                     </p>
@@ -889,7 +890,7 @@ function BadgesPanel({
                   size={84}
                 />
                 <p className="mt-2 text-sm font-semibold text-slate-100">{g.name}</p>
-                <p className="text-[11px]" style={{ color: g.tier ? p.star : '#64748b' }}>
+                <p className="tier-text text-[11px]" style={tierTextStyle(g.tier)}>
                   {g.pct}% · {g.done}/{g.total}
                 </p>
                 <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">

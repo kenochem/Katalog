@@ -5,7 +5,7 @@ import {
   type AchievementState,
   type Tier,
 } from '../lib/achievements';
-import { ACH_ICON, BadgeMedal, TIER_PALETTE } from './BadgeMedal';
+import { ACH_ICON, BadgeMedal, TIER_PALETTE, tierTextStyle } from './BadgeMedal';
 
 function fmtDate(key: string | null | undefined): string {
   if (!key) return '';
@@ -51,7 +51,7 @@ export function AchievementModal({
           <BadgeMedal tier={state.tier} icon={<Icon strokeWidth={1.7} />} size={132} />
           <h3 className="mt-3 text-xl font-bold text-slate-50">{def.name}</h3>
           <p className="mt-0.5 text-center text-sm text-slate-300">{def.desc.replace('{n}', String(state.next ?? def.tiers[3]))}</p>
-          <p className="mt-1 text-xs font-semibold" style={{ color: state.tier ? p.star : '#64748b' }}>
+          <p className="tier-text mt-1 text-xs font-semibold" style={tierTextStyle(state.tier)}>
             {TIER_NAMES[state.tier]}
           </p>
           <div className="mt-3 w-full max-w-xs">
@@ -156,7 +156,7 @@ export function UnlockCelebration({
         style={{ animation: 'cf-pop .5s ease-out both', boxShadow: `0 0 60px ${p.glow}` }}
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="text-xs font-bold uppercase tracking-widest" style={{ color: p.star }}>
+        <p className="tier-text text-xs font-bold uppercase tracking-widest" style={tierTextStyle(cur.tier)}>
           Nowa odznaka!
         </p>
         <div className="mt-3 flex justify-center">
@@ -164,13 +164,14 @@ export function UnlockCelebration({
         </div>
         <h3 className="mt-3 text-2xl font-bold text-slate-50">{st.def.name}</h3>
         <p className="mt-1 text-sm text-slate-300">
-          Stopień: <b style={{ color: p.star }}>{TIER_NAMES[cur.tier]}</b>
+          Stopień: <b className="tier-text" style={tierTextStyle(cur.tier)}>{TIER_NAMES[cur.tier]}</b>
         </p>
         <p className="mt-1 text-xs text-slate-400">{st.def.desc.replace('{n}', String(st.def.tiers[cur.tier - 1]))}</p>
         <button
           type="button"
           onClick={() => (idx + 1 < unlocks.length ? setIdx(idx + 1) : onClose())}
-          className="mt-5 rounded-xl px-5 py-2 text-sm font-bold text-slate-950"
+          className="mt-5 rounded-xl px-5 py-2 text-sm font-bold text-[#0b1220]"
+
           style={{ background: p.star }}
         >
           {idx + 1 < unlocks.length ? `Dalej (${idx + 1}/${unlocks.length})` : 'Świetnie!'}

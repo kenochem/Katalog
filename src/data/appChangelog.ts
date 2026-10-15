@@ -13,6 +13,21 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-15',
+    title: 'Kontrast w jasnym motywie: czytelny kolorowy tekst w całym katalogu',
+    description:
+      'Naprawa nieczytelnego tekstu w jasnym i ciasteczkowym motywie. Klasy kolorów pisane pod ciemne tło (jasne żółcie, bursztyny, zielenie, błękity, czerwienie, fiolety — odcienie 100–400) były na jasnym tle prawie niewidoczne; teraz w jasnych motywach automatycznie dostają ciemniejsze odpowiedniki w całej aplikacji, a w ciemnych niczego nie zmieniają. Dotyczy m.in. linii „Nowe w tym tygodniu” w profilu, ostrzeżeń, komunikatów statusu i plakietek. W profilu nazwy stopni odznak (brąz/srebro/złoto/diament) i rang mają osobne ciemniejsze kolory na jasnym tle, a na ciemnych tłach nagłówka (zmierzch, zorza, kosmos itd.) tekst jest zawsze jasny — wcześniej nazwa użytkownika była ciemna na ciemnym. Tekst na kolorowych plakietkach (poziom, ranga, „TY”) jest stale ciemny, niezależnie od motywu.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-15',
+    title: 'Zestawy: synchronizacja z BaseLinkerem nie liczy się jako praca do punktów i odznak',
+    description:
+      'Zapisy zestawów wykonywane przez „Porównaj skład z BaseLinkerem” są teraz oznaczane osobno („Synchronizacja zestawu z BaseLinkerem”) i nie dają punktów pracy ani postępu w odznace Zestawowicz — tak jak ręczne tworzenie zestawów. Wcześniej jedna synchronizacja potrafiła zdobyć kilkaset punktów i wszystkie stopnie odznaki. Wcześniejsze wpisy w dzienniku aktywności są niezmienne i nadal się liczą.',
+    tag: 'poprawka',
+  },
+
+  {
+    date: '2026-10-15',
     title: 'Zestawy: konfigurator zestawu (wybór produktów po lewej, zestaw na żywo po prawej)',
     description:
       'Nowy konfigurator zestawu zastępuje stary formularz. Po lewej przeglądarka produktów: wyszukiwanie (nazwa, SKU, EAN, gwint, skaner kodów), filtr kategorii, „Tylko dostępne” i „Tylko z BaseLinkera”; bez wpisanej frazy pokazuje najlepiej sprzedające się produkty. Każdy produkt ma zdjęcie, cenę (zieloną), stan i ostrzeżenie „brak w BaseLinkerze”; klik dodaje produkt, a potem pojawia się stepper ilości. Po prawej zestaw na żywo: zdjęcie (aparat lub plik), nazwa, kategoria, opis, lista składników ze zdjęciami, ceną za sztukę i zmianą ilości, a na dole wartość składników brutto, ile kompletów da się złożyć teraz oraz informacja, czy wszystkie składniki są w BaseLinkerze (wtedy zestaw można wysłać do BL). Na telefonie dwie zakładki: Produkty i Zestaw. Kod katalogowy zestawu jest widoczny od razu.',

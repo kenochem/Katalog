@@ -99,6 +99,24 @@ function overlayItems(type: string): ReactNode[] {
   });
 }
 
+/**
+ * Tła inne niż „domyślne” są ciemne w każdym motywie — tekst w środku musi być jasny. W jasnym motywie skala slate jest
+ * odwrócona (text-slate-50 = ciemny), więc wewnątrz banera przywracamy klasyczne wartości skali.
+ */
+const DARK_SURFACE_VARS: Record<string, string> = {
+  '--color-slate-50': '#f8fafc',
+  '--color-slate-100': '#f1f5f9',
+  '--color-slate-200': '#e2e8f0',
+  '--color-slate-300': '#cbd5e1',
+  '--color-slate-400': '#94a3b8',
+  '--color-slate-500': '#64748b',
+  '--color-slate-600': '#475569',
+  '--color-slate-700': '#334155',
+  '--color-slate-800': '#1e293b',
+  '--color-slate-900': '#0f172a',
+  '--color-slate-950': '#020617',
+};
+
 interface BannerProps {
   bg?: string;
   overlay?: string;
@@ -111,8 +129,10 @@ interface BannerProps {
 export function ProfileBanner({ bg = 'default', overlay = 'none', accent, className = '', children }: BannerProps) {
   const style: CSSProperties & Record<string, string> = { '--ac': accent };
   if (bg === 'default') style.background = `linear-gradient(135deg, ${accent}33, transparent 60%)`;
+  else Object.assign(style, DARK_SURFACE_VARS);
   return (
     <div className={`pf-banner pf-bg-${bg} ${className}`} style={style}>
+
       <style>{CSS}</style>
       {(bg === 'space' || bg === 'legend') && (
         <span className="pf-ov pf-ov-stars" aria-hidden="true">

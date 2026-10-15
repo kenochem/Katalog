@@ -56,6 +56,8 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'product.category': 'Kategoria / producent',
   'kit.save': 'Zapis zestawu',
   'kit.delete': 'Usunięcie zestawu',
+  'kit.sync': 'Synchronizacja zestawu z BaseLinkerem',
+
   'user.create': 'Nowe konto',
   'user.update': 'Zmiana konta',
   'user.password': 'Reset hasła',

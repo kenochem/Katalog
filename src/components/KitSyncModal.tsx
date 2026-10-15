@@ -121,9 +121,10 @@ export function KitSyncModal({ kits, products, onClose, onApplied }: Props) {
             code,
             blId: r.blKit.blId,
             blActive: true,
-          });
+          }, { action: 'kit.sync' });
         } else if (r.localKit && r.blKit) {
-          await saveKit({ ...r.localKit, items: r.proposedItems, blId: r.blKit.blId, blActive: true });
+          await saveKit({ ...r.localKit, items: r.proposedItems, blId: r.blKit.blId, blActive: true }, { action: 'kit.sync' });
+
         }
         ok++;
       } catch (e) {

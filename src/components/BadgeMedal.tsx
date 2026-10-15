@@ -1,4 +1,5 @@
-import { useId, type ReactNode } from 'react';
+import { useId, type CSSProperties, type ReactNode } from 'react';
+
 import {
   Boxes,
   CalendarDays,
@@ -42,15 +43,22 @@ interface Palette {
   icon: string;
   glow: string;
   star: string;
+  /** Wariant koloru stopnia do TEKSTU na jasnym tle. */
+  textLight: string;
 }
 
 export const TIER_PALETTE: Record<Tier, Palette> = {
-  0: { ring: ['#3b4558', '#2a3344', '#1b2230'], inner: ['#141b29', '#0d1320'], icon: '#4b5870', glow: 'transparent', star: '#334155' },
-  1: { ring: ['#f4b983', '#b8651b', '#6e3a0c'], inner: ['#3b2412', '#22130a'], icon: '#f6c89a', glow: 'rgba(205,127,50,.55)', star: '#f0a35e' },
-  2: { ring: ['#ffffff', '#c4c9d4', '#7d8799'], inner: ['#2c3345', '#171b27'], icon: '#eef2fb', glow: 'rgba(203,213,225,.55)', star: '#e2e8f0' },
-  3: { ring: ['#fff6b0', '#f5c518', '#a8730a'], inner: ['#40320f', '#241b08'], icon: '#ffe27a', glow: 'rgba(250,204,21,.6)', star: '#fde047' },
-  4: { ring: ['#e0fbff', '#7dd3fc', '#6366f1'], inner: ['#1d2c5e', '#0e1535'], icon: '#c9f3ff', glow: 'rgba(125,211,252,.75)', star: '#a5f3fc' },
+  0: { ring: ['#3b4558', '#2a3344', '#1b2230'], inner: ['#141b29', '#0d1320'], icon: '#4b5870', glow: 'transparent', star: '#334155', textLight: '#64748b' },
+  1: { ring: ['#f4b983', '#b8651b', '#6e3a0c'], inner: ['#3b2412', '#22130a'], icon: '#f6c89a', glow: 'rgba(205,127,50,.55)', star: '#f0a35e', textLight: '#9a4f12' },
+  2: { ring: ['#ffffff', '#c4c9d4', '#7d8799'], inner: ['#2c3345', '#171b27'], icon: '#eef2fb', glow: 'rgba(203,213,225,.55)', star: '#e2e8f0', textLight: '#475569' },
+  3: { ring: ['#fff6b0', '#f5c518', '#a8730a'], inner: ['#40320f', '#241b08'], icon: '#ffe27a', glow: 'rgba(250,204,21,.6)', star: '#fde047', textLight: '#a16207' },
+  4: { ring: ['#e0fbff', '#7dd3fc', '#6366f1'], inner: ['#1d2c5e', '#0e1535'], icon: '#c9f3ff', glow: 'rgba(125,211,252,.75)', star: '#a5f3fc', textLight: '#4338ca' },
 };
+
+/** Styl tekstu w kolorze stopnia: ciemniejszy w jasnym motywie, jasny w ciemnym (klasa tier-text). */
+export function tierTextStyle(tier: Tier): CSSProperties {
+  return { '--c-light': TIER_PALETTE[tier].textLight, '--c-dark': TIER_PALETTE[tier].star } as CSSProperties;
+}
 
 const HEX = '50,3 95,28 95,84 50,109 5,84 5,28';
 const HEX_INNER = '50,16 83,35 83,78 50,97 17,78 17,35';

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { Loader2, Trophy } from 'lucide-react';
 import { fetchLeaderboard, type BoardPeriod, type BoardRow } from '../lib/leaderboard';
 import { levelFromXp } from '../lib/profileStats';
@@ -50,7 +50,8 @@ function Row({ row, place, me, maxXp }: { row: BoardRow; place: number; me: bool
           {me && <span className="rounded-full bg-slate-700 px-1.5 py-0.5 text-[10px] font-bold text-slate-200">TY</span>}
         </p>
         <p className="truncate text-[11px] text-slate-400">
-          <span className="font-semibold" style={{ color: level.rank.color }}>
+          <span className="rank-text font-semibold" style={{ '--c-light': level.rank.textLight, '--c-dark': level.rank.color } as CSSProperties}>
+
             Poz. {level.level} · {level.rank.name}
           </span>
           {row.profile.motto ? <span className="italic text-slate-500"> — „{row.profile.motto}”</span> : null}
