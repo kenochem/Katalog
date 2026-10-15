@@ -13,6 +13,12 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-15',
+    title: 'Menu profilu: przycisk „Mój profil”',
+    description: 'W menu profilu przycisk prowadzący do statystyk, odznak i ustawień nazywa się teraz po prostu „Mój profil”.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-15',
     title: 'Mój profil: statystyki pracy, odznaki, poziomy i personalizacja',
     description:
       'Nowy widok „Mój profil” (menu profilu w prawym górnym rogu → „Mój profil, statystyki i odznaki”, także w Ctrl+K). Nagłówek z avatarem, nazwą, własnym mottem, kolorem akcentu i poziomem: za każdą wykonaną pracę w katalogu (edycje produktów, stany, ceny, zdjęcia, zestawy, BaseLinker, zatwierdzone opisy techniczne, zoptymalizowane zdjęcia) dostajesz punkty i awansujesz od Nowicjusza do Legendy Kenochem. Zakładka „Statystyki”: praca z ostatnich 7 i 30 dni, dni aktywności, bieżąca i najdłuższa seria dni roboczych (weekend jej nie przerywa), siatka aktywności z 16 tygodni i podział pracy na kategorie. Zakładka „Odznaki”: 12 odznak w trzech stopniach (brąz, srebro, złoto) z paskiem postępu, m.in. Redaktor katalogu, Fotograf, Magazynier, Porządkowicz grup, Lekka waga, Wytrwały, Ranny ptaszek i Nocny marek. Zakładka „Ustawienia”: motto, kolor akcentu, widok otwierany po wejściu, gęstość siatki produktów, motyw i przywrócenie układu menu. Statystyki liczone są z dziennika aktywności — każdy widzi tylko własne wpisy. Wymaga migracji migration-audit-log-self-read.sql.',

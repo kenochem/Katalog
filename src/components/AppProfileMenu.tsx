@@ -229,7 +229,7 @@ export function AppProfileMenu({
                   className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-800"
                 >
                   <Trophy className="h-4 w-4 shrink-0 text-brand-400" />
-                  Mój profil, statystyki i odznaki
+                  Mój profil
                 </button>
               </li>
             )}
