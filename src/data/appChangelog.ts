@@ -13,6 +13,14 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-15',
+    title: 'Testy automatyczne (61) i poprawka wyszukiwarki znaleziona przez testy',
+    description:
+      'W projekcie są pierwsze testy automatyczne (Vitest): 61 testów kluczowej logiki — parser nazw technicznych na prawdziwych nazwach z WAPRO (gwinty, nypel/trójnik/dysza/zawór/o-ring, ostrzeżenia o literówkach), wyszukiwarka (pełne wyniki, wiele słów, polskie znaki, warianty, odmiana), poziomy, rangi, punkty, serie i odznaki, cele zespołu, kosmetyka profilu, marże i ceny, etykiety (opakowanie, cena za 1 l / 1 kg, skracanie nazwy) oraz budowa zamówienia do WAPRO. Uruchamiane poleceniem npm test (npm run check = typy + testy), automatycznie przed każdym wdrożeniem katalogu, magazynu i CRM oraz na GitHubie po każdym wypchnięciu zmian. Już pierwszy przebieg wykrył błąd w nowej wyszukiwarce: wiele słów było dzielonych po literze „s” zamiast po spacji, przez co niektóre frazy wielowyrazowe (np. „woskiem szampon”) nie znajdowały produktów — poprawione i zabezpieczone testem.',
+    tag: 'poprawka',
+  },
+
+  {
+    date: '2026-10-15',
     title: 'Wydajność: lżejsze odświeżanie opisów technicznych i szybsze otwieranie profilu',
     description:
       'Odświeżanie opisów technicznych w tle (co 5 minut) nie przebudowuje już indeksu wyszukiwarki, gdy nic się nie zmieniło — wcześniej każde sondowanie unieważniało indeks i następne wyszukiwanie liczyło go od nowa. W „Mój profil” cięższe obliczenia (daty zdobycia odznak) wykonują się po wyświetleniu strony, więc profil otwiera się płynnie nawet przy dużej historii aktywności.',

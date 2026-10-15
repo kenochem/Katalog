@@ -4,6 +4,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "tsc -b && vitest run",
     "dev": "vite --mode suite",
     "dev:catalog": "vite --mode catalog",
     "dev:suite": "vite --mode suite",
@@ -73,12 +76,12 @@
     "embeddings:enrich": "node scripts/enrich-shop-embeddings.mjs",
     "export:finance": "py scripts/export-finance-koszty.py",
     "deploy": "npm run build:products && npx firebase deploy --only hosting",
-    "deploy:catalog": "npm run build:catalog && node scripts/verify-hosting-dist.mjs dist-catalog && npx firebase deploy --only hosting:katalog",
+    "deploy:catalog": "npm test && npm run build:catalog && node scripts/verify-hosting-dist.mjs dist-catalog && npx firebase deploy --only hosting:katalog",
     "deploy:ops": "npm run build:ops && npx firebase deploy --only hosting:ops",
-    "deploy:sell": "npm run build:sell && npx firebase deploy --only hosting:sell",
+    "deploy:sell": "npm test && npm run build:sell && npx firebase deploy --only hosting:sell",
     "deploy:suite": "npm run build:suite && npx firebase deploy --only hosting:suite",
     "deploy:calendar": "npm run build:calendar && npx firebase deploy --only hosting:calendar",
-    "deploy:stock": "npm run build:stock && npx firebase deploy --only hosting:stock",
+    "deploy:stock": "npm test && npm run build:stock && npx firebase deploy --only hosting:stock",
     "deploy:products": "npm run deploy"
   },
   "dependencies": {
@@ -116,6 +119,7 @@
     "sharp": "^0.35.3",
     "tailwindcss": "^4.1.4",
     "typescript": "~5.8.3",
-    "vite": "^6.3.5"
+    "vite": "^6.3.5",
+    "vitest": "^3.2.7"
   }
 }

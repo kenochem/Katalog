@@ -177,7 +177,7 @@ export function searchIndexedProducts(
 
   const lower = q.toLowerCase();
   const folded = foldText(q);
-  const tokens = folded.split(/s+/).filter(Boolean);
+  const tokens = folded.split(/\s+/).filter(Boolean);
   const eanQuery = normalizeEan(q);
   // trafienia tekstowe (nazwa/SKU) zwracamy w całości — wcześniej sztywny limit 100 ucinał listę
   // alfabetycznie (np. „olejek zapach” gubił zapachy na końcu alfabetu); limit dotyczy tylko Fuse
