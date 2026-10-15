@@ -13,6 +13,21 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-15',
+    title: 'Zestawy: konfigurator zestawu (wybór produktów po lewej, zestaw na żywo po prawej)',
+    description:
+      'Nowy konfigurator zestawu zastępuje stary formularz. Po lewej przeglądarka produktów: wyszukiwanie (nazwa, SKU, EAN, gwint, skaner kodów), filtr kategorii, „Tylko dostępne” i „Tylko z BaseLinkera”; bez wpisanej frazy pokazuje najlepiej sprzedające się produkty. Każdy produkt ma zdjęcie, cenę (zieloną), stan i ostrzeżenie „brak w BaseLinkerze”; klik dodaje produkt, a potem pojawia się stepper ilości. Po prawej zestaw na żywo: zdjęcie (aparat lub plik), nazwa, kategoria, opis, lista składników ze zdjęciami, ceną za sztukę i zmianą ilości, a na dole wartość składników brutto, ile kompletów da się złożyć teraz oraz informacja, czy wszystkie składniki są w BaseLinkerze (wtedy zestaw można wysłać do BL). Na telefonie dwie zakładki: Produkty i Zestaw. Kod katalogowy zestawu jest widoczny od razu.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-15',
+    title: 'Zestawy: wyszukiwarka widoczna, zmiana widoku siatki, zielone ceny i cena jednostkowa składnika',
+    description:
+      'Poprawki widoku Zestawy: pole wyszukiwania było ściśnięte przez listę sortowania i nic nie było widać — teraz zajmuje całą szerokość. Dodany przełącznik widoku jak w głównym katalogu: duże kafelki, średnie, małe oraz lista (zapamiętywany w przeglądarce). Ceny są zielone, a w szczegółach zestawu przy każdym składniku widać cenę jednostkową (za sztukę). Zestaw wysłany do BaseLinkera pojawia się na obu listach: w „BaseLinker” jako aktywny i w „Własne” z niebieską etykietą „Także w Base”.',
+    tag: 'poprawka',
+  },
+
+  {
+    date: '2026-10-15',
     title: 'Zestawy: własne zestawy z eksportem do BaseLinkera (bundle)',
     description:
       'Własny zestaw (Zestawy → „Własne / techniczne” → „Nowy zestaw”) można teraz wysłać do BaseLinkera: w szczegółach zestawu przycisk „Wyślij do BaseLinkera” tworzy w BL produkt-zestaw (bundle) ze składnikami i ilościami, z SKU równym kodowi katalogowemu zestawu, nazwą, opisem, zdjęciem i ceną (suma cen składników brutto, do zmiany w BL). Składniki muszą być powiązane z BaseLinkerem (znaczniki B/W), a SKU nie może już istnieć w BL — w przeciwnym razie eksport jest blokowany z czytelnym komunikatem. Po eksporcie zestaw dostaje niebieską plakietkę „Base · aktywny” i zapamiętane id z BaseLinkera (wtedy porównanie składu obejmuje też takie zestawy). Dla zestawów z BaseLinkera jest przycisk „Powiel jako własny”, który robi edytowalną kopię. Wymaga wdrożenia funkcji baselinker.',

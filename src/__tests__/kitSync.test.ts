@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Kit, Product } from '../types';
 import { buildProductLookup } from '../lib/kitResolve';
+import { isInBaselinker } from '../lib/kitSource';
 import { blIdOfKit, buildKitSync, diffItems, itemsFromBl, kitAvailability, kitIdForBl, type BlKit } from '../lib/kitSync';
 
 function prod(sku: string, name: string, stock = 10): Product {
@@ -36,6 +37,16 @@ describe('zestawy z BaseLinkera', () => {
   it('rozpoznaje id BaseLinkera zakodowane w id zestawu', () => {
     expect(blIdOfKit(localKit(206122132, []))).toBe(206122132);
     expect(blIdOfKit({ ...localKit(1, []), id: 'kit-123' })).toBeNull();
+  });
+
+  it('zestaw własny wysłany do BL (ma blId) jest widoczny jako zestaw w BaseLinkerze i porównywany po blId', () => {
+    const own: Kit = { ...localKit(1, [['FRE000001', 1]]), id: 'kit-777', blId: 4242 };
+    expect(blIdOfKit(own)).toBe(4242);
+    expect(isInBaselinker(own)).toBe(true);
+    expect(isInBaselinker({ ...own, blId: undefined })).toBe(false);
+    const rows = buildKitSync([blKit(4242, [[10, 'FRE000001', 1]])], [own], lookup);
+    expect(rows[0].status).toBe('same');
+    expect(rows).toHaveLength(1); // nie tworzy duplikatu jako „nowy”
   });
 
   it('przelicza skład BL na produkty katalogu i łączy powtórzone SKU', () => {
