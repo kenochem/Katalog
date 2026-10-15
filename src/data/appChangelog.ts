@@ -13,6 +13,27 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-15',
+    title: 'Mój profil: podsumowanie tygodnia i powiadomienia (zadania, odznaki, tydzień)',
+    description:
+      'W zakładce „Statystyki” jest karta „Podsumowanie tygodnia”: liczba działań w tym tygodniu na tle poprzedniego, dni aktywności, najintensywniejsza kategoria pracy, wykonane zadania i nowe odznaki zdobyte w tym tygodniu — z przyciskiem „Kopiuj”, żeby wkleić podsumowanie np. w czacie. W centrum powiadomień (dzwonek) pojawiają się teraz: nowe zadanie przydzielone Tobie przez kogoś innego (sprawdzane co 5 minut), zdobyta odznaka lub nowy stopień oraz podsumowanie poprzedniego tygodnia.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-15',
+    title: 'Mój profil: „Moja kolejka” — zadania przydzielane osobom',
+    description:
+      'Nowa zakładka „Moja kolejka”. Lista zadań przydzielonych Tobie (uzupełnij zdjęcie, zatwierdź opis techniczny, sprawdź dane, inne) z przyciskiem „Zrobione”, przejściem do produktu i informacją, od kogo jest zadanie. Zadania można przydzielać innym osobom albo sobie (rodzaj, dla kogo, kod produktu z podpowiedzią nazwy, notatka); osoba, której przydzielono zadanie, dostaje powiadomienie. Zadania „uzupełnij zdjęcie” i „zatwierdź opis” zamykają się same, gdy zdjęcie zostanie dodane albo opis zatwierdzony. Sekcja „Podpowiedzi” pokazuje produkty bez zdjęcia od najlepiej sprzedających się z przyciskiem „Biorę to” oraz liczbę pewnych propozycji opisów technicznych do zatwierdzenia. Wykonane zadania liczą się do punktów i odznaki „Solidny wykonawca”. Wymaga migracji migration-catalog-tasks.sql.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-15',
+    title: 'Odznaki i osiągnięcia: nowy model i wygląd (4 stopnie, medale, cele zespołu)',
+    description:
+      'Przebudowany system osiągnięć. 15 odznak w 7 kategoriach (zdjęcia, dane produktów, porządek techniczny, magazyn i ceny, integracje, rytm pracy, zadania) w czterech stopniach: brąz, srebro, złoto i diament. Każda odznaka to medal z sześciokątną tarczą, ikoną i gwiazdkami stopnia (złoto i diament lśnią), w kolorze stopnia; nie zdobyte są przygaszone. Kliknięcie otwiera szczegóły: opis, progi wszystkich stopni z datami zdobycia i postęp; odznaki można przypinać do „gabloty” w nagłówku profilu (do 3). Za zdobycie nowego stopnia pojawia się okno gratulacji z konfetti. Nowe odznaki: Nowy asortyment, Tygodniowy maraton i Solidny wykonawca. Dodatkowo „Cele zespołu” — wspólne osiągnięcia za kompletność katalogu: Katalog ze zdjęciami, Opisy techniczne zatwierdzone oraz osobne cele dla każdej grupy technicznej („Nyple ze zdjęciem”, „Zawory ze zdjęciem” itd.) z progami 50 / 75 / 90 / 100% (brąz, srebro, złoto, diament) i listą brakujących produktów po kliknięciu.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-15',
     title: 'Menu profilu: przycisk „Mój profil”',
     description: 'W menu profilu przycisk prowadzący do statystyk, odznak i ustawień nazywa się teraz po prostu „Mój profil”.',
     tag: 'poprawka',

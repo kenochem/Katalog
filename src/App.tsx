@@ -67,6 +67,7 @@ import { LabelStudioView } from './components/LabelStudioView';
 import { PromotionsView } from './components/PromotionsView';
 import { useReservedVersion } from './lib/reservedStock';
 import { useLivePromosVersion } from './lib/promotions';
+import { useTaskNotifications } from './lib/catalogTasks';
 import { ProductGrid } from './components/ProductGrid';
 import { InstallAppHint, resetInstallHint } from './components/InstallAppHint';
 import { LoginGate } from './components/LoginGate';
@@ -317,6 +318,7 @@ export default function App() {
   const [missingCategory, setMissingCategory] = useState('Wszystkie');
   const [gridDensity, setGridDensity] = useState<GridDensity>(loadGridDensity);
   const startViewAppliedRef = useRef(false);
+  useTaskNotifications(user?.id, mode === 'signed_in' && isCatalogProduct());
   const [showMobileMore, setShowMobileMore] = useState(false);
   const [syncBusy, setSyncBusy] = useState(false);
   const [collectionsRevision, setCollectionsRevision] = useState(0);
@@ -2008,7 +2010,13 @@ export default function App() {
         ) : view === 'profile' && isCatalogProduct() ? (
           <InlineErrorBoundary label="Mój profil">
             <Suspense fallback={<ViewFallback />}>
-              <UserProfileView gridDensity={gridDensity} onGridDensityChange={changeGridDensity} />
+              <UserProfileView
+                products={activeAllProducts}
+                gridDensity={gridDensity}
+                onGridDensityChange={changeGridDensity}
+                onOpenProduct={setSelectedProduct}
+                onOpenView={setView}
+              />
             </Suspense>
           </InlineErrorBoundary>
         ) : view === 'groups' && isCatalogProduct() ? (

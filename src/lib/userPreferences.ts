@@ -20,6 +20,10 @@ export interface ProfilePreferences {
   accent?: string;
   /** Widok otwierany po wejściu do katalogu. */
   startView?: View;
+  /** Ostatnio „obejrzane” stopnie odznak (id → stopień) — do gratulacji za nowe. */
+  seenAch?: Record<string, number>;
+  /** Odznaki przypięte do gabloty w nagłówku profilu (max 3). */
+  pinned?: string[];
 }
 
 export interface UserPreferencesPayload {

@@ -20,7 +20,8 @@ export type CategoryId =
   | 'kits'
   | 'baselinker'
   | 'tech'
-  | 'imgopt';
+  | 'imgopt'
+  | 'tasks';
 
 export const CATEGORY_LABEL: Record<CategoryId, string> = {
   edits: 'Edycje produktów',
@@ -32,6 +33,7 @@ export const CATEGORY_LABEL: Record<CategoryId, string> = {
   baselinker: 'BaseLinker',
   tech: 'Opisy techniczne',
   imgopt: 'Optymalizacja zdjęć',
+  tasks: 'Wykonane zadania',
 };
 
 const ACTION_CATEGORY: Record<string, CategoryId> = {
@@ -47,6 +49,7 @@ const ACTION_CATEGORY: Record<string, CategoryId> = {
   'baselinker.import': 'baselinker',
   'tech.approve': 'tech',
   'image.optimize': 'imgopt',
+  'task.done': 'tasks',
 };
 
 export async function fetchMyActivity(userId: string, days = 400): Promise<ActivityRow[]> {
@@ -80,6 +83,14 @@ export function dayKey(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+/** Klucz tygodnia: data poniedziałku (czas lokalny). */
+export function mondayKey(d: Date): string {
+  const m = new Date(d);
+  m.setHours(12, 0, 0, 0);
+  m.setDate(m.getDate() - ((m.getDay() + 6) % 7));
+  return dayKey(m);
+}
+
 export interface ProfileStats {
   counts: Record<CategoryId, number>;
   total: number;
@@ -87,6 +98,9 @@ export interface ProfileStats {
   last30: number;
   last7: number;
   perDay: Map<string, number>;
+  /** Praca w tygodniach (klucz = poniedziałek yyyy-mm-dd). */
+  perWeek: Map<string, number>;
+  bestWeek: number;
   activeDays: number;
   currentStreak: number;
   bestStreak: number;
@@ -105,11 +119,13 @@ const EMPTY_COUNTS = (): Record<CategoryId, number> => ({
   baselinker: 0,
   tech: 0,
   imgopt: 0,
+  tasks: 0,
 });
 
 export function computeStats(rows: ActivityRow[]): ProfileStats {
   const counts = EMPTY_COUNTS();
   const perDay = new Map<string, number>();
+  const perWeek = new Map<string, number>();
   let logins = 0;
   let early = 0;
   let late = 0;
@@ -131,6 +147,8 @@ export function computeStats(rows: ActivityRow[]): ProfileStats {
     const d = new Date(r.created_at);
     const k = dayKey(d);
     perDay.set(k, (perDay.get(k) ?? 0) + w);
+    const wk = mondayKey(d);
+    perWeek.set(wk, (perWeek.get(wk) ?? 0) + w);
     const age = (now - d.getTime()) / 86_400_000;
     if (age <= 30) last30 += w;
     if (age <= 7) last7 += w;
@@ -178,6 +196,8 @@ export function computeStats(rows: ActivityRow[]): ProfileStats {
     last30,
     last7,
     perDay,
+    perWeek,
+    bestWeek: Math.max(0, ...perWeek.values()),
     activeDays: perDay.size,
     currentStreak: current,
     bestStreak: best,
@@ -217,51 +237,3 @@ export function levelFromXp(xp: number): LevelInfo {
   const title = [...TITLES].reverse().find(([min]) => level >= min)?.[1] ?? 'Nowicjusz';
   return { level, title, xp, xpIntoLevel: xp - base, xpForNext: next - base };
 }
-
-export type BadgeTier = 0 | 1 | 2 | 3; // 0 = jeszcze nie zdobyta
-
-export interface BadgeDef {
-  id: string;
-  name: string;
-  /** Opis z miejscem na liczbę, np. „Zmień {n} produktów” */
-  desc: string;
-  icon: 'pencil' | 'camera' | 'boxes' | 'tag' | 'wrench' | 'feather' | 'plug' | 'layers' | 'flame' | 'calendar' | 'sunrise' | 'moon';
-  tiers: [number, number, number];
-  value: (s: ProfileStats) => number;
-}
-
-export const BADGES: BadgeDef[] = [
-  { id: 'redaktor', name: 'Redaktor katalogu', desc: 'Edytuj lub dodaj {n} produktów', icon: 'pencil', tiers: [25, 100, 500], value: (s) => s.counts.edits + s.counts.created },
-  { id: 'fotograf', name: 'Fotograf', desc: 'Dodaj lub popraw {n} zdjęć', icon: 'camera', tiers: [10, 50, 250], value: (s) => s.counts.images },
-  { id: 'magazynier', name: 'Magazynier', desc: 'Zaktualizuj {n} stanów', icon: 'boxes', tiers: [20, 100, 500], value: (s) => s.counts.stock },
-  { id: 'cennik', name: 'Cennik pod kontrolą', desc: 'Zmień {n} cen', icon: 'tag', tiers: [10, 50, 200], value: (s) => s.counts.price },
-  { id: 'porzadkowicz', name: 'Porządkowicz grup', desc: 'Zatwierdź {n} opisów technicznych', icon: 'wrench', tiers: [20, 100, 500], value: (s) => s.counts.tech },
-  { id: 'lekka-waga', name: 'Lekka waga', desc: 'Zoptymalizuj {n} zdjęć', icon: 'feather', tiers: [10, 50, 300], value: (s) => s.counts.imgopt },
-  { id: 'integrator', name: 'Łącznik z BaseLinkerem', desc: 'Wykonaj {n} operacji BaseLinkera', icon: 'plug', tiers: [5, 25, 100], value: (s) => s.counts.baselinker },
-  { id: 'zestawowicz', name: 'Zestawowicz', desc: 'Zapisz {n} zestawów', icon: 'layers', tiers: [3, 10, 40], value: (s) => s.counts.kits },
-  { id: 'wytrwaly', name: 'Wytrwały', desc: 'Pracuj w katalogu {n} dni roboczych z rzędu', icon: 'flame', tiers: [3, 7, 20], value: (s) => s.bestStreak },
-  { id: 'bywalec', name: 'Stały bywalec', desc: 'Pracuj w katalogu w {n} różnych dniach', icon: 'calendar', tiers: [10, 50, 150], value: (s) => s.activeDays },
-  { id: 'ranny', name: 'Ranny ptaszek', desc: 'Wykonaj {n} działań przed 7:00', icon: 'sunrise', tiers: [10, 50, 200], value: (s) => s.early },
-  { id: 'nocny', name: 'Nocny marek', desc: 'Wykonaj {n} działań po 20:00', icon: 'moon', tiers: [10, 50, 200], value: (s) => s.late },
-];
-
-export interface BadgeProgress {
-  def: BadgeDef;
-  value: number;
-  tier: BadgeTier;
-  /** Próg następnego poziomu (null = max). */
-  next: number | null;
-}
-
-export function evaluateBadges(stats: ProfileStats): BadgeProgress[] {
-  return BADGES.map((def) => {
-    const value = def.value(stats);
-    let tier: BadgeTier = 0;
-    def.tiers.forEach((t, i) => {
-      if (value >= t) tier = (i + 1) as BadgeTier;
-    });
-    return { def, value, tier, next: tier >= 3 ? null : def.tiers[tier] };
-  });
-}
-
-export const TIER_LABEL = ['—', 'Brąz', 'Srebro', 'Złoto'] as const;

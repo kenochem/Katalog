@@ -1,7 +1,14 @@
 import type { View } from '../types';
 import { getMergedFinanceData } from './financeStore';
 
-export type AppNotificationKind = 'low_stock' | 'sync' | 'system' | 'finance';
+export type AppNotificationKind =
+  | 'low_stock'
+  | 'sync'
+  | 'system'
+  | 'finance'
+  | 'task'
+  | 'achievement'
+  | 'summary';
 export type AppNotificationScope =
   | 'all'
   | 'catalog'
