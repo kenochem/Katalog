@@ -240,3 +240,11 @@ export const pingBaselinker = () =>
   call<{ ok: boolean; ms: number; inventories: number; inventoryId: number | null }>({ action: 'ping' });
 export const promoTickBaselinker = () =>
   call<{ ok: boolean; results: unknown[] }>({ action: 'promo-tick' });
+export interface BlKitsResponse {
+  kits: import('./kitSync').BlKit[];
+  scanned: number;
+  candidates: number;
+}
+/** Zestawy (bundle) z BaseLinkera wraz ze składem; `blIds` = id już zaimportowanych zestawów. */
+export const fetchBlKits = (blIds: number[]) => call<BlKitsResponse>({ action: 'kits-bl', blIds });
+

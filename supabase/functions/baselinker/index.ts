@@ -941,7 +941,64 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ---- kits-bl: ZESTAWY (bundle) z BaseLinkera wraz ze skladem (tylko odczyt, admin) -------
+    // Zwraca produkty-zestawy z `bundle_products` (id skladnika -> ilosc) i ich SKU z katalogu BL.
+    // Kandydaci: id przekazane przez klienta (juz zaimportowane zestawy) + produkty z "zestaw/komplet" w nazwie.
+    if (action === 'kits-bl') {
+      needAdmin();
+      if (isSystem) return json({ error: 'Niedostepne dla service_role' }, 400);
+      const wanted = Array.isArray(body.blIds) ? (body.blIds as unknown[]).map((x) => Number(x)).filter((x) => Number.isFinite(x)) : [];
+      const all = await listAllBlProducts();
+      const byId = new Map(all.map((p) => [p.id, p]));
+      const cand = new Set<number>(wanted.filter((id) => byId.has(id)));
+      for (const p of all) if (/zestaw|komplet/i.test(p.name)) cand.add(p.id);
+      const ids = [...cand];
+      const kits: Record<string, unknown>[] = [];
+      for (let i = 0; i < ids.length; i += 100) {
+        const chunk = ids.slice(i, i + 100);
+        const data = await bl('getInventoryProductsData', { inventory_id: INVENTORY_ID, products: chunk });
+        const prods = (data.products ?? {}) as Record<string, Record<string, unknown>>;
+        for (const id of chunk) {
+          const p = prods[String(id)];
+          if (!p) continue;
+          const raw = p.bundle_products;
+          const comps: { blId: number; qty: number }[] = [];
+          if (raw && typeof raw === 'object') {
+            if (Array.isArray(raw)) {
+              for (const c of raw as Record<string, unknown>[]) {
+                const cid = Number(c.product_id ?? c.id);
+                if (Number.isFinite(cid)) comps.push({ blId: cid, qty: Math.max(1, Number(c.quantity ?? c.qty ?? 1) || 1) });
+              }
+            } else {
+              for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+                const cid = Number(k);
+                if (Number.isFinite(cid)) comps.push({ blId: cid, qty: Math.max(1, Number(v) || 1) });
+              }
+            }
+          }
+          const text = (p.text_fields ?? {}) as Record<string, unknown>;
+          const images = Object.values((p.images ?? {}) as Record<string, string>).filter((u) => typeof u === 'string' && u);
+          kits.push({
+            blId: id,
+            sku: String(p.sku ?? byId.get(id)?.sku ?? ''),
+            name: String(text.name ?? p.name ?? byId.get(id)?.name ?? ''),
+            isBundle: Boolean(p.is_bundle),
+            image: images[0] ?? '',
+            components: comps.map((c) => ({
+              blId: c.blId,
+              qty: c.qty,
+              sku: byId.get(c.blId)?.sku ?? '',
+              name: byId.get(c.blId)?.name ?? '',
+              inInventory: byId.has(c.blId),
+            })),
+          });
+        }
+      }
+      return json({ kits, scanned: all.length, candidates: ids.length });
+    }
+
     // ---- images-status: porownanie zdjec katalog <-> BL (kazdy zalogowany, tylko odczyt) -----
+
     if (action === 'images-status') {
       if (isSystem) return json({ error: 'Niedostepne dla service_role' }, 400);
       const skus = Array.isArray(body.skus) ? (body.skus as unknown[]).map((s) => String(s)) : [];

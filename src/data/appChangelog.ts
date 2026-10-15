@@ -13,6 +13,14 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-15',
+    title: 'Zestawy: prawdziwy skład z BaseLinkera i dostępność zestawu',
+    description:
+      'Zestawy z BaseLinkera były dotąd importowane z pliku CSV, a ich skład zgadywany z opisów i zapachów — stąd pomieszane pozycje. Teraz w „Zestawy → BaseLinker” jest przycisk „Porównaj skład z BaseLinkerem”: katalog pobiera z API BaseLinkera zestawy (bundle) razem z rzeczywistym składem (SKU i ilości), mapuje składniki na produkty katalogu i pokazuje, co jest nowe, co się różni (dodać / usunąć / zmienić ilość), co jest zgodne oraz co jest problemem (zestaw bez składu w BL, zestaw usunięty z BL, składnik spoza katalogu). Zaznaczone pozycje można zapisać jednym kliknięciem — zmienia się tylko skład, nazwy, opisy i zdjęcia zestawów zostają. Dodatkowo każdy zestaw pokazuje „do złożenia: N” (ile kompletów da się złożyć z dostępnych sztuk składników po odjęciu rezerwacji) albo który składnik jest niedostępny. Wymaga wdrożenia funkcji baselinker.',
+    tag: 'nowość',
+  },
+
+  {
+    date: '2026-10-15',
     title: 'Testy automatyczne (61) i poprawka wyszukiwarki znaleziona przez testy',
     description:
       'W projekcie są pierwsze testy automatyczne (Vitest): 61 testów kluczowej logiki — parser nazw technicznych na prawdziwych nazwach z WAPRO (gwinty, nypel/trójnik/dysza/zawór/o-ring, ostrzeżenia o literówkach), wyszukiwarka (pełne wyniki, wiele słów, polskie znaki, warianty, odmiana), poziomy, rangi, punkty, serie i odznaki, cele zespołu, kosmetyka profilu, marże i ceny, etykiety (opakowanie, cena za 1 l / 1 kg, skracanie nazwy) oraz budowa zamówienia do WAPRO. Uruchamiane poleceniem npm test (npm run check = typy + testy), automatycznie przed każdym wdrożeniem katalogu, magazynu i CRM oraz na GitHubie po każdym wypchnięciu zmian. Już pierwszy przebieg wykrył błąd w nowej wyszukiwarce: wiele słów było dzielonych po literze „s” zamiast po spacji, przez co niektóre frazy wielowyrazowe (np. „woskiem szampon”) nie znajdowały produktów — poprawione i zabezpieczone testem.',

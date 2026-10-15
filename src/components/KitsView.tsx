@@ -1,4 +1,4 @@
-import { Plus, Trash2, Package, ChevronDown, ChevronUp, Save, X, ShoppingCart, Camera, Upload, Loader2, ImageOff } from 'lucide-react';
+import { Plus, Trash2, Package, ChevronDown, ChevronUp, Save, X, ShoppingCart, Camera, Upload, Loader2, ImageOff, RefreshCw } from 'lucide-react';
 import { confirmDialog } from '../lib/dialog';
 import { useMemo, useRef, useState } from 'react';
 import type { Kit, KitItem, Product } from '../types';
@@ -14,6 +14,9 @@ import { addKitToOrderDraft } from '../lib/orderDraft';
 import { SearchBar } from './SearchBar';
 import { BarcodeScanner } from './BarcodeScanner';
 import { filterProducts } from '../lib/search';
+import { getAvailableQty } from '../lib/reservedStock';
+import { kitAvailability } from '../lib/kitSync';
+import { KitSyncModal } from './KitSyncModal';
 import { showToast } from '../lib/toast';
 import {
   buildProductLookup,
@@ -27,6 +30,8 @@ interface KitsViewProps {
   onKitsChange: () => void;
   canAddToOrder?: boolean;
   onOrderDraftChange?: () => void;
+  /** Uprawnienie do porównania składu zestawów z BaseLinkerem. */
+  canSyncBl?: boolean;
 }
 
 export function KitsView({
@@ -35,7 +40,9 @@ export function KitsView({
   onKitsChange,
   canAddToOrder,
   onOrderDraftChange,
+  canSyncBl,
 }: KitsViewProps) {
+  const [showSync, setShowSync] = useState(false);
   const [segment, setSegment] = useState<KitSegment>(() =>
     kits.some(isBaselinkerKit) ? 'baselinker' : 'own',
   );
@@ -61,6 +68,16 @@ export function KitsView({
               : 'Zestawy robocze i techniczne tworzone w katalogu.'}
           </p>
         </div>
+        {readOnlyList && canSyncBl && (
+          <button
+            type="button"
+            onClick={() => setShowSync(true)}
+            className="flex shrink-0 items-center justify-center gap-2 rounded-xl border border-brand-500/50 px-4 py-2.5 text-sm font-medium text-brand-300 transition hover:bg-brand-500/10"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Porównaj skład z BaseLinkerem
+          </button>
+        )}
         {!readOnlyList && (
           <button
             type="button"
@@ -173,6 +190,15 @@ export function KitsView({
         </div>
       )}
 
+      {showSync && (
+        <KitSyncModal
+          kits={kits}
+          products={products}
+          onClose={() => setShowSync(false)}
+          onApplied={onKitsChange}
+        />
+      )}
+
       {showEditor && !readOnlyList && (
         <KitEditor
           kit={editingKit}
@@ -214,6 +240,7 @@ function KitCard({
 }) {
   const linked = kitLinkedCount(kit.items, productLookup);
   const total = kit.items.length;
+  const avail = kitAvailability(kit.items, productLookup, getAvailableQty);
 
   return (
     <div className="overflow-hidden rounded-2xl border border-stone-200/90 bg-white shadow-sm shadow-stone-200/40 dark:border-slate-800 dark:bg-slate-900/80 dark:shadow-none">
@@ -245,7 +272,20 @@ function KitCard({
           </div>
           <p className="text-sm text-stone-600 dark:text-slate-400">
             {kit.items.length} elementów · {kit.category}
+            {avail && (
+              <span
+                className={`ml-2 rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${
+                  avail.count > 0
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300'
+                    : 'bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300'
+                }`}
+                title={`Ogranicza: ${avail.limiting} (stan dostępny po odjęciu rezerwacji)`}
+              >
+                {avail.count > 0 ? `do złożenia: ${avail.count}` : `brak: ${avail.limiting}`}
+              </span>
+            )}
           </p>
+
         </div>
         {expanded ? (
           <ChevronUp className="h-5 w-5 shrink-0 text-slate-500" />

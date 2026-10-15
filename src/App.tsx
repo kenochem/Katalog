@@ -1997,6 +1997,7 @@ export default function App() {
               onKitsChange={loadData}
               canAddToOrder={canUseCrmModule(role)}
               onOrderDraftChange={refreshOrderCount}
+              canSyncBl={roleCan(role, 'manageBaselinker')}
             />
           </Suspense>
         ) : view === 'progress' ? (
