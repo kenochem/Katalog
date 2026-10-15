@@ -49,6 +49,7 @@ const BL_KIT_ID = /^bl-zestaw-(\d+)$/;
 
 /** Id produktu w BaseLinkerze zakodowane w id zestawu z importu (`bl-zestaw-<id>`). */
 export function blIdOfKit(kit: Kit): number | null {
+  if (kit.blId != null) return kit.blId;
   const m = BL_KIT_ID.exec(kit.id);
   return m ? Number(m[1]) : null;
 }

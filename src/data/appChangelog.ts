@@ -13,6 +13,28 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-15',
+    title: 'Zestawy: własne zestawy z eksportem do BaseLinkera (bundle)',
+    description:
+      'Własny zestaw (Zestawy → „Własne / techniczne” → „Nowy zestaw”) można teraz wysłać do BaseLinkera: w szczegółach zestawu przycisk „Wyślij do BaseLinkera” tworzy w BL produkt-zestaw (bundle) ze składnikami i ilościami, z SKU równym kodowi katalogowemu zestawu, nazwą, opisem, zdjęciem i ceną (suma cen składników brutto, do zmiany w BL). Składniki muszą być powiązane z BaseLinkerem (znaczniki B/W), a SKU nie może już istnieć w BL — w przeciwnym razie eksport jest blokowany z czytelnym komunikatem. Po eksporcie zestaw dostaje niebieską plakietkę „Base · aktywny” i zapamiętane id z BaseLinkera (wtedy porównanie składu obejmuje też takie zestawy). Dla zestawów z BaseLinkera jest przycisk „Powiel jako własny”, który robi edytowalną kopię. Wymaga wdrożenia funkcji baselinker.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-15',
+    title: 'Zestawy: kody katalogowe (ZST-0001…)',
+    description:
+      'Każdy zestaw ma kod katalogowy w formacie ZST-0001, widoczny na kafelku i w szczegółach (kliknięcie kopiuje kod). Nowe zestawy dostają kolejny kod automatycznie, a dla istniejących jest przycisk „Nadaj kody (N)”, który numeruje je od najstarszego. Kod jest szukalny, służy do wskazywania zestawów (np. w promocjach) i jest SKU zestawu po wysłaniu do BaseLinkera. Zestawy zaimportowane z BL zapamiętują też id produktu w BL. Wymaga migracji migration-kits-code-meta.sql (bez niej zestawy zapisują się jak dotąd, tylko bez kodu).',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-15',
+    title: 'Zestawy: nowy wygląd, wyszukiwarka, zmiana zdjęcia głównego i niebieska etykieta Base',
+    description:
+      'Widok Zestawy przebudowany: siatka kafelków z dużym zdjęciem (gdy zestaw nie ma własnego, pokazujemy mozaikę zdjęć składników), kodem, nazwą, liczbą składników, dostępnością („do złożenia: N” albo „brak składnika”) i wartością składników. Na górze wyszukiwarka zestawów po nazwie, kodzie, kategorii, SKU i nazwach składników (z polskimi znakami i dowolną kolejnością słów) oraz sortowanie: nazwa, kod, najnowsze, dostępność. Kliknięcie kafelka otwiera szczegóły: duże zdjęcie z przyciskiem „Zmień zdjęcie główne” (także dla zestawów z BaseLinkera), pełna lista składników ze zdjęciami, ilościami, cenami i stanem każdego składnika oraz akcje (do zamówienia, edycja, powielenie, eksport, usunięcie). Etykieta „Base” jest teraz niebieska i oznacza zestaw aktywny w BaseLinkerze („Base · aktywny”); szara „nieaktywny” pojawia się, gdy porównanie wykaże, że zestawu nie ma już w BL.',
+    tag: 'nowość',
+  },
+
+  {
+    date: '2026-10-15',
     title: 'Zestawy: prawdziwy skład z BaseLinkera i dostępność zestawu',
     description:
       'Zestawy z BaseLinkera były dotąd importowane z pliku CSV, a ich skład zgadywany z opisów i zapachów — stąd pomieszane pozycje. Teraz w „Zestawy → BaseLinker” jest przycisk „Porównaj skład z BaseLinkerem”: katalog pobiera z API BaseLinkera zestawy (bundle) razem z rzeczywistym składem (SKU i ilości), mapuje składniki na produkty katalogu i pokazuje, co jest nowe, co się różni (dodać / usunąć / zmienić ilość), co jest zgodne oraz co jest problemem (zestaw bez składu w BL, zestaw usunięty z BL, składnik spoza katalogu). Zaznaczone pozycje można zapisać jednym kliknięciem — zmienia się tylko skład, nazwy, opisy i zdjęcia zestawów zostają. Dodatkowo każdy zestaw pokazuje „do złożenia: N” (ile kompletów da się złożyć z dostępnych sztuk składników po odjęciu rezerwacji) albo który składnik jest niedostępny. Wymaga wdrożenia funkcji baselinker.',

@@ -38,6 +38,8 @@ export interface KitRow {
   items: KitItem[];
   image_url: string;
   created_at: number;
+  code?: string | null;
+  meta?: { blId?: number; blActive?: boolean } | null;
 }
 
 function normalizeWaproSalesStats(raw: unknown): WaproSalesResult | undefined {
@@ -143,11 +145,15 @@ export function rowToKit(row: KitRow): Kit {
     items: row.items,
     imageUrl: row.image_url || undefined,
     createdAt: row.created_at,
+    code: row.code || undefined,
+    blId: typeof row.meta?.blId === 'number' ? row.meta.blId : undefined,
+    blActive: typeof row.meta?.blActive === 'boolean' ? row.meta.blActive : undefined,
   };
 }
 
+/** Kolumny `code` i `meta` dopisujemy tylko, gdy są ustawione (zapis działa też przed migracją). */
 export function kitToRow(k: Kit): KitRow {
-  return {
+  const row: KitRow = {
     id: k.id,
     name: k.name,
     description: k.description,
@@ -156,4 +162,13 @@ export function kitToRow(k: Kit): KitRow {
     image_url: k.imageUrl || '',
     created_at: k.createdAt,
   };
+  if (k.code) row.code = k.code;
+  if (k.blId != null || k.blActive != null) {
+    row.meta = {
+      ...(k.blId != null ? { blId: k.blId } : {}),
+      ...(k.blActive != null ? { blActive: k.blActive } : {}),
+    };
+  }
+  return row;
 }
+

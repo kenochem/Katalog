@@ -717,8 +717,16 @@ export async function saveKit(kit: Omit<Kit, 'id'> & { id?: string }): Promise<s
     throw new Error('Supabase nie skonfigurowany — zestawy wymagają bazy danych.');
   }
 
-  const { error } = await supabase.from('kits').upsert(kitToRow(full));
+  let { error } = await supabase.from('kits').upsert(kitToRow(full));
+  if (error && /\bcode\b|\bmeta\b|schema cache/i.test(error.message)) {
+    // migracja migration-kits-code-meta.sql jeszcze nie wykonana — zapisujemy bez kodu i powiązań z BL
+    const row = kitToRow(full);
+    delete row.code;
+    delete row.meta;
+    ({ error } = await supabase.from('kits').upsert(row));
+  }
   if (error) throw error;
+
   logAudit({
     action: 'kit.save',
     entityType: 'kit',
@@ -736,7 +744,22 @@ export async function deleteKit(kitId: string): Promise<void> {
   logAudit({ action: 'kit.delete', entityType: 'kit', entityId: kitId, summary: 'Zestaw usunięty' });
 }
 
+/** Nadaje kod katalogowy zestawu (bez wpisu do dziennika — to porządkowanie, nie praca merytoryczna). */
+export async function setKitCode(kitId: string, code: string): Promise<void> {
+  if (!supabase) throw new Error('Supabase nie skonfigurowany');
+  const { error } = await supabase.from('kits').update({ code }).eq('id', kitId);
+  if (error) throw new Error(error.message);
+}
+
+/** Zapisuje powiązanie zestawu z BaseLinkerem (id produktu, aktywność). Nie przerywa pracy, gdy brak kolumny meta. */
+export async function setKitMeta(kitId: string, meta: { blId?: number; blActive?: boolean }): Promise<void> {
+  if (!supabase) return;
+  const { error } = await supabase.from('kits').update({ meta }).eq('id', kitId);
+  if (error) console.warn('setKitMeta', error.message);
+}
+
 export async function uploadKitImage(kitId: string, file: File): Promise<string> {
+
   if (!supabase) throw new Error('Supabase nie skonfigurowany');
 
   const originalExt = file.name.split('.').pop() || 'jpg';

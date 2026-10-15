@@ -98,9 +98,16 @@ export interface Kit {
   items: KitItem[];
   imageUrl?: string;
   createdAt: number;
+  /** Kod katalogowy zestawu (np. ZST-0001) — do wyszukiwania, promocji i jako SKU w BaseLinkerze. */
+  code?: string;
+  /** Id produktu-zestawu w BaseLinkerze (po imporcie lub eksporcie). */
+  blId?: number;
+  /** false = zestawu nie ma już w BaseLinkerze (wynik ostatniego porównania); brak = traktujemy jako aktywny. */
+  blActive?: boolean;
 }
 
 export type View =
+
   | 'home'
   | 'catalog'
   | 'collections'

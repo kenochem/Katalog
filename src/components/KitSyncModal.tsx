@@ -10,7 +10,8 @@ import {
   type KitSyncRow,
   type KitSyncStatus,
 } from '../lib/kitSync';
-import { saveKit } from '../lib/products';
+import { saveKit, setKitMeta } from '../lib/products';
+import { nextKitCode } from '../lib/kitMeta';
 import { showToast } from '../lib/toast';
 
 const STATUS_LABEL: Record<KitSyncStatus, string> = {
@@ -103,9 +104,12 @@ export function KitSyncModal({ kits, products, onClose, onApplied }: Props) {
     setBusy(true);
     let ok = 0;
     const failed: string[] = [];
+    const codeBase: Kit[] = [...kits];
     for (const r of chosen) {
       try {
         if (r.status === 'new' && r.blKit) {
+          const code = nextKitCode(codeBase);
+          codeBase.push({ code } as Kit);
           await saveKit({
             id: kitIdForBl(r.blKit.blId),
             name: r.blKit.name,
@@ -114,9 +118,12 @@ export function KitSyncModal({ kits, products, onClose, onApplied }: Props) {
             items: r.proposedItems,
             imageUrl: r.blKit.image || undefined,
             createdAt: Date.now(),
+            code,
+            blId: r.blKit.blId,
+            blActive: true,
           });
-        } else if (r.localKit) {
-          await saveKit({ ...r.localKit, items: r.proposedItems });
+        } else if (r.localKit && r.blKit) {
+          await saveKit({ ...r.localKit, items: r.proposedItems, blId: r.blKit.blId, blActive: true });
         }
         ok++;
       } catch (e) {
@@ -124,8 +131,25 @@ export function KitSyncModal({ kits, products, onClose, onApplied }: Props) {
         failed.push(r.blKit?.name ?? r.localKit?.name ?? r.key);
       }
     }
+    // oznaczenia aktywności w BL dla pozostałych zestawów (bez wpisu do dziennika)
+    for (const r of rows ?? []) {
+      if (!r.localKit || selected.has(r.key)) continue;
+      try {
+        if ((r.status === 'same' || r.status === 'diff' || r.status === 'not-bundle') && r.blKit) {
+          if (r.localKit.blActive !== true || r.localKit.blId !== r.blKit.blId) {
+            await setKitMeta(r.localKit.id, { blId: r.blKit.blId, blActive: true });
+          }
+        } else if (r.status === 'missing-in-bl') {
+          const id = blIdOfKit(r.localKit);
+          if (r.localKit.blActive !== false) await setKitMeta(r.localKit.id, { ...(id != null ? { blId: id } : {}), blActive: false });
+        }
+      } catch {
+        /* oznaczenie to dodatek — nie przerywamy */
+      }
+    }
     setBusy(false);
     if (failed.length === 0) showToast(`Zaktualizowano ${ok} zestawów wg BaseLinkera`, 'ok', 6000);
+
     else showToast(`Zapisano ${ok}, błąd: ${failed.length} (${failed.slice(0, 3).join(', ')})`, 'warn', 9000);
     onApplied();
     onClose();

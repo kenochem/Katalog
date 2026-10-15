@@ -941,7 +941,82 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ---- kit-export: tworzy w BaseLinkerze ZESTAW (bundle) z zestawu wlasnego z katalogu -------
+    // Skladniki musza miec powiazanie z BL (baselinker_links). SKU zestawu w BL = kod katalogowy (np. ZST-0001).
+    if (action === 'kit-export') {
+      needAdmin();
+      if (isSystem) return json({ error: 'Niedostepne dla service_role' }, 400);
+      const kit = (body.kit ?? {}) as Record<string, unknown>;
+      const kitSku = String(kit.code ?? '').trim().toUpperCase();
+      const kitName = String(kit.name ?? '').trim();
+      const items = Array.isArray(kit.items) ? (kit.items as Record<string, unknown>[]) : [];
+      if (!kitSku) return json({ error: 'Zestaw nie ma kodu katalogowego — nadaj kod przed eksportem.' }, 400);
+      if (!kitName) return json({ error: 'Brak nazwy zestawu' }, 400);
+      if (!items.length) return json({ error: 'Zestaw nie ma skladnikow' }, 400);
+
+      const { exact, norm } = await existingBlSkus();
+      if (exact.has(kitSku) || norm.has(normSku(kitSku))) {
+        return json({ error: `SKU ${kitSku} juz istnieje w BaseLinkerze — eksport zablokowany.` }, 409);
+      }
+
+      const skus = [...new Set(items.map((i) => String(i.sku ?? '').trim().toUpperCase()).filter(Boolean))];
+      const { data: lk } = await admin.from('baselinker_links').select('sku,bl_product_id').in('sku', skus);
+      const linkMap = new Map<string, number>();
+      for (const r of lk ?? []) linkMap.set(String(r.sku).toUpperCase(), Number(r.bl_product_id));
+      const missing = skus.filter((s) => !linkMap.has(s));
+      if (missing.length) {
+        return json({ error: `Skladniki bez powiazania z BaseLinkerem: ${missing.join(', ')}. Odswiez powiazania (B/W) lub zaimportuj je do BL.` }, 422);
+      }
+      const bundle: Record<string, number> = {};
+      for (const it of items) {
+        const sku = String(it.sku ?? '').trim().toUpperCase();
+        const id = linkMap.get(sku);
+        if (id == null) continue;
+        bundle[String(id)] = (bundle[String(id)] ?? 0) + Math.max(1, Number(it.quantity ?? 1) || 1);
+      }
+
+      const settings = await loadSettings(admin);
+      const ctx = await loadImportCtx(settings);
+      const priceGross = Number(kit.priceGross);
+      const images: Record<string, string> = {};
+      const img = String(kit.imageUrl ?? '').trim();
+      if (img && /^https?:\/\//i.test(img)) images['0'] = `url:${img.split('?')[0]}`;
+      const description = String(kit.description ?? '').trim();
+      const payload: Record<string, unknown> = {
+        inventory_id: INVENTORY_ID,
+        sku: kitSku,
+        tax_rate: 23,
+        is_bundle: true,
+        bundle_products: bundle,
+        prices: Number.isFinite(priceGross) && priceGross > 0 ? { [ctx.priceGroupId]: Math.round(priceGross * 100) / 100 } : {},
+        stock: { [ctx.warehouse]: 0 },
+        text_fields: { name: kitName, ...(description ? { description: escapeHtml(description).replace(/\r?\n/g, '<br>') } : {}) },
+      };
+      if (Object.keys(images).length) payload.images = images;
+      const res = await bl('addInventoryProduct', payload);
+      const blId = Number(res.product_id);
+      await admin.from('baselinker_links').upsert(
+        { sku: kitSku, bl_product_id: blId, bl_sku: kitSku, bl_name: kitName, checked_at: new Date().toISOString() },
+        { onConflict: 'sku' },
+      );
+      if (userId) {
+        await admin.from('audit_log').insert({
+          user_id: userId,
+          user_label: userLabel,
+          user_role: userRole,
+          app: 'baselinker',
+          action: 'baselinker.import',
+          entity_type: 'kit',
+          entity_id: kitSku,
+          entity_label: kitName,
+          summary: `Eksport zestawu do BaseLinkera: ${kitSku} (${Object.keys(bundle).length} skladnikow)`,
+        });
+      }
+      return json({ ok: true, blId, sku: kitSku, components: Object.keys(bundle).length, blWarnings: res.warnings ?? {} });
+    }
+
     // ---- kits-bl: ZESTAWY (bundle) z BaseLinkera wraz ze skladem (tylko odczyt, admin) -------
+
     // Zwraca produkty-zestawy z `bundle_products` (id skladnika -> ilosc) i ich SKU z katalogu BL.
     // Kandydaci: id przekazane przez klienta (juz zaimportowane zestawy) + produkty z "zestaw/komplet" w nazwie.
     if (action === 'kits-bl') {

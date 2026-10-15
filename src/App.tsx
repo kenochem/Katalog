@@ -1998,6 +1998,8 @@ export default function App() {
               canAddToOrder={canUseCrmModule(role)}
               onOrderDraftChange={refreshOrderCount}
               canSyncBl={roleCan(role, 'manageBaselinker')}
+              canEdit={roleCan(role, 'editProduct')}
+              showPrices={roleCan(role, 'viewPrices')}
             />
           </Suspense>
         ) : view === 'progress' ? (

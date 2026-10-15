@@ -248,3 +248,19 @@ export interface BlKitsResponse {
 /** Zestawy (bundle) z BaseLinkera wraz ze składem; `blIds` = id już zaimportowanych zestawów. */
 export const fetchBlKits = (blIds: number[]) => call<BlKitsResponse>({ action: 'kits-bl', blIds });
 
+export interface KitExportInput {
+  code: string;
+  name: string;
+  description?: string;
+  imageUrl?: string;
+  priceGross?: number;
+  items: { sku: string; quantity: number }[];
+}
+/** Tworzy w BaseLinkerze zestaw (bundle) z zestawu własnego katalogu; SKU w BL = kod katalogowy. */
+export const exportKitToBaselinker = (kit: KitExportInput) =>
+  call<{ ok: boolean; blId: number; sku: string; components: number; blWarnings?: Record<string, unknown> }>({
+    action: 'kit-export',
+    kit,
+  });
+
+
