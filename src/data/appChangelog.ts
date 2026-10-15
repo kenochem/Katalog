@@ -13,6 +13,14 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-15',
+    title: 'Wydajność: lżejsze odświeżanie opisów technicznych i szybsze otwieranie profilu',
+    description:
+      'Odświeżanie opisów technicznych w tle (co 5 minut) nie przebudowuje już indeksu wyszukiwarki, gdy nic się nie zmieniło — wcześniej każde sondowanie unieważniało indeks i następne wyszukiwanie liczyło go od nowa. W „Mój profil” cięższe obliczenia (daty zdobycia odznak) wykonują się po wyświetleniu strony, więc profil otwiera się płynnie nawet przy dużej historii aktywności.',
+    tag: 'wydajność',
+  },
+
+  {
+    date: '2026-10-15',
     title: 'Ranking pracowników w profilu',
     description:
       'Nowa zakładka „Ranking” w „Mój profil”: tabela zespołu z punktami pracy w katalogu za wybrany okres (ten tydzień od poniedziałku, ten miesiąc, cały czas) — miejsce z medalami dla pierwszej trójki, avatar z ramką, nazwa, poziom i ranga, motto, pasek względem lidera, liczba punktów i działań; Twój wiersz jest wyróżniony i widać Twoje miejsce. Punkty liczone są z dziennika aktywności po stronie serwera, a w Ustawieniach można włączyć „Ukryj mnie w rankingu zespołu”. Wymaga migracji migration-catalog-leaderboard.sql.',

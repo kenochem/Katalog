@@ -143,7 +143,14 @@ export function UserProfileView({ products, gridDensity, onGridDensityChange, on
 
   const stats = useMemo<ProfileStats | null>(() => (rows ? computeStats(rows) : null), [rows]);
   const states = useMemo<AchievementState[]>(() => (stats ? evaluateAchievements(stats) : []), [stats]);
-  const earnedDates = useMemo(() => (rows ? computeEarnedDates(rows) : {}), [rows]);
+  // daty zdobycia odznak to najcięższe liczenie w profilu — robimy je po pierwszym wyrenderowaniu
+  const [earnedDates, setEarnedDates] = useState<Record<string, (string | null)[]>>({});
+  useEffect(() => {
+    if (!rows) return;
+    const t = window.setTimeout(() => setEarnedDates(computeEarnedDates(rows)), 30);
+    return () => window.clearTimeout(t);
+  }, [rows]);
+
   const summary = useMemo(
     () => (stats && rows ? computeWeeklySummary(stats, rows, earnedDates, displayLabel) : null),
     [stats, rows, earnedDates, displayLabel],

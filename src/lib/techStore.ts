@@ -45,7 +45,9 @@ let version = 0;
 let started = false;
 let inflight: Promise<void> | null = null;
 let lastFetch = 0;
+let loadedOnce = false;
 let tableMissing = false;
+
 const listeners = new Set<() => void>();
 const POLL_MS = 5 * 60_000;
 
@@ -93,9 +95,17 @@ export async function refreshTech(force = false): Promise<void> {
         }
         if (!data || data.length < 1000) break;
       }
+      // odświeżenie nic nie zmieniło — nie unieważniamy indeksu wyszukiwarki (oszczędza przebudowę przy każdym sondowaniu)
+      const sig = (m: Map<string, TechRecord>) => {
+        let latest = '';
+        for (const r of m.values()) if (r.updatedAt > latest) latest = r.updatedAt;
+        return `${m.size}:${latest}`;
+      };
+      const changed = !loadedOnce || sig(records) !== sig(next);
       records = next;
       lastFetch = Date.now();
-      emit();
+      loadedOnce = true;
+      if (changed) emit();
     } catch {
       /* brak sieci / dostępu */
     } finally {
