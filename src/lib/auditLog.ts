@@ -62,6 +62,8 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'roles.matrix': 'Uprawnienia ról',
   'baselinker.push': 'Stany → BaseLinker',
   'baselinker.import': 'Import → BaseLinker',
+  'tech.approve': 'Zatwierdzenie opisów technicznych',
+  'image.optimize': 'Optymalizacja zdjęć',
 };
 
 let actor: AuditActor | null = null;

@@ -12,8 +12,19 @@ export interface CatalogUserPreferences {
   sidebarHidden?: View[];
 }
 
+/** Personalizacja profilu (Mój profil). */
+export interface ProfilePreferences {
+  /** Własne motto / opis pod nazwą (max 80 znaków). */
+  motto?: string;
+  /** Kolor akcentu profilu (klucz z palety). */
+  accent?: string;
+  /** Widok otwierany po wejściu do katalogu. */
+  startView?: View;
+}
+
 export interface UserPreferencesPayload {
   catalog?: CatalogUserPreferences;
+  profile?: ProfilePreferences;
 }
 
 const LOCAL_KEY = 'katalog-user-preferences-cache';
@@ -45,6 +56,7 @@ function mergePayload(
     ...base,
     ...patch,
     catalog: { ...base.catalog, ...patch.catalog },
+    profile: { ...base.profile, ...patch.profile },
   };
 }
 
@@ -108,6 +120,10 @@ export function scheduleSaveUserPreferences(
     saveTimer = null;
     void flushUserPreferences();
   }, 600);
+}
+
+export function getCachedProfilePreferences(): ProfilePreferences {
+  return readLocalCache().profile ?? {};
 }
 
 export function getCachedCatalogPreferences(): CatalogUserPreferences {

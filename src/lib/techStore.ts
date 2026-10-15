@@ -1,6 +1,7 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import type { Product } from '../types';
 import { supabase } from './supabase';
+import { logAudit } from './auditLog';
 import {
   parseTechName,
   rebuildAliases,
@@ -237,6 +238,16 @@ export async function saveTechRecords(inputs: TechSaveInput[], who: string): Pro
   }
   for (const r of rows) {
     records.set(r.sku, rowToRecord(r as unknown as Record<string, unknown>));
+  }
+  const approved = rows.filter((r) => r.status === 'approved').length;
+  if (approved > 0) {
+    logAudit({
+      action: 'tech.approve',
+      entityType: 'tech',
+      entityId: approved === 1 ? rows[0].sku : '',
+      summary: 'Zatwierdzono opisów technicznych: ' + approved,
+      changes: { count: { from: 0, to: approved } },
+    });
   }
   emit();
 }

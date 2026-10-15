@@ -109,6 +109,7 @@ export type View =
   | 'small-images'
   | 'promotions'
   | 'groups'
+  | 'profile'
   | 'catalog-decisions'
   | 'catalog-hidden'
   | 'progress'

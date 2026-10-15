@@ -87,6 +87,7 @@ export function AppHeaderActions({
         subtitle={notificationSubtitle}
       />
       <AppProfileMenu
+        onOpenProfile={APP_PRODUCT === 'catalog' ? () => onNavigate('profile') : undefined}
         onOpenAdmin={onOpenAdmin}
         adminActive={adminActive}
         onOpenChatSettings={onOpenChatSettings}

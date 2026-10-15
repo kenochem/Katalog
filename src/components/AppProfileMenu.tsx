@@ -9,6 +9,7 @@ import {
   Settings2,
   Sun,
   Moon,
+  Trophy,
   Palette,
   UserRound,
   X,
@@ -28,12 +29,15 @@ interface AppProfileMenuProps {
   onOpenAdmin?: () => void;
   adminActive?: boolean;
   onOpenChatSettings?: () => void;
+  /** Katalog: „Mój profil” (statystyki, odznaki, ustawienia). */
+  onOpenProfile?: () => void;
 }
 
 export function AppProfileMenu({
   onOpenAdmin,
   adminActive,
   onOpenChatSettings,
+  onOpenProfile,
 }: AppProfileMenuProps) {
   const {
     mode,
@@ -214,6 +218,21 @@ export function AppProfileMenu({
             )}
           </div>
           <ul className="py-1">
+            {onOpenProfile && (
+              <li>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenProfile();
+                    setOpen(false);
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-800"
+                >
+                  <Trophy className="h-4 w-4 shrink-0 text-brand-400" />
+                  Mój profil, statystyki i odznaki
+                </button>
+              </li>
+            )}
             {onOpenChatSettings && (
               <li>
                 <button

@@ -19,6 +19,7 @@ import {
   type OptimizePolicy,
 } from '../lib/imageOptimize';
 import { confirmDialog } from '../lib/dialog';
+import { logAudit } from '../lib/auditLog';
 import { showToast } from '../lib/toast';
 
 const PAGE = 100;
@@ -194,6 +195,14 @@ export function CatalogImageWeightPanel({ products, onProductClick, onImageUpdat
     setWork(null);
     setSelected(new Set());
     setVersion((v) => v + 1);
+    if (ok > 0) {
+      logAudit({
+        action: 'image.optimize',
+        entityType: 'product',
+        summary: 'Zoptymalizowano zdjęć: ' + ok + ' (oszczędność ' + formatBytes(saved) + ')',
+        changes: { count: { from: 0, to: ok } },
+      });
+    }
     const msg = `Zoptymalizowano ${ok} (oszczędność ${formatBytes(saved)})${skipped ? `, pominięto ${skipped} (już lekkie lub za małe)` : ''}`;
     if (failed.length === 0) showToast(msg, 'ok', 7000);
     else showToast(`${msg}; błąd: ${failed.length} (${failed.slice(0, 5).join(', ')})`, 'warn', 9000);

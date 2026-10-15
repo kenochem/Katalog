@@ -211,6 +211,12 @@ export function CatalogCommandPalette({
         run: wrap(() => onNavigate('new-products')),
       },
       {
+        id: 'nav-profile',
+        label: 'Widok: Mój profil (statystyki, odznaki, ustawienia)',
+        icon: <Wrench className="h-4 w-4" />,
+        run: wrap(() => onNavigate('profile')),
+      },
+      {
         id: 'nav-groups',
         label: 'Widok: Grupy produktów (nyple, trójniki, dysze…)',
         icon: <Wrench className="h-4 w-4" />,

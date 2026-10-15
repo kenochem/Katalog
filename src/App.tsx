@@ -130,6 +130,9 @@ import {
 } from './components/CatalogDecisionView';
 import { getProductDisplayCategory } from './lib/catalogCategory';
 
+const UserProfileView = lazy(() =>
+  import('./components/UserProfileView').then((m) => ({ default: m.UserProfileView })),
+);
 const ProductGroupsView = lazy(() =>
   import('./components/ProductGroupsView').then((m) => ({ default: m.ProductGroupsView })),
 );
@@ -313,6 +316,7 @@ export default function App() {
   const [showScanner, setShowScanner] = useState(false);
   const [missingCategory, setMissingCategory] = useState('Wszystkie');
   const [gridDensity, setGridDensity] = useState<GridDensity>(loadGridDensity);
+  const startViewAppliedRef = useRef(false);
   const [showMobileMore, setShowMobileMore] = useState(false);
   const [syncBusy, setSyncBusy] = useState(false);
   const [collectionsRevision, setCollectionsRevision] = useState(0);
@@ -361,6 +365,12 @@ export default function App() {
         }
       }
       // zapisany w chmurze podział Akcesoria / Produkty jest ignorowany — filtr został usunięty z interfejsu
+      // widok startowy z profilu (tylko przy pierwszym wejściu, gdy użytkownik jeszcze nigdzie nie przeszedł)
+      const startView = prefs.profile?.startView;
+      if (startView && startView !== 'home' && !startViewAppliedRef.current) {
+        startViewAppliedRef.current = true;
+        setView((cur) => (cur === 'home' ? startView : cur));
+      }
     });
   }, [mode, user?.id]);
 
@@ -1995,6 +2005,12 @@ export default function App() {
               onOpenKnowledgeWeak={(cat) => openKnowledgeGaps(cat ?? 'Wszystkie')}
             />
           </Suspense>
+        ) : view === 'profile' && isCatalogProduct() ? (
+          <InlineErrorBoundary label="Mój profil">
+            <Suspense fallback={<ViewFallback />}>
+              <UserProfileView gridDensity={gridDensity} onGridDensityChange={changeGridDensity} />
+            </Suspense>
+          </InlineErrorBoundary>
         ) : view === 'groups' && isCatalogProduct() ? (
           <InlineErrorBoundary label="Grupy produktów">
             <Suspense fallback={<ViewFallback />}>
