@@ -2,7 +2,6 @@ import { useEffect, useLayoutEffect, useState, useCallback, useMemo, lazy, Suspe
 import {
   Search,
   Layers,
-  ImageOff,
   Loader2,
   Star,
   LayoutGrid,
@@ -17,7 +16,6 @@ import {
   Boxes,
   AlertTriangle,
   EyeOff,
-  Camera,
 } from 'lucide-react';
 import type { Product, Kit, View, CatalogType, CatalogListFilter } from './types';
 import { CATALOG_LABELS, deriveCategories } from './types';
@@ -59,7 +57,6 @@ import {
   getLabelQueue,
   type LabelQueueItem,
 } from './lib/labelQueue';
-import { ProductCard } from './components/ProductCard';
 import { CatalogGridCard } from './components/CatalogGridCard';
 import { SearchBar } from './components/SearchBar';
 import { CatalogSmallImagesView } from './components/CatalogSmallImagesView';
@@ -190,11 +187,6 @@ const ManufacturersView = lazy(() =>
 const CatalogHiddenView = lazy(() =>
   import('./components/CatalogHiddenView').then((m) => ({ default: m.CatalogHiddenView })),
 );
-const QuickPhotoCaptureModal = lazy(() =>
-  import('./components/QuickPhotoCaptureModal').then((m) => ({
-    default: m.QuickPhotoCaptureModal,
-  })),
-);
 const CatalogHistoryView = lazy(() =>
   import('./components/CatalogHistoryView').then((m) => ({ default: m.CatalogHistoryView })),
 );
@@ -319,7 +311,8 @@ export default function App() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
-  const [missingCategory, setMissingCategory] = useState('Wszystkie');
+  /** Gotowy filtr listy „Uzupełnianie danych” (np. z podpowiedzi w Postępach): rodzaje braków i kategoria. */
+  const [decisionPreset, setDecisionPreset] = useState<{ kinds: string[]; category?: string; manufacturer?: string; nonce: number } | null>(null);
   const [gridDensity, setGridDensity] = useState<GridDensity>(loadGridDensity);
   const startViewAppliedRef = useRef(false);
   useTaskNotifications(user?.id, mode === 'signed_in' && isCatalogProduct());
@@ -1421,17 +1414,27 @@ export default function App() {
   }, [selectedProduct]);
 
   // Funkcja bywa podpinana wprost jako onClick — wtedy dostaje obiekt zdarzenia zamiast nazwy kategorii.
-  const openMissingImages = useCallback((categoryFilter: unknown = 'Wszystkie') => {
-    setMissingCategory(typeof categoryFilter === 'string' && categoryFilter ? categoryFilter : 'Wszystkie');
-    setView('missing-images');
+  const openDecisions = useCallback((kinds: string[] = [], category?: string, manufacturer?: string) => {
+    setDecisionPreset((p) => ({
+      kinds,
+      category: category && category !== 'Wszystkie' ? category : undefined,
+      manufacturer: manufacturer || undefined,
+      nonce: (p?.nonce ?? 0) + 1,
+    }));
+    setView('catalog-decisions');
   }, []);
 
-  const openKnowledgeGaps = useCallback((categoryFilter: unknown = 'Wszystkie') => {
-    setCategory(typeof categoryFilter === 'string' && categoryFilter ? categoryFilter : 'Wszystkie');
-    setKnowledgeFilter('weak');
-    setView('catalog');
-    setSelectedProduct(null);
-  }, []);
+  // Dawne „Bez zdjęć” to teraz filtr listy Uzupełniania danych.
+  const openMissingImages = useCallback(
+    (categoryFilter: unknown = 'Wszystkie') => {
+      openDecisions(['photo'], typeof categoryFilter === 'string' ? categoryFilter : undefined);
+    },
+    [openDecisions],
+  );
+
+  useEffect(() => {
+    if (view !== 'catalog-decisions' && view !== 'missing-images') setDecisionPreset(null);
+  }, [view]);
 
   const catalogHomeQuickActions = useMemo((): CatalogHomeQuickAction[] => {
     const items: CatalogHomeQuickAction[] = [];
@@ -1476,17 +1479,10 @@ export default function App() {
     if (roleCan(role, 'viewProgress')) {
       items.push({
         id: 'catalog-decisions',
-        label: 'Decyzje',
+        label: 'Uzupełnianie danych',
         icon: <AlertTriangle className="h-4 w-4" />,
         count: catalogDecisionRows.length,
         onClick: () => setView('catalog-decisions'),
-      });
-      items.push({
-        id: 'missing-images',
-        label: 'Bez zdjęć',
-        icon: <ImageOff className="h-4 w-4" />,
-        count: missingImages.length,
-        onClick: () => openMissingImages(),
       });
       items.push({
         id: 'catalog-hidden',
@@ -1957,7 +1953,11 @@ export default function App() {
           </Suspense>
         ) : view === 'catalog-decisions' && isCatalogProduct() ? (
           <CatalogDecisionView
+            key={`preset-${decisionPreset?.nonce ?? 0}`}
             products={activeProducts}
+            initialKinds={decisionPreset?.kinds}
+            initialCategory={decisionPreset?.category}
+            initialManufacturer={decisionPreset?.manufacturer}
             onOpenProduct={setSelectedProduct}
             onApplyCategory={handleApplyDecisionCategory}
             categoryBusyId={categoryBusyId}
@@ -2078,9 +2078,11 @@ export default function App() {
           <Suspense fallback={<ViewFallback />}>
             <CatalogProgressView
               products={activeProducts}
-              onOpenMissing={(cat) => openMissingImages(cat ?? 'Wszystkie')}
-              onOpenKnowledgeWeak={(cat) => openKnowledgeGaps(cat ?? 'Wszystkie')}
+              onOpenDecisions={openDecisions}
+              onOpenProduct={setSelectedProduct}
+              onOpenView={setView}
             />
+
           </Suspense>
         ) : view === 'profile' && isCatalogProduct() ? (
           <InlineErrorBoundary label="Mój profil">
@@ -2126,19 +2128,19 @@ export default function App() {
             />
           </InlineErrorBoundary>
         ) : (
-          <InlineErrorBoundary label="Bez zdjęć">
-            <MissingImagesView
-              products={missingImages}
-              categoryList={categoryList}
-              shopCategoryGroups={shopCategoryGroups}
-              initialCategory={missingCategory}
-              gridDensity={gridDensity}
-              onGridDensityChange={changeGridDensity}
-              onProductClick={setSelectedProduct}
-              onImageUpdated={handleImageUpdated}
-              canUpload={roleCan(role, 'uploadImage')}
-            />
-          </InlineErrorBoundary>
+          <CatalogDecisionView
+            key={`preset-${decisionPreset?.nonce ?? 0}`}
+            products={activeProducts}
+            initialKinds={decisionPreset?.kinds ?? ['photo']}
+            initialCategory={decisionPreset?.category}
+            initialManufacturer={decisionPreset?.manufacturer}
+            onOpenProduct={setSelectedProduct}
+            onApplyCategory={handleApplyDecisionCategory}
+            categoryBusyId={categoryBusyId}
+            onOpenHidden={() => setView('catalog-hidden')}
+            onOpenManufacturers={() => setView('manufacturers')}
+            onHideProducts={handleHideProducts}
+          />
         )}
 
         {canUseCrmModule(role) &&
@@ -2907,258 +2909,6 @@ function CatalogView({
           )}
         />
         </div>
-      )}
-    </div>
-  );
-}
-
-function MissingImagesView({
-  products,
-  categoryList,
-  shopCategoryGroups,
-  initialCategory = 'Wszystkie',
-  gridDensity = 'md',
-  onGridDensityChange,
-  onProductClick,
-  onImageUpdated,
-  canUpload = false,
-}: {
-  products: Product[];
-  categoryList: string[];
-  shopCategoryGroups?: ShopCategoryGroup[];
-  initialCategory?: string;
-  gridDensity?: GridDensity;
-  onGridDensityChange?: (v: GridDensity) => void;
-  onProductClick: (p: Product) => void;
-  onImageUpdated: (id: string, url: string) => void;
-  canUpload?: boolean;
-}) {
-  const [search, setSearch] = useState('');
-  const [category, setCategory] = useState(typeof initialCategory === 'string' ? initialCategory : 'Wszystkie');
-  // Filtry tego widoku są lokalne — nie mieszają się z filtrami głównego katalogu.
-  const [manufacturer, setManufacturer] = useState('Wszyscy');
-  const [stockFilter, setStockFilter] = useState<StockFilter>('all');
-  const [sort, setSort] = useState<CatalogSort>('name-asc');
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [showScanner, setShowScanner] = useState(false);
-  const [quickMode, setQuickMode] = useState(false);
-
-  useEffect(() => {
-    setCategory(typeof initialCategory === 'string' && initialCategory ? initialCategory : 'Wszystkie');
-  }, [initialCategory]);
-
-  // Liczniki uwzględniają pozostałe filtry (kategoria nie zawęża liczników kategorii, producent —
-  // liczników producentów), żeby wybór z listy nie kończył się pustym wynikiem.
-  const forCategoryCounts = useMemo(
-    () =>
-      applyCatalogFilters(products, {
-        search,
-        category: 'Wszystkie',
-        manufacturer,
-        sort: 'name-asc',
-        stockFilter,
-        visibilityFilter: 'all',
-      }),
-    [products, search, manufacturer, stockFilter],
-  );
-  const forManufacturerCounts = useMemo(
-    () =>
-      applyCatalogFilters(products, {
-        search,
-        category,
-        manufacturer: 'Wszyscy',
-        sort: 'name-asc',
-        stockFilter,
-        visibilityFilter: 'all',
-      }),
-    [products, search, category, stockFilter],
-  );
-
-  const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = { Wszystkie: forCategoryCounts.length };
-    for (const p of forCategoryCounts) {
-      const c = getProductDisplayCategory(p);
-      counts[c] = (counts[c] || 0) + 1;
-    }
-    return counts;
-  }, [forCategoryCounts]);
-
-  const mfgCounts = useMemo(() => buildManufacturerCounts(forManufacturerCounts), [forManufacturerCounts]);
-  const manufacturerList = useMemo(() => deriveManufacturers(products), [products]);
-
-  // Kategorie z głównego katalogu + te, które realnie występują wśród produktów bez zdjęcia.
-  const categories = useMemo(() => {
-    const extra = Object.keys(categoryCounts).filter(
-      (c) => c !== 'Wszystkie' && !categoryList.includes(c),
-    );
-    return [...categoryList, ...extra];
-  }, [categoryList, categoryCounts]);
-
-  const filtered = useMemo(
-    () =>
-      applyCatalogFilters(products, {
-        search,
-        category,
-        manufacturer,
-        sort,
-        stockFilter,
-        visibilityFilter: 'all',
-      }),
-    [products, search, category, manufacturer, stockFilter, sort],
-  );
-
-  const topManufacturers = useMemo(
-    () =>
-      Object.entries(buildManufacturerCounts(products))
-        .filter(([m, count]) => m !== 'Wszyscy' && m !== 'Bez producenta' && count > 0)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5),
-    [products],
-  );
-
-  const activeFilterCount =
-    (category !== 'Wszystkie' ? 1 : 0) +
-    (manufacturer !== 'Wszyscy' ? 1 : 0) +
-    (stockFilter !== 'all' ? 1 : 0);
-
-  function resetFilters() {
-    setCategory('Wszystkie');
-    setManufacturer('Wszyscy');
-    setStockFilter('all');
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-amber-500/40 bg-amber-500/15 px-4 py-3">
-        <div>
-          <p className="text-sm text-amber-950 dark:text-amber-100">
-            <strong>{products.length}</strong> produktów bez zdjęcia.
-            Zrób zdjęcie telefonem lub wgraj plik — od razu trafi do katalogu.
-          </p>
-          {topManufacturers.length > 0 && (
-            <p className="mt-2 text-xs text-amber-900/80 dark:text-amber-200/80">
-              Najwięcej braków wg marki:{' '}
-              {topManufacturers.map(([m, count], i) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setManufacturer(m)}
-                  className="underline-offset-2 hover:underline"
-                  title={`Pokaż tylko: ${m}`}
-                >
-                  {i > 0 ? ' · ' : ''}
-                  {m} ({count})
-                </button>
-              ))}
-            </p>
-          )}
-        </div>
-        {canUpload && filtered.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setQuickMode(true)}
-            className="flex shrink-0 items-center gap-1.5 rounded-xl bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-500"
-          >
-            <Camera className="h-4 w-4" />
-            Szybkie zdjęcia ({filtered.length})
-          </button>
-        )}
-      </div>
-
-      <SearchBar
-        value={search}
-        onChange={setSearch}
-        placeholder="Szukaj brakujących zdjęć po SKU, nazwie lub EAN..."
-        onScanClick={() => setShowScanner(true)}
-      />
-
-      <CatalogFilterBar
-        categories={categories}
-        categoryCounts={categoryCounts}
-        category={category}
-        onCategoryChange={setCategory}
-        manufacturers={manufacturerList}
-        manufacturerCounts={mfgCounts}
-        manufacturer={manufacturer}
-        onManufacturerChange={setManufacturer}
-        stockFilter={stockFilter}
-        onStockFilterChange={setStockFilter}
-        imageFilter="all"
-        onImageFilterChange={() => undefined}
-        hideImageFilter
-        shopCategoryGroups={shopCategoryGroups}
-        sort={sort}
-        onSortChange={setSort}
-        sortDisabled={search.trim().length >= 2}
-        density={gridDensity}
-        onDensityChange={(d) => onGridDensityChange?.(d)}
-        filteredCount={filtered.length}
-        searching={search.trim().length >= 2}
-        onResetFilters={resetFilters}
-        mobileFiltersOpen={filtersOpen}
-        onMobileFiltersOpenChange={setFiltersOpen}
-        activeFilterCount={activeFilterCount}
-      />
-
-      <p className="text-sm text-slate-500">
-        {filtered.length} {filtered.length === 1 ? 'produkt' : 'produktów'}
-        {search && ` dla „${search}"`}
-        {manufacturer !== 'Wszyscy' && ` · ${manufacturer}`}
-        {category !== 'Wszystkie' && ` · ${category}`}
-      </p>
-
-      {filtered.length === 0 ? (
-        <div className="py-16 text-center text-slate-500">
-          <ImageOff className="mx-auto h-10 w-10 opacity-40" />
-          <p className="mt-3">Brak produktów w tym filtrze</p>
-          {activeFilterCount > 0 && (
-            <button
-              type="button"
-              onClick={resetFilters}
-              className="mt-3 rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:bg-slate-800"
-            >
-              Wyczyść filtry
-            </button>
-          )}
-        </div>
-      ) : (
-        <ProductGrid
-          products={filtered}
-          className={GRID_CLASS[gridDensity]}
-          resetKey={`missing|${gridDensity}|${category}|${manufacturer}|${stockFilter}|${sort}|${search}|${filtered.length}`}
-          renderItem={(product) => (
-            <ProductCard
-              product={product}
-              onClick={() => onProductClick(product)}
-              showUpload={canUpload}
-              onImageUpdated={onImageUpdated}
-              density={gridDensity}
-            />
-          )}
-        />
-      )}
-
-      {showScanner && (
-        <Suspense fallback={null}>
-          <BarcodeScanner
-            onScan={(code) => {
-              setSearch(code);
-              resetFilters();
-              setShowScanner(false);
-            }}
-            onClose={() => setShowScanner(false)}
-          />
-        </Suspense>
-      )}
-
-      {quickMode && canUpload && (
-        <Suspense fallback={null}>
-          <QuickPhotoCaptureModal
-            products={filtered}
-            onImageUpdated={onImageUpdated}
-            onClose={() => setQuickMode(false)}
-          />
-        </Suspense>
       )}
     </div>
   );

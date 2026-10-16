@@ -132,7 +132,7 @@ export function buildSyncLogSummary(
       label: 'Nowe produkty z Mag',
       value: fields.newSkuFromMag!,
       description:
-        'Nowe indeksy dopisane do katalogu. Warto uzupełnić zdjęcia, opisy i kategorie w widoku „Decyzje” lub „Bez zdjęć”.',
+        'Nowe indeksy dopisane do katalogu. Warto uzupełnić zdjęcia, opisy i kategorie w widoku „Uzupełnianie danych”.',
       tone: 'good',
     });
   }

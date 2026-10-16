@@ -18,6 +18,14 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-16',
+    title: 'Postępy przebudowane na panel statystyk z wykresami; „Decyzje” → „Uzupełnianie danych”; usunięto „Bez zdjęć”',
+    description:
+      'Sekcja „Bez zdjęć” została usunięta z menu — brakujące zdjęcia są filtrem „Brak zdjęcia” w Uzupełnianiu danych (dawne Decyzje), gdzie można je sortować i hurtowo obrabiać; stare skróty prowadzą tam z gotowym filtrem. Dodano filtr kategorii na liście. Postępy zbudowano od nowa jako nowoczesny panel statystyk z wykresami kołowymi, słupkowymi i liniowymi, w pięciu zakładkach: Przegląd (kafle: produkty, średnia kompletność, zdjęcia, EAN, producenci, ceny; poziomy i rozkład kompletności; producenci z najsłabszą kompletnością), Zdjęcia i opisy (zdjęcia, stany, katalogi, pokrycie każdego składnika oceny, kategorie z najmniejszym odsetkiem zdjęć), Producenci i Kategorie (udział, rankingi i tabele z miernikami kompletności, zdjęć i EAN; kliknięcie otwiera Uzupełnianie danych z gotowym filtrem) oraz Zmiany pracowników (aktywność z ostatnich 30 dni, uzupełnione pola, kto pracuje i lista najnowszych zmian produktów — administrator widzi wszystkich, pozostali własne). Na górze zawsze jest karta „Następny krok”: system wylicza, które uzupełnienie podniesie średnią kompletność katalogu najbardziej, i jednym kliknięciem otwiera właściwą listę.',
+    tag: 'nowość',
+  },
+
+  {
+    date: '2026-10-16',
     title: 'Logi → Migracje bazy: kontrola, które migracje są wgrane; naprawa komunikatu w „Mojej kolejce”',
     description:
       'W Logach (dla administratorów) jest nowa zakładka „Migracje bazy”. Aplikacja sama sprawdza próbnymi zapytaniami, czy tabele i kolumny z każdej migracji (supabase/migration-*.sql, 67 plików) istnieją w bazie, i pokazuje stan: wgrana, do wgrania, częściowo, brak dostępu albo nie do sprawdzenia (migracje bez tabel i kolumn, np. funkcje). Domyślnie widać tylko rzeczy do zrobienia, z nazwą brakującego obiektu i przyciskiem kopiowania nazwy pliku. Wyjaśniono też błąd z profilu „Brak tabeli zadań”: komunikat pojawiał się przy każdym błędzie bazy, także gdy tabela istniała, a baza odmawiała dostępu (brak uprawnień GRANT dla zalogowanych). Teraz pokazujemy prawdziwą przyczynę, a nowa migracja migration-grants-fix.sql nadaje brakujące uprawnienia do tabel zadań, producentów, opisów technicznych, promocji i alertów (bezpiecznie pomija tabele, których nie ma).',

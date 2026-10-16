@@ -199,7 +199,7 @@ function hasSpecificCategory(product: Product): boolean {
   return category.length >= 3;
 }
 
-const KNOWLEDGE_CHECKS: {
+export const KNOWLEDGE_CHECKS: {
   label: string;
   weight: number;
   test: (p: Product, meta: ProductMeta) => boolean;

@@ -7,7 +7,6 @@ import {
   X,
   Layers,
   BarChart3,
-  ImageOff,
   Plus,
   Pencil,
   Download,
@@ -201,7 +200,6 @@ export function MobileMoreSheet({
   syncBusy,
   canRequestStockSync,
   decisionCount,
-  missingCount,
   hiddenCount,
   kitsCount,
   collectionsCount = 0,
@@ -342,7 +340,7 @@ export function MobileMoreSheet({
                 <SheetAction
                   active={view === 'catalog-decisions'}
                   icon={<AlertTriangle className="h-4 w-4" />}
-                  label={`Decyzje (${decisionCount})`}
+                  label={`Uzupełnianie danych (${decisionCount})`}
                   onClick={() => go('catalog-decisions')}
                 />
               )}
@@ -361,14 +359,6 @@ export function MobileMoreSheet({
                   icon={<EyeOff className="h-4 w-4" />}
                   label={`Ukryte (${hiddenCount})`}
                   onClick={() => go('catalog-hidden')}
-                />
-              )}
-              {showCatalogTools && roleCan(role, 'viewProgress') && (
-                <SheetAction
-                  active={view === 'missing-images'}
-                  icon={<ImageOff className="h-4 w-4" />}
-                  label={`Bez zdjęć (${missingCount})`}
-                  onClick={() => go('missing-images')}
                 />
               )}
               {showCatalogTools && roleCan(role, 'viewProgress') && (

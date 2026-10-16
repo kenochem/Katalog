@@ -136,6 +136,9 @@ export function CatalogDecisionView({
   onOpenHidden,
   onHideProducts,
   onOpenManufacturers,
+  initialKinds,
+  initialCategory,
+  initialManufacturer,
 }: {
   products: Product[];
   onOpenProduct: (product: Product) => void;
@@ -144,13 +147,18 @@ export function CatalogDecisionView({
   onOpenHidden?: () => void;
   onHideProducts?: (products: Product[], reason: string) => void | Promise<void>;
   onOpenManufacturers?: () => void;
+  /** Wstępnie zaznaczone rodzaje braków (np. „photo” z Postępów). */
+  initialKinds?: string[];
+  initialCategory?: string;
+  initialManufacturer?: string;
 }) {
-  const [kinds, setKinds] = useState<Set<string>>(new Set());
+  const [kinds, setKinds] = useState<Set<string>>(new Set(initialKinds ?? []));
+  const [categoryFilter, setCategoryFilter] = useState(initialCategory ?? '');
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<SortKey>('urgent');
   const [stockFilter, setStockFilter] = useState<StockFilter>('all');
   const [catalogFilter, setCatalogFilter] = useState<CatalogFilter>('all');
-  const [manufacturer, setManufacturer] = useState('');
+  const [manufacturer, setManufacturer] = useState(initialManufacturer ?? '');
   const [pageSize, setPageSize] = useState(50);
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -168,6 +176,14 @@ export function CatalogDecisionView({
     for (const r of rows) {
       const m = effectiveManufacturer(r.product) || 'Bez producenta';
       map.set(m, (map.get(m) || 0) + 1);
+    }
+    return [...map.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'pl'));
+  }, [rows]);
+  const categories = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const r of rows) {
+      const c = getProductDisplayCategory(r.product);
+      map.set(c, (map.get(c) || 0) + 1);
     }
     return [...map.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'pl'));
   }, [rows]);
@@ -189,6 +205,7 @@ export function CatalogDecisionView({
       if (stockFilter === 'with' && !((p.stock ?? 0) > 0)) return false;
       if (stockFilter === 'without' && (p.stock ?? 0) > 0) return false;
       if (catalogFilter !== 'all' && (p.catalog || 'accessories') !== catalogFilter) return false;
+      if (categoryFilter && getProductDisplayCategory(p) !== categoryFilter) return false;
       if (manufacturer && (effectiveManufacturer(p) || 'Bez producenta') !== manufacturer) return false;
       return true;
     });
@@ -199,7 +216,7 @@ export function CatalogDecisionView({
     else if (sort === 'complete') list.sort((a, b) => a.knowledgeScore - b.knowledgeScore || byName(a, b));
     else if (sort === 'stock') list.sort((a, b) => (b.product.stock ?? 0) - (a.product.stock ?? 0) || byName(a, b));
     return list;
-  }, [rows, query, kinds, stockFilter, catalogFilter, manufacturer, sort]);
+  }, [rows, query, kinds, stockFilter, catalogFilter, manufacturer, categoryFilter, sort]);
 
   const pageCount = Math.max(1, Math.ceil(filteredRows.length / pageSize));
   const currentPage = Math.min(page, pageCount - 1);
@@ -209,12 +226,17 @@ export function CatalogDecisionView({
   const selectedRows = filteredRows.filter((r) => selected.has(r.product.id));
   const selectedCategoryRows = selectedRows.filter((r) => onApplyCategory && hasCategoryDecision(r.product));
   const filtersActive =
-    kinds.size > 0 || query.trim() !== '' || stockFilter !== 'all' || catalogFilter !== 'all' || manufacturer !== '';
+    kinds.size > 0 ||
+    query.trim() !== '' ||
+    stockFilter !== 'all' ||
+    catalogFilter !== 'all' ||
+    manufacturer !== '' ||
+    categoryFilter !== '';
 
   useEffect(() => {
     setPage(0);
     setSelected(new Set());
-  }, [kinds, query, sort, stockFilter, catalogFilter, manufacturer, pageSize]);
+  }, [kinds, query, sort, stockFilter, catalogFilter, manufacturer, categoryFilter, pageSize]);
 
   function toggleKind(key: string) {
     setKinds((prev) => {
@@ -231,6 +253,7 @@ export function CatalogDecisionView({
     setStockFilter('all');
     setCatalogFilter('all');
     setManufacturer('');
+    setCategoryFilter('');
   }
 
   function toggleSelected(id: string) {
@@ -309,7 +332,8 @@ export function CatalogDecisionView({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `decyzje-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `uzupelnianie-danych-${new Date().toISOString().slice(0, 10)}.csv`;
+
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -325,9 +349,9 @@ export function CatalogDecisionView({
             <p className="text-xs font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
               Porządkowanie katalogu
             </p>
-            <h2 className="mt-1 text-xl font-bold text-slate-950 dark:text-slate-50">Decyzje i trudne przypadki</h2>
+            <h2 className="mt-1 text-xl font-bold text-slate-950 dark:text-slate-50">Uzupełnianie danych</h2>
             <p className="mt-1 max-w-3xl text-sm text-slate-700 dark:text-slate-400">
-              Wszystkie produkty wymagające decyzji: kategoria, zdjęcie, EAN, producent, opis, cena albo powiązanie.
+              Wszystkie produkty z brakami: zdjęcie, kategoria, EAN, producent, opis, cena albo powiązanie.
               Filtry i akcje masowe są w panelu obok listy.
             </p>
           </div>
@@ -541,6 +565,17 @@ export function CatalogDecisionView({
                 );
               })}
             </div>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">Kategoria</span>
+              <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className={selectCls}>
+                <option value="">Wszystkie ({categories.length})</option>
+                {categories.map(([c, n]) => (
+                  <option key={c} value={c}>
+                    {c} ({n})
+                  </option>
+                ))}
+              </select>
+            </label>
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">Producent</span>
               <select value={manufacturer} onChange={(e) => setManufacturer(e.target.value)} className={selectCls}>

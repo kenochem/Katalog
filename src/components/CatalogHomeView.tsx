@@ -254,12 +254,12 @@ export function CatalogHomeView({
         <div className="divide-y divide-slate-100 dark:divide-slate-800">
           <TaskRow
             icon={<AlertTriangle className="h-4 w-4" />}
-            label="Decyzje"
+            label="Uzupełnianie danych"
             description="Kategorie, brakujące źródła danych i trudne przypadki do ręcznego sprawdzenia."
             value={decisionCount}
             total={stats.total}
             tone="warn"
-            actionLabel="Przejdź do decyzji"
+            actionLabel="Uzupełnij dane"
             onClick={quickActions.find((a) => a.id === 'catalog-decisions')?.onClick}
           />
           <TaskRow
