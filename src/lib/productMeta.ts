@@ -8,6 +8,10 @@ export interface ProductMeta {
   unit?: string;
   vatRate?: number;
   shortDescription?: string;
+  /** Dodatkowe opisy (HTML): sposób użycia, skład / dane techniczne, bezpieczeństwo — pola tekstowe BL. */
+  descUsage?: string;
+  descComposition?: string;
+  descSafety?: string;
   internalNote?: string;
   /** Poprzedni / błędny kod (np. BL…) — sync WAPRO próbuje też ten indeks. */
   legacySku?: string;
@@ -52,6 +56,9 @@ export const PRODUCT_META_LABELS: Record<
   Exclude<
     keyof ProductMeta,
     | 'knowledgeBotLast'
+    | 'descUsage'
+    | 'descComposition'
+    | 'descSafety'
     | 'parameters'
     | 'shopCategoryPath'
     | 'shopCategoryWpId'
@@ -110,6 +117,10 @@ export function normalizeProductMeta(raw: unknown): ProductMeta | undefined {
   str('previousSku');
   str('unit');
   str('shortDescription');
+  str('descUsage');
+  str('descComposition');
+  str('descSafety');
+
   str('internalNote');
   str('shopCategoryPath');
   str('categoryAssignedBy');

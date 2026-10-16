@@ -6,6 +6,7 @@ import { resolveProductLocation } from './locationStore';
 import { formatDimensions, normalizeProductMeta, type ProductMeta } from './productMeta';
 import { inferProductTypeLabel } from './catalogKind';
 import { getProductDisplayCategory, productNeedsCategoryDecision } from './catalogCategory';
+import { DESC_FIELDS, charCount } from './productDescriptions';
 
 export type KnowledgeLevel = 'weak' | 'fair' | 'good' | 'rich';
 
@@ -126,6 +127,10 @@ function buildKnowledgeText(
       : '',
     ctx.short ? `Krótki opis: ${ctx.short}` : '',
     ctx.desc ? `Opis: ${ctx.desc}` : '',
+    meta.descUsage ? `Sposób użycia: ${stripHtml(meta.descUsage, 0)}` : '',
+    meta.descComposition ? `Skład / dane techniczne: ${stripHtml(meta.descComposition, 0)}` : '',
+    meta.descSafety ? `Bezpieczeństwo: ${stripHtml(meta.descSafety, 0)}` : '',
+
   ];
 
   if (ctx.params) {
@@ -213,6 +218,19 @@ const KNOWLEDGE_CHECKS: {
     label: `Pełny opis min. ${MIN_FULL_DESCRIPTION_CHARS} znaków`,
     weight: 18,
     test: hasUsefulDescription,
+  },
+  {
+    label: `Krótki opis min. ${DESC_FIELDS[1].minChars} znaków`,
+    weight: 6,
+    test: (_p, m) => charCount(m.shortDescription ?? '') >= DESC_FIELDS[1].minChars,
+  },
+  {
+    label: 'Sposób użycia, skład lub bezpieczeństwo',
+    weight: 6,
+    test: (_p, m) =>
+      charCount(m.descUsage ?? '') >= DESC_FIELDS[2].minChars ||
+      charCount(m.descComposition ?? '') >= DESC_FIELDS[3].minChars ||
+      charCount(m.descSafety ?? '') >= DESC_FIELDS[4].minChars,
   },
   {
     label: 'Kategoria szczegółowa',

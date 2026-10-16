@@ -263,6 +263,28 @@ export const exportKitToBaselinker = (kit: KitExportInput) =>
     kit,
   });
 
+export type BlDescriptionKey =
+  | 'description'
+  | 'description_extra1'
+  | 'description_extra2'
+  | 'description_extra3'
+  | 'description_extra4';
+
+/** Pobiera pola opisowe produktu z BaseLinkera (szukając po SKU). */
+export const fetchBlDescriptions = (sku: string) =>
+  call<{ found: boolean; blId?: number; text?: Partial<Record<BlDescriptionKey, string>> }>({
+    action: 'description-get',
+    sku,
+  });
+
+/** Wysyła niepuste opisy do produktu w BaseLinkerze (pozostałe pola tekstowe zostają bez zmian). */
+export const pushBlDescriptions = (sku: string, fields: Partial<Record<BlDescriptionKey, string>>) =>
+  call<{ ok: boolean; blId: number; sent: string[]; found?: boolean }>({
+    action: 'description-push',
+    sku,
+    fields,
+  });
+
 export interface BlManufacturer {
   id: number;
   name: string;

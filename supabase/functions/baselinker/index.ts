@@ -921,8 +921,64 @@ Deno.serve(async (req) => {
       return json({ created, existing, items });
     }
 
+    // ---- opisy produktu (pobranie z BL / wysłanie do BL) -------------------------------------
+    if (action === 'description-get' || action === 'description-push') {
+      needAdmin();
+      if (isSystem) return json({ error: 'Niedostepne dla service_role' }, 400);
+      const sku = String(body.sku ?? '').trim();
+      if (!sku) return json({ error: 'Brak sku' }, 400);
+      const candidates = [...new Set([sku, sku.toUpperCase(), normSku(sku)])];
+      let found: Record<string, unknown> | null = null;
+      for (const c of candidates) {
+        const list = await bl('getInventoryProductsList', { inventory_id: INVENTORY_ID, filter_sku: c });
+        const arr = Object.values((list.products ?? {}) as Record<string, Record<string, unknown>>);
+        found = arr.find((p) => normSku(String(p.sku ?? '')) === normSku(sku)) ?? null;
+        if (found) break;
+      }
+      if (!found) return json({ found: false, sku });
+      const blId = Number(found.id);
+      const full = await bl('getInventoryProductsData', { inventory_id: INVENTORY_ID, products: [blId] });
+      const p = ((full.products ?? {}) as Record<string, Record<string, unknown>>)[String(blId)] ?? found;
+      const text = ((p.text_fields ?? {}) as Record<string, unknown>) ?? {};
+      const KEYS = ['description', 'description_extra1', 'description_extra2', 'description_extra3', 'description_extra4'];
+
+      if (action === 'description-get') {
+        const out: Record<string, string> = {};
+        for (const k of KEYS) out[k] = String(text[k] ?? '');
+        return json({ found: true, blId, text: out });
+      }
+
+      const incoming = (body.fields ?? {}) as Record<string, unknown>;
+      const patch: Record<string, string> = {};
+      for (const k of KEYS) {
+        const v = incoming[k];
+        if (typeof v === 'string' && v.trim()) patch[k] = v;
+      }
+      if (!Object.keys(patch).length) return json({ error: 'Brak opisów do wysłania' }, 400);
+      // zachowujemy pozostałe pola tekstowe (nazwa, cechy…): wysyłamy aktualne + nadpisane opisy
+      await bl('addInventoryProduct', {
+        inventory_id: INVENTORY_ID,
+        product_id: blId,
+        text_fields: { ...text, ...patch },
+      });
+      if (userId) {
+        await admin.from('audit_log').insert({
+          user_id: userId,
+          user_label: userLabel,
+          user_role: userRole,
+          app: 'baselinker',
+          action: 'baselinker.description',
+          entity_type: 'product',
+          entity_id: sku.toUpperCase(),
+          summary: `Opisy -> BaseLinker (${Object.keys(patch).length} pol)`,
+        });
+      }
+      return json({ ok: true, blId, sent: Object.keys(patch) });
+    }
+
     // ---- product -------------------------------------------------------------------------
     if (action === 'product') {
+
 
       if (isSystem) return json({ error: 'Niedostepne dla service_role' }, 400);
       const sku = String(body.sku ?? '').trim();

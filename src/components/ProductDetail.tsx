@@ -28,6 +28,20 @@ import {
   stripHtml,
 } from '../lib/format';
 import { addToLabelQueue } from '../lib/labelQueue';
+import {
+  blTextFromDesc,
+  DESC_FIELDS,
+  descFromBlText,
+  descValuesOf,
+  sanitizeDescriptionHtml,
+  toEditorHtml,
+  type DescKey,
+  type DescValues,
+} from '../lib/productDescriptions';
+import { fetchBlDescriptions, pushBlDescriptions } from '../lib/baselinkerApi';
+import { DescriptionBlBar, ProductDescriptionsEditor, ProductDescriptionsView } from './product/ProductDescriptionsTab';
+import { RichTextField } from './product/RichTextField';
+
 import { showToast } from '../lib/toast';
 import { roleCan, type AppRole } from '../lib/roles';
 import { ProductTechPanel } from './product/ProductTechPanel';
@@ -57,7 +71,6 @@ import {
   ProductDetailDataPanel,
   ProductDetailPriceGrid,
   ProductDetailCatalogQuickActions,
-  ProductDetailDescPanel,
   ProductDetailAiPanel,
   parametersToText,
   type ProductMeta,
@@ -210,7 +223,7 @@ export function ProductDetail({
             variants: full.variants?.length ? full.variants : product.variants,
             isGroup: full.isGroup ?? product.isGroup ?? (full.variants?.length ?? 0) > 0,
           });
-          setDescription(stripHtml(full.description));
+          setDescription(full.description ?? '');
           setEan(full.ean || '');
           setStock(full.stock ?? 0);
           setEditMeta({ ...full.meta });
@@ -501,9 +514,12 @@ export function ProductDetail({
         displayName,
         category,
         manufacturer: normalizeManufacturer(manufacturer.trim()),
-        description,
         ean: normalizedEan,
       };
+      // opis zapisujemy tylko po zmianie (nie nadpisujemy pełnego HTML-a skróconą/uproszczoną kopią)
+      if (description !== (detail.description ?? '')) {
+        updates.description = sanitizeDescriptionHtml(description);
+      }
       if (skuChanged) {
         updates.sku = normalizedSku;
         updates.stockManual = stockTouched;
@@ -626,6 +642,88 @@ export function ProductDetail({
     ).sort((a, b) => a.localeCompare(b, 'pl'));
   }, [detail.category]);
   const displayManufacturer = effectiveManufacturer(detail);
+
+  // ---- opisy: bieżące wartości (w edycji z edytora, poza edycją z zapisanego produktu) + BaseLinker ----
+  const [descBusy, setDescBusy] = useState<'pull' | 'push' | null>(null);
+  const [descReset, setDescReset] = useState(0);
+  const canBlDesc = roleCan(role, 'manageBaselinker');
+  const currentDescValues: DescValues = editing
+    ? {
+        description,
+        shortDescription: editMeta.shortDescription ?? '',
+        descUsage: editMeta.descUsage ?? '',
+        descComposition: editMeta.descComposition ?? '',
+        descSafety: editMeta.descSafety ?? '',
+      }
+    : descValuesOf({ description: description || detail.description || '', meta: detail.meta });
+
+  async function pullDescFromBl() {
+    setDescBusy('pull');
+    try {
+      const res = await fetchBlDescriptions(detail.sku);
+      if (!res.found) {
+        showToast(`Nie znaleziono produktu ${detail.sku} w BaseLinkerze`, 'warn', 5000);
+        return;
+      }
+      const fromBl = descFromBlText(res.text);
+      const keys = Object.keys(fromBl) as DescKey[];
+      if (keys.length === 0) {
+        showToast('W BaseLinkerze ten produkt nie ma opisów', 'info', 5000);
+        return;
+      }
+      const names = DESC_FIELDS.filter((d) => keys.includes(d.key)).map((d) => d.label);
+      const ok = await confirmDialog({
+        title: 'Pobranie opisów z BaseLinkera',
+        message: `Z BaseLinkera zostaną wczytane pola: ${names.join(', ')}. Zastąpią obecne teksty w edytorze (zapis dopiero po kliknięciu „Zapisz”). Kontynuować?`,
+        confirmLabel: 'Wczytaj',
+        tone: 'info',
+      });
+      if (!ok) return;
+      setEditing(true);
+      setDetailTab('desc');
+      if (fromBl.description !== undefined) setDescription(fromBl.description);
+      setEditMeta((m: ProductMeta) => ({
+        ...m,
+        ...(fromBl.shortDescription !== undefined ? { shortDescription: fromBl.shortDescription } : {}),
+        ...(fromBl.descUsage !== undefined ? { descUsage: fromBl.descUsage } : {}),
+        ...(fromBl.descComposition !== undefined ? { descComposition: fromBl.descComposition } : {}),
+        ...(fromBl.descSafety !== undefined ? { descSafety: fromBl.descSafety } : {}),
+      }));
+      setDescReset((r) => r + 1);
+      showToast(`Wczytano z BaseLinkera: ${names.join(', ')} — sprawdź i zapisz`, 'ok', 6000);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Nie udało się pobrać opisów z BaseLinkera', 'error', 7000);
+    } finally {
+      setDescBusy(null);
+    }
+  }
+
+  async function pushDescToBl() {
+    const fields = blTextFromDesc(currentDescValues);
+    const count = Object.keys(fields).length;
+    if (count === 0) {
+      showToast('Brak opisów do wysłania', 'info');
+      return;
+    }
+    const ok = await confirmDialog({
+      title: 'Wysłanie opisów do BaseLinkera',
+      message: `Wysłać ${count} ${count === 1 ? 'pole' : 'pól'} opisowych do produktu ${detail.sku} w BaseLinkerze? Nadpisze odpowiadające im opisy w BL${editing ? ' (zostaną wysłane aktualne treści z edytora, także niezapisane)' : ''}.`,
+      confirmLabel: 'Wyślij do BL',
+      tone: 'warn',
+    });
+    if (!ok) return;
+    setDescBusy('push');
+    try {
+      const res = await pushBlDescriptions(detail.sku, fields);
+      if (res.found === false) showToast(`Nie znaleziono produktu ${detail.sku} w BaseLinkerze`, 'warn', 5000);
+      else showToast(`Wysłano do BaseLinkera: ${res.sent.length} pól`, 'ok', 5000);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Nie udało się wysłać opisów do BaseLinkera', 'error', 7000);
+    } finally {
+      setDescBusy(null);
+    }
+  }
+
   const variantCount = detail.variants?.length ?? 0;
   const isGroup = detail.isGroup || variantCount > 0;
   const hasPrimary = !!primaryImage;
@@ -1166,7 +1264,7 @@ export function ProductDetail({
                   roleCan(role, 'editProduct')
                     ? () => {
                         setEditing(true);
-                        setDetailTab('info');
+                        setDetailTab('desc');
                       }
                     : undefined
                 }
@@ -1203,12 +1301,14 @@ export function ProductDetail({
           )}
 
           {hubStyle && !editing && detailTab === 'desc' && (
-            <ProductDetailDescPanel
-              description={description}
-              shortDescription={detail.meta?.shortDescription}
-              loading={detailLoading}
-              loadError={detailLoadError}
-            />
+            <div className="space-y-3">
+              {canBlDesc && <DescriptionBlBar busy={descBusy} onPull={() => void pullDescFromBl()} onPush={() => void pushDescToBl()} />}
+              <ProductDescriptionsView
+                values={currentDescValues}
+                loading={detailLoading}
+                loadError={detailLoadError}
+              />
+            </div>
           )}
 
           {hubStyle && editing && detailTab === 'info' && (
@@ -1428,21 +1528,20 @@ export function ProductDetail({
           )}
 
           {hubStyle && editing && detailTab === 'desc' && (
-            <label className="block">
-              <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
-                Opis produktu
-              </span>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={16}
-                className="input-field min-h-[min(50vh,22rem)] resize-y leading-relaxed"
-                placeholder="Opis widoczny w katalogu i ofercie…"
+            <div className="space-y-3">
+              {canBlDesc && <DescriptionBlBar busy={descBusy} onPull={() => void pullDescFromBl()} onPush={() => void pushDescToBl()} />}
+              <ProductDescriptionsEditor
+                values={currentDescValues}
+                resetKey={descReset}
+                onChange={(key, value) => {
+                  if (key === 'description') setDescription(value);
+                  else setEditMeta((m: ProductMeta) => ({ ...m, [key]: value }));
+                }}
               />
-              <span className="mt-2 block text-[11px] text-slate-500">
-                Edytujesz w zakładce Opisy — zapis obejmuje też dane z zakładki Dane.
+              <span className="block text-[11px] text-slate-500">
+                Zapis obejmuje też dane z zakładki Dane. Opis pełny i dodatkowe opisy mają formatowanie (HTML) zgodne z BaseLinkerem.
               </span>
-            </label>
+            </div>
           )}
 
           {hubStyle && editing && detailTab === 'variants' && variantCount > 0 && detail.variants && (
@@ -1539,12 +1638,7 @@ export function ProductDetail({
               </label>
               <label className="block">
                 <span className="mb-1 text-xs text-slate-500">Opis / notatki</span>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={3}
-                  className="input-field resize-none"
-                />
+                <RichTextField value={toEditorHtml(description)} onChange={setDescription} minHeight={110} />
               </label>
               <label className="block">
                 <span className="mb-1 inline-flex items-center gap-1 text-xs text-slate-500">
@@ -1713,7 +1807,7 @@ export function ProductDetail({
                 )}
 
               {description && (
-                <p className="text-sm leading-relaxed text-slate-400">{description}</p>
+                <p className="text-sm leading-relaxed text-slate-400">{stripHtml(description, 600)}</p>
               )}
 
               {variantCount > 0 && detail.variants && (
