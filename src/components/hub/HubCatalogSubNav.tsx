@@ -1,4 +1,4 @@
-import { AlertTriangle, BarChart3, BookOpen, EyeOff, Home, ImageOff, Layers, Maximize2, Printer, Search, Star } from 'lucide-react';
+import { AlertTriangle, BarChart3, BookOpen, Building2, EyeOff, Home, ImageOff, Layers, Maximize2, Printer, Search, Star } from 'lucide-react';
 import type { View } from '../../types';
 
 export function HubCatalogSubNav({
@@ -39,7 +39,9 @@ export function HubCatalogSubNav({
   if (role.progress) {
     tabs.push({ id: 'progress', label: 'Postęp', icon: BarChart3 });
     tabs.push({ id: 'catalog-decisions', label: 'Decyzje', icon: AlertTriangle, count: counts.decisions });
+    tabs.push({ id: 'manufacturers', label: 'Producenci', icon: Building2 });
     tabs.push({ id: 'catalog-hidden', label: 'Ukryte', icon: EyeOff, count: counts.hidden });
+
     tabs.push({ id: 'missing-images', label: 'Bez zdjęć', icon: ImageOff, count: counts.missing });
     tabs.push({ id: 'small-images', label: 'Do poprawy', icon: Maximize2 });
   }

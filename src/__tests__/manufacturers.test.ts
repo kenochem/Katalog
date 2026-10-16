@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   getExtraManufacturers,
+  isStaticManufacturer,
+  setRemovedManufacturers,
+
   manufacturerOptions,
   normalizeManufacturer,
   setExtraManufacturers,
@@ -22,6 +25,18 @@ describe('producenci spoza listy WAPRO', () => {
     setExtraManufacturers(['Alfa Clean']);
     expect(normalizeManufacturer('  alfa   clean ')).toBe('Alfa Clean');
     expect(normalizeManufacturer('sonax')).toBe('SONAX');
+  });
+
+  it('wycofany producent znika z listy wyboru, a statyczny jest rozpoznawany', () => {
+    setRemovedManufacturers(['KALA', 'Stara Marka']);
+    setExtraManufacturers(['Stara Marka', 'Nowa Marka']);
+    const opts = manufacturerOptions(['Stara Marka']);
+    expect(opts).not.toContain('KALA');
+    expect(opts).not.toContain('Stara Marka');
+    expect(opts).toContain('Nowa Marka');
+    expect(isStaticManufacturer('kala')).toBe(true);
+    expect(isStaticManufacturer('Nowa Marka')).toBe(false);
+    setRemovedManufacturers([]);
   });
 
   it('po wyczyszczeniu rejestru dodani producenci znikają, WAPRO zostaje', () => {

@@ -119,6 +119,8 @@ export type View =
   | 'profile'
   | 'catalog-decisions'
   | 'catalog-hidden'
+  | 'manufacturers'
+
   | 'progress'
   | 'favorites'
   | 'labels'

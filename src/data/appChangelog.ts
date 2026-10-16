@@ -18,6 +18,14 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-16',
+    title: 'Nowa sekcja „Producenci” w menu: profile marek z logo, opisem i zmianą nazwy',
+    description:
+      'W menu (Katalog → Producenci, także w menu mobilnym i zakładkach) jest osobny widok do pracy z markami. Po lewej lista wszystkich producentów z logo, liczbą produktów i oznaczeniami (WAPRO / ręczny / BaseLinker, brak logo lub opisu), wyszukiwarka i sortowanie (nazwa, liczba produktów, najmniej uzupełnieni). Po prawej profil wybranego producenta: wgrywanie i zmiana logo, opis marki, strona WWW, e-mail, telefon, notatki wewnętrzne, statystyki (produkty, odsetek zdjęć, brak EAN, stan magazynowy), przycisk „Pokaż produkty w katalogu” oraz zmiana nazwy, która poprawia producenta we wszystkich jego produktach (np. niedokładne nazwy z WAPRO). Można też dodać nowego producenta, usunąć nieużywanego, pobrać listę z BaseLinkera i wysłać tam brakujących. Przycisk „Producenci” w Decyzjach prowadzi teraz do tego widoku. Wymaga uruchomienia (ponownie) migracji migration-catalog-manufacturers.sql.',
+    tag: 'nowość',
+  },
+
+  {
+    date: '2026-10-16',
     title: 'Producenci: dodawanie nowych, lista wspólna i synchronizacja z BaseLinkerem',
     description:
       'Lista producentów nie jest już ograniczona do nazw z WAPRO. W edycji produktu i przy dodawaniu produktu na końcu listy producentów jest „+ Nowy producent…”, a nowa marka trafia do wspólnej listy dla wszystkich użytkowników. W Decyzjach jest nowy przycisk „Producenci”: lista wszystkich marek z liczbą produktów i oznaczeniem źródła (WAPRO / ręczny / BaseLinker), dodawanie nowych, „Pobierz z BaseLinkera” (import listy producentów z BL) oraz „Wyślij do BaseLinkera” (zaznaczonych albo wszystkich brakujących — brakujące marki są tworzone w BL, istniejących nie dublujemy). Dzięki temu produkty wysyłane do BaseLinkera dostają właściwego producenta. Wymaga migracji bazy migration-catalog-manufacturers.sql i wdrożenia funkcji baselinker; wysyłka i pobieranie z BL wymagają uprawnienia do zarządzania BaseLinkerem.',

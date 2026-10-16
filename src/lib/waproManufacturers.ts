@@ -107,6 +107,18 @@ export function getExtraManufacturers(): string[] {
   return EXTRA_MANUFACTURERS;
 }
 
+/** Producenci wycofani z listy wyboru (np. po zmianie nazwy niedokładnej marki z WAPRO). */
+let REMOVED_MANUFACTURERS = new Set<string>();
+
+export function setRemovedManufacturers(names: string[]): void {
+  REMOVED_MANUFACTURERS = new Set(names.map((n) => normalizeManufacturerKey(n)));
+}
+
+export function isStaticManufacturer(name: string): boolean {
+  const k = normalizeManufacturerKey(name);
+  return WAPRO_MANUFACTURERS.some((m) => normalizeManufacturerKey(m) === k);
+}
+
 function normalizeManufacturerKey(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, ' ');
 }
@@ -146,6 +158,7 @@ export function manufacturerOptions(existing: string[] = []): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const name of WAPRO_MANUFACTURERS) {
+    if (REMOVED_MANUFACTURERS.has(normalizeManufacturerKey(name))) continue;
     if (!seen.has(name)) {
       seen.add(name);
       out.push(name);
@@ -155,7 +168,9 @@ export function manufacturerOptions(existing: string[] = []): string[] {
     const m = raw?.trim();
 
     if (!m || isPlaceholderManufacturer(m)) continue;
+    if (REMOVED_MANUFACTURERS.has(normalizeManufacturerKey(m))) continue;
     const norm = normalizeManufacturer(m);
+
     if (!seen.has(norm)) {
       seen.add(norm);
       out.push(norm);

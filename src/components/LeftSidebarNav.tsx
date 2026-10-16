@@ -24,6 +24,7 @@ import {
   Tag,
   TrendingUp,
   Wrench,
+  Building2,
 } from 'lucide-react';
 import type { View } from '../types';
 import { canAccessAdminPanel } from '../lib/adminAccess';
@@ -68,6 +69,7 @@ const DEFAULT_ORDER: View[] = [
   'progress',
   'catalog-decisions',
   'catalog-hidden',
+  'manufacturers',
   'missing-images',
   'small-images',
   'promotions',
@@ -297,9 +299,17 @@ export function LeftSidebarNav({
         onClick: () => setView('catalog-decisions'),
       },
       {
+        id: 'manufacturers',
+        icon: <Building2 className="h-4 w-4" />,
+        label: 'Producenci',
+        available: isCatalogProduct && roleCan(role, 'viewProgress'),
+        onClick: () => setView('manufacturers'),
+      },
+      {
         id: 'catalog-hidden',
         icon: <EyeOff className="h-4 w-4" />,
         label: 'Ukryte',
+
         count: hiddenProductsCount,
         highlight: hiddenProductsCount > 0,
         available: roleCan(role, 'viewProgress'),

@@ -184,6 +184,9 @@ const CatalogChangelogView = lazy(() =>
     default: m.CatalogChangelogView,
   })),
 );
+const ManufacturersView = lazy(() =>
+  import('./components/ManufacturersView').then((m) => ({ default: m.ManufacturersView })),
+);
 const CatalogHiddenView = lazy(() =>
   import('./components/CatalogHiddenView').then((m) => ({ default: m.CatalogHiddenView })),
 );
@@ -514,6 +517,7 @@ export default function App() {
     if (!roleCan(role, 'viewProgress') && view === 'progress') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'catalog-decisions') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'catalog-hidden') setView(fallback);
+    if (!roleCan(role, 'viewProgress') && view === 'manufacturers') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'small-images') setView(fallback);
     if (!roleCan(role, 'viewPrices') && view === 'promotions') setView(fallback);
     if (!roleCan(role, 'manageFavorites') && view === 'favorites') setView(fallback);
@@ -1958,8 +1962,20 @@ export default function App() {
             onApplyCategory={handleApplyDecisionCategory}
             categoryBusyId={categoryBusyId}
             onOpenHidden={() => setView('catalog-hidden')}
+            onOpenManufacturers={() => setView('manufacturers')}
             onHideProducts={handleHideProducts}
           />
+        ) : view === 'manufacturers' && isCatalogProduct() ? (
+          <Suspense fallback={<ViewFallback />}>
+            <ManufacturersView
+              products={activeAllProducts}
+              onShowProducts={(name) => {
+                setManufacturer(name);
+                setView('catalog');
+              }}
+            />
+          </Suspense>
+
         ) : view === 'catalog-hidden' && isCatalogProduct() ? (
           <Suspense fallback={<ViewFallback />}>
             <CatalogHiddenView
