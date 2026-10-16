@@ -2,7 +2,9 @@ import { Camera, Loader2, Save, Upload, X } from 'lucide-react';
 import { useRef, useState } from 'react';
 import type { Product, CatalogType } from '../types';
 import { ACCESSORY_CATEGORIES, deriveCategories } from '../types';
-import { manufacturerOptions, normalizeManufacturer } from '../lib/waproManufacturers';
+import { normalizeManufacturer } from '../lib/waproManufacturers';
+import { ManufacturerSelect } from './ManufacturerSelect';
+
 import { createProduct } from '../lib/products';
 import { showToast } from '../lib/toast';
 
@@ -25,9 +27,6 @@ export function AddProductModal({
       : ACCESSORY_CATEGORIES.filter((c) => c !== 'Wszystkie');
   const defaultCategory =
     catalog === 'shop' ? categoryOptions[0] || 'Inne' : 'Inne części';
-  const manufacturerSelectOptions = manufacturerOptions(
-    existingProducts.map((p) => p.manufacturer).filter(Boolean),
-  );
 
   const [sku, setSku] = useState('');
   const [name, setName] = useState('');
@@ -197,18 +196,11 @@ export function AddProductModal({
           </Field>
 
           <Field label="Producent / marka">
-            <select
+            <ManufacturerSelect
               value={manufacturer}
-              onChange={(e) => setManufacturer(e.target.value)}
-              className="input-field"
-            >
-              <option value="">— wybierz —</option>
-              {manufacturerSelectOptions.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
+              onChange={setManufacturer}
+              extra={existingProducts.map((p) => p.manufacturer)}
+            />
           </Field>
 
           <Field label="EAN / kod kreskowy">

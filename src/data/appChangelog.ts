@@ -18,6 +18,14 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-16',
+    title: 'Producenci: dodawanie nowych, lista wspólna i synchronizacja z BaseLinkerem',
+    description:
+      'Lista producentów nie jest już ograniczona do nazw z WAPRO. W edycji produktu i przy dodawaniu produktu na końcu listy producentów jest „+ Nowy producent…”, a nowa marka trafia do wspólnej listy dla wszystkich użytkowników. W Decyzjach jest nowy przycisk „Producenci”: lista wszystkich marek z liczbą produktów i oznaczeniem źródła (WAPRO / ręczny / BaseLinker), dodawanie nowych, „Pobierz z BaseLinkera” (import listy producentów z BL) oraz „Wyślij do BaseLinkera” (zaznaczonych albo wszystkich brakujących — brakujące marki są tworzone w BL, istniejących nie dublujemy). Dzięki temu produkty wysyłane do BaseLinkera dostają właściwego producenta. Wymaga migracji bazy migration-catalog-manufacturers.sql i wdrożenia funkcji baselinker; wysyłka i pobieranie z BL wymagają uprawnienia do zarządzania BaseLinkerem.',
+    tag: 'nowość',
+  },
+
+  {
+    date: '2026-10-16',
     title: 'Ukrywanie produktów: bezpieczny zapis w bazie dla wszystkich i automatyczne odświeżanie listy',
     description:
       'Ukrycie produktu (także masowe z Decyzji) zawsze zapisywało się w bazie, więc działa dla wszystkich użytkowników — ale inny komputer widział zmianę dopiero po przeładowaniu strony. Teraz katalog po powrocie do karty (po ponad 3 minutach) cicho pobiera aktualne dane z bazy. Dodatkowo ukrywanie i przywracanie zapisuje flagę do aktualnych danych produktu z bazy, a nie do skróconej wersji z listy, żeby przy masowym ukrywaniu nie zgubić innych pól meta produktu. Ukrycia i przywrócenia trafiają do dziennika aktywności.',

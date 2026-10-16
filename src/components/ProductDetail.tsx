@@ -9,7 +9,9 @@ import {
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import type { Product, ProductVariant } from '../types';
 import { ACCESSORY_CATEGORIES } from '../types';
-import { manufacturerOptions, normalizeManufacturer, effectiveManufacturer } from '../lib/waproManufacturers';
+import { normalizeManufacturer, effectiveManufacturer } from '../lib/waproManufacturers';
+import { ManufacturerSelect } from './ManufacturerSelect';
+
 import { ProductImage } from './ProductImage';
 import { getProductImage, getProductImages, updateProductImage, addProductExtraImage, setProductPrimaryImage,
   updateProduct, deleteProductImage, deleteProductExtraImage, fetchProductById,
@@ -621,7 +623,6 @@ export function ProductDetail({
       ].filter(Boolean)),
     ).sort((a, b) => a.localeCompare(b, 'pl'));
   }, [detail.category]);
-  const editManufacturers = manufacturerOptions([detail.manufacturer, manufacturer]);
   const displayManufacturer = effectiveManufacturer(detail);
   const variantCount = detail.variants?.length ?? 0;
   const isGroup = detail.isGroup || variantCount > 0;
@@ -1246,16 +1247,7 @@ export function ProductDetail({
               </label>
               <label className="block">
                 <span className="mb-1 text-xs text-slate-500">Producent / marka</span>
-                <select
-                  value={manufacturer}
-                  onChange={(e) => setManufacturer(e.target.value)}
-                  className="input-field"
-                >
-                  <option value="">— wybierz —</option>
-                  {editManufacturers.map((m) => (
-                    <option key={m} value={m}>{m}</option>
-                  ))}
-                </select>
+                <ManufacturerSelect value={manufacturer} onChange={setManufacturer} extra={[detail.manufacturer]} />
               </label>
               <label className="block">
                 <span className="mb-1 text-xs text-slate-500">Kategoria</span>
@@ -1523,16 +1515,8 @@ export function ProductDetail({
               </label>
               <label className="block">
                 <span className="mb-1 text-xs text-slate-500">Producent / marka</span>
-                <select
-                  value={manufacturer}
-                  onChange={(e) => setManufacturer(e.target.value)}
-                  className="input-field"
-                >
-                  <option value="">— wybierz —</option>
-                  {editManufacturers.map((m) => (
-                    <option key={m} value={m}>{m}</option>
-                  ))}
-                </select>
+                <ManufacturerSelect value={manufacturer} onChange={setManufacturer} extra={[detail.manufacturer]} />
+
               </label>
               <label className="block">
                 <span className="mb-1 text-xs text-slate-500">Kategoria</span>

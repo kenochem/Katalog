@@ -1,4 +1,5 @@
-import { AlertTriangle, CheckCircle2, CheckSquare, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, EyeOff, ImageOff, Loader2, Search, SlidersHorizontal, Square, Tag, X } from 'lucide-react';
+import { AlertTriangle, Building2, CheckCircle2,
+ CheckSquare, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, EyeOff, ImageOff, Loader2, Search, SlidersHorizontal, Square, Tag, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { Product } from '../types';
 import { getProductImage } from '../lib/products';
@@ -6,6 +7,7 @@ import { assessProductKnowledge } from '../lib/productKnowledge';
 import { effectiveManufacturer } from '../lib/waproManufacturers';
 import { hasBaselinkerLink } from '../lib/baselinkerLink';
 import { HIDE_REASON_PRESETS } from '../lib/hideReasons';
+import { ManufacturersManager } from './ManufacturersManager';
 import { inferProductTypeLabel } from '../lib/catalogKind';
 import {
   getProductDisplayCategory,
@@ -154,6 +156,7 @@ export function CatalogDecisionView({
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
   const [hideReason, setHideReason] = useState(HIDE_REASON_PRESETS[0]);
   const [hiding, setHiding] = useState(false);
+  const [showManufacturers, setShowManufacturers] = useState(false);
 
   const rows = useMemo(() => buildCatalogDecisionRows(products), [products]);
   const kindCounts = useMemo(
@@ -316,6 +319,7 @@ export function CatalogDecisionView({
 
   return (
     <div className="catalog-readable-light w-full space-y-4 pb-10">
+      {showManufacturers && <ManufacturersManager products={products} onClose={() => setShowManufacturers(false)} />}
       <section className="surface-panel p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -329,6 +333,14 @@ export function CatalogDecisionView({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowManufacturers(true)}
+              className="inline-flex items-center rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+            >
+              <Building2 className="mr-1.5 h-4 w-4" />
+              Producenci
+            </button>
             <button
               type="button"
               onClick={exportCsv}

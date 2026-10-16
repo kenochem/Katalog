@@ -80,6 +80,7 @@ import {
 import { SystemAlertBanner } from './components/SystemAlertBanner';
 import { useAuth } from './lib/auth';
 import { isSupabaseConfigured } from './lib/supabase';
+import { loadManufacturerRegistry } from './lib/manufacturerRegistry';
 import { roleCan, ROLE_LABELS } from './lib/roles';
 import { branding, moduleEnabled, APP_PRODUCT } from './app/moduleRegistry';
 import { canUseCrmModule, canViewOpsModule, canUseCommsModule } from './app/productAccess';
@@ -809,7 +810,13 @@ export default function App() {
     };
   }, [opsStandalone, shouldUseSupabaseCatalog, loadCatalog]);
 
+  useEffect(() => {
+    if (mode === 'loading' || opsStandalone) return;
+    void loadManufacturerRegistry();
+  }, [mode, opsStandalone]);
+
   const initialCatalogLoadRef = useRef('');
+
 
   useEffect(() => {
     if (opsStandalone) {

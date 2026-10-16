@@ -883,8 +883,47 @@ Deno.serve(async (req) => {
       return json({ error: 'Brak sekretu BASELINKER_INVENTORY_ID w Supabase.' }, 500);
     }
 
+    // ---- producenci (lista z BL / dodawanie) ------------------------------------------------
+    if (action === 'manufacturers-bl' || action === 'manufacturers-add') {
+      needAdmin();
+      const readBl = async (): Promise<{ id: number; name: string }[]> => {
+        const raw = (await bl('getInventoryManufacturers', {})).manufacturers ?? [];
+        const list = Array.isArray(raw)
+          ? raw
+          : Object.entries(raw as Record<string, unknown>).map(([id, v]) =>
+              typeof v === 'string' ? { manufacturer_id: id, name: v } : { manufacturer_id: id, ...(v as object) },
+            );
+        return (list as { manufacturer_id: number | string; name: string }[])
+          .map((m) => ({ id: Number(m.manufacturer_id), name: String(m.name ?? '').trim() }))
+          .filter((m) => m.name);
+      };
+      const current = await readBl();
+      if (action === 'manufacturers-bl') return json({ manufacturers: current });
+
+      const names = [...new Set(((body.names ?? []) as unknown[]).map((n) => String(n ?? '').trim()).filter(Boolean))].slice(0, 200);
+      const have = new Map(current.map((m) => [m.name.toLowerCase(), m]));
+      const items: { id: number; name: string }[] = [];
+      let created = 0;
+      let existing = 0;
+      for (const name of names) {
+        const hit = have.get(name.toLowerCase());
+        if (hit) {
+          existing++;
+          items.push(hit);
+          continue;
+        }
+        const res = await bl('addInventoryManufacturer', { name });
+        const item = { id: Number(res.manufacturer_id), name };
+        created++;
+        items.push(item);
+        have.set(name.toLowerCase(), item);
+      }
+      return json({ created, existing, items });
+    }
+
     // ---- product -------------------------------------------------------------------------
     if (action === 'product') {
+
       if (isSystem) return json({ error: 'Niedostepne dla service_role' }, 400);
       const sku = String(body.sku ?? '').trim();
       if (!sku) return json({ error: 'Brak sku' }, 400);

@@ -263,4 +263,15 @@ export const exportKitToBaselinker = (kit: KitExportInput) =>
     kit,
   });
 
+export interface BlManufacturer {
+  id: number;
+  name: string;
+}
+/** Lista producentów zdefiniowanych w BaseLinkerze. */
+export const fetchBlManufacturers = () =>
+  call<{ manufacturers: BlManufacturer[] }>({ action: 'manufacturers-bl' }).then((r) => r.manufacturers);
+/** Tworzy w BaseLinkerze brakujących producentów (istniejących nie dubluje). */
+export const addBlManufacturers = (names: string[]) =>
+  call<{ created: number; existing: number; items: BlManufacturer[] }>({ action: 'manufacturers-add', names });
+
 

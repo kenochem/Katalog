@@ -88,6 +88,25 @@ const MANUFACTURER_LOOKUP = new Map<string, string>(
   WAPRO_MANUFACTURERS.map((m) => [normalizeManufacturerKey(m), m]),
 );
 
+/** Producenci spoza listy WAPRO (dodani ręcznie / pobrani z BaseLinkera) — ustawiani przy starcie aplikacji. */
+let EXTRA_MANUFACTURERS: string[] = [];
+
+export function setExtraManufacturers(names: string[]): void {
+  for (const n of EXTRA_MANUFACTURERS) {
+    const k = normalizeManufacturerKey(n);
+    if (!WAPRO_MANUFACTURERS.some((m) => normalizeManufacturerKey(m) === k)) MANUFACTURER_LOOKUP.delete(k);
+  }
+  EXTRA_MANUFACTURERS = names.map((n) => n.trim()).filter(Boolean);
+  for (const n of EXTRA_MANUFACTURERS) {
+    const k = normalizeManufacturerKey(n);
+    if (!MANUFACTURER_LOOKUP.has(k)) MANUFACTURER_LOOKUP.set(k, n);
+  }
+}
+
+export function getExtraManufacturers(): string[] {
+  return EXTRA_MANUFACTURERS;
+}
+
 function normalizeManufacturerKey(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, ' ');
 }
@@ -132,8 +151,9 @@ export function manufacturerOptions(existing: string[] = []): string[] {
       out.push(name);
     }
   }
-  for (const raw of existing) {
+  for (const raw of [...EXTRA_MANUFACTURERS, ...existing]) {
     const m = raw?.trim();
+
     if (!m || isPlaceholderManufacturer(m)) continue;
     const norm = normalizeManufacturer(m);
     if (!seen.has(norm)) {
