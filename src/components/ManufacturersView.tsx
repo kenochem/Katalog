@@ -273,12 +273,11 @@ export function ManufacturersView({
                       active ? 'bg-brand-50/70 dark:bg-brand-500/10' : ''
                     }`}
                   >
-                    <Avatar name={r.name} logoUrl={reg?.logoUrl} />
+                    <Avatar name={r.name} logoUrl={reg?.logoUrl} size={64} />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate font-semibold text-slate-950 dark:text-slate-50">{r.name}</span>
+                      <span className="block truncate text-base font-semibold text-slate-950 dark:text-slate-50">{r.name}</span>
                       <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-400">
                         {r.wapro && <span className="rounded-full bg-slate-200 px-1.5 py-0.5 font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200">WAPRO</span>}
-                        {r.manual && <span className="rounded-full bg-violet-100 px-1.5 py-0.5 font-semibold text-violet-800 dark:bg-violet-500/20 dark:text-violet-200">ręczny</span>}
                         {r.inBl === true || (r.inBl === null && r.blKnown) ? (
                           <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-100 px-1.5 py-0.5 font-semibold text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300">
                             <Check className="h-3 w-3" /> BL
@@ -468,7 +467,7 @@ function ManufacturerDetail({
     <div className="surface-panel space-y-4 p-4">
       <div className="flex items-start gap-3">
         <div className="relative">
-          <Avatar name={row.name} logoUrl={saved.logoUrl} size={84} />
+          <Avatar name={row.name} logoUrl={saved.logoUrl} size={96} />
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-lg font-bold text-slate-950 dark:text-slate-50">{row.name}</h3>

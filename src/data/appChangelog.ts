@@ -18,6 +18,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-16',
+    title: 'Producenci: większe loga na liście, bez etykiety „ręczny”',
+    description:
+      'Loga producentów na liście są większe (64 px zamiast 40 px, w profilu 96 px), dzięki czemu łatwiej rozpoznać markę. Usunięto etykietę „ręczny” przy producentach dodanych ręcznie — zostały tylko oznaczenia WAPRO i BaseLinker oraz braki logo i opisu.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-16',
     title: 'Statystyki (dawne Postępy), nowy widok „Ukryte”, nowoczesny panel administracyjny i nowe uprawnienia',
     description:
       'Postępy mają teraz nazwę „Statystyki” we wszystkich menu, wyszukiwarce poleceń, opisach uprawnień i podpowiedziach. Poprawiono kontrast wykresów na ciemnym motywie (tekst w dymkach i legendach). Widok „Ukryte” został przebudowany: lista na całą szerokość ze stronicowaniem, panel boczny z wyszukiwarką (naprawiona nachodząca lupa), filtrami powodów z licznikami, sortowaniem, zaznaczaniem i akcjami masowymi (przywróć zaznaczone, zmień powód ukrycia), a w wierszach widać producenta, kategorię, stan, powód i datę ukrycia. Ten sam błąd lupy naprawiono w wyszukiwarkach dziennika aktywności, CRM i lokalizacji magazynowych. Panel administracyjny ma nowy wygląd i nową zakładkę „Przegląd” (konta i role, aktywność zespołu z ostatnich 14 dni, najaktywniejsi, ostatnie logowania z urządzeniem i adresem IP, kontrola migracji) oraz zakładki, które do tej pory były tylko w Logach: Aktywność, Migracje bazy i Status systemów. Doszły trzy nowe uprawnienia w macierzy ról: Producenci (edycja, logo, synchronizacja z BL), Ukrywanie produktów i Eksport danych do CSV — operator ma je domyślnie, handlowiec tylko eksport; bez uprawnienia przyciski są ukryte lub wyłączone. W dzienniku aktywności są teraz czytelne nazwy dla akcji producentów, opisów i zdjęć wysyłanych do BaseLinkera.',
