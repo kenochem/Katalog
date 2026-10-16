@@ -18,6 +18,14 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-16',
+    title: 'Logo producenta także w głównym widoku produktu (nagłówek z zakładkami)',
+    description:
+      'Logo producenta było dodane tylko w starszym układzie podglądu, więc w głównym widoku produktu (nagłówek z SKU, stanem i zakładkami Dane / Sprzedaż / Zdjęcia) go nie było. Teraz logo jest w prawym górnym rogu nagłówka, obok przycisku edycji, a po kliknięciu otwiera stronę producenta, jeśli adres WWW jest podany w profilu.',
+    tag: 'poprawka',
+  },
+
+  {
+    date: '2026-10-16',
     title: 'Podgląd produktu: logo producenta w prawym górnym rogu, klikalne do strony marki',
     description:
       'Jeśli producent produktu ma wgrane logo w sekcji Producenci, pojawia się ono w podglądzie produktu po prawej stronie nagłówka (obok nazwy). Gdy w profilu producenta podano adres strony WWW, logo jest klikalne i otwiera tę stronę w nowej karcie; bez adresu logo jest tylko widoczne.',

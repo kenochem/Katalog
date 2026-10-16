@@ -850,11 +850,13 @@ export function ProductDetail({
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-2">
+                <ManufacturerLogo name={displayManufacturer} className="!h-12 !w-24" />
                 {roleCan(role, 'editProduct') && (
                   <ProductEditActions
                     editing={editing}
                     saving={saving}
                     hubStyle
+
                     onSave={() => void handleSaveEdits()}
                     onStartEdit={() => setEditing(true)}
                     onCancelEdit={() => setEditing(false)}
