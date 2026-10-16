@@ -18,6 +18,14 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-16',
+    title: 'Decyzje: nowy układ — lista na całą szerokość, panel filtrów i akcji z boku, stronicowanie',
+    description:
+      'Przebudowa sekcji Decyzje. Lista produktów zajmuje całą szerokość strony i pokazuje wszystkie pozycje (koniec limitu 200) ze stronicowaniem po 25/50/100/200. Z boku jest panel (przewija się razem ze stroną): wyszukiwarka (nazwa, SKU, EAN, producent), filtry rodzajów problemów z licznikami (zdjęcie, kategoria, producent, EAN, cena, kompletność, typ, BaseLinker), filtr producenta, stanu magazynowego i katalogu, sortowanie (pilność, nazwa, SKU, kompletność, stan), zaznaczanie strony lub wszystkich wyników, masowe ukrywanie z gotowymi powodami (np. Śmietnik Piotra, Część myjki) oraz masowe ustawianie kategorii. Przy każdym wierszu jest przycisk szybkiego „Ukryj”, a u góry eksport przefiltrowanej listy do CSV. Wiersze pokazują teraz producenta, stan, kompletność i wszystkie problemy.',
+    tag: 'nowość',
+  },
+
+  {
+    date: '2026-10-16',
     title: 'Decyzje: masowe ukrywanie „śmietnika” z gotowymi powodami (np. Śmietnik Piotra)',
     description:
       'W sekcji Decyzje można teraz zaznaczyć dowolne produkty z listy (pojedynczo albo „Zaznacz wszystko na liście”) i ukryć je jednym kliknięciem z opisem powodu. Gotowe powody: Śmietnik Piotra, Część myjki, Obudowa, Koło wentylatora, Element maszyny, Uszczelka/o-ring, Śruba/złączka, Stara marka, Produkt przestarzały, Nie sprzedajemy, Duplikat — albo własny opis. Dodano też wyszukiwarkę na liście (np. „myjka”, „obudowa”), żeby szybko wyłuskać całe grupy części. Ukryte pozycje zostają w bazie i synchronizacji, widać je w „Ukryte” i można przywrócić. Te same gotowe powody są podpowiedziane w karcie produktu przy opcji „Ukryj w katalogu”.',
