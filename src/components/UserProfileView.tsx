@@ -1063,7 +1063,16 @@ function QueuePanel({
   }
 
   if (!tasks) return <Spinner />;
+  if (tasks.error) {
+    return (
+      <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+        Nie udało się pobrać zadań: {tasks.error}. Tabela istnieje, ale baza odmawia dostępu — uruchom migration-grants-fix.sql w Supabase
+        (szczegóły sprawdzisz w Logi → Migracje).
+      </p>
+    );
+  }
   if (tasks.missing) {
+
     return (
       <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
         Brak tabeli zadań w bazie — uruchom migration-catalog-tasks.sql w Supabase, żeby korzystać z kolejki.

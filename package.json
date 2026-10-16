@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
+    "gen:migrations": "node scripts/generate-migration-probes.mjs",
     "test:watch": "vitest",
     "check": "tsc -b && vitest run",
     "dev": "vite --mode suite",

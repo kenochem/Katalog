@@ -15,7 +15,10 @@ import {
   Search,
   Trash2,
   XCircle,
+  Database,
 } from 'lucide-react';
+import { MigrationsStatusView } from './MigrationsStatusView';
+
 import {
   clearCatalogLogs,
   listCatalogLogs,
@@ -561,12 +564,17 @@ function CatalogSystemLogs({ userId }: CatalogLogsViewProps) {
 export function CatalogLogsView({ userId }: CatalogLogsViewProps) {
   const { role } = useAuth();
   const canAudit = roleCan(role, 'manageUsers');
-  const [tab, setTab] = useState<'status' | 'system' | 'activity'>('status');
+  const [tab, setTab] = useState<'status' | 'system' | 'activity' | 'migrations'>('status');
 
   const tabs = [
     ['status', 'Status systemów', Gauge],
     ['system', 'Zmiany produktów i raporty', ListTree],
-    ...(canAudit ? ([['activity', 'Aktywność użytkowników', Activity]] as const) : []),
+    ...(canAudit
+      ? ([
+          ['activity', 'Aktywność użytkowników', Activity],
+          ['migrations', 'Migracje bazy', Database],
+        ] as const)
+      : []),
   ] as const;
 
   return (
@@ -592,6 +600,8 @@ export function CatalogLogsView({ userId }: CatalogLogsViewProps) {
         <SystemStatusView />
       ) : tab === 'system' || !canAudit ? (
         <CatalogSystemLogs userId={userId} />
+      ) : tab === 'migrations' ? (
+        <MigrationsStatusView />
       ) : (
         <div className="mx-auto max-w-6xl">
           <AdminAuditSection />

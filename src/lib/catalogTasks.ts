@@ -53,6 +53,8 @@ function rowToTask(r: Record<string, unknown>): CatalogTask {
 }
 
 export interface TaskLists {
+  /** Komunikat błędu z bazy, gdy tabela istnieje, ale zapytanie się nie powiodło (np. brak uprawnień). */
+  error?: string;
   /** Przydzielone mnie (otwarte + ostatnio wykonane). */
   mine: CatalogTask[];
   /** Utworzone przeze mnie dla innych. */
@@ -72,8 +74,11 @@ export async function fetchTasks(userId: string): Promise<TaskLists> {
     .order('created_at', { ascending: false })
     .limit(500);
   if (error) {
-    return { mine: [], delegated: [], missing: /catalog_tasks|relation|schema cache/i.test(error.message) };
+    // tabela naprawdę nie istnieje tylko przy tych kodach; inne błędy (np. brak uprawnień) pokazujemy wprost
+    const missing = error.code === 'PGRST205' || error.code === '42P01' || /could not find the table/i.test(error.message);
+    return { mine: [], delegated: [], missing, error: missing ? undefined : `${error.message}${error.code ? ` (${error.code})` : ''}` };
   }
+
   const all = ((data ?? []) as Record<string, unknown>[]).map(rowToTask);
   return {
     mine: all.filter((t) => t.assignedTo === userId),

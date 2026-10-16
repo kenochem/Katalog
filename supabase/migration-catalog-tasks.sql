@@ -48,3 +48,7 @@ drop policy if exists "catalog_tasks_delete" on public.catalog_tasks;
 create policy "catalog_tasks_delete" on public.catalog_tasks
   for delete to authenticated
   using (created_by = auth.uid());
+
+-- uprawnienia dla zalogowanych (bez tego baza zwraca "permission denied")
+grant select, insert, update, delete on public.catalog_tasks to authenticated;
+grant select, insert, update, delete on public.catalog_tasks to service_role;

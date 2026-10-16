@@ -18,6 +18,14 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-16',
+    title: 'Logi → Migracje bazy: kontrola, które migracje są wgrane; naprawa komunikatu w „Mojej kolejce”',
+    description:
+      'W Logach (dla administratorów) jest nowa zakładka „Migracje bazy”. Aplikacja sama sprawdza próbnymi zapytaniami, czy tabele i kolumny z każdej migracji (supabase/migration-*.sql, 67 plików) istnieją w bazie, i pokazuje stan: wgrana, do wgrania, częściowo, brak dostępu albo nie do sprawdzenia (migracje bez tabel i kolumn, np. funkcje). Domyślnie widać tylko rzeczy do zrobienia, z nazwą brakującego obiektu i przyciskiem kopiowania nazwy pliku. Wyjaśniono też błąd z profilu „Brak tabeli zadań”: komunikat pojawiał się przy każdym błędzie bazy, także gdy tabela istniała, a baza odmawiała dostępu (brak uprawnień GRANT dla zalogowanych). Teraz pokazujemy prawdziwą przyczynę, a nowa migracja migration-grants-fix.sql nadaje brakujące uprawnienia do tabel zadań, producentów, opisów technicznych, promocji i alertów (bezpiecznie pomija tabele, których nie ma).',
+    tag: 'nowość',
+  },
+
+  {
+    date: '2026-10-16',
     title: 'Opisy produktów: edytor z formatowaniem, nowe pola i synchronizacja z BaseLinkerem',
     description:
       'Zakładka Opisy została przebudowana. Zamiast jednego pola tekstowego jest pięć sekcji: Opis pełny (tradycyjny), Opis krótki (do 300 znaków), Sposób użycia / dawkowanie, Skład / dane techniczne oraz Bezpieczeństwo i ostrzeżenia. Pola z formatowaniem mają edytor (pogrubienie, kursywa, nagłówek, listy punktowane i numerowane, linki, czyszczenie formatowania, podgląd kodu HTML), licznik znaków i ocenę (brak / za krótki / OK). Wklejany tekst jest automatycznie czyszczony ze zbędnych stylów. Pola odpowiadają polom tekstowym BaseLinkera (opis oraz dodatkowe opisy 1–4): przycisk „Pobierz z BaseLinkera” wczytuje opisy z produktu w BL do edytora (zapis dopiero po sprawdzeniu), a „Wyślij do BaseLinkera” wysyła niepuste opisy do produktu w BL, zachowując pozostałe jego pola. Opisy liczą się do kompletności produktu (krótki opis oraz sposób użycia / skład / bezpieczeństwo) w statystykach i Decyzjach. Naprawiono też poważny błąd: edycja produktu zapisywała opis uproszczony do zwykłego tekstu i obcięty do 500 znaków — teraz opis jest zapisywany tylko po zmianie i w całości z formatowaniem. Wymaga wdrożenia funkcji baselinker; wysyłka i pobieranie wymagają uprawnienia do zarządzania BaseLinkerem.',

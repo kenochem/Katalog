@@ -38,3 +38,7 @@ create policy "catalog_manufacturers_update" on public.catalog_manufacturers
 drop policy if exists "catalog_manufacturers_delete" on public.catalog_manufacturers;
 create policy "catalog_manufacturers_delete" on public.catalog_manufacturers
   for delete to authenticated using (true);
+
+-- uprawnienia dla zalogowanych (bez tego baza zwraca "permission denied")
+grant select, insert, update, delete on public.catalog_manufacturers to authenticated;
+grant select, insert, update, delete on public.catalog_manufacturers to service_role;
