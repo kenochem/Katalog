@@ -332,7 +332,7 @@ export function MobileMoreSheet({
                 <SheetAction
                   active={view === 'progress'}
                   icon={<BarChart3 className="h-4 w-4" />}
-                  label="Postęp zdjęć"
+                  label="Statystyki"
                   onClick={() => go('progress')}
                 />
               )}

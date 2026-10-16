@@ -106,7 +106,7 @@ export function ActiveClientBar({
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Szukaj: nazwa, NIP, adres…"
-                  className="input-field w-full pl-9"
+                  className="input-field w-full with-icon"
                 />
               </div>
               <div className="flex gap-1.5">

@@ -183,7 +183,7 @@ export function WarehouseLocationsPanel({
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Szukaj SKU, nazwy, kategorii, lokalizacji…"
-          className="input-field w-full pl-9"
+          className="input-field w-full with-icon"
         />
       </div>
 

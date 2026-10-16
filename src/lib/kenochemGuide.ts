@@ -71,7 +71,7 @@ export const KENOCHEM_GUIDE_SECTIONS: KenochemGuideSection[] = [
           '',
           'Typowe obszary uprawnien:',
           '- Katalog: przegladanie produktow, zdjec, stanow i danych.',
-          '- Magazyn: stany, etykiety, lokalizacje, postep zdjec.',
+          '- Magazyn: stany, etykiety, lokalizacje, statystyki katalogu.',
           '- CRM: klienci, oferty, zamowienia, trasy, lejek.',
           '- Operacje: finanse, raporty, koszty, analizy.',
           '- Talk: komunikacja firmowa.',
@@ -443,7 +443,7 @@ export const KENOCHEM_GUIDE_SECTIONS: KenochemGuideSection[] = [
           '- niskie stany,',
           '- kolejka etykiet,',
           '- lokalizacje magazynowe,',
-          '- postep uzupelniania katalogu.',
+          '- statystyki katalogu (kompletnosc, zdjecia, producenci, zmiany pracownikow).',
         ].join('\n'),
       },
       {

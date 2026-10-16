@@ -41,7 +41,10 @@ export type CapabilityId =
   | 'admin.editRoleMatrix'
   | 'admin.manageBaselinker'
   | 'crm.sendWaproOrder'
-  | 'catalog.managePromotions';
+  | 'catalog.managePromotions'
+  | 'catalog.manageManufacturers'
+  | 'catalog.hideProducts'
+  | 'catalog.exportData';
 
 export interface CapabilityDef {
   id: CapabilityId;
@@ -223,15 +226,43 @@ export const CAPABILITY_REGISTRY: CapabilityDef[] = [
   },
   {
     id: 'catalog.viewProgress',
-    label: 'Postęp zdjęć',
-    description: 'Widok braków zdjęć i statystyk uzupełniania',
+    label: 'Statystyki i uzupełnianie danych',
+    description: 'Panel statystyk katalogu, lista braków danych (zdjęcia, EAN, opisy), producenci',
     group: 'catalog',
     roleAction: 'viewProgress',
     moduleId: 'catalog',
     requires: ['module.catalog'],
   },
   {
+    id: 'catalog.manageManufacturers',
+    label: 'Producenci',
+    description: 'Dodawanie i edycja producentów, logo, opisy, zmiana nazw, synchronizacja z BaseLinkerem',
+    group: 'catalog',
+    roleAction: 'manageManufacturers',
+    moduleId: 'catalog',
+    requires: ['module.catalog'],
+  },
+  {
+    id: 'catalog.hideProducts',
+    label: 'Ukrywanie produktów',
+    description: 'Ukrywanie (także masowe) i przywracanie produktów w katalogu',
+    group: 'catalog',
+    roleAction: 'hideProducts',
+    moduleId: 'catalog',
+    requires: ['module.catalog'],
+  },
+  {
+    id: 'catalog.exportData',
+    label: 'Eksport danych',
+    description: 'Eksport list produktów do pliku CSV',
+    group: 'catalog',
+    roleAction: 'exportData',
+    moduleId: 'catalog',
+    requires: ['module.catalog'],
+  },
+  {
     id: 'crm.use',
+
     label: 'Panel handlowca',
     description: 'CRM, klienci, koszyk, oferty, mapa tras',
     group: 'crm',

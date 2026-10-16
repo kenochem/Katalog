@@ -52,7 +52,7 @@ export function HubCommandSearch({
     list.push(
       { id: 'guide', label: 'Baza wiedzy', run: () => go('guide') },
       { id: 'labels', label: 'Etykiety półek', run: () => app('labels') },
-      { id: 'progress', label: 'Postęp zdjęć', run: () => app('progress') },
+      { id: 'progress', label: 'Statystyki katalogu', run: () => app('progress') },
       { id: 'missing', label: 'Produkty bez zdjęć', run: () => app('missing-images') },
       { id: 'comms', label: 'Talk — czat', run: () => go('comms') },
     );

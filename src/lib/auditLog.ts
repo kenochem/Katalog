@@ -66,6 +66,14 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'baselinker.import': 'Import → BaseLinker',
   'tech.approve': 'Zatwierdzenie opisów technicznych',
   'image.optimize': 'Optymalizacja zdjęć',
+  'baselinker.images': 'Zdjęcia → BaseLinker',
+  'baselinker.description': 'Opisy → BaseLinker',
+  'baselinker.manufacturers': 'Producenci → BaseLinker',
+  'manufacturer.add': 'Producent: dodanie',
+  'manufacturer.update': 'Producent: profil',
+  'manufacturer.rename': 'Producent: zmiana nazwy',
+  'manufacturer.remove': 'Producent: usunięcie',
+  'task.done': 'Zadanie wykonane',
 };
 
 let actor: AuditActor | null = null;

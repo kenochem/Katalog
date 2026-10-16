@@ -1342,6 +1342,30 @@ export default function App() {
     invalidateProductsCache();
   }, []);
 
+  const handleRestoreHiddenMany = useCallback(async (items: Product[]) => {
+    for (const product of items) {
+      const nextMeta = { ...(product.meta ?? {}) };
+      delete nextMeta.catalogHidden;
+      delete nextMeta.catalogHiddenReason;
+      delete nextMeta.catalogHiddenAt;
+      patchProductInCache(product.id, () => ({ ...product, meta: nextMeta }));
+    }
+    let failedIds: string[] = [];
+    try {
+      failedIds = (await setProductsHidden(items.map((p) => p.id), false)).failed;
+    } catch (err) {
+      console.error(err);
+      failedIds = items.map((p) => p.id);
+    }
+    const failedSet = new Set(failedIds);
+    for (const product of items) {
+      if (failedSet.has(product.id)) patchProductInCache(product.id, () => product);
+    }
+    const ok = items.length - failedSet.size;
+    if (ok > 0) showToast(`Przywrócono ${ok} produktów do katalogu`, 'ok');
+    if (failedSet.size > 0) showToast(`Nie udało się przywrócić ${failedSet.size} produktów`, 'error');
+  }, []);
+
   const handleRestoreHiddenProduct = useCallback(async (product: Product) => {
     const nextMeta = { ...(product.meta ?? {}) };
     delete nextMeta.catalogHidden;
@@ -1963,12 +1987,14 @@ export default function App() {
             categoryBusyId={categoryBusyId}
             onOpenHidden={() => setView('catalog-hidden')}
             onOpenManufacturers={() => setView('manufacturers')}
-            onHideProducts={handleHideProducts}
+            onHideProducts={roleCan(role, 'hideProducts') ? handleHideProducts : undefined}
+            canExport={roleCan(role, 'exportData')}
           />
         ) : view === 'manufacturers' && isCatalogProduct() ? (
           <Suspense fallback={<ViewFallback />}>
             <ManufacturersView
               products={activeAllProducts}
+              canEdit={roleCan(role, 'manageManufacturers')}
               onShowProducts={(name) => {
                 setManufacturer(name);
                 setView('catalog');
@@ -1982,7 +2008,9 @@ export default function App() {
               products={hiddenProducts}
               restoringId={restoreHiddenBusyId}
               onOpenProduct={setSelectedProduct}
-              onRestoreProduct={handleRestoreHiddenProduct}
+              onRestoreProduct={roleCan(role, 'hideProducts') ? handleRestoreHiddenProduct : undefined}
+              onRestoreMany={roleCan(role, 'hideProducts') ? handleRestoreHiddenMany : undefined}
+              onChangeReason={roleCan(role, 'hideProducts') ? handleHideProducts : undefined}
             />
           </Suspense>
         ) : view === 'logs' && isCatalogProduct() ? (
@@ -2139,9 +2167,11 @@ export default function App() {
             categoryBusyId={categoryBusyId}
             onOpenHidden={() => setView('catalog-hidden')}
             onOpenManufacturers={() => setView('manufacturers')}
-            onHideProducts={handleHideProducts}
+            onHideProducts={roleCan(role, 'hideProducts') ? handleHideProducts : undefined}
+            canExport={roleCan(role, 'exportData')}
           />
         )}
+
 
         {canUseCrmModule(role) &&
           CrmOrderSidePanel &&

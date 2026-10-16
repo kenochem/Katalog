@@ -35,6 +35,8 @@ const TOOLTIP_STYLE = {
   color: '#e2e8f0',
 } as const;
 
+const TOOLTIP_TEXT = { color: '#e2e8f0' } as const;
+
 export function ChartCard({
   title,
   subtitle,
@@ -101,10 +103,10 @@ export function Donut({ data, center, height = 220 }: { data: Slice[]; center?: 
             ))}
           </Pie>
           <Tooltip
-            contentStyle={TOOLTIP_STYLE}
+            contentStyle={TOOLTIP_STYLE} itemStyle={TOOLTIP_TEXT} labelStyle={TOOLTIP_TEXT}
             formatter={(v, name) => [`${Number(v).toLocaleString('pl-PL')} (${total ? Math.round((Number(v) / total) * 100) : 0}%)`, name]}
           />
-          <Legend iconType="circle" wrapperStyle={{ fontSize: 11, color: '#94a3b8' }} />
+          <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} formatter={(v) => <span style={{ color: '#cbd5e1' }}>{v}</span>} />
         </PieChart>
       </ResponsiveContainer>
       {center && (
@@ -148,7 +150,7 @@ export function HBars({
           <CartesianGrid horizontal={false} stroke="#1e293b" />
           <XAxis type="number" tick={AXIS} domain={max ? [0, max] : undefined} axisLine={false} tickLine={false} />
           <YAxis type="category" dataKey="name" tick={AXIS} width={118} axisLine={false} tickLine={false} />
-          <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(148,163,184,0.08)' }} formatter={(v) => [`${Number(v).toLocaleString('pl-PL')}${unit}`, '']} />
+          <Tooltip contentStyle={TOOLTIP_STYLE} itemStyle={TOOLTIP_TEXT} labelStyle={TOOLTIP_TEXT} cursor={{ fill: 'rgba(148,163,184,0.08)' }} formatter={(v) => [`${Number(v).toLocaleString('pl-PL')}${unit}`, '']} />
           <Bar dataKey="value" radius={[0, 6, 6, 0]} onClick={onClick ? (d) => onClick(String((d as { name?: string }).name ?? '')) : undefined} cursor={onClick ? 'pointer' : undefined}>
             {data.map((d, i) => (
               <Cell key={i} fill={d.color ?? color} />
@@ -177,7 +179,7 @@ export function Columns({
           <CartesianGrid vertical={false} stroke="#1e293b" />
           <XAxis dataKey="name" tick={AXIS} axisLine={false} tickLine={false} />
           <YAxis tick={AXIS} axisLine={false} tickLine={false} allowDecimals={false} />
-          <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(148,163,184,0.08)' }} />
+          <Tooltip contentStyle={TOOLTIP_STYLE} itemStyle={TOOLTIP_TEXT} labelStyle={TOOLTIP_TEXT} cursor={{ fill: 'rgba(148,163,184,0.08)' }} />
           <Bar dataKey="value" radius={[6, 6, 0, 0]}>
             {data.map((d, i) => (
               <Cell key={i} fill={d.color ?? color} />
@@ -219,8 +221,8 @@ export function Trend({
           <CartesianGrid vertical={false} stroke="#1e293b" />
           <XAxis dataKey="label" tick={AXIS} axisLine={false} tickLine={false} interval="preserveStartEnd" minTickGap={24} />
           <YAxis tick={AXIS} axisLine={false} tickLine={false} allowDecimals={false} />
-          <Tooltip contentStyle={TOOLTIP_STYLE} />
-          <Legend iconType="circle" wrapperStyle={{ fontSize: 11, color: '#94a3b8' }} />
+          <Tooltip contentStyle={TOOLTIP_STYLE} itemStyle={TOOLTIP_TEXT} labelStyle={TOOLTIP_TEXT} />
+          <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} formatter={(v) => <span style={{ color: '#cbd5e1' }}>{v}</span>} />
           {series.map((s) => (
             <Area key={s.key} type="monotone" dataKey={s.key} name={s.name} stroke={s.color} strokeWidth={2} fill={`url(#grad-${s.key})`} />
           ))}

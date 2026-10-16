@@ -210,7 +210,7 @@ export function AdminAuditSection() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="SKU, nazwa, opis…"
-            className="input-field pl-9 text-sm"
+            className="input-field with-icon text-sm"
           />
         </div>
         <div className="flex gap-2">

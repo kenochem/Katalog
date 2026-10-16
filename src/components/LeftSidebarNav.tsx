@@ -283,7 +283,7 @@ export function LeftSidebarNav({
       {
         id: 'progress',
         icon: <BarChart3 className="h-4 w-4" />,
-        label: 'Postęp',
+        label: 'Statystyki',
         available: roleCan(role, 'viewProgress'),
         onClick: () => setView('progress'),
       },

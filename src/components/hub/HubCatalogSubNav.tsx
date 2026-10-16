@@ -37,7 +37,7 @@ export function HubCatalogSubNav({
     tabs.push({ id: 'kits', label: 'Zestawy', icon: Layers, count: counts.kits });
   }
   if (role.progress) {
-    tabs.push({ id: 'progress', label: 'Postęp', icon: BarChart3 });
+    tabs.push({ id: 'progress', label: 'Statystyki', icon: BarChart3 });
     tabs.push({ id: 'catalog-decisions', label: 'Uzupełnianie danych', icon: AlertTriangle, count: counts.decisions });
     tabs.push({ id: 'manufacturers', label: 'Producenci', icon: Building2 });
     tabs.push({ id: 'catalog-hidden', label: 'Ukryte', icon: EyeOff, count: counts.hidden });

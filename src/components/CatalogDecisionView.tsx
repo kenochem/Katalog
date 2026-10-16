@@ -136,6 +136,7 @@ export function CatalogDecisionView({
   onOpenHidden,
   onHideProducts,
   onOpenManufacturers,
+  canExport = true,
   initialKinds,
   initialCategory,
   initialManufacturer,
@@ -147,6 +148,8 @@ export function CatalogDecisionView({
   onOpenHidden?: () => void;
   onHideProducts?: (products: Product[], reason: string) => void | Promise<void>;
   onOpenManufacturers?: () => void;
+  /** Uprawnienie „Eksport danych”. */
+  canExport?: boolean;
   /** Wstępnie zaznaczone rodzaje braków (np. „photo” z Postępów). */
   initialKinds?: string[];
   initialCategory?: string;
@@ -365,6 +368,7 @@ export function CatalogDecisionView({
               <Building2 className="mr-1.5 h-4 w-4" />
               Producenci
             </button>
+            {canExport && (
             <button
               type="button"
               onClick={exportCsv}
@@ -374,6 +378,7 @@ export function CatalogDecisionView({
               <Download className="mr-1.5 h-4 w-4" />
               Eksport CSV
             </button>
+            )}
             {onOpenHidden && (
               <button
                 type="button"

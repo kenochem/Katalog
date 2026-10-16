@@ -69,9 +69,12 @@ function Avatar({ name, logoUrl, size = 40 }: { name: string; logoUrl?: string; 
 export function ManufacturersView({
   products,
   onShowProducts,
+  canEdit = true,
 }: {
   products: Product[];
   onShowProducts: (manufacturer: string) => void;
+  /** false = tylko podgląd (brak uprawnienia „Producenci”). */
+  canEdit?: boolean;
 }) {
   const registryVersion = useManufacturerRegistry();
   const [query, setQuery] = useState('');
@@ -197,6 +200,7 @@ export function ManufacturersView({
               a lista jest wspólna dla katalogu i BaseLinkera.
             </p>
           </div>
+          {canEdit && (
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -218,6 +222,7 @@ export function ManufacturersView({
               Wyślij brakujące do BL ({blNames === null ? '?' : missingInBl.length})
             </button>
           </div>
+          )}
         </div>
       </section>
 
@@ -234,6 +239,7 @@ export function ManufacturersView({
               <option value="incomplete">Najmniej uzupełnieni</option>
             </select>
           </div>
+          {canEdit && (
           <div className="flex gap-2">
             <input
               value={draft}
@@ -252,6 +258,7 @@ export function ManufacturersView({
               Dodaj
             </button>
           </div>
+          )}
 
           <ul className="divide-y divide-slate-200 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-950/30 dark:shadow-none">
             {shown.map((r) => {
@@ -306,6 +313,7 @@ export function ManufacturersView({
               onRemoved={() => setSelectedName(null)}
               statClass={stat}
               registryVersion={registryVersion}
+              canEdit={canEdit}
             />
           ) : (
             <div className="surface-panel p-6 text-sm text-slate-700 dark:text-slate-400">
@@ -327,6 +335,7 @@ function ManufacturerDetail({
   onRemoved,
   statClass,
   registryVersion,
+  canEdit,
 }: {
   row: Row;
   busy: boolean;
@@ -336,6 +345,7 @@ function ManufacturerDetail({
   onRemoved: () => void;
   statClass: string;
   registryVersion: number;
+  canEdit: boolean;
 }) {
   const reg = getManufacturerEntry(row.name);
   const saved: ManufacturerProfile = useMemo(
@@ -476,14 +486,14 @@ function ManufacturerDetail({
             />
             <button
               type="button"
-              disabled={working !== null}
+              disabled={working !== null || !canEdit}
               onClick={() => fileRef.current?.click()}
               className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
             >
               {working === 'logo' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
               {saved.logoUrl ? 'Zmień logo' : 'Wgraj logo'}
             </button>
-            {saved.logoUrl && (
+            {saved.logoUrl && canEdit && (
               <button
                 type="button"
                 disabled={working !== null}
@@ -525,7 +535,7 @@ function ManufacturerDetail({
         >
           <ExternalLink className="h-4 w-4" /> Pokaż produkty w katalogu
         </button>
-        {(row.inBl === false || (row.inBl === null && !row.blKnown)) && (
+        {canEdit && (row.inBl === false || (row.inBl === null && !row.blKnown)) && (
           <button
             type="button"
             disabled={busy}
@@ -537,6 +547,7 @@ function ManufacturerDetail({
         )}
       </div>
 
+      <fieldset disabled={!canEdit} className="m-0 min-w-0 space-y-4 border-0 p-0">
       <label className="block">
         <span className={label}>Opis producenta (marka, specyfika, do czego służy asortyment)</span>
         <textarea
@@ -624,6 +635,7 @@ function ManufacturerDetail({
         </div>
 
       </div>
+      </fieldset>
     </div>
   );
 }

@@ -1,10 +1,13 @@
 import { useState, type ReactNode } from 'react';
 import {
+  Activity,
   ArrowLeft,
   Calculator,
-  Link2,
   Database,
   FileSpreadsheet,
+  Gauge,
+  LayoutDashboard,
+  Link2,
   Settings2,
   Shield,
   Users,
@@ -15,9 +18,13 @@ import { ROLE_LABELS } from '../lib/roles';
 import { AdminUsersSection } from './AdminUsersSection';
 import { AdminPermissionsSection } from './AdminPermissionsSection';
 import { AdminBaselinkerSection } from './AdminBaselinkerSection';
+import { AdminAuditSection } from './AdminAuditSection';
+import { AdminOverviewSection, type AdminShortcut } from './AdminOverviewSection';
+import { MigrationsStatusView } from './MigrationsStatusView';
+import { SystemStatusView } from './SystemStatusView';
 import { ContextHelp } from './ContextHelp';
 
-type AdminTab = 'users' | 'permissions' | 'operations' | 'baselinker';
+type AdminTab = 'overview' | AdminShortcut | 'operations';
 
 type AdminHubPanelProps = {
   onBack?: () => void;
@@ -29,30 +36,37 @@ type AdminHubPanelProps = {
 
 export function AdminHubPanel({
   onBack,
-  backLabel = 'Wroc do katalogu',
+  backLabel = 'Wróć do katalogu',
   title = 'Administracja Kenochem',
-  description = 'Konta zespolu i macierz uprawnien.',
+  description = 'Konta zespołu, uprawnienia, integracje, dziennik aktywności i stan bazy danych.',
   product = 'catalog',
 }: AdminHubPanelProps) {
   const { role } = useAuth();
-  const [tab, setTab] = useState<AdminTab>(
-    roleCan(role, 'manageUsers')
-      ? 'users'
-      : product === 'ops'
-        ? 'operations'
-        : roleCan(role, 'viewRoleMatrix')
-          ? 'permissions'
-          : 'baselinker',
-  );
-
   const showUsers = roleCan(role, 'manageUsers');
   const showMatrix = roleCan(role, 'viewRoleMatrix');
   const showOperations = product === 'ops';
   const showBaselinker = roleCan(role, 'manageBaselinker');
   const canEditMatrix = roleCan(role, 'editRoleMatrix');
+  // dziennik, migracje i status systemów są dostępne tylko administratorowi (RLS po stronie bazy)
+  const showAdminData = showUsers;
+
+  const [tab, setTab] = useState<AdminTab>(
+    showAdminData ? 'overview' : showOperations ? 'operations' : showMatrix ? 'permissions' : 'baselinker',
+  );
+
+  const tabs: { id: AdminTab; label: string; icon: ReactNode; show: boolean }[] = [
+    { id: 'overview', label: 'Przegląd', icon: <LayoutDashboard className="h-4 w-4" />, show: showAdminData },
+    { id: 'users', label: 'Użytkownicy', icon: <Users className="h-4 w-4" />, show: showUsers },
+    { id: 'permissions', label: 'Uprawnienia', icon: <Shield className="h-4 w-4" />, show: showMatrix },
+    { id: 'baselinker', label: 'BaseLinker', icon: <Link2 className="h-4 w-4" />, show: showBaselinker },
+    { id: 'activity', label: 'Aktywność', icon: <Activity className="h-4 w-4" />, show: showAdminData },
+    { id: 'migrations', label: 'Migracje bazy', icon: <Database className="h-4 w-4" />, show: showAdminData },
+    { id: 'system', label: 'Status systemów', icon: <Gauge className="h-4 w-4" />, show: showAdminData },
+    { id: 'operations', label: 'Operacje', icon: <Calculator className="h-4 w-4" />, show: showOperations },
+  ];
 
   return (
-    <div className="mx-auto w-full max-w-[1400px] space-y-6 pb-12">
+    <div className="mx-auto w-full max-w-[1400px] space-y-5 pb-12">
       {onBack && (
         <button
           type="button"
@@ -64,82 +78,68 @@ export function AdminHubPanel({
         </button>
       )}
 
-      <header className="rounded-2xl border border-slate-800 bg-slate-900/80">
-        <div className="p-5 sm:p-6 lg:p-8">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="flex items-start gap-3">
-              <span className="rounded-2xl bg-violet-500/15 p-3 text-violet-400">
-                <Settings2 className="h-6 w-6" />
-              </span>
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-400">
-                  Panel kontrolny
-                </p>
-                <h1 className="inline-flex items-center gap-2 text-xl font-semibold text-slate-50 sm:text-2xl">
-                  {title}
-                  <ContextHelp id="admin" side="left" />
-                </h1>
-                <p className="mt-1 max-w-2xl text-sm text-slate-400">
-                  {description}
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <StatPill label="Twoja rola" value={ROLE_LABELS[role]} />
-              <StatPill label="Konta" value={showUsers ? 'Zarzadzanie' : '-'} />
-              <StatPill
-                label={product === 'ops' ? 'Operacje' : 'Macierz'}
-                value={showMatrix ? (canEditMatrix ? 'Edycja' : 'Podglad') : '-'}
-                accent
-              />
+      <header className="overflow-hidden rounded-2xl border border-slate-800 bg-gradient-to-br from-violet-500/15 via-slate-900/80 to-slate-900/80">
+        <div className="flex flex-col gap-4 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-4">
+            <span className="rounded-2xl bg-violet-500/20 p-3.5 text-violet-300 shadow-inner">
+              <Settings2 className="h-7 w-7" />
+            </span>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-violet-300">Panel kontrolny</p>
+              <h1 className="inline-flex items-center gap-2 text-xl font-bold text-slate-50 sm:text-2xl">
+                {title}
+                <ContextHelp id="admin" side="left" />
+              </h1>
+              <p className="mt-1 max-w-2xl text-sm text-slate-400">{description}</p>
             </div>
           </div>
+          <div className="flex flex-wrap gap-2">
+            <StatPill label="Twoja rola" value={ROLE_LABELS[role]} />
+            <StatPill label="Konta" value={showUsers ? 'Zarządzanie' : '—'} />
+            <StatPill label="Uprawnienia" value={showMatrix ? (canEditMatrix ? 'Edycja' : 'Podgląd') : '—'} accent />
+          </div>
         </div>
-        <div className="flex gap-1 border-t border-slate-800 px-4 pb-0 pt-2">
-          {showUsers && (
-            <TabButton
-              active={tab === 'users'}
-              onClick={() => setTab('users')}
-              icon={<Users className="h-4 w-4" />}
-              label="Uzytkownicy"
-            />
-          )}
-          {showMatrix && (
-            <TabButton
-              active={tab === 'permissions'}
-              onClick={() => setTab('permissions')}
-              icon={<Shield className="h-4 w-4" />}
-              label="Uprawnienia"
-            />
-          )}
-          {showBaselinker && (
-            <TabButton
-              active={tab === 'baselinker'}
-              onClick={() => setTab('baselinker')}
-              icon={<Link2 className="h-4 w-4" />}
-              label="BaseLinker"
-            />
-          )}
-          {showOperations && (
-            <TabButton
-              active={tab === 'operations'}
-              onClick={() => setTab('operations')}
-              icon={<Calculator className="h-4 w-4" />}
-              label="Operacje"
-            />
-          )}
-        </div>
+        <nav className="flex gap-1 overflow-x-auto border-t border-slate-800/80 bg-slate-950/30 px-3 py-2" role="tablist">
+          {tabs
+            .filter((t) => t.show)
+            .map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={tab === t.id}
+                onClick={() => setTab(t.id)}
+                className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                  tab === t.id ? 'bg-violet-500/20 text-violet-200 shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                }`}
+              >
+                {t.icon}
+                {t.label}
+              </button>
+            ))}
+        </nav>
       </header>
 
-      {tab === 'users' && showUsers && <AdminUsersSection />}
-
-      {tab === 'operations' && showOperations && <OpsAdminSection />}
-
-      {tab === 'baselinker' && showBaselinker && <AdminBaselinkerSection />}
-
-      {tab === 'permissions' && showMatrix && (
-        <AdminPermissionsSection canEditMatrix={canEditMatrix} />
+      {tab === 'overview' && showAdminData && (
+        <AdminOverviewSection
+          onGo={(t) => setTab(t)}
+          canGo={{
+            users: showUsers,
+            permissions: showMatrix,
+            baselinker: showBaselinker,
+            activity: showAdminData,
+            migrations: showAdminData,
+            system: showAdminData,
+          }}
+        />
       )}
+      {tab === 'users' && showUsers && <AdminUsersSection />}
+      {tab === 'permissions' && showMatrix && <AdminPermissionsSection canEditMatrix={canEditMatrix} />}
+      {tab === 'baselinker' && showBaselinker && <AdminBaselinkerSection />}
+      {tab === 'activity' && showAdminData && <AdminAuditSection />}
+      {tab === 'migrations' && showAdminData && <MigrationsStatusView />}
+      {tab === 'system' && showAdminData && <SystemStatusView />}
+      {tab === 'operations' && showOperations && <OpsAdminSection />}
     </div>
   );
 }
@@ -247,30 +247,5 @@ function StatPill({
       <p className="text-[10px] uppercase tracking-wide text-slate-500">{label}</p>
       <p className="text-sm font-semibold tabular-nums text-slate-100">{value}</p>
     </div>
-  );
-}
-
-function TabButton({
-  active,
-  onClick,
-  icon,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: ReactNode;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`catalog-product-tab mb-2 inline-flex items-center gap-1.5 rounded-t-lg px-4 py-2 text-sm font-medium ${
-        active ? 'catalog-product-tab--active' : ''
-      }`}
-    >
-      {icon}
-      {label}
-    </button>
   );
 }

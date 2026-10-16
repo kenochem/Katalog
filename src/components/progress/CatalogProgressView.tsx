@@ -38,7 +38,7 @@ export function CatalogProgressView({ products, onOpenDecisions, onOpenProduct }
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-brand-300">Statystyki katalogu</p>
-          <h2 className="mt-1 text-2xl font-bold text-slate-50">Postępy</h2>
+          <h2 className="mt-1 text-2xl font-bold text-slate-50">Statystyki</h2>
           <p className="text-sm text-slate-400">
             Jakość danych produktów, zdjęć, opisów i producentów oraz ostatnia praca zespołu.
           </p>

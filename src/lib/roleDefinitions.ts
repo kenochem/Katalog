@@ -70,7 +70,10 @@ export type RoleAction =
   | 'viewOps'
   | 'manageBaselinker'
   | 'sendWaproOrder'
-  | 'managePromotions';
+  | 'managePromotions'
+  | 'manageManufacturers'
+  | 'hideProducts'
+  | 'exportData';
 
 export const ROLE_ACTION_LABELS: Record<RoleAction, string> = {
   editStock: 'Edycja stanów',
@@ -83,7 +86,7 @@ export const ROLE_ACTION_LABELS: Record<RoleAction, string> = {
   manageFavorites: 'Ulubione',
   manageKits: 'Zestawy',
   switchCatalog: 'Przełączanie katalogów',
-  viewProgress: 'Postęp zdjęć',
+  viewProgress: 'Statystyki i uzupełnianie danych',
   viewImages: 'Podgląd zdjęć',
   viewPrices: 'Ceny i marża',
   manageUsers: 'Zarządzanie kontami',
@@ -96,6 +99,9 @@ export const ROLE_ACTION_LABELS: Record<RoleAction, string> = {
   manageBaselinker: 'BaseLinker: synchronizacja i import',
   sendWaproOrder: 'CRM: wysyłka zamówień do WAPRO',
   managePromotions: 'Promocje: kampanie i ceny promocyjne',
+  manageManufacturers: 'Producenci: dodawanie, edycja, logo, synchronizacja z BL',
+  hideProducts: 'Ukrywanie i przywracanie produktów',
+  exportData: 'Eksport danych do CSV',
 };
 
 export const ROLE_ACTIONS: RoleAction[] = Object.keys(
@@ -126,6 +132,9 @@ const ALL_FALSE: Record<RoleAction, boolean> = {
   manageBaselinker: false,
   sendWaproOrder: false,
   managePromotions: false,
+  manageManufacturers: false,
+  hideProducts: false,
+  exportData: false,
 };
 
 /** Domyślna macierz — później można nadpisać z DB. */
@@ -151,6 +160,7 @@ export const DEFAULT_ROLE_MATRIX: Record<AppRole, Record<RoleAction, boolean>> =
     useTalk: true,
     useCrm: true,
     viewOps: true,
+    exportData: true,
   },
   magazynier: {
     ...ALL_FALSE,
@@ -187,6 +197,9 @@ export const DEFAULT_ROLE_MATRIX: Record<AppRole, Record<RoleAction, boolean>> =
     manageBaselinker: false,
     sendWaproOrder: false,
     managePromotions: false,
+    manageManufacturers: true,
+    hideProducts: true,
+    exportData: true,
   },
   admin: {
     editStock: true,
@@ -212,5 +225,9 @@ export const DEFAULT_ROLE_MATRIX: Record<AppRole, Record<RoleAction, boolean>> =
     manageBaselinker: true,
     sendWaproOrder: true,
     managePromotions: true,
+    manageManufacturers: true,
+    hideProducts: true,
+    exportData: true,
   },
 };
+

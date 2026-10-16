@@ -262,7 +262,7 @@ export function CatalogCommandPalette({
     if (canProgress) {
       items.push({
         id: 'nav-progress',
-        label: 'Widok: Postęp zdjęć',
+        label: 'Widok: Statystyki',
         icon: <BarChart3 className="h-4 w-4" />,
         run: wrap(() => onNavigate('progress')),
       });
