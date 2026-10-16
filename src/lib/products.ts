@@ -887,7 +887,72 @@ export async function isProductSkuTaken(
   );
 }
 
+/**
+ * Ukrywa / przywraca produkty w katalogu dla WSZYSTKICH użytkowników (flaga w product_meta w bazie).
+ * Dopisuje flagi do aktualnego `product_meta` z bazy (lista w aplikacji ma tylko okrojone meta, więc
+ * nie wolno zapisywać go z listy — zgubiłyby się pozostałe pola).
+ * Zwraca id, których nie udało się zapisać.
+ */
+export async function setProductsHidden(
+  ids: string[],
+  hidden: boolean,
+  reason = '',
+): Promise<{ failed: string[] }> {
+  const failed: string[] = [];
+  if (!isSupabaseConfigured || !supabase) return { failed: ids };
+  const at = new Date().toISOString();
+  for (let i = 0; i < ids.length; i += 100) {
+    const chunk = ids.slice(i, i + 100);
+    const { data, error } = await supabase
+      .from('products')
+      .select('id,sku,display_name,name,product_meta')
+      .in('id', chunk);
+    if (error) {
+      failed.push(...chunk);
+      continue;
+    }
+    const byId = new Map((data ?? []).map((r) => [String(r.id), r]));
+    for (const id of chunk) {
+      const row = byId.get(id);
+      if (!row) {
+        failed.push(id);
+        continue;
+      }
+      const meta = { ...((row.product_meta && typeof row.product_meta === 'object' ? row.product_meta : {}) as Record<string, unknown>) };
+      const before = { hidden: meta.catalogHidden === true, reason: meta.catalogHiddenReason ?? null };
+      if (hidden) {
+        meta.catalogHidden = true;
+        meta.catalogHiddenReason = reason;
+        meta.catalogHiddenAt = at;
+      } else {
+        delete meta.catalogHidden;
+        delete meta.catalogHiddenReason;
+        delete meta.catalogHiddenAt;
+      }
+      const { error: upErr } = await supabase.from('products').update({ product_meta: meta }).eq('id', id);
+      if (upErr) {
+        failed.push(id);
+        continue;
+      }
+      logAudit({
+        action: 'product.update',
+        entityType: 'product',
+        entityId: String(row.sku ?? id),
+        entityLabel: String(row.display_name || row.name || ''),
+        summary: hidden ? `Ukryto: ${reason}` : 'Przywrócono do katalogu',
+        changes: {
+          'meta: catalogHidden': { from: before.hidden ? true : null, to: hidden ? true : null },
+          ...(hidden ? { 'meta: catalogHiddenReason': { from: before.reason, to: reason } } : {}),
+        },
+      });
+    }
+  }
+  invalidateProductsCache();
+  return { failed };
+}
+
 export async function deleteProduct(productId: string): Promise<void> {
+
   if (isSupabaseConfigured && supabase) {
     const before = await captureProductBefore(productId, {});
     const { error } = await supabase.from('products').delete().eq('id', productId);

@@ -27,7 +27,7 @@ import {
   recordWaproSyncError,
   recordWaproSyncStarted,
 } from './lib/syncNotifications';
-import { fetchProducts, fetchKits, getProductImage, updateProduct, invalidateProductsCache, productListSignature } from './lib/products';
+import { fetchProducts, fetchKits, getProductImage, updateProduct, invalidateProductsCache, productListSignature, setProductsHidden } from './lib/products';
 import { getProductSearchIndex } from './lib/productSearchIndex';
 import { isCatalogSearchPending, useDebouncedCatalogSearch } from './lib/useDebouncedCatalogSearch';
 import {
@@ -789,7 +789,28 @@ export default function App() {
     }
   }, [opsStandalone]);
 
+  // Cicha synchronizacja: po powrocie do karty (> 3 min) pobierz katalog z bazy, żeby zmiany innych
+  // użytkowników (np. ukryte produkty) pojawiły się bez ręcznego odświeżania.
+  const lastCatalogSyncRef = useRef(Date.now());
+  useEffect(() => {
+    if (opsStandalone || !shouldUseSupabaseCatalog) return;
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - lastCatalogSyncRef.current < 3 * 60_000) return;
+      lastCatalogSyncRef.current = Date.now();
+      void loadCatalog('accessories', true);
+      void loadCatalog('shop', true);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+  }, [opsStandalone, shouldUseSupabaseCatalog, loadCatalog]);
+
   const initialCatalogLoadRef = useRef('');
+
   useEffect(() => {
     if (opsStandalone) {
       setLoading(false);
@@ -1329,7 +1350,8 @@ export default function App() {
     if (selectedProduct?.id === product.id) setSelectedProduct(restored);
 
     try {
-      await updateProduct(product.id, { meta: nextMeta });
+      const { failed } = await setProductsHidden([product.id], false);
+      if (failed.length) throw new Error('restore failed');
       showToast('Produkt przywrócony do katalogu', 'ok');
     } catch (err) {
       console.error(err);
@@ -1343,24 +1365,25 @@ export default function App() {
 
   const handleHideProducts = useCallback(async (items: Product[], reason: string) => {
     const at = new Date().toISOString();
-    let failed = 0;
     for (const product of items) {
-      const nextMeta = {
-        ...(product.meta ?? {}),
-        catalogHidden: true,
-        catalogHiddenReason: reason,
-        catalogHiddenAt: at,
+      const hidden: Product = {
+        ...product,
+        meta: { ...(product.meta ?? {}), catalogHidden: true, catalogHiddenReason: reason, catalogHiddenAt: at },
       };
-      const hidden: Product = { ...product, meta: nextMeta };
       patchProductInCache(product.id, () => hidden);
-      try {
-        await updateProduct(product.id, { meta: nextMeta });
-      } catch (err) {
-        console.error(err);
-        failed++;
-        patchProductInCache(product.id, () => product);
-      }
     }
+    let failedIds: string[] = [];
+    try {
+      failedIds = (await setProductsHidden(items.map((p) => p.id), true, reason)).failed;
+    } catch (err) {
+      console.error(err);
+      failedIds = items.map((p) => p.id);
+    }
+    const failedSet = new Set(failedIds);
+    for (const product of items) {
+      if (failedSet.has(product.id)) patchProductInCache(product.id, () => product);
+    }
+    const failed = failedSet.size;
     const ok = items.length - failed;
     if (ok > 0) showToast(`Ukryto ${ok} poz.: ${reason}`, 'ok');
     if (failed > 0) showToast(`Nie udało się ukryć ${failed} poz.`, 'error');

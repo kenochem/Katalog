@@ -18,6 +18,14 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-16',
+    title: 'Ukrywanie produktów: bezpieczny zapis w bazie dla wszystkich i automatyczne odświeżanie listy',
+    description:
+      'Ukrycie produktu (także masowe z Decyzji) zawsze zapisywało się w bazie, więc działa dla wszystkich użytkowników — ale inny komputer widział zmianę dopiero po przeładowaniu strony. Teraz katalog po powrocie do karty (po ponad 3 minutach) cicho pobiera aktualne dane z bazy. Dodatkowo ukrywanie i przywracanie zapisuje flagę do aktualnych danych produktu z bazy, a nie do skróconej wersji z listy, żeby przy masowym ukrywaniu nie zgubić innych pól meta produktu. Ukrycia i przywrócenia trafiają do dziennika aktywności.',
+    tag: 'poprawka',
+  },
+
+  {
+    date: '2026-10-16',
     title: 'Edycja produktu: kategoria wybierana z pełnej listy',
     description:
       'Pole „Kategoria” w edycji produktu było polem z podpowiedziami, które pokazywało tylko pozycje pasujące do aktualnie wpisanej wartości (np. przy „Inne” nie dało się wybrać niczego innego). Teraz to normalna lista rozwijana ze wszystkimi kategoriami, a nową kategorię można dodać opcją „+ Nowa kategoria…”.',
