@@ -21,7 +21,7 @@ import {
   importManufacturersFromBaselinker,
   manufacturerKey,
   registerManufacturers,
-  removeManufacturer,
+  removeManufacturerAndMove,
   renameManufacturer,
   saveManufacturerProfile,
   sendManufacturersToBaselinker,
@@ -346,6 +346,12 @@ function ManufacturerDetail({
   const [form, setForm] = useState<ManufacturerProfile>(saved);
   const [name, setName] = useState(row.name);
   const [working, setWorking] = useState<string | null>(null);
+  const [moveTo, setMoveTo] = useState('');
+  const moveOptions = useMemo(
+    () => manufacturerOptions().filter((n) => manufacturerKey(n) !== manufacturerKey(row.name) && n !== 'Inne'),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [registryVersion, row.name],
+  );
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -424,16 +430,19 @@ function ManufacturerDetail({
 
   async function remove() {
     const ok = await confirmDialog({
-      title: 'Usunięcie producenta z listy',
-      message: `Usunąć „${row.name}” z listy wyboru?`,
+      title: 'Usunięcie producenta',
+      message:
+        row.count > 0
+          ? `Usunąć „${row.name}” z listy? Jego ${row.count} produktów przejdzie do: ${moveTo || 'bez producenta'}.`
+          : `Usunąć „${row.name}” z listy wyboru?`,
       confirmLabel: 'Usuń',
       tone: 'danger',
     });
     if (!ok) return;
     setWorking('remove');
     try {
-      await removeManufacturer(row.name);
-      showToast('Producent usunięty z listy', 'ok');
+      const res = await removeManufacturerAndMove(row.name, moveTo);
+      showToast(`Producent usunięty${res.moved ? ` (przeniesiono ${res.moved} produktów)` : ''}`, 'ok');
       onRemoved();
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Nie udało się usunąć', 'error', 7000);
@@ -586,15 +595,34 @@ function ManufacturerDetail({
         <p className="text-[11px] text-slate-600 dark:text-slate-400">
           Poprawia nazwę w {row.count} produktach. Jeśli nowa nazwa już istnieje, zmiana jest blokowana. Nazwy w BaseLinkerze nie zmieniamy automatycznie.
         </p>
-        <button
-          type="button"
-          disabled={working !== null || row.count > 0}
-          onClick={() => void remove()}
-          title={row.count > 0 ? 'Najpierw przenieś produkty do innego producenta' : undefined}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-700 hover:underline disabled:opacity-40 dark:text-rose-300"
-        >
-          <Trash2 className="h-3.5 w-3.5" /> Usuń z listy{row.count > 0 ? ` (ma ${row.count} produktów)` : ''}
-        </button>
+        <div className="rounded-xl border border-rose-500/30 p-3">
+          <p className="text-xs font-semibold text-rose-700 dark:text-rose-300">Usuń tego producenta</p>
+          {row.count > 0 && (
+            <label className="mt-2 block">
+              <span className="mb-1 block text-[11px] text-slate-600 dark:text-slate-400">
+                Przenieś jego {row.count} produktów do:
+              </span>
+              <select value={moveTo} onChange={(e) => setMoveTo(e.target.value)} className="input-field">
+                <option value="">— bez producenta —</option>
+                {moveOptions.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <button
+            type="button"
+            disabled={working !== null}
+            onClick={() => void remove()}
+            className="mt-2 inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-500 disabled:opacity-50"
+          >
+            {working === 'remove' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+            Usuń producenta
+          </button>
+        </div>
+
       </div>
     </div>
   );

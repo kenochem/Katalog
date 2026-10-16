@@ -185,11 +185,13 @@ export async function saveManufacturerProfile(name: string, patch: Partial<Manuf
   const clean = cleanManufacturerName(name);
   const key = manufacturerKey(clean);
   const existing = getManufacturerEntry(clean);
-  const payload: Record<string, unknown> = { name_key: key, updated_at: new Date().toISOString() };
-  if (!existing) {
-    payload.name = clean;
-    payload.source = isStaticManufacturer(clean) ? 'wapro' : 'manual';
-  }
+  // nazwa i źródło muszą być w każdym upsercie (kolumny NOT NULL są sprawdzane przed ON CONFLICT)
+  const payload: Record<string, unknown> = {
+    name_key: key,
+    name: existing?.name ?? clean,
+    source: existing?.source ?? (isStaticManufacturer(clean) ? 'wapro' : 'manual'),
+    updated_at: new Date().toISOString(),
+  };
   if (patch.logoUrl !== undefined) payload.logo_url = patch.logoUrl || null;
   if (patch.description !== undefined) payload.description = patch.description || null;
   if (patch.website !== undefined) payload.website = patch.website || null;
@@ -224,24 +226,10 @@ export async function uploadManufacturerLogo(name: string, file: File): Promise<
   return data.publicUrl;
 }
 
-/**
- * Zmienia nazwę producenta we wszystkich jego produktach i w rejestrze (profil przechodzi na nową nazwę).
- * Marka z listy WAPRO zostaje ukryta na liście wyboru, żeby nie wracała pod starą nazwą.
- */
-export async function renameManufacturer(oldName: string, newNameRaw: string): Promise<{ updated: number }> {
+/** Przepisuje producenta we wszystkich produktach, które mają zapisaną starą nazwę (wielkość liter bez znaczenia). */
+async function moveProducts(oldName: string, newName: string): Promise<string[]> {
   const client = supabase;
   if (!client) throw new Error('Brak połączenia z bazą');
-  const newName = cleanManufacturerName(newNameRaw);
-  const oldKey = manufacturerKey(oldName);
-  const newKey = manufacturerKey(newName);
-  if (!newName) throw new Error('Podaj nową nazwę');
-  if (newName === oldName) return { updated: 0 };
-  if (newKey !== oldKey && (getManufacturerEntry(newName) && !getManufacturerEntry(newName)?.removed || isStaticManufacturer(newName))) {
-    throw new Error(`Producent „${newName}” już istnieje — wybierz inną nazwę`);
-  }
-  const old = getManufacturerEntry(oldName);
-
-  // produkty ze starą nazwą (wielkość liter bez znaczenia)
   const ids: string[] = [];
   for (let from = 0; ; from += 1000) {
     const { data, error } = await client
@@ -257,6 +245,46 @@ export async function renameManufacturer(oldName: string, newNameRaw: string): P
     const { error } = await client.from('products').update({ manufacturer: newName }).in('id', ids.slice(i, i + 200));
     if (error) throw error;
   }
+  return ids;
+}
+
+/**
+ * Usuwa producenta z listy; jego produkty przechodzą do wskazanego producenta (pusty = bez producenta).
+ */
+export async function removeManufacturerAndMove(name: string, target: string): Promise<{ moved: number }> {
+  const to = cleanManufacturerName(target);
+  if (to && manufacturerKey(to) === manufacturerKey(name)) throw new Error('Wybierz innego producenta');
+  const ids = await moveProducts(name, to);
+  invalidateProductsCache();
+  await removeManufacturer(name);
+  logAudit({
+    action: 'manufacturer.remove',
+    entityType: 'manufacturer',
+    entityId: name,
+    summary: `Producent „${name}” usunięty, ${ids.length} produktów → ${to || 'bez producenta'}`,
+  });
+  return { moved: ids.length };
+}
+
+/**
+ * Zmienia nazwę producenta we wszystkich jego produktach i w rejestrze (profil przechodzi na nową nazwę).
+
+ * Marka z listy WAPRO zostaje ukryta na liście wyboru, żeby nie wracała pod starą nazwą.
+ */
+export async function renameManufacturer(oldName: string, newNameRaw: string): Promise<{ updated: number }> {
+  const client = supabase;
+  if (!client) throw new Error('Brak połączenia z bazą');
+  const newName = cleanManufacturerName(newNameRaw);
+  const oldKey = manufacturerKey(oldName);
+  const newKey = manufacturerKey(newName);
+  if (!newName) throw new Error('Podaj nową nazwę');
+  if (newName === oldName) return { updated: 0 };
+  if (newKey !== oldKey && (getManufacturerEntry(newName) && !getManufacturerEntry(newName)?.removed || isStaticManufacturer(newName))) {
+    throw new Error(`Producent „${newName}” już istnieje — wybierz inną nazwę`);
+  }
+  const old = getManufacturerEntry(oldName);
+
+  const ids = await moveProducts(oldName, newName);
 
   // rejestr: nowy wpis z profilem starego, stary wycofany / usunięty
   const profile = old ?? { ...EMPTY_PROFILE, source: 'manual' as const, blId: null };

@@ -18,6 +18,14 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-16',
+    title: 'Producenci: naprawa zapisu profilu i usuwania logo oraz usuwanie producenta z przeniesieniem produktów',
+    description:
+      'Naprawiono błąd, przez który zapis profilu producenta (usunięcie lub zmiana logo, opis, kontakt) kończył się niepowodzeniem, gdy producent miał już wpis w rejestrze — baza odrzucała zapis z powodu brakującej nazwy. Dodatkowo producenta można teraz usunąć także wtedy, gdy ma produkty: przy usuwaniu wybierasz, do którego producenta mają trafić jego produkty (albo „bez producenta”), a stara marka znika z listy wyboru.',
+    tag: 'poprawka',
+  },
+
+  {
+    date: '2026-10-16',
     title: 'Nowa sekcja „Producenci” w menu: profile marek z logo, opisem i zmianą nazwy',
     description:
       'W menu (Katalog → Producenci, także w menu mobilnym i zakładkach) jest osobny widok do pracy z markami. Po lewej lista wszystkich producentów z logo, liczbą produktów i oznaczeniami (WAPRO / ręczny / BaseLinker, brak logo lub opisu), wyszukiwarka i sortowanie (nazwa, liczba produktów, najmniej uzupełnieni). Po prawej profil wybranego producenta: wgrywanie i zmiana logo, opis marki, strona WWW, e-mail, telefon, notatki wewnętrzne, statystyki (produkty, odsetek zdjęć, brak EAN, stan magazynowy), przycisk „Pokaż produkty w katalogu” oraz zmiana nazwy, która poprawia producenta we wszystkich jego produktach (np. niedokładne nazwy z WAPRO). Można też dodać nowego producenta, usunąć nieużywanego, pobrać listę z BaseLinkera i wysłać tam brakujących. Przycisk „Producenci” w Decyzjach prowadzi teraz do tego widoku. Wymaga uruchomienia (ponownie) migracji migration-catalog-manufacturers.sql.',
