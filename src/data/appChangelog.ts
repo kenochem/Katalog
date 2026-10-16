@@ -4,6 +4,11 @@ export interface AppChangelogEntry {
   title: string;
   description: string;
   tag?: 'nowość' | 'poprawka' | 'wydajność';
+  /**
+   * Wielkość zmiany do numeru wersji (domyślnie z tagu: nowość → minor, reszta → patch).
+   * `major` — duża przebudowa; `minor` — nowa funkcja lub większa zmiana; `patch` — mała poprawka.
+   */
+  size?: 'patch' | 'minor' | 'major';
 }
 
 /**
@@ -11,6 +16,14 @@ export interface AppChangelogEntry {
  * funkcji/poprawce. Najnowszy na górze listy w UI (sortowane po `date`).
  */
 export const APP_CHANGELOG: AppChangelogEntry[] = [
+  {
+    date: '2026-10-16',
+    title: 'Numeracja wersji wg wielkości zmiany (poprawka → patch, nowość → minor, przebudowa → major)',
+    description:
+      'Zmiana zasady numeracji: wersja nie rośnie już automatycznie z każdym dniem, tylko zależy od wielkości zmiany. Mała poprawka lub drobna zmiana podnosi ostatnią liczbę (PATCH), nowa funkcja lub większa zmiana — środkową (MINOR, a ostatnia wraca do 0), a duża przebudowa — pierwszą (MAJOR). Domyślny rozmiar wynika z tagu wpisu (poprawka i wydajność → patch, nowość → minor), a w dzienniku można go nadpisać polem rozmiaru (np. duża przebudowa → major). Dotychczasowe wersje zostają bez zmian, a nowa numeracja startuje od ostatniej z nich (1.13.20). Każdy wpis w Aktualizacjach ma swój numer wersji.',
+    tag: 'poprawka',
+  },
+
   {
     date: '2026-10-15',
     title: 'Numeracja wersji: numer wpisu w ciągu dnia jako PATCH (np. 1.13.20)',
