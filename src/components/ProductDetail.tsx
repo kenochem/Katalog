@@ -621,7 +621,6 @@ export function ProductDetail({
       ].filter(Boolean)),
     ).sort((a, b) => a.localeCompare(b, 'pl'));
   }, [detail.category]);
-  const categoryListId = `product-category-options-${detail.id.replace(/[^a-z0-9_-]/gi, '-')}`;
   const editManufacturers = manufacturerOptions([detail.manufacturer, manufacturer]);
   const displayManufacturer = effectiveManufacturer(detail);
   const variantCount = detail.variants?.length ?? 0;
@@ -1260,18 +1259,8 @@ export function ProductDetail({
               </label>
               <label className="block">
                 <span className="mb-1 text-xs text-slate-500">Kategoria</span>
-                <input
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  list={categoryListId}
-                  placeholder="Wybierz lub wpisz kategorię"
-                  className="input-field"
-                />
-                <datalist id={categoryListId}>
-                  {editCategories.map((c) => (
-                    <option key={c} value={c} />
-                  ))}
-                </datalist>
+                <CategoryPicker value={category} options={editCategories} onChange={setCategory} />
+
               </label>
               <label className="block">
                 <span className="mb-1 text-xs text-slate-500">EAN / kod kreskowy</span>
@@ -1547,18 +1536,8 @@ export function ProductDetail({
               </label>
               <label className="block">
                 <span className="mb-1 text-xs text-slate-500">Kategoria</span>
-                <input
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  list={categoryListId}
-                  placeholder="Wybierz lub wpisz kategorię"
-                  className="input-field"
-                />
-                <datalist id={categoryListId}>
-                  {editCategories.map((c) => (
-                    <option key={c} value={c} />
-                  ))}
-                </datalist>
+                <CategoryPicker value={category} options={editCategories} onChange={setCategory} />
+
               </label>
               <label className="block">
                 <span className="mb-1 text-xs text-slate-500">EAN / kod kreskowy</span>
@@ -2626,5 +2605,58 @@ function Badge({ label, muted, warning }: { label: string; muted?: boolean; warn
     >
       {label}
     </span>
+  );
+}
+
+const NEW_CATEGORY = '__new__';
+
+/** Lista kategorii do wyboru (zawsze pełna) + możliwość wpisania nowej. */
+function CategoryPicker({
+  value,
+  options,
+  onChange,
+}: {
+  value: string;
+  options: string[];
+  onChange: (next: string) => void;
+}) {
+  const [custom, setCustom] = useState(false);
+  const all = useMemo(() => {
+    const set = new Set(options.filter(Boolean));
+    if (value) set.add(value);
+    return [...set].sort((a, b) => a.localeCompare(b, 'pl'));
+  }, [options, value]);
+  return (
+    <>
+      <select
+        value={custom ? NEW_CATEGORY : value}
+        onChange={(e) => {
+          if (e.target.value === NEW_CATEGORY) {
+            setCustom(true);
+            return;
+          }
+          setCustom(false);
+          onChange(e.target.value);
+        }}
+        className="input-field"
+      >
+        {!value && <option value="">— wybierz kategorię —</option>}
+        {all.map((c) => (
+          <option key={c} value={c}>
+            {c}
+          </option>
+        ))}
+        <option value={NEW_CATEGORY}>+ Nowa kategoria…</option>
+      </select>
+      {custom && (
+        <input
+          autoFocus
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Wpisz nazwę nowej kategorii"
+          className="input-field mt-2"
+        />
+      )}
+    </>
   );
 }

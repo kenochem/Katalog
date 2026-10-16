@@ -18,6 +18,14 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-16',
+    title: 'Edycja produktu: kategoria wybierana z pełnej listy',
+    description:
+      'Pole „Kategoria” w edycji produktu było polem z podpowiedziami, które pokazywało tylko pozycje pasujące do aktualnie wpisanej wartości (np. przy „Inne” nie dało się wybrać niczego innego). Teraz to normalna lista rozwijana ze wszystkimi kategoriami, a nową kategorię można dodać opcją „+ Nowa kategoria…”.',
+    tag: 'poprawka',
+  },
+
+  {
+    date: '2026-10-16',
     title: 'Profil: naprawa danych liczy się do statystyk, XP i nowych odznak „Jakość danych”',
     description:
       'Do statystyk profilu dochodzą „Naprawione dane”: system rozpoznaje w dzienniku zmian, kiedy puste pole produktu zostało uzupełnione — EAN, opis, producent, cena sprzedaży, zdjęcie, a także ustawienie kategorii oraz schowanie zbędnych pozycji (porządki w Decyzjach). Za każde uzupełnienie jest bonus punktów (max 3 pkt na jeden zapis), a ukrywanie liczy się do statystyk i odznaki, ale nie daje bonusu XP. Siedem nowych odznak w czterech stopniach w grupie „Jakość danych”: Naprawiacz danych, Łowca EAN-ów, Autor opisów, Kategoryzator, Znawca producentów, Uzupełniacz cen i Sprzątacz katalogu. Liczone jest też wstecz z istniejącego dziennika. Operacje BaseLinkera nadal liczą się w odznace „Łącznik z BaseLinkerem”.',
