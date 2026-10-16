@@ -1,4 +1,5 @@
 ﻿import { confirmDialog } from '../lib/dialog';
+import { HIDE_REASON_PRESETS } from '../lib/hideReasons';
 import {
   X, Camera, Upload, Loader2, Package, Pencil, Save, Trash2,
   Minus, Plus, Images, Printer, Tag, ArrowLeft,
@@ -721,6 +722,19 @@ export function ProductDetail({
               placeholder="np. stara marka, produkt przestarzały, nie sprzedajemy"
               className="input-field"
             />
+            <span className="mt-2 flex flex-wrap gap-1.5">
+              {HIDE_REASON_PRESETS.map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setEditMeta((m: ProductMeta) => ({ ...m, catalogHiddenReason: preset }))}
+                  className="rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  {preset}
+                </button>
+              ))}
+            </span>
+
           </label>
         )}
       </div>

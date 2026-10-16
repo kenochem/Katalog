@@ -18,6 +18,14 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-16',
+    title: 'Decyzje: masowe ukrywanie „śmietnika” z gotowymi powodami (np. Śmietnik Piotra)',
+    description:
+      'W sekcji Decyzje można teraz zaznaczyć dowolne produkty z listy (pojedynczo albo „Zaznacz wszystko na liście”) i ukryć je jednym kliknięciem z opisem powodu. Gotowe powody: Śmietnik Piotra, Część myjki, Obudowa, Koło wentylatora, Element maszyny, Uszczelka/o-ring, Śruba/złączka, Stara marka, Produkt przestarzały, Nie sprzedajemy, Duplikat — albo własny opis. Dodano też wyszukiwarkę na liście (np. „myjka”, „obudowa”), żeby szybko wyłuskać całe grupy części. Ukryte pozycje zostają w bazie i synchronizacji, widać je w „Ukryte” i można przywrócić. Te same gotowe powody są podpowiedziane w karcie produktu przy opcji „Ukryj w katalogu”.',
+    tag: 'nowość',
+  },
+
+  {
+    date: '2026-10-16',
     title: 'Numeracja wersji wg wielkości zmiany (poprawka → patch, nowość → minor, przebudowa → major)',
     description:
       'Zmiana zasady numeracji: wersja nie rośnie już automatycznie z każdym dniem, tylko zależy od wielkości zmiany. Mała poprawka lub drobna zmiana podnosi ostatnią liczbę (PATCH), nowa funkcja lub większa zmiana — środkową (MINOR, a ostatnia wraca do 0), a duża przebudowa — pierwszą (MAJOR). Domyślny rozmiar wynika z tagu wpisu (poprawka i wydajność → patch, nowość → minor), a w dzienniku można go nadpisać polem rozmiaru (np. duża przebudowa → major). Dotychczasowe wersje zostają bez zmian, a nowa numeracja startuje od ostatniej z nich (1.13.20). Każdy wpis w Aktualizacjach ma swój numer wersji.',

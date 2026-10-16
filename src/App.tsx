@@ -1341,6 +1341,31 @@ export default function App() {
     }
   }, [selectedProduct]);
 
+  const handleHideProducts = useCallback(async (items: Product[], reason: string) => {
+    const at = new Date().toISOString();
+    let failed = 0;
+    for (const product of items) {
+      const nextMeta = {
+        ...(product.meta ?? {}),
+        catalogHidden: true,
+        catalogHiddenReason: reason,
+        catalogHiddenAt: at,
+      };
+      const hidden: Product = { ...product, meta: nextMeta };
+      patchProductInCache(product.id, () => hidden);
+      try {
+        await updateProduct(product.id, { meta: nextMeta });
+      } catch (err) {
+        console.error(err);
+        failed++;
+        patchProductInCache(product.id, () => product);
+      }
+    }
+    const ok = items.length - failed;
+    if (ok > 0) showToast(`Ukryto ${ok} poz.: ${reason}`, 'ok');
+    if (failed > 0) showToast(`Nie udało się ukryć ${failed} poz.`, 'error');
+  }, []);
+
   const handleApplyDecisionCategory = useCallback(async (product: Product, nextCategory: string) => {
     const previous = product;
     const updated: Product = { ...product, category: nextCategory };
@@ -1903,6 +1928,7 @@ export default function App() {
             onApplyCategory={handleApplyDecisionCategory}
             categoryBusyId={categoryBusyId}
             onOpenHidden={() => setView('catalog-hidden')}
+            onHideProducts={handleHideProducts}
           />
         ) : view === 'catalog-hidden' && isCatalogProduct() ? (
           <Suspense fallback={<ViewFallback />}>

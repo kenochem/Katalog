@@ -1,10 +1,11 @@
-import { AlertTriangle, CheckCircle2, CheckSquare, ChevronRight, EyeOff, ImageOff, Loader2, Square, Tag } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, CheckSquare, ChevronRight, EyeOff, ImageOff, Loader2, Search, Square, Tag } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { Product } from '../types';
 import { getProductImage } from '../lib/products';
 import { assessProductKnowledge } from '../lib/productKnowledge';
 import { effectiveManufacturer } from '../lib/waproManufacturers';
 import { hasBaselinkerLink } from '../lib/baselinkerLink';
+import { HIDE_REASON_PRESETS } from '../lib/hideReasons';
 import { inferProductTypeLabel } from '../lib/catalogKind';
 import {
   getProductDisplayCategory,
@@ -98,16 +99,21 @@ export function CatalogDecisionView({
   onApplyCategory,
   categoryBusyId,
   onOpenHidden,
+  onHideProducts,
 }: {
   products: Product[];
   onOpenProduct: (product: Product) => void;
   onApplyCategory?: (product: Product, category: string) => void | Promise<void>;
   categoryBusyId?: string | null;
   onOpenHidden?: () => void;
+  onHideProducts?: (products: Product[], reason: string) => void | Promise<void>;
 }) {
   const [filter, setFilter] = useState<'all' | 'category' | 'media' | 'data'>('all');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
+  const [query, setQuery] = useState('');
+  const [hideReason, setHideReason] = useState(HIDE_REASON_PRESETS[0]);
+  const [hiding, setHiding] = useState(false);
   const rows = useMemo(() => buildCatalogDecisionRows(products), [products]);
   const hard = rows.filter((row) => row.score >= 6).length;
   const imageMissing = rows.filter((row) => row.issues.some((i) => i.label === 'brak zdjęcia')).length;
@@ -115,13 +121,22 @@ export function CatalogDecisionView({
     row.issues.some((i) => i.label.startsWith('ogólna kategoria') || i.label.startsWith('producent jako kategoria')),
   ).length;
   const categoryRows = rows.filter((row) => hasCategoryDecision(row.product));
+  const queryTokens = query.trim().toLocaleLowerCase('pl').split(/\s+/).filter(Boolean);
   const visibleRows = rows.filter((row) => {
+    if (queryTokens.length > 0) {
+      const hay = [row.product.sku, row.product.displayName, row.product.name, effectiveManufacturer(row.product), getProductDisplayCategory(row.product)]
+        .filter(Boolean)
+        .join(' ')
+        .toLocaleLowerCase('pl');
+      if (!queryTokens.every((t) => hay.includes(t))) return false;
+    }
     if (filter === 'category') return hasCategoryDecision(row.product);
     if (filter === 'media') return row.issues.some((i) => i.label === 'brak zdjęcia');
     if (filter === 'data') return row.issues.some((i) => !i.label.includes('kategoria') && i.label !== 'brak zdjęcia');
     return true;
   });
   const visibleSlice = visibleRows.slice(0, 220);
+  const allVisibleSelected = visibleSlice.length > 0 && visibleSlice.every((row) => selected.has(row.product.id));
   const applicableVisible = visibleSlice.filter((row) => onApplyCategory && hasCategoryDecision(row.product));
   const allApplicableSelected =
     applicableVisible.length > 0 && applicableVisible.every((row) => selected.has(row.product.id));
@@ -139,6 +154,29 @@ export function CatalogDecisionView({
     });
   }
 
+  function toggleSelectEveryVisible() {
+    setSelected((prev) => {
+      if (allVisibleSelected) return new Set();
+      const next = new Set(prev);
+      for (const row of visibleSlice) next.add(row.product.id);
+      return next;
+    });
+  }
+
+  async function hideSelected() {
+    if (!onHideProducts) return;
+    const items = visibleRows.filter((row) => selected.has(row.product.id)).map((row) => row.product);
+    const reason = hideReason.trim();
+    if (items.length === 0 || !reason) return;
+    setHiding(true);
+    try {
+      await onHideProducts(items, reason);
+    } finally {
+      setHiding(false);
+      setSelected(new Set());
+    }
+  }
+
   function toggleSelectAllVisible() {
     setSelected((prev) => {
       if (allApplicableSelected) return new Set();
@@ -150,7 +188,7 @@ export function CatalogDecisionView({
 
   async function applySelected() {
     if (!onApplyCategory) return;
-    const items = visibleSlice.filter((row) => selected.has(row.product.id));
+    const items = visibleSlice.filter((row) => selected.has(row.product.id) && hasCategoryDecision(row.product));
     if (items.length === 0) return;
     setBulkProgress({ done: 0, total: items.length });
     for (const row of items) {
@@ -214,6 +252,70 @@ export function CatalogDecisionView({
         <DecisionFilterButton active={filter === 'data'} onClick={() => setFilter('data')} label="Dane i opis" />
       </div>
 
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Szukaj na liście (np. myjka, obudowa, wentylator, SKU)..."
+          className="input-field with-icon"
+        />
+      </div>
+
+      {onHideProducts && visibleSlice.length > 0 && (
+        <section className="space-y-3 rounded-2xl border border-slate-300 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900/60">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={toggleSelectEveryVisible}
+              className="flex items-center gap-1.5 text-sm font-semibold text-slate-800 dark:text-slate-100"
+            >
+              {allVisibleSelected ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+              Zaznacz wszystko na liście ({visibleSlice.length})
+            </button>
+            <span className="text-sm text-slate-600 dark:text-slate-400">
+              Zaznaczono: <strong>{selected.size}</strong>
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
+              Ukryj jako:
+            </span>
+            {HIDE_REASON_PRESETS.map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => setHideReason(preset)}
+                className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                  hideReason === preset
+                    ? 'border-rose-500 bg-rose-50 text-rose-900 dark:bg-rose-500/15 dark:text-rose-200'
+                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
+                }`}
+              >
+                {preset}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              value={hideReason}
+              onChange={(e) => setHideReason(e.target.value)}
+              placeholder="Własny opis powodu ukrycia"
+              className="input-field min-w-0 flex-1"
+            />
+            <button
+              type="button"
+              disabled={selected.size === 0 || !hideReason.trim() || hiding}
+              onClick={() => void hideSelected()}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {hiding ? <Loader2 className="h-4 w-4 animate-spin" /> : <EyeOff className="h-4 w-4" />}
+              Ukryj zaznaczone ({selected.size})
+            </button>
+          </div>
+        </section>
+      )}
+
       {onApplyCategory && applicableVisible.length > 0 && (
         <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-brand-300 bg-brand-50 px-4 py-3 dark:border-brand-500/30 dark:bg-brand-500/10">
           <button
@@ -273,14 +375,16 @@ export function CatalogDecisionView({
               const sourceCategory = getProductSourceCategory(row.product);
               const targetCategory = getProductDisplayCategory(row.product);
               const canApply = onApplyCategory && hasCategoryDecision(row.product);
+              const canSelect = canApply || Boolean(onHideProducts);
               const busy = categoryBusyId === row.product.id;
               return (
                 <li
                   key={row.product.id}
                   className="grid grid-cols-[1.5rem_4.5rem_1fr_auto] items-center gap-3 px-4 py-3 transition hover:bg-slate-50 dark:hover:bg-slate-900/60"
                 >
-                  {canApply ? (
+                  {canSelect ? (
                     <button
+
                       type="button"
                       onClick={() => toggleSelected(row.product.id)}
                       aria-label="Zaznacz"
