@@ -11,6 +11,8 @@ import type { Product, ProductVariant } from '../types';
 import { ACCESSORY_CATEGORIES } from '../types';
 import { normalizeManufacturer, effectiveManufacturer } from '../lib/waproManufacturers';
 import { ManufacturerSelect } from './ManufacturerSelect';
+import { ManufacturerLogo } from './ManufacturerLogo';
+
 
 import { ProductImage } from './ProductImage';
 import { getProductImage, getProductImages, updateProductImage, addProductExtraImage, setProductPrimaryImage,
@@ -1605,12 +1607,15 @@ export function ProductDetail({
             </div>
           ) : (
             <>
-              <div>
-                <h2 className="text-lg font-semibold text-slate-100">{displayName}</h2>
-                {detail.name.trim() &&
-                  detail.name.trim().toLowerCase() !== displayName.trim().toLowerCase() && (
-                    <p className="mt-1 text-sm text-slate-400">{detail.name}</p>
-                  )}
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="text-lg font-semibold text-slate-100">{displayName}</h2>
+                  {detail.name.trim() &&
+                    detail.name.trim().toLowerCase() !== displayName.trim().toLowerCase() && (
+                      <p className="mt-1 text-sm text-slate-400">{detail.name}</p>
+                    )}
+                </div>
+                <ManufacturerLogo name={displayManufacturer} />
               </div>
 
               <div className="flex flex-wrap gap-2">
