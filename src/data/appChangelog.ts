@@ -18,6 +18,14 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-16',
+    title: 'Profil: naprawa danych liczy się do statystyk, XP i nowych odznak „Jakość danych”',
+    description:
+      'Do statystyk profilu dochodzą „Naprawione dane”: system rozpoznaje w dzienniku zmian, kiedy puste pole produktu zostało uzupełnione — EAN, opis, producent, cena sprzedaży, zdjęcie, a także ustawienie kategorii oraz schowanie zbędnych pozycji (porządki w Decyzjach). Za każde uzupełnienie jest bonus punktów (max 3 pkt na jeden zapis), a ukrywanie liczy się do statystyk i odznaki, ale nie daje bonusu XP. Siedem nowych odznak w czterech stopniach w grupie „Jakość danych”: Naprawiacz danych, Łowca EAN-ów, Autor opisów, Kategoryzator, Znawca producentów, Uzupełniacz cen i Sprzątacz katalogu. Liczone jest też wstecz z istniejącego dziennika. Operacje BaseLinkera nadal liczą się w odznace „Łącznik z BaseLinkerem”.',
+    tag: 'nowość',
+  },
+
+  {
+    date: '2026-10-16',
     title: 'Decyzje: nowy układ — lista na całą szerokość, panel filtrów i akcji z boku, stronicowanie',
     description:
       'Przebudowa sekcji Decyzje. Lista produktów zajmuje całą szerokość strony i pokazuje wszystkie pozycje (koniec limitu 200) ze stronicowaniem po 25/50/100/200. Z boku jest panel (przewija się razem ze stroną): wyszukiwarka (nazwa, SKU, EAN, producent), filtry rodzajów problemów z licznikami (zdjęcie, kategoria, producent, EAN, cena, kompletność, typ, BaseLinker), filtr producenta, stanu magazynowego i katalogu, sortowanie (pilność, nazwa, SKU, kompletność, stan), zaznaczanie strony lub wszystkich wyników, masowe ukrywanie z gotowymi powodami (np. Śmietnik Piotra, Część myjki) oraz masowe ustawianie kategorii. Przy każdym wierszu jest przycisk szybkiego „Ukryj”, a u góry eksport przefiltrowanej listy do CSV. Wiersze pokazują teraz producenta, stan, kompletność i wszystkie problemy.',

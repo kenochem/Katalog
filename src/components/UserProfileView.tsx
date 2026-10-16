@@ -29,6 +29,9 @@ import {
 } from '../lib/userPreferences';
 import {
   CATEGORY_LABEL,
+  FIX_IDS,
+  FIX_LABEL,
+
   computeStats,
   dayKey,
   fetchMyActivity,
@@ -729,6 +732,18 @@ function Overview({
           ))}
         </div>
         <p className="mt-2 text-[11px] text-slate-500">Im ciemniejszy kwadrat, tym więcej wykonanej pracy danego dnia. Weekend nie przerywa serii.</p>
+      </div>
+
+      <div className={card}>
+        <h3 className="mb-1 text-sm font-semibold text-slate-100">Naprawione dane</h3>
+        <p className="mb-3 text-[11px] text-slate-500">
+          Liczymy pola, które były puste, a Ty je uzupełniłeś/aś (dodatkowe punkty XP). Razem: {stats.fixesTotal}.
+        </p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {FIX_IDS.map((id) => (
+            <Stat key={id} label={FIX_LABEL[id]} value={stats.fixes[id]} />
+          ))}
+        </div>
       </div>
 
       <div className={card}>

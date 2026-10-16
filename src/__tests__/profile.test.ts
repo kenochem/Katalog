@@ -3,6 +3,7 @@ import {
   MAX_LEVEL,
   XP_EVENT_CAP,
   computeStats,
+  detectFixes,
   levelFromXp,
   rankForLevel,
   xpForLevel,
@@ -146,5 +147,60 @@ describe('kosmetyka profilu', () => {
     expect(names).toContain('Zmierzch');
     expect(names).toContain('Iskierki');
     expect(names).not.toContain('Siatka techniczna');
+  });
+});
+
+describe('naprawione dane (uzupełnienia pól)', () => {
+  const fixRow = (changes: Record<string, unknown>, action = 'product.update'): ActivityRow => ({
+    created_at: new Date().toISOString(),
+    action,
+    changes: changes as ActivityRow['changes'],
+  });
+
+  it('wykrywa uzupełnienie pustych pól, a nie zwykłą zmianę', () => {
+    const f = detectFixes(
+      fixRow({
+        EAN: { from: null, to: '5900000000000' },
+        Opis: { from: '', to: 'Nowy opis' },
+        Producent: { from: 'Stary', to: 'Nowy' },
+      }),
+    );
+    expect(f.ean).toBe(1);
+    expect(f.description).toBe(1);
+    expect(f.manufacturer).toBeUndefined();
+  });
+
+  it('cena z 0 na wartość i zdjęcie z pustego liczą się jako naprawa', () => {
+    const f = detectFixes(
+      fixRow({ 'Cena sprzedaży brutto': { from: 0, to: 12.3 }, 'Zdjęcie główne': { from: null, to: 'https://x/y.jpg' } }),
+    );
+    expect(f.price).toBe(1);
+    expect(f.photo).toBe(1);
+  });
+
+  it('ukrycie produktu to porządkowanie i nie daje bonusowych punktów', () => {
+    const hide = fixRow({ 'meta: catalogHidden': { from: null, to: true } });
+    expect(detectFixes(hide).hidden).toBe(1);
+    const s = computeStats([hide]);
+    expect(s.fixes.hidden).toBe(1);
+    expect(s.xp).toBe(1);
+  });
+
+  it('bonus XP za naprawy jest ograniczony do 3 na wpis i sumuje się w statystykach', () => {
+    const s = computeStats([
+      fixRow({
+        EAN: { from: null, to: '1' },
+        Opis: { from: null, to: 'a' },
+        Producent: { from: null, to: 'b' },
+        'Cena sprzedaży netto': { from: null, to: 5 },
+      }),
+    ]);
+    expect(s.fixes.ean + s.fixes.description + s.fixes.manufacturer + s.fixes.price).toBe(4);
+    expect(s.xp).toBe(1 + 3);
+    expect(s.fixesTotal).toBe(4);
+  });
+
+  it('inne akcje (np. stan) nie są naprawami', () => {
+    expect(detectFixes(fixRow({ EAN: { from: null, to: '1' } }, 'product.stock'))).toEqual({});
   });
 });

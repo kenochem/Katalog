@@ -8,7 +8,52 @@ import { supabase } from './supabase';
 export interface ActivityRow {
   created_at: string;
   action: string;
-  changes: { count?: { to?: unknown } } | null;
+  changes: ({ count?: { to?: unknown } } & Record<string, unknown>) | null;
+}
+
+/** Rodzaje „napraw” danych produktu wykrywane w zapisanych zmianach (pole puste → uzupełnione). */
+export type FixId = 'ean' | 'description' | 'manufacturer' | 'category' | 'price' | 'photo' | 'hidden';
+
+export const FIX_LABEL: Record<FixId, string> = {
+  ean: 'Uzupełnione EAN',
+  description: 'Uzupełnione opisy',
+  manufacturer: 'Uzupełnieni producenci',
+  category: 'Ustawione kategorie',
+  price: 'Uzupełnione ceny',
+  photo: 'Dodane zdjęcia',
+  hidden: 'Ukryte pozycje (porządkowanie)',
+};
+
+export const FIX_IDS = Object.keys(FIX_LABEL) as FixId[];
+
+const FIX_ACTIONS = new Set(['product.update', 'product.category', 'product.price', 'product.image']);
+
+function isEmptyValue(v: unknown): boolean {
+  if (v == null || v === '' || v === 0 || v === false) return true;
+  if (typeof v === 'string') return v.trim() === '' || v === '[]' || v === '0';
+  if (Array.isArray(v)) return v.length === 0;
+  return false;
+}
+
+/** Które dane produktu zostały w tym wpisie uzupełnione/naprawione (puste → wypełnione). */
+export function detectFixes(row: ActivityRow): Partial<Record<FixId, number>> {
+  const out: Partial<Record<FixId, number>> = {};
+  if (!FIX_ACTIONS.has(row.action) || !row.changes) return out;
+  const ch = row.changes as Record<string, unknown>;
+  const filled = (label: string): boolean => {
+    const c = ch[label] as { from?: unknown; to?: unknown } | undefined;
+    return !!c && typeof c === 'object' && isEmptyValue(c.from) && !isEmptyValue(c.to);
+  };
+  if (filled('EAN')) out.ean = 1;
+  if (filled('Opis')) out.description = 1;
+  if (filled('Producent')) out.manufacturer = 1;
+  const cat = ch['Kategoria'] as { to?: unknown } | undefined;
+  if (cat && typeof cat === 'object' && !isEmptyValue(cat.to)) out.category = 1;
+  if (filled('Cena sprzedaży netto') || filled('Cena sprzedaży brutto')) out.price = 1;
+  if (filled('Zdjęcie główne') || filled('Zdjęcie (URL)') || filled('Dodatkowe zdjęcia')) out.photo = 1;
+  const hid = ch['meta: catalogHidden'] as { to?: unknown } | undefined;
+  if (hid && typeof hid === 'object' && hid.to === true) out.hidden = 1;
+  return out;
 }
 
 export type CategoryId =
@@ -97,8 +142,11 @@ export function mondayKey(d: Date): string {
 export interface ProfileStats {
   counts: Record<CategoryId, number>;
   total: number;
-  /** Punkty pracy (XP): każda czynność 1 pkt, akcje zbiorcze max 25 pkt za jedną operację. */
+  /** Punkty pracy (XP): każda czynność 1 pkt (+ bonus za uzupełnione dane), akcje zbiorcze max 25 pkt za operację. */
   xp: number;
+  /** Naprawione dane: ile razy uzupełniono EAN, opis, producenta, cenę itd. */
+  fixes: Record<FixId, number>;
+  fixesTotal: number;
   logins: number;
   last30: number;
   last7: number;
@@ -133,6 +181,7 @@ export function computeStats(rows: ActivityRow[]): ProfileStats {
   const perWeek = new Map<string, number>();
   let logins = 0;
   let xp = 0;
+  const fixes = Object.fromEntries(FIX_IDS.map((id) => [id, 0])) as Record<FixId, number>;
   let early = 0;
   let late = 0;
   let first: string | null = null;
@@ -151,6 +200,15 @@ export function computeStats(rows: ActivityRow[]): ProfileStats {
     const w = weight(r);
     counts[cat] += w;
     xp += Math.min(w, XP_EVENT_CAP);
+    // bonus za naprawę danych (puste → uzupełnione); ukrywanie nie daje bonusu, żeby nie dało się go „farmić”
+    const rowFixes = detectFixes(r);
+    let bonus = 0;
+    for (const id of FIX_IDS) {
+      const n = rowFixes[id] ?? 0;
+      fixes[id] += n;
+      if (id !== 'hidden') bonus += n;
+    }
+    xp += Math.min(bonus, 3);
     const d = new Date(r.created_at);
     const k = dayKey(d);
     perDay.set(k, (perDay.get(k) ?? 0) + w);
@@ -165,6 +223,7 @@ export function computeStats(rows: ActivityRow[]): ProfileStats {
   }
 
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  const fixesTotal = FIX_IDS.reduce((s, id) => s + fixes[id], 0);
 
   // serie: kolejne dni robocze z aktywnością (weekend nie przerywa serii)
   const isWeekend = (d: Date) => d.getDay() === 0 || d.getDay() === 6;
@@ -200,7 +259,10 @@ export function computeStats(rows: ActivityRow[]): ProfileStats {
     counts,
     total,
     xp,
+    fixes,
+    fixesTotal,
     logins,
+
     last30,
     last7,
     perDay,

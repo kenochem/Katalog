@@ -13,11 +13,12 @@ import type { TechEntry } from './techStore';
  * liczonych z własnej pracy + cele zespołu (kompletność katalogu) liczone ze stanu danych.
  */
 
-export type AchCategory = 'foto' | 'dane' | 'techniczne' | 'magazyn' | 'integracje' | 'rytm' | 'zadania';
+export type AchCategory = 'foto' | 'dane' | 'jakosc' | 'techniczne' | 'magazyn' | 'integracje' | 'rytm' | 'zadania';
 
 export const ACH_CATEGORY_LABEL: Record<AchCategory, string> = {
   foto: 'Zdjęcia',
   dane: 'Dane produktów',
+  jakosc: 'Jakość danych',
   techniczne: 'Porządek techniczny',
   magazyn: 'Magazyn i ceny',
   integracje: 'Integracje',
@@ -25,7 +26,7 @@ export const ACH_CATEGORY_LABEL: Record<AchCategory, string> = {
   zadania: 'Zadania',
 };
 
-export const ACH_CATEGORY_ORDER: AchCategory[] = ['foto', 'dane', 'techniczne', 'magazyn', 'integracje', 'rytm', 'zadania'];
+export const ACH_CATEGORY_ORDER: AchCategory[] = ['foto', 'dane', 'jakosc', 'techniczne', 'magazyn', 'integracje', 'rytm', 'zadania'];
 
 export type AchIcon =
   | 'pencil'
@@ -64,7 +65,15 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'redaktor', name: 'Redaktor katalogu', desc: 'Edytuj lub dodaj {n} produktów', category: 'dane', icon: 'pencil', tiers: [25, 100, 500, 2000], value: (s) => s.counts.edits + s.counts.created },
   { id: 'nowy-asortyment', name: 'Nowy asortyment', desc: 'Dodaj {n} nowych produktów', category: 'dane', icon: 'rocket', tiers: [3, 15, 60, 200], value: (s) => s.counts.created },
   { id: 'zestawowicz', name: 'Zestawowicz', desc: 'Zapisz {n} zestawów', category: 'dane', icon: 'layers', tiers: [3, 10, 40, 100], value: (s) => s.counts.kits },
-  { id: 'porzadkowicz', name: 'Porządkowicz grup', desc: 'Zatwierdź {n} opisów technicznych', category: 'techniczne', icon: 'wrench', tiers: [20, 100, 500, 2000], value: (s) => s.counts.tech },
+  { id: 'naprawiacz', name: 'Naprawiacz danych', desc: 'Uzupełnij lub napraw {n} pól produktów (EAN, opis, producent, cena, kategoria, zdjęcie)', category: 'jakosc', icon: 'sparkles', tiers: [15, 75, 300, 1000], value: (s) => s.fixesTotal - s.fixes.hidden },
+  { id: 'kod-kreskowy', name: 'Łowca EAN-ów', desc: 'Uzupełnij EAN w {n} produktach', category: 'jakosc', icon: 'tag', tiers: [10, 50, 200, 800], value: (s) => s.fixes.ean },
+  { id: 'opisowicz', name: 'Autor opisów', desc: 'Uzupełnij opis w {n} produktach', category: 'jakosc', icon: 'pencil', tiers: [10, 40, 150, 500], value: (s) => s.fixes.description },
+  { id: 'kategoryzator', name: 'Kategoryzator', desc: 'Ustaw kategorię w {n} produktach', category: 'jakosc', icon: 'boxes', tiers: [20, 100, 400, 1500], value: (s) => s.fixes.category },
+  { id: 'producenci', name: 'Znawca producentów', desc: 'Uzupełnij producenta w {n} produktach', category: 'jakosc', icon: 'layers', tiers: [10, 40, 150, 500], value: (s) => s.fixes.manufacturer },
+  { id: 'cenowiec', name: 'Uzupełniacz cen', desc: 'Uzupełnij brakującą cenę w {n} produktach', category: 'jakosc', icon: 'tag', tiers: [5, 25, 100, 400], value: (s) => s.fixes.price },
+  { id: 'sprzatacz', name: 'Sprzątacz katalogu', desc: 'Schowaj {n} zbędnych pozycji (części, śmietnik)', category: 'jakosc', icon: 'wrench', tiers: [10, 50, 250, 1000], value: (s) => s.fixes.hidden },
+  { id: 'porzadkowicz',
+ name: 'Porządkowicz grup', desc: 'Zatwierdź {n} opisów technicznych', category: 'techniczne', icon: 'wrench', tiers: [20, 100, 500, 2000], value: (s) => s.counts.tech },
   { id: 'magazynier', name: 'Magazynier', desc: 'Zaktualizuj {n} stanów magazynowych', category: 'magazyn', icon: 'boxes', tiers: [20, 100, 500, 2000], value: (s) => s.counts.stock },
   { id: 'cennik', name: 'Cennik pod kontrolą', desc: 'Zmień {n} cen', category: 'magazyn', icon: 'tag', tiers: [10, 50, 200, 800], value: (s) => s.counts.price },
   { id: 'integrator', name: 'Łącznik z BaseLinkerem', desc: 'Wykonaj {n} operacji BaseLinkera', category: 'integracje', icon: 'plug', tiers: [5, 25, 100, 400], value: (s) => s.counts.baselinker },
