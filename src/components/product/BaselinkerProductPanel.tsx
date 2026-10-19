@@ -17,6 +17,7 @@ import { useAuth } from '../../lib/auth';
 import { roleCan } from '../../lib/roles';
 import { markBaselinkerLinked, markBaselinkerUnlinked } from '../../lib/baselinkerLive';
 import { findBrokenImages, planImagePull, pullCandidates } from '../../lib/blImagePull';
+import { filterVisuallyNew } from '../../lib/imageHash';
 import { updateProduct } from '../../lib/products';
 import { mergeProductMeta } from '../../lib/productMeta';
 import { showToast } from '../../lib/toast';
@@ -102,6 +103,22 @@ export function BaselinkerProductPanel({
   const [broken, setBroken] = useState<string[] | null>(null);
   const [pulling, setPulling] = useState(false);
   const canPullImages = roleCan(role, 'editProduct') || roleCan(role, 'uploadImage');
+  // walidacja wizualna: zdjęcia z BL, które wyglądają jak zdjęcia z katalogu (po obróbce), nie są „brakujące”
+  const [visual, setVisual] = useState<{ fresh: string[]; similar: string[] } | null>(null);
+  useEffect(() => {
+    setVisual(null);
+    if (!img || !(img.blOnlyUrls?.length ?? 0)) return;
+    let alive = true;
+    void filterVisuallyNew(img.blOnlyUrls ?? [], img.ours ?? []).then((r) => {
+      if (alive) setVisual(r);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [img]);
+  const freshBl = visual ? visual.fresh : (img?.blOnlyUrls ?? []);
+  const validating = Boolean(img && (img.blOnlyUrls?.length ?? 0) > 0 && !visual);
+  const similarBl = visual?.similar ?? [];
 
   async function loadImages() {
     try {
@@ -124,7 +141,7 @@ export function BaselinkerProductPanel({
 
   async function pullImages() {
     if (!img) return;
-    const plan = planImagePull(product, pullCandidates(img.bl ?? [], img.blOnlyUrls, broken ?? []), broken ?? []);
+    const plan = planImagePull(product, pullCandidates(img.bl ?? [], freshBl, broken ?? []), broken ?? []);
     if (!plan.changed) {
       showToast('Katalog ma już wszystkie zdjęcia z BaseLinkera', 'info');
       return;
@@ -367,8 +384,13 @@ export function BaselinkerProductPanel({
                 {img.blOnly > 0 ? ` · inne w BL: ${img.blOnly}` : ''}
               </span>
             )}
-            {img && (img.blOnlyUrls?.length ?? 0) > 0 && (
-              <span className="rounded-md bg-sky-500/15 px-2 py-0.5 text-sky-300">brak w katalogu: {img.blOnlyUrls?.length}</span>
+            {img && freshBl.length > 0 && (
+              <span className="rounded-md bg-sky-500/15 px-2 py-0.5 text-sky-300">brak w katalogu: {freshBl.length}</span>
+            )}
+            {similarBl.length > 0 && (
+              <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-300" title="Zdjęcia z BaseLinkera, które wyglądają jak zdjęcia w katalogu (np. po obróbce) — pominięte">
+                te same po obróbce: {similarBl.length}
+              </span>
             )}
             {broken && broken.length > 0 && (
               <span className="rounded-md bg-rose-500/15 px-2 py-0.5 text-rose-300">martwe linki w katalogu: {broken.length}</span>
@@ -389,12 +411,13 @@ export function BaselinkerProductPanel({
             )}
           </div>
 
-          {canPullImages && img && ((img.blOnlyUrls?.length ?? 0) > 0 || (broken?.length ?? 0) > 0) && (
+          {canPullImages && img && (freshBl.length > 0 || (broken?.length ?? 0) > 0 || validating) && (
             <div className="space-y-2 rounded-lg border border-sky-500/30 bg-sky-500/5 p-2.5">
               <p className="text-xs text-slate-300">
-                {(img.blOnlyUrls?.length ?? 0) > 0 && (
+                {validating && <span className="text-slate-400">Porównuję zdjęcia z BaseLinkera z katalogiem…{' '}</span>}
+                {freshBl.length > 0 && (
                   <>
-                    W BaseLinkerze są zdjęcia, których <strong>brak w katalogu</strong> ({img.blOnlyUrls?.length}).{' '}
+                    W BaseLinkerze są zdjęcia, których <strong>brak w katalogu</strong> ({freshBl.length}).{' '}
                   </>
                 )}
                 {(broken?.length ?? 0) > 0 && (
@@ -403,16 +426,16 @@ export function BaselinkerProductPanel({
                   </>
                 )}
               </p>
-              {(img.blOnlyUrls?.length ?? 0) > 0 && (
+              {freshBl.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
-                  {img.blOnlyUrls?.slice(0, 8).map((u) => (
+                  {freshBl.slice(0, 8).map((u) => (
                     <img key={u} src={u} alt="" loading="lazy" className="h-12 w-12 rounded-md border border-slate-700 bg-white object-contain" />
                   ))}
                 </div>
               )}
               <button
                 type="button"
-                disabled={pulling}
+                disabled={pulling || validating}
                 onClick={() => void pullImages()}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-500 disabled:opacity-50"
               >

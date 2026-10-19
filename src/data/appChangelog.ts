@@ -18,6 +18,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-19',
+    title: 'Zdjęcia z BaseLinkera: walidacja wizualna — zdjęcia po obróbce nie są już „brakujące”',
+    description:
+      'Zdjęcie poprawione w katalogu (zmiana rozmiaru, wycięcie tła, margines, inny format) miało inny adres i nazwę pliku niż oryginał w BaseLinkerze, więc było uznawane za „inne”, a oryginał z BL za brakujący w katalogu. Teraz zdjęcia z BL są porównywane wizualnie (hash percepcyjny z przycięciem białych marginesów i traktowaniem przezroczystości jak bieli): jeśli wyglądają jak któreś zdjęcie z katalogu, są pomijane i oznaczone jako „te same po obróbce”, a do zaciągnięcia trafiają tylko naprawdę nowe zdjęcia (z miniaturami). Walidacja działa w karcie produktu oraz przy zaciąganiu hurtowym (opcja „sprawdź martwe linki i duplikaty”). Dodatkowo serwer traktuje oryginał zdjęcia głównego sprzed obróbki (image_url) jako obecny w katalogu. Zdjęć, których nie da się wczytać do porównania, nie pomijamy. Część serwerowa wymaga wdrożenia funkcji baselinker.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-19',
     title: 'Karta produktu: przebudowane sekcje „Identyfikacja” i „Magazyn · media · logistyka”',
     description:
       'Dane identyfikacyjne produktu zostały uporządkowane w dwie czytelne karty. W Identyfikacji SKU i EAN są dużymi, klikalnymi polami (kliknięcie kopiuje kod; brak EAN jest wyraźnie zaznaczony), poniżej siatka z producentem, typem, kategorią docelową, ścieżką kategorii w sklepie jako okruszki, powiązaniem z BaseLinkerem (znacznik z ID), nazwą WAPRO / tytułem oferty i identyfikatorem rekordu do skopiowania. Magazyn, media i logistyka to teraz kafelki z ikonami: stan (kolor zależny od dostępności), lokalizacja, liczba zdjęć, waga, wymiary, jednostka, VAT i warianty, a tagi są chipami. Znaczniki źródła danych (W — WAPRO, BL — BaseLinker) zostały, ale są dyskretne.',

@@ -569,6 +569,8 @@ interface ImageCompare {
 async function compareImages(admin: Admin, skusIn: string[]): Promise<ImageCompare[]> {
   const skus = [...new Set(skusIn.map((s) => String(s).toUpperCase().trim()).filter(Boolean))];
   const our = new Map<string, string[]>();
+  /** Oryginał zdjęcia głównego sprzed obróbki (image_url przy własnym zdjęciu) — też „jest w katalogu”. */
+  const orig = new Map<string, string>();
   const links = new Map<string, number>();
   for (let i = 0; i < skus.length; i += 200) {
     const part = skus.slice(i, i + 200);
@@ -578,7 +580,11 @@ async function compareImages(admin: Admin, skusIn: string[]): Promise<ImageCompa
     ]);
     for (const r of pr ?? []) {
       const sku = String(r.sku ?? '').toUpperCase();
-      if (!our.has(sku)) our.set(sku, ourImageUrls(r));
+      if (!our.has(sku)) {
+        our.set(sku, ourImageUrls(r));
+        const o = typeof r.image_url === 'string' ? r.image_url.trim() : '';
+        if (/^https?:\/\//i.test(o)) orig.set(sku, o);
+      }
     }
     for (const r of lk ?? []) links.set(String(r.sku).toUpperCase(), Number(r.bl_product_id));
   }
@@ -592,7 +598,7 @@ async function compareImages(admin: Admin, skusIn: string[]): Promise<ImageCompa
     if (blId == null) return { sku, state: 'not-in-bl', blId, ours, bl, missing: [], blOnly: 0, blOnlyUrls: [] };
     if (!ours.length) return { sku, state: 'no-local', blId, ours, bl, missing: [], blOnly: bl.length, blOnlyUrls: bl };
     const blSet = toImageSet(bl);
-    const ourSet = toImageSet(ours);
+    const ourSet = toImageSet(orig.has(sku) ? [...ours, orig.get(sku) as string] : ours);
     const missing = ours.filter((u) => !imageSetHas(blSet, u));
     const blOnlyUrls = bl.filter((u) => !imageSetHas(ourSet, u));
     const blOnly = blOnlyUrls.length;

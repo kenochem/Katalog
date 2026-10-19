@@ -3,6 +3,7 @@ import { CheckSquare, Loader2, RefreshCw, Send, Square } from 'lucide-react';
 import type { Product } from '../types';
 import { getProductImages, updateProduct } from '../lib/products';
 import { findBrokenImages, planImagePull, pullCandidates } from '../lib/blImagePull';
+import { filterVisuallyNew } from '../lib/imageHash';
 import { getLiveLinkId, useBaselinkerLinksVersion } from '../lib/baselinkerLive';
 import {
   fetchImageStatus,
@@ -129,13 +130,17 @@ export function CatalogBaselinkerImagesPanel({ products, onProductClick, canPush
     let updated = 0;
     let added = 0;
     let removed = 0;
+    let skippedSimilar = 0;
     try {
       for (let i = 0; i < picked.length; i++) {
         const r = picked[i];
         const p = bySku.get(r.sku);
         if (p) {
           const broken = probeBroken ? await findBrokenImages(r.ours.slice(0, 8)) : [];
-          const plan = planImagePull(p, pullCandidates(r.bl ?? [], r.blOnlyUrls, broken), broken);
+          // walidacja wizualna: pomijamy zdjęcia z BL wyglądające jak zdjęcia z katalogu (po obróbce)
+          const visual = probeBroken ? await filterVisuallyNew(r.blOnlyUrls ?? [], r.ours) : { fresh: r.blOnlyUrls ?? [], similar: [] as string[] };
+          skippedSimilar += visual.similar.length;
+          const plan = planImagePull(p, pullCandidates(r.bl ?? [], visual.fresh, broken), broken);
           if (plan.changed) {
             const patch = {
               imageUrl: plan.imageUrl,
@@ -159,7 +164,7 @@ export function CatalogBaselinkerImagesPanel({ products, onProductClick, canPush
         for (const it of fresh) n.set(it.sku.toUpperCase(), it);
         return n;
       });
-      showToast(`Zaciągnięto zdjęcia: ${added} w ${updated} produktach${removed ? `, usunięto martwych linków: ${removed}` : ''}`, 'ok', 8000);
+      showToast(`Zaciągnięto zdjęcia: ${added} w ${updated} produktach${removed ? `, usunięto martwych linków: ${removed}` : ''}${skippedSimilar ? `, pominięto ${skippedSimilar} wyglądających jak już istniejące` : ''}`, 'ok', 8000);
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Błąd zaciągania zdjęć', 'error', 8000);
     } finally {
@@ -320,9 +325,9 @@ export function CatalogBaselinkerImagesPanel({ products, onProductClick, canPush
           </div>
           {mode === 'pull' && canPull && needing.length > 0 && (
             <>
-              <label className="inline-flex items-center gap-1.5 text-xs text-slate-300" title="Sprawdza w przeglądarce, czy zdjęcia z katalogu się ładują (wolniejsze)">
+              <label className="inline-flex items-center gap-1.5 text-xs text-slate-300" title="Sprawdza, czy zdjęcia z katalogu się ładują, i pomija zdjęcia z BL wyglądające jak te już w katalogu (wolniejsze)">
                 <input type="checkbox" checked={probeBroken} onChange={(e) => setProbeBroken(e.target.checked)} className="h-4 w-4 accent-sky-500" />
-                sprawdź martwe linki
+                sprawdź martwe linki i duplikaty (wolniej)
               </label>
               <button
                 type="button"
