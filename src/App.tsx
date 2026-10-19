@@ -1994,6 +1994,7 @@ export default function App() {
             hideImages={!roleCan(role, 'viewImages')}
             showPrices={roleCan(role, 'viewPrices')}
             showCatalogStats={isCatalogProduct()}
+            canExport={roleCan(role, 'exportData')}
             catalogProducts={products}
             catalogLabel={catalogExportLabel}
             useHubFilters={isCatalogProduct()}
@@ -2066,6 +2067,7 @@ export default function App() {
               onRestoreProduct={roleCan(role, 'hideProducts') ? handleRestoreHiddenProduct : undefined}
               onRestoreMany={roleCan(role, 'hideProducts') ? handleRestoreHiddenMany : undefined}
               onChangeReason={roleCan(role, 'hideProducts') ? handleHideProducts : undefined}
+              canExport={roleCan(role, 'exportData')}
             />
           </Suspense>
         ) : view === 'logs' && isCatalogProduct() ? (
@@ -2595,6 +2597,7 @@ function CatalogView({
   hideImages = false,
   showPrices = false,
   showCatalogStats = false,
+  canExport = true,
   catalogProducts = [],
   catalogLabel = 'Katalog',
   useHubFilters = false,
@@ -2650,6 +2653,7 @@ function CatalogView({
   hideImages?: boolean;
   showPrices?: boolean;
   showCatalogStats?: boolean;
+  canExport?: boolean;
   catalogProducts?: Product[];
   catalogLabel?: string;
   useHubFilters?: boolean;
@@ -2911,6 +2915,7 @@ function CatalogView({
           filtered={filtered}
           catalogProducts={catalogProducts}
           catalogLabel={catalogLabel}
+          canExport={canExport}
         />
       )}
       {shopLoading && catalogFilter === 'all' && (

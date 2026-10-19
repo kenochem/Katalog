@@ -1,11 +1,9 @@
 import { Download } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { Product } from '../types';
-import {
-  computeCatalogStats,
-  exportProductsCsv,
-} from '../lib/catalogExport';
+import { computeCatalogStats } from '../lib/catalogExport';
 import { showToast } from '../lib/toast';
+import { CsvExportDialog } from './CsvExportDialog';
 
 interface CatalogStatsBarProps {
   /** Produkty po filtrach (to, co widać na liście). */
@@ -14,6 +12,8 @@ interface CatalogStatsBarProps {
   catalogProducts: Product[];
   catalogLabel: string;
   exportLabel?: string;
+  /** Uprawnienie „Eksport danych” — bez niego przycisk jest ukryty. */
+  canExport?: boolean;
 }
 
 export function CatalogStatsBar({
@@ -21,7 +21,9 @@ export function CatalogStatsBar({
   catalogProducts,
   catalogLabel,
   exportLabel = 'Eksportuj widok (CSV)',
+  canExport = true,
 }: CatalogStatsBarProps) {
+  const [exportOpen, setExportOpen] = useState(false);
   const stats = useMemo(() => computeCatalogStats(catalogProducts), [catalogProducts]);
 
   function handleExport() {
@@ -29,8 +31,7 @@ export function CatalogStatsBar({
       showToast('Brak produktów do eksportu', 'warn', 2500);
       return;
     }
-    exportProductsCsv(filtered, catalogLabel);
-    showToast(`CSV: ${filtered.length} pozycji`, 'ok', 3000);
+    setExportOpen(true);
   }
 
   return (
@@ -72,6 +73,7 @@ export function CatalogStatsBar({
           </span>
         )}
       </div>
+      {canExport && (
       <button
         type="button"
         onClick={handleExport}
@@ -80,6 +82,15 @@ export function CatalogStatsBar({
         <Download className="h-3.5 w-3.5" />
         {exportLabel}
       </button>
+      )}
+      {exportOpen && (
+        <CsvExportDialog
+          products={filtered}
+          title={`Eksport CSV — ${catalogLabel}`}
+          filePrefix="katalog"
+          onClose={() => setExportOpen(false)}
+        />
+      )}
     </div>
   );
 }

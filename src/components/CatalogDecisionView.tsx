@@ -7,6 +7,7 @@ import { assessProductKnowledge } from '../lib/productKnowledge';
 import { effectiveManufacturer } from '../lib/waproManufacturers';
 import { hasBaselinkerLink } from '../lib/baselinkerLink';
 import { HIDE_REASON_PRESETS } from '../lib/hideReasons';
+import { CsvExportDialog } from './CsvExportDialog';
 import { EXCEPTION_KIND_LABEL, EXCEPTION_PRESETS, exceptionsOf, type ExceptionKind } from '../lib/dataExceptions';
 import { inferProductTypeLabel } from '../lib/catalogKind';
 import {
@@ -186,6 +187,7 @@ export function CatalogDecisionView({
   const [hiding, setHiding] = useState(false);
 
   const [mode, setMode] = useState<'todo' | 'exceptions'>('todo');
+  const [exportOpen, setExportOpen] = useState(false);
   const [exceptionNote, setExceptionNote] = useState('');
   const [exceptionBusy, setExceptionBusy] = useState(false);
   const [menuFor, setMenuFor] = useState<string | null>(null);
@@ -349,40 +351,20 @@ export function CatalogDecisionView({
     setSelected(new Set());
   }
 
-  function exportCsv() {
-    const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const lines = [
-      ['SKU', 'Nazwa', 'Producent', 'Kategoria', 'Stan', 'EAN', 'Kompletność %', 'Problemy'].map(esc).join(';'),
-      ...filteredRows.map((r) =>
-        [
-          r.product.sku,
-          r.product.displayName,
-          effectiveManufacturer(r.product),
-          getProductDisplayCategory(r.product),
-          r.product.stock ?? 0,
-          r.product.ean ?? '',
-          r.knowledgeScore,
-          r.issues.map((i) => i.label).join(', '),
-        ]
-          .map(esc)
-          .join(';'),
-      ),
-    ];
-    const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `uzupelnianie-danych-${new Date().toISOString().slice(0, 10)}.csv`;
-
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
   const selectCls =
     'input-field !w-full text-sm';
 
   return (
     <div className="catalog-readable-light w-full space-y-4 pb-10">
+      {exportOpen && (
+        <CsvExportDialog
+          products={filteredRows.map((r) => r.product)}
+          selectedIds={selected}
+          title="Eksport CSV — Uzupełnianie danych"
+          filePrefix="uzupelnianie-danych"
+          onClose={() => setExportOpen(false)}
+        />
+      )}
       <section className="surface-panel p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -408,7 +390,7 @@ export function CatalogDecisionView({
             {canExport && (
             <button
               type="button"
-              onClick={exportCsv}
+              onClick={() => setExportOpen(true)}
               disabled={filteredRows.length === 0}
               className="inline-flex items-center rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
             >

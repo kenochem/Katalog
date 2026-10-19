@@ -1,10 +1,11 @@
-import { CheckSquare, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, EyeOff, ImageOff, Loader2, RotateCcw, Search, SlidersHorizontal, Square, Tag, X } from 'lucide-react';
+import { Download, CheckSquare, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, EyeOff, ImageOff, Loader2, RotateCcw, Search, SlidersHorizontal, Square, Tag, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { Product } from '../types';
 import { getProductImage } from '../lib/products';
 import { getProductDisplayCategory } from '../lib/catalogCategory';
 import { effectiveManufacturer } from '../lib/waproManufacturers';
 import { HIDE_REASON_PRESETS } from '../lib/hideReasons';
+import { CsvExportDialog } from './CsvExportDialog';
 
 const NO_REASON = 'Bez powodu';
 type Sort = 'recent' | 'name' | 'sku' | 'stock';
@@ -29,6 +30,7 @@ export function CatalogHiddenView({
   onRestoreProduct,
   onRestoreMany,
   onChangeReason,
+  canExport = true,
 }: {
   products: Product[];
   restoringId?: string | null;
@@ -37,7 +39,10 @@ export function CatalogHiddenView({
   onRestoreProduct?: (product: Product) => void;
   onRestoreMany?: (products: Product[]) => void | Promise<void>;
   onChangeReason?: (products: Product[], reason: string) => void | Promise<void>;
+  /** Uprawnienie „Eksport danych”. */
+  canExport?: boolean;
 }) {
+  const [exportOpen, setExportOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [reason, setReason] = useState<string | null>(null);
   const [sort, setSort] = useState<Sort>('recent');
@@ -128,6 +133,15 @@ export function CatalogHiddenView({
 
   return (
     <div className="catalog-readable-light w-full space-y-4 pb-10">
+      {exportOpen && (
+        <CsvExportDialog
+          products={filtered}
+          selectedIds={selected}
+          title="Eksport CSV — Ukryte produkty"
+          filePrefix="ukryte"
+          onClose={() => setExportOpen(false)}
+        />
+      )}
       <section className="surface-panel p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -140,7 +154,18 @@ export function CatalogHiddenView({
               na liście katalogu. Tutaj sprawdzisz powód ukrycia i możesz je przywrócić.
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {canExport && (
+              <button
+                type="button"
+                onClick={() => setExportOpen(true)}
+                disabled={products.length === 0}
+                className="inline-flex items-center rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+              >
+                <Download className="mr-1.5 h-4 w-4" />
+                Eksport CSV
+              </button>
+            )}
             <div className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900">
               <p className="text-2xl font-bold tabular-nums text-slate-950 dark:text-slate-50">{products.length.toLocaleString('pl-PL')}</p>
               <p className="text-[11px] text-slate-600 dark:text-slate-400">ukrytych</p>

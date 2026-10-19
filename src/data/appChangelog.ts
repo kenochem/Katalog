@@ -18,6 +18,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-19',
+    title: 'Profesjonalny, konfigurowalny eksport CSV',
+    description:
+      'Eksport do CSV ma teraz okno konfiguracji (przycisk „Eksportuj widok (CSV)” nad listą katalogu oraz „Eksport CSV” w Uzupełnianiu danych i w Ukrytych). Wybierasz dokładnie, co trafi do pliku: ponad 40 kolumn w grupach — identyfikacja (SKU, EAN, nazwy, producent, kategoria, typ), ceny i marża (sprzedaż brutto i netto, zakup netto i brutto, VAT, marża %, zysk, wartość zapasu), magazyn i logistyka (stan, lokalizacja, jednostka, waga, wymiary), opisy i kompletność (opis pełny, krótki, użycie, skład, bezpieczeństwo, % kompletności, czego brakuje), zdjęcia (czy ma, adresy URL), BaseLinker, status (ukryty, wyjątki, notatka) i sprzedaż z WAPRO. Kolejność kolumn zmieniasz strzałkami, a nagłówek każdej możesz nazwać po swojemu. Gotowe zestawy: Podstawowy, Cennik, Magazyn, Braki danych, Opisy i zdjęcia, Pełny — plus własne profile zapisywane pod nazwą w przeglądarce (ostatnie ustawienia pamiętane automatycznie). Format: separator (średnik, przecinek, tabulator), separator dziesiętny i liczba miejsc po przecinku, Tak/Nie lub 1/0, opisy jako zwykły tekst lub HTML, nagłówki czytelne lub techniczne, BOM dla Excela, cudzysłowy. Jest podgląd pierwszych wierszy, wybór zakresu (wszystkie lub zaznaczone) i zabezpieczenie przed „formułami” w Excelu. Opisy pełne są doczytywane z bazy tylko wtedy, gdy wybierzesz tę kolumnę. Eksport wymaga uprawnienia „Eksport danych”.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-19',
     title: 'Kategorie: nowy wygląd drzewa, przeciąganie kategorii i porządek z „dzikimi” kategoriami',
     description:
       'Zakładka Kategorie została przebudowana wizualnie. Drzewo ma czytelne gałęzie z liniami prowadzącymi, ikony folderów (grupy) i etykiet (kategorie z produktami), pasek udziału i liczbę produktów przy każdej pozycji oraz oznaczenia „nowa” i „pusta”. Kategorie można przeciągać myszą na inną grupę (albo do kategorii głównych), żeby je przenosić. Na górze są liczniki: kategorie, własne, puste i „Do decyzji”. Doszły sortowanie drzewa (ze sklepu, A–Z, wg liczby produktów), filtr „Tylko puste” oraz Rozwiń / Zwiń. „Dzikie” kategorie wpisane w produktach, których nie ma w drzewie, są teraz w wyraźnym banerze na górze jako przyciski-pigułki: kliknięcie nazwy od razu dodaje ją do drzewa, a „Dodaj wszystkie” robi to hurtem. Usunięte kategorie ze sklepu można przywrócić jednym kliknięciem.',
