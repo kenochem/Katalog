@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fileKey, imageKey, planImagePull } from '../lib/blImagePull';
+import { fileKey, imageKey, planImagePull, pullCandidates } from '../lib/blImagePull';
 
 describe('klucze zdjęć', () => {
   it('ignoruje protokół, parametry i wielkość liter', () => {
@@ -15,7 +15,7 @@ describe('plan zaciągnięcia zdjęć z BaseLinkera', () => {
   it('produkt tylko z dodatkowymi grafikami i martwym głównym dostaje główne z BL', () => {
     const plan = planImagePull(
       { imageUrl: 'https://rajci/old/CIDL0038.png', customImageUrl: '', extraImageUrls: ['https://ok/extra1.jpg'] },
-      ['https://bl/cdn/CIDL0038.jpg', 'https://ok/extra1.jpg'],
+      pullCandidates(['https://bl/cdn/CIDL0038.jpg', 'https://ok/extra1.jpg'], [], ['https://rajci/old/CIDL0038.png']),
       ['https://rajci/old/CIDL0038.png'],
     );
     expect(plan.imageUrl).toBe('https://bl/cdn/CIDL0038.jpg');
@@ -26,16 +26,22 @@ describe('plan zaciągnięcia zdjęć z BaseLinkera', () => {
   });
 
   it('działające zdjęcia zostają, nowe z BL trafiają do dodatkowych', () => {
-    const plan = planImagePull({ imageUrl: 'https://a/x.jpg', extraImageUrls: [] }, ['https://bl/x.jpg', 'https://bl/y.jpg']);
+    const plan = planImagePull({ imageUrl: 'https://a/x.jpg', extraImageUrls: [] }, ['https://a/x.jpg', 'https://bl/y.jpg']);
     expect(plan.imageUrl).toBe('https://a/x.jpg');
     expect(plan.extraImageUrls).toEqual(['https://bl/y.jpg']);
     expect(plan.removed).toEqual([]);
   });
 
-  it('nie dubluje tego samego zdjęcia z innego serwera ani w innym formacie', () => {
-    const plan = planImagePull({ imageUrl: 'https://wp/uploads/foto-1.png', extraImageUrls: [] }, ['https://bl/foto-1.jpg']);
-    expect(plan.added).toEqual([]);
-    expect(plan.changed).toBe(false);
+  it('dokłada zdjęcia wskazane przez serwer jako brakujące, także gdy mają tę samą nazwę pliku w innym folderze', () => {
+    const plan = planImagePull(
+      { imageUrl: 'https://wp/a/image.jpg', extraImageUrls: [] },
+      pullCandidates(['https://bl/p1/image.jpg', 'https://bl/p2/image.jpg'], ['https://bl/p1/image.jpg', 'https://bl/p2/image.jpg']),
+    );
+    expect(plan.added).toEqual(['https://bl/p1/image.jpg', 'https://bl/p2/image.jpg']);
+  });
+
+  it('kandydaci: martwy link ma odpowiednik w BL pod tą samą nazwą pliku', () => {
+    expect(pullCandidates(['https://bl/x.jpg', 'https://bl/y.jpg'], [], ['https://dead/x.png'])).toEqual(['https://bl/x.jpg']);
   });
 
   it('produkt bez żadnych zdjęć dostaje pierwsze z BL jako główne', () => {
@@ -55,7 +61,7 @@ describe('plan zaciągnięcia zdjęć z BaseLinkera', () => {
   });
 
   it('bez zmian, gdy nic nie brakuje i nic nie jest martwe', () => {
-    const plan = planImagePull({ imageUrl: 'https://a/x.jpg', extraImageUrls: ['https://a/y.jpg'] }, ['https://bl/x.jpg']);
+    const plan = planImagePull({ imageUrl: 'https://a/x.jpg', extraImageUrls: ['https://a/y.jpg'] }, ['https://a/x.jpg']);
     expect(plan.changed).toBe(false);
   });
 });

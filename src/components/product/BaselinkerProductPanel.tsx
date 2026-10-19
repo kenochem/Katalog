@@ -16,7 +16,7 @@ import {
 import { useAuth } from '../../lib/auth';
 import { roleCan } from '../../lib/roles';
 import { markBaselinkerLinked, markBaselinkerUnlinked } from '../../lib/baselinkerLive';
-import { findBrokenImages, planImagePull } from '../../lib/blImagePull';
+import { findBrokenImages, planImagePull, pullCandidates } from '../../lib/blImagePull';
 import { updateProduct } from '../../lib/products';
 import { mergeProductMeta } from '../../lib/productMeta';
 import { showToast } from '../../lib/toast';
@@ -124,7 +124,7 @@ export function BaselinkerProductPanel({
 
   async function pullImages() {
     if (!img) return;
-    const plan = planImagePull(product, img.bl ?? [], broken ?? []);
+    const plan = planImagePull(product, pullCandidates(img.bl ?? [], img.blOnlyUrls, broken ?? []), broken ?? []);
     if (!plan.changed) {
       showToast('Katalog ma już wszystkie zdjęcia z BaseLinkera', 'info');
       return;

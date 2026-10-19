@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { CheckSquare, Loader2, RefreshCw, Send, Square } from 'lucide-react';
 import type { Product } from '../types';
 import { getProductImages, updateProduct } from '../lib/products';
-import { findBrokenImages, planImagePull } from '../lib/blImagePull';
+import { findBrokenImages, planImagePull, pullCandidates } from '../lib/blImagePull';
 import { getLiveLinkId, useBaselinkerLinksVersion } from '../lib/baselinkerLive';
 import {
   fetchImageStatus,
@@ -135,7 +135,7 @@ export function CatalogBaselinkerImagesPanel({ products, onProductClick, canPush
         const p = bySku.get(r.sku);
         if (p) {
           const broken = probeBroken ? await findBrokenImages(r.ours.slice(0, 8)) : [];
-          const plan = planImagePull(p, r.bl ?? [], broken);
+          const plan = planImagePull(p, pullCandidates(r.bl ?? [], r.blOnlyUrls, broken), broken);
           if (plan.changed) {
             const patch = {
               imageUrl: plan.imageUrl,

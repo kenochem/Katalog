@@ -36,6 +36,18 @@ export interface PullPlan {
 
 type ImageFields = Pick<Product, 'customImageUrl' | 'imageUrl' | 'extraImageUrls'>;
 
+/**
+ * Zdjęcia z BL do dołożenia do katalogu: te, których serwer nie znalazł w katalogu (`blOnlyUrls`, dopasowanie
+ * po nazwie pliku uwzględnia inne serwery i formaty), oraz zdjęcia z BL będące odpowiednikiem martwego linku
+ * (ta sama nazwa pliku, np. po zmianie png → jpg), których serwer nie uzna za brakujące.
+ */
+export function pullCandidates(blAll: string[], blOnlyUrls: string[] = [], broken: string[] = []): string[] {
+  const brokenNames = new Set(broken.map(fileKey));
+  const out = [...blOnlyUrls];
+  for (const u of blAll) if (brokenNames.has(fileKey(u)) && !out.includes(u)) out.push(u);
+  return out;
+}
+
 export function planImagePull(product: ImageFields, blUrls: string[], broken: string[] = []): PullPlan {
   const brokenKeys = new Set(broken.map(imageKey));
   const isBroken = (u?: string) => !!u && brokenKeys.has(imageKey(u));
@@ -54,12 +66,12 @@ export function planImagePull(product: ImageFields, blUrls: string[], broken: st
   let image = keepOrDrop(product.imageUrl);
   const extras = (product.extraImageUrls ?? []).map(keepOrDrop).filter(Boolean);
 
-  const have = new Set([custom, image, ...extras].filter(Boolean).map(fileKey));
+  const have = new Set([custom, image, ...extras].filter(Boolean).map(imageKey));
   const toAdd: string[] = [];
   for (const u of blUrls) {
     const v = (u ?? '').trim();
     if (!/^https?:\/\//i.test(v)) continue;
-    const k = fileKey(v);
+    const k = imageKey(v);
     if (have.has(k)) continue;
     have.add(k);
     toAdd.push(v);

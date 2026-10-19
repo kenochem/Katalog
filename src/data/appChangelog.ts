@@ -18,6 +18,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-19',
+    title: 'Zaciąganie zdjęć z BaseLinkera: naprawa fałszywego „katalog ma już wszystkie zdjęcia”',
+    description:
+      'Przycisk „Zaciągnij zdjęcia z BaseLinkera do katalogu” przy produktach, w których BL miał inne zdjęcia o tej samej nazwie pliku (np. image.jpg w różnych folderach), uznawał je za już obecne i nic nie dodawał, choć panel pokazywał „brak w katalogu”. Teraz do katalogu trafiają dokładnie te zdjęcia, które panel wskazuje jako brakujące (z miniaturami), a dodatkowo zdjęcia z BL będące odpowiednikiem martwego linku (ta sama nazwa pliku, np. po zmianie png → jpg).',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-19',
     title: 'Zdjęcia: zaciąganie z BaseLinkera do katalogu i wykrywanie martwych linków',
     description:
       'Synchronizacja zdjęć działa teraz w obie strony. W karcie produktu (panel BaseLinker) widać, ile zdjęć jest w BL, a nie ma ich w katalogu, oraz ile zdjęć w katalogu się nie ładuje (martwe linki, np. po zmianie adresów lub formatu png → jpg na serwerze zdjęć). Przycisk „Zaciągnij zdjęcia z BaseLinkera do katalogu” dokłada brakujące zdjęcia, zastępuje martwe linki zdjęciami z BL i ustawia pierwsze zdjęcie z BL jako główne, gdy produkt nie ma działającego głównego; działających zdjęć nie rusza (przed zapisem jest podsumowanie do potwierdzenia). Dopasowanie po nazwie pliku bez rozszerzenia nie dubluje tego samego zdjęcia z innego serwera czy w innym formacie. W Zdjęcia do poprawy → BaseLinker pojawił się przełącznik kierunku: „BaseLinker → katalog” pokazuje produkty (także te bez żadnego zdjęcia w katalogu) i zaciąga zdjęcia hurtem, z opcjonalnym sprawdzaniem martwych linków. Wymaga wdrożenia funkcji baselinker (lista zdjęć brakujących w katalogu).',
