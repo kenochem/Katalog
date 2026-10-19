@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Product, View } from '../../types';
 import { computeCatalogStats, suggestNext, type GroupStat, type Suggestion } from '../../lib/catalogStats';
 import { FIX_IDS, FIX_LABEL, detectFixes, type ActivityRow } from '../../lib/profileStats';
+import { VALIDATION_KINDS, VALIDATION_LABEL } from '../../lib/validations';
+
 import { fetchAuditLog, type AuditEntry } from '../../lib/auditLog';
 import { ChartCard, Columns, Donut, HBars, Kpi, PALETTE, Trend, type SeriesPoint } from './ChartCards';
 
@@ -174,6 +176,25 @@ function Overview({
           />
         </ChartCard>
       </div>
+
+      <ChartCard title="Walidacje jakości danych" subtitle="Produkty z błędami: EAN, duplikaty, ceny, tytuły — kliknij, aby poprawiać">
+        <HBars
+          data={VALIDATION_KINDS.map((k) => ({
+            name: VALIDATION_LABEL[k],
+            value: stats.validation[k],
+            color: stats.validation[k] === 0 ? PALETTE.green : k === 'eanBad' || k === 'dupEan' || k === 'priceBelow' ? PALETTE.rose : PALETTE.amber,
+          }))}
+          onClick={(name) => {
+            const k = VALIDATION_KINDS.find((x) => VALIDATION_LABEL[x] === name);
+            if (k) onOpenDecisions([k]);
+          }}
+        />
+        <p className="mt-1 text-[11px] text-slate-500">
+          {VALIDATION_KINDS.every((k) => stats.validation[k] === 0)
+            ? 'Brak wykrytych błędów jakości — świetnie.'
+            : 'Wyjątek „Ignoruj walidacje jakości” wyłącza produkt z tych liczników.'}
+        </p>
+      </ChartCard>
     </div>
   );
 }

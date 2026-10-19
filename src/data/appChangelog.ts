@@ -18,6 +18,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-19',
+    title: 'Walidacje jakości danych: błędne EAN, duplikaty, niespójne ceny i tytuły',
+    description:
+      'Uzupełnianie danych wykrywa teraz błędy jakości, nie tylko braki. Sprawdzamy: poprawność kodu EAN (długość i cyfra kontrolna GS1: EAN-8, UPC-A, EAN-13, GTIN-14), duplikaty EAN i duplikaty nazw (z podaniem, z jakimi SKU się powtarzają; ten sam produkt w dwóch katalogach nie jest duplikatem), sprzedaż netto poniżej ceny zakupu, niespójność ceny brutto z netto i VAT, tytuł dłuższy niż 75 znaków oraz nazwy ze zbędnymi spacjami lub pisane samymi wielkimi literami. Każdy rodzaj błędu ma własny filtr z licznikiem na liście, a w Statystykach pojawił się wykres „Walidacje jakości danych” (kliknięcie otwiera właściwą listę) i podpowiedzi w „Następnym kroku”. Produkty, które mają tak być, można wyłączyć gotowym wyjątkiem „Ignoruj walidacje jakości”.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-19',
     title: 'Etykiety: zmiana ceny brutto na etykiecie i wyrównywanie końcówek (,99 / ,00 …)',
     description:
       'W Studiu etykiet można teraz zmienić cenę brutto, która idzie na etykietę (np. z dziwnej 31,81 zł na 31,90 zł) — zmiana dotyczy tylko etykiety, cena w katalogu zostaje bez zmian. W edycji pozycji (ołówek) jest pole ceny, informacja o cenie z katalogu, przycisk „przywróć z katalogu” oraz przyciski wyrównania z podglądem wyniku dla danej ceny: ,99 w dół / w górę / najbliższa, ,00 w dół / w górę / najbliższa, ,90 i ,50 najbliższa (np. 31,81 → 30,99 / 31,99 / 31,00 / 32,00). Nad listą „Do wydruku” jest wyrównanie dla wszystkich etykiet naraz (z opcją „także ceny promocyjne”) i przywrócenie wszystkich cen z katalogu. Przy pozycji widać aktualną cenę z oznaczeniem „zmieniona”, a cena netto jest przeliczana według VAT produktu.',

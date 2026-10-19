@@ -9,6 +9,8 @@ import { hasBaselinkerLink } from '../lib/baselinkerLink';
 import { HIDE_REASON_PRESETS } from '../lib/hideReasons';
 import { CsvExportDialog } from './CsvExportDialog';
 import { BulkEditDialog } from './BulkEditDialog';
+import { VALIDATION_LABEL, buildValidationContext, validateProduct, type ValidationContext } from '../lib/validations';
+
 import { QuickEditRow, type QuickPatch } from './QuickEditRow';
 import type { BulkRunResult } from '../lib/bulkEdit';
 import { EXCEPTION_KIND_LABEL, EXCEPTION_PRESETS, exceptionsOf, type ExceptionKind } from '../lib/dataExceptions';
@@ -37,7 +39,11 @@ type DecisionRow = {
   exceptions: string[];
 };
 
-function describeIssues(product: Product, knowledgeScore = assessProductKnowledge(product).score): DecisionIssue[] {
+function describeIssues(
+  product: Product,
+  knowledgeScore = assessProductKnowledge(product).score,
+  vctx?: ValidationContext,
+): DecisionIssue[] {
   const issues: DecisionIssue[] = [];
   const manufacturer = effectiveManufacturer(product);
   const typeLabel = inferProductTypeLabel(product);
@@ -72,6 +78,9 @@ function describeIssues(product: Product, knowledgeScore = assessProductKnowledg
   if ((product.catalog || 'accessories') === 'shop' && !hasBaselinkerLink(product)) {
     issues.push({ label: 'brak powiązania BaseLinker', tone: 'info', kind: 'bl' });
   }
+  if (vctx) {
+    for (const f of validateProduct(product, vctx)) issues.push({ label: f.label, tone: f.tone, kind: 'validation' });
+  }
 
   return issues;
 }
@@ -87,10 +96,11 @@ function issueWeight(issue: DecisionIssue): number {
  * `mode: 'exceptions'` zwraca produkty z ustawionym wyjątkiem (do przeglądu i cofania).
  */
 export function buildCatalogDecisionRows(products: Product[], mode: 'todo' | 'exceptions' = 'todo'): DecisionRow[] {
+  const vctx = buildValidationContext(products);
   return products
     .map((product) => {
       const knowledgeScore = assessProductKnowledge(product).score;
-      const all = describeIssues(product, knowledgeScore);
+      const all = describeIssues(product, knowledgeScore, vctx);
       const exceptions = exceptionsOf(product);
       const skipAll = exceptions.includes('all');
       const issues = mode === 'exceptions' ? all : skipAll ? [] : all.filter((i) => !exceptions.includes(i.kind));
@@ -131,6 +141,13 @@ const ISSUE_KINDS: IssueKind[] = [
   { key: 'low', label: 'Niska kompletność', test: (r) => r.issues.some((i) => i.label.startsWith('niska kompletność')) },
   { key: 'type', label: 'Typ do potwierdzenia', test: (r) => r.issues.some((i) => i.label === 'typ do potwierdzenia') },
   { key: 'bl', label: 'Brak powiązania BaseLinker', test: (r) => r.issues.some((i) => i.label === 'brak powiązania BaseLinker') },
+  { key: 'eanBad', label: VALIDATION_LABEL.eanBad, test: (r) => r.issues.some((i) => i.label.startsWith('błędny EAN')) },
+  { key: 'dupEan', label: VALIDATION_LABEL.dupEan, test: (r) => r.issues.some((i) => i.label.startsWith('duplikat EAN')) },
+  { key: 'dupName', label: VALIDATION_LABEL.dupName, test: (r) => r.issues.some((i) => i.label.startsWith('duplikat nazwy')) },
+  { key: 'priceBelow', label: VALIDATION_LABEL.priceBelow, test: (r) => r.issues.some((i) => i.label.startsWith('sprzedaż netto poniżej')) },
+  { key: 'priceMismatch', label: VALIDATION_LABEL.priceMismatch, test: (r) => r.issues.some((i) => i.label.startsWith('brutto nie pasuje')) },
+  { key: 'titleLong', label: VALIDATION_LABEL.titleLong, test: (r) => r.issues.some((i) => i.label.startsWith('tytuł ')) },
+  { key: 'nameFormat', label: VALIDATION_LABEL.nameFormat, test: (r) => r.issues.some((i) => i.label.startsWith('nazwa:')) },
 ];
 
 type SortKey = 'urgent' | 'name' | 'sku' | 'complete' | 'stock';

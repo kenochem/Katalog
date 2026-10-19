@@ -3,6 +3,7 @@ import { KNOWLEDGE_CHECKS, assessProductKnowledge, type KnowledgeLevel } from '.
 import { getProductDisplayCategory } from './catalogCategory';
 import { effectiveManufacturer } from './waproManufacturers';
 import { getProductImage } from './products';
+import { VALIDATION_KINDS, VALIDATION_LABEL, buildValidationContext, validateProduct, type ValidationKind } from './validations';
 
 /** Statystyki katalogu do panelu „Postępy” (jedno przejście po produktach). */
 export interface GroupStat {
@@ -44,6 +45,8 @@ export interface CatalogStats {
   checks: CheckCoverage[];
   /** Kandydaci do ukrycia: bez zdjęcia, bez stanu i bez ceny sprzedaży. */
   junkCandidates: number;
+  /** Liczba produktów z danym problemem jakości (walidacje). */
+  validation: Record<ValidationKind, number>;
 }
 
 const pct = (n: number, d: number) => (d ? Math.round((n / d) * 100) : 0);
@@ -78,6 +81,8 @@ export function computeCatalogStats(products: Product[]): CatalogStats {
   let junk = 0;
   let accessories = 0;
   let shop = 0;
+  const vctx = buildValidationContext(real);
+  const validation = Object.fromEntries(VALIDATION_KINDS.map((k) => [k, 0])) as Record<ValidationKind, number>;
 
   const bump = (
     map: typeof mf,
@@ -125,6 +130,12 @@ export function computeCatalogStats(products: Product[]): CatalogStats {
     if (!photo && stock <= 0 && !price) junk++;
     if ((p.catalog || 'accessories') === 'shop') shop++;
     else accessories++;
+    // walidacje jakości (z uwzględnieniem wyjątków „Walidacje jakości” i „Cały produkt”)
+    const exc = p.meta?.dataExceptions ?? [];
+    if (!exc.includes('all') && !exc.includes('validation')) {
+      const kinds = new Set(validateProduct(p, vctx).map((f) => f.kind));
+      for (const kd of kinds) validation[kd]++;
+    }
 
     bump(mf, manufacturer || 'Bez producenta', photo, ean, k.score);
     bump(cat, getProductDisplayCategory(p) || 'Bez kategorii', photo, ean, k.score);
@@ -152,6 +163,7 @@ export function computeCatalogStats(products: Product[]): CatalogStats {
     categories: groupStats(cat),
     checks,
     junkCandidates: junk,
+    validation,
   };
 }
 
@@ -203,7 +215,28 @@ export function suggestNext(stats: CatalogStats, limit = 5): Suggestion[] {
     });
   }
   out.sort((a, b) => b.gain - a.gain);
+  const validationHints: { kind: ValidationKind; verb: string; gain: number }[] = [
+    { kind: 'eanBad', verb: 'Popraw błędne kody EAN', gain: 0.9 },
+    { kind: 'dupEan', verb: 'Rozwiąż duplikaty EAN', gain: 0.9 },
+    { kind: 'priceBelow', verb: 'Sprawdź ceny sprzedaży poniżej zakupu', gain: 0.8 },
+    { kind: 'dupName', verb: 'Sprawdź duplikaty nazw', gain: 0.4 },
+  ];
+  for (const h of validationHints) {
+    const n = stats.validation[h.kind];
+    if (n > 0) {
+      out.push({
+        id: 'val:' + h.kind,
+        title: `${h.verb} (${n.toLocaleString('pl-PL')})`,
+        detail: `${VALIDATION_LABEL[h.kind]} — to błąd jakości danych, który może blokować wystawienie produktu albo prowadzić do strat.`,
+        count: n,
+        gain: h.gain,
+        kinds: [h.kind],
+      });
+    }
+  }
+  out.sort((a, b) => b.gain - a.gain);
   if (stats.junkCandidates >= 10) {
+
     out.push({
       id: 'junk',
       title: `Sprawdź ${stats.junkCandidates.toLocaleString('pl-PL')} pozycji do ukrycia`,

@@ -7,7 +7,7 @@ import { invalidateProductsCache } from './products';
  * (np. nie trafi do BaseLinkera, nie ma EAN, zdjęcie niepotrzebne), znika z listy braków.
  * Zapis w product_meta produktu (wspólny dla wszystkich).
  */
-export type ExceptionKind = 'photo' | 'category' | 'mfr' | 'ean' | 'price' | 'low' | 'type' | 'bl';
+export type ExceptionKind = 'photo' | 'category' | 'mfr' | 'ean' | 'price' | 'low' | 'type' | 'bl' | 'validation';
 
 export const EXCEPTION_KIND_LABEL: Record<ExceptionKind | 'all', string> = {
   photo: 'Zdjęcie',
@@ -18,6 +18,7 @@ export const EXCEPTION_KIND_LABEL: Record<ExceptionKind | 'all', string> = {
   low: 'Kompletność opisów',
   type: 'Typ produktu',
   bl: 'BaseLinker',
+  validation: 'Walidacje jakości',
   all: 'Wszystko',
 };
 
@@ -39,7 +40,15 @@ export const EXCEPTION_PRESETS: ExceptionPreset[] = [
     kinds: ['photo', 'low', 'bl', 'price'],
     note: 'Pozycja wewnętrzna — nie sprzedajemy',
   },
-  { id: 'no-photo', label: 'Zdjęcie niepotrzebne', hint: 'Np. część, drobnica, usługa', kinds: ['photo'], note: 'Zdjęcie nie jest potrzebne' },
+  {
+    id: 'no-validation',
+    label: 'Ignoruj walidacje jakości',
+    hint: 'Np. celowy duplikat nazwy, nietypowy EAN albo długi tytuł',
+    kinds: ['validation'],
+    note: 'Walidacje jakości pominięte',
+  },
+  { id: 'no-photo', label: 'Zdjęcie niepotrzebne',
+ hint: 'Np. część, drobnica, usługa', kinds: ['photo'], note: 'Zdjęcie nie jest potrzebne' },
   { id: 'no-ean', label: 'Brak kodu EAN (nie istnieje)', hint: 'Produkt własny / luzem', kinds: ['ean'], note: 'Produkt bez kodu EAN' },
   { id: 'no-mfr', label: 'Bez producenta (to normalne)', hint: 'Produkt bez marki', kinds: ['mfr'], note: 'Produkt bez marki' },
   { id: 'no-price', label: 'Bez ceny sprzedaży', hint: 'Nie sprzedajemy osobno', kinds: ['price'], note: 'Nie sprzedajemy osobno' },
