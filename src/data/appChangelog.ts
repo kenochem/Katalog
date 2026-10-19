@@ -18,6 +18,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-19',
+    title: 'Etykiety: zmiana ceny brutto na etykiecie i wyrównywanie końcówek (,99 / ,00 …)',
+    description:
+      'W Studiu etykiet można teraz zmienić cenę brutto, która idzie na etykietę (np. z dziwnej 31,81 zł na 31,90 zł) — zmiana dotyczy tylko etykiety, cena w katalogu zostaje bez zmian. W edycji pozycji (ołówek) jest pole ceny, informacja o cenie z katalogu, przycisk „przywróć z katalogu” oraz przyciski wyrównania z podglądem wyniku dla danej ceny: ,99 w dół / w górę / najbliższa, ,00 w dół / w górę / najbliższa, ,90 i ,50 najbliższa (np. 31,81 → 30,99 / 31,99 / 31,00 / 32,00). Nad listą „Do wydruku” jest wyrównanie dla wszystkich etykiet naraz (z opcją „także ceny promocyjne”) i przywrócenie wszystkich cen z katalogu. Przy pozycji widać aktualną cenę z oznaczeniem „zmieniona”, a cena netto jest przeliczana według VAT produktu.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-19',
     title: 'Edycja masowa i szybka edycja w wierszu w Uzupełnianiu danych (Etap 2)',
     description:
       'Nowe narzędzia w Uzupełnianiu danych. Edycja masowa zaznaczonych produktów: producent, kategoria, stawka VAT, jednostka, tagi (dodawanie i usuwanie) oraz ceny — ustaw wartość, zmień o procent albo o kwotę, z zaokrągleniem (do grosza, 10 groszy, złotych, końcówka ,99 lub ,90) i opcjonalnym przeliczeniem drugiej ceny sprzedaży netto ↔ brutto wg VAT. Przed zapisem jest podgląd „stare → nowe” dla każdego produktu i podsumowanie, a cała operacja zapisuje się jako jedna partia, którą można cofnąć (Logi → Operacje masowe). Szybka edycja w wierszu: przycisk „Szybka edycja” rozwija pola EAN (z ostrzeżeniem o nietypowej długości), producent, kategoria i cena sprzedaży brutto — zapis bez otwierania karty. Edycja wymaga uprawnienia edycji produktów, zmiany cen także uprawnienia do cen.',

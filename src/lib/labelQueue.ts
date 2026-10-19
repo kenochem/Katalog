@@ -5,6 +5,7 @@ import { customerGrossPrice } from './format';
 import { getProductDisplayCategory } from './catalogCategory';
 import { effectiveManufacturer } from './waproManufacturers';
 import { parsePackFromText, type PackSize } from './labelPack';
+import { roundToEnding, type PriceRoundMode } from './priceRounding';
 
 const QUEUE_KEY = 'katalog-label-queue';
 
@@ -18,8 +19,10 @@ export interface LabelQueueItem {
   locationCode?: string;
   /** Liczba kopii etykiety (domyślnie 1). */
   qty?: number;
-  /** Cena brutto na etykiecie (jeśli włączona w konfiguracji). */
+  /** Cena brutto na etykiecie (jeśli włączona w konfiguracji). Można ją zmienić tylko na etykiecie — katalog bez zmian. */
   priceGross?: number | null;
+  /** Cena brutto z katalogu z chwili dodania do kolejki (do przywrócenia i porównania). */
+  priceGrossCatalog?: number | null;
   manufacturer?: string;
   category?: string;
   stock?: number;
@@ -61,7 +64,7 @@ function locationForProduct(product: Product): string {
 
 function extraFields(product: Product): Pick<
   LabelQueueItem,
-  'priceGross' | 'priceNet' | 'vatRate' | 'pack' | 'manufacturer' | 'category' | 'stock'
+  'priceGross' | 'priceGrossCatalog' | 'priceNet' | 'vatRate' | 'pack' | 'manufacturer' | 'category' | 'stock'
 > {
   const vat = Number(product.meta?.vatRate);
   const vatRate = Number.isFinite(vat) && vat >= 0 ? vat : 23;
@@ -74,6 +77,7 @@ function extraFields(product: Product): Pick<
         : null;
   return {
     priceGross: gross,
+    priceGrossCatalog: gross,
     priceNet: net,
     vatRate,
     pack: parsePackFromText(product.displayName) ?? parsePackFromText(product.name),
@@ -148,7 +152,50 @@ export function updateLabelItem(id: string, patch: Partial<LabelQueueItem>): Lab
   return next;
 }
 
+const netOf = (gross: number, vat: number) => Math.round((gross / (1 + vat / 100)) * 100) / 100;
+
+/** Ustawia cenę brutto na etykiecie (null = przywróć cenę z katalogu); przelicza netto wg VAT. */
+export function setLabelPrice(id: string, gross: number | null): LabelQueueItem[] {
+  const next = readQueue().map((q) => {
+    if (q.id !== id) return q;
+    const value = gross == null ? (q.priceGrossCatalog ?? q.priceGross ?? null) : Math.round(gross * 100) / 100;
+    return { ...q, priceGross: value, priceNet: value != null ? netOf(value, q.vatRate ?? 23) : q.priceNet };
+  });
+  writeQueue(next);
+  return next;
+}
+
+/** Wyrównuje ceny wielu etykiet do końcówek (,99 / ,00 …); opcjonalnie także ceny promocyjne. */
+export function roundLabelPrices(mode: PriceRoundMode, opts: { ids?: string[]; includeSale?: boolean } = {}): LabelQueueItem[] {
+  const only = opts.ids ? new Set(opts.ids) : null;
+  const next = readQueue().map((q) => {
+    if (only && !only.has(q.id)) return q;
+    const out = { ...q };
+    if (q.priceGross != null && q.priceGross > 0) {
+      out.priceGross = roundToEnding(q.priceGross, mode);
+      out.priceNet = netOf(out.priceGross, q.vatRate ?? 23);
+    }
+    if (opts.includeSale && q.salePrice != null && q.salePrice > 0) out.salePrice = roundToEnding(q.salePrice, mode);
+    return out;
+  });
+  writeQueue(next);
+  return next;
+}
+
+/** Przywraca ceny brutto z katalogu we wszystkich (lub wskazanych) etykietach. */
+export function resetLabelPrices(ids?: string[]): LabelQueueItem[] {
+  const only = ids ? new Set(ids) : null;
+  const next = readQueue().map((q) => {
+    if (only && !only.has(q.id)) return q;
+    if (q.priceGrossCatalog == null) return q;
+    return { ...q, priceGross: q.priceGrossCatalog, priceNet: netOf(q.priceGrossCatalog, q.vatRate ?? 23) };
+  });
+  writeQueue(next);
+  return next;
+}
+
 export function removeFromLabelQueue(id: string): LabelQueueItem[] {
+
   const next = readQueue().filter((q) => q.id !== id);
   writeQueue(next);
   return next;

@@ -5,6 +5,8 @@ import { applyCatalogFilters } from '../lib/search';
 import {
   addProductsToLabelQueue,
   clearLabelQueue,
+  resetLabelPrices,
+  roundLabelPrices,
   type LabelQueueItem,
 } from '../lib/labelQueue';
 import {
@@ -18,6 +20,7 @@ import {
 import { buildLabelsDocument, fitLabelName, printShelfLabels } from '../lib/printLabel';
 import { showToast } from '../lib/toast';
 import { LabelItemRow } from './LabelItemRow';
+import { PRICE_ROUND_OPTIONS, type PriceRoundMode } from '../lib/priceRounding';
 import { useAuth } from '../lib/auth';
 import { roleCan } from '../lib/roles';
 import { labelNameFor } from '../lib/labelPack';
@@ -56,6 +59,8 @@ export function LabelStudioView({ products, queue, onQueueChange }: Props) {
   const productById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
   const [cfg, setCfg] = useState<LabelConfig>(loadLabelConfig);
   const [search, setSearch] = useState('');
+  const [roundMode, setRoundMode] = useState<PriceRoundMode>('99-down');
+  const [roundSale, setRoundSale] = useState(false);
   const [onlyEan, setOnlyEan] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [limit, setLimit] = useState(PAGE);
@@ -260,9 +265,51 @@ export function LabelStudioView({ products, queue, onQueueChange }: Props) {
                 Wyczyść
               </button>
             </div>
+            {queue.length > 0 && (
+              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-sky-500/30 bg-sky-500/5 px-3 py-2">
+                <span className="text-xs font-semibold text-slate-200">Wyrównaj ceny wszystkich etykiet (tylko na etykiecie):</span>
+                <select
+                  value={roundMode}
+                  onChange={(e) => setRoundMode(e.target.value as PriceRoundMode)}
+                  className="input-field !w-auto text-xs"
+                  aria-label="Sposób wyrównania"
+                >
+                  {PRICE_ROUND_OPTIONS.map((o) => (
+                    <option key={o.mode} value={o.mode}>
+                      {o.label} ({o.hint})
+                    </option>
+                  ))}
+                </select>
+                <label className="inline-flex items-center gap-1.5 text-xs text-slate-300">
+                  <input type="checkbox" checked={roundSale} onChange={(e) => setRoundSale(e.target.checked)} className="h-3.5 w-3.5 accent-sky-500" />
+                  także ceny promocyjne
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    roundLabelPrices(roundMode, { includeSale: roundSale });
+                    onQueueChange();
+                  }}
+                  className="rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-500"
+                >
+                  Wyrównaj
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    resetLabelPrices();
+                    onQueueChange();
+                  }}
+                  className="text-xs text-brand-300 hover:underline"
+                >
+                  przywróć ceny z katalogu
+                </button>
+              </div>
+            )}
             {queue.length === 0 ? (
               <p className="py-6 text-center text-sm text-slate-500">
-                Nic jeszcze nie wybrano — zaznacz produkty powyżej albo dodaj je z karty produktu.
+                Nic jeszcze nie wybrano
+ — zaznacz produkty powyżej albo dodaj je z karty produktu.
               </p>
             ) : (
               <ul className="space-y-1.5">

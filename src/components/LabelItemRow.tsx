@@ -4,11 +4,13 @@ import type { Product } from '../types';
 import { formatMarginPercent, formatPricePln, marginPercent } from '../lib/format';
 import {
   removeFromLabelQueue,
+  setLabelPrice,
   setLabelQty,
   updateLabelItem,
   type LabelQueueItem,
 } from '../lib/labelQueue';
 import { PACK_UNITS, formatPack, labelNameFor, parsePackFromText, type PackUnit } from '../lib/labelPack';
+import { PRICE_ROUND_OPTIONS, roundToEnding } from '../lib/priceRounding';
 
 interface Props {
   item: LabelQueueItem;
@@ -80,6 +82,14 @@ export function LabelItemRow({
     onChanged();
   }
 
+  const catalogGross = item.priceGrossCatalog ?? (product ? product.priceSaleGross ?? null : null);
+  const priceChanged = grossNow != null && catalogGross != null && Math.abs(grossNow - catalogGross) > 0.004;
+
+  function priceTo(value: number | null) {
+    setLabelPrice(item.id, value);
+    onChanged();
+  }
+
   function setPromoFromDiscount(pct: number) {
     if (grossNow == null) return;
     patch({ salePrice: Math.round(grossNow * (1 - pct / 100) * 100) / 100 });
@@ -96,6 +106,15 @@ export function LabelItemRow({
               {item.ean && item.ean !== item.sku ? ` · ${item.ean}` : ''}
               {item.locationCode ? ` · ${item.locationCode}` : ''}
             </span>
+            {grossNow != null && (
+              <span
+                className={`rounded px-1 font-sans text-[10px] font-bold ${priceChanged ? 'bg-sky-500/20 text-sky-300' : 'bg-slate-800 text-slate-300'}`}
+                title={priceChanged ? `Cena z katalogu: ${money(catalogGross)}` : 'Cena z katalogu'}
+              >
+                {money(grossNow)}
+                {priceChanged ? ' (zmieniona)' : ''}
+              </span>
+            )}
             {sale && (
               <span className="rounded bg-red-600 px-1 font-sans text-[10px] font-bold text-white">promocja</span>
             )}
@@ -237,7 +256,57 @@ export function LabelItemRow({
             </div>
           </div>
 
+          {/* ---- cena brutto na etykiecie: ręczna zmiana i wyrównanie końcówek ---- */}
+          <div className="rounded-xl border border-sky-500/30 bg-sky-500/5 p-3 sm:col-span-2">
+            <p className="mb-1 text-sm font-semibold text-slate-100">Cena brutto na etykiecie</p>
+            <p className="mb-2 text-[11px] text-slate-400">
+              Zmiana dotyczy tylko etykiety — cena w katalogu zostaje bez zmian
+              {catalogGross != null ? ` (katalog: ${money(catalogGross)})` : ''}.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={grossNow ?? ''}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (e.target.value !== '' && Number.isFinite(v) && v > 0) priceTo(v);
+                }}
+                className="input-field w-36 text-base font-semibold"
+                placeholder="np. 31,90"
+              />
+              <span className="text-sm text-slate-400">zł brutto</span>
+              {priceChanged && (
+                <button type="button" onClick={() => priceTo(null)} className="text-xs text-brand-300 hover:underline">
+                  przywróć z katalogu
+                </button>
+              )}
+            </div>
+            {grossNow != null && (
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] text-slate-400">Wyrównaj:</span>
+                {PRICE_ROUND_OPTIONS.map((o) => {
+                  const target = roundToEnding(grossNow, o.mode);
+                  return (
+                    <button
+                      key={o.mode}
+                      type="button"
+                      disabled={Math.abs(target - grossNow) < 0.004}
+                      onClick={() => priceTo(target)}
+                      title={`${o.hint} — dla tej ceny: ${money(grossNow)} → ${money(target)}`}
+                      className="rounded-md border border-slate-700 bg-slate-900 px-2 py-0.5 text-xs font-semibold text-slate-200 hover:border-sky-400 hover:text-sky-300 disabled:opacity-30"
+                    >
+                      {o.label} <span className="font-normal text-slate-400">→ {money(target)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           {/* ---- cena promocyjna: ceny wyjściowe + marża ---- */}
+
           <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-3 sm:col-span-2">
             <p className="mb-2 text-sm font-semibold text-slate-100">Cena promocyjna</p>
 
