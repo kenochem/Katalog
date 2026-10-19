@@ -36,9 +36,14 @@ const KNOWN_PRODUCER_CATEGORIES = new Set([
   'youtech',
 ]);
 
-const shopLeaves = walkShopLeaves(getShopCategoryTree().roots);
-const leafByNorm = new Map(shopLeaves.map((leaf) => [normalize(leaf.label), leaf.label]));
-const displayCategoryCache = new WeakMap<Product, string>();
+let leafByNorm = new Map(walkShopLeaves(getShopCategoryTree().roots).map((leaf) => [normalize(leaf.label), leaf.label]));
+let displayCategoryCache = new WeakMap<Product, string>();
+
+/** Przebudowuje indeks kategorii po zmianie drzewa (własne kategorie, przeniesienia, usunięcia). */
+export function rebuildCategoryIndex(): void {
+  leafByNorm = new Map(walkShopLeaves(getShopCategoryTree().roots).map((leaf) => [normalize(leaf.label), leaf.label]));
+  displayCategoryCache = new WeakMap<Product, string>();
+}
 
 function normalize(value: string): string {
   return value

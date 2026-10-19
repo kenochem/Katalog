@@ -120,6 +120,8 @@ export type View =
   | 'catalog-decisions'
   | 'catalog-hidden'
   | 'manufacturers'
+  | 'categories'
+
 
   | 'progress'
   | 'favorites'

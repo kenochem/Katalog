@@ -73,7 +73,8 @@ export type RoleAction =
   | 'managePromotions'
   | 'manageManufacturers'
   | 'hideProducts'
-  | 'exportData';
+  | 'exportData'
+  | 'manageCategories';
 
 export const ROLE_ACTION_LABELS: Record<RoleAction, string> = {
   editStock: 'Edycja stanów',
@@ -102,6 +103,7 @@ export const ROLE_ACTION_LABELS: Record<RoleAction, string> = {
   manageManufacturers: 'Producenci: dodawanie, edycja, logo, synchronizacja z BL',
   hideProducts: 'Ukrywanie i przywracanie produktów',
   exportData: 'Eksport danych do CSV',
+  manageCategories: 'Kategorie: dodawanie, zmiana nazw, przenoszenie i usuwanie',
 };
 
 export const ROLE_ACTIONS: RoleAction[] = Object.keys(
@@ -135,6 +137,7 @@ const ALL_FALSE: Record<RoleAction, boolean> = {
   manageManufacturers: false,
   hideProducts: false,
   exportData: false,
+  manageCategories: false,
 };
 
 /** Domyślna macierz — później można nadpisać z DB. */
@@ -200,6 +203,7 @@ export const DEFAULT_ROLE_MATRIX: Record<AppRole, Record<RoleAction, boolean>> =
     manageManufacturers: true,
     hideProducts: true,
     exportData: true,
+    manageCategories: true,
   },
   admin: {
     editStock: true,
@@ -228,6 +232,8 @@ export const DEFAULT_ROLE_MATRIX: Record<AppRole, Record<RoleAction, boolean>> =
     manageManufacturers: true,
     hideProducts: true,
     exportData: true,
+    manageCategories: true,
   },
 };
+
 

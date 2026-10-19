@@ -32,7 +32,9 @@ import {
   History,
   Tag,
   Building2,
+  FolderTree,
 } from 'lucide-react';
+
 import type { View } from '../types';
 import type { AppRole } from '../lib/roles';
 import { roleCan } from '../lib/roles';
@@ -67,7 +69,7 @@ export function MobileBottomNav({
   showCatalog = true,
   showCatalogTools = true,
 }: MobileBottomNavProps) {
-  const moreActive = ['kits', 'progress', 'catalog-decisions', 'manufacturers', 'catalog-hidden', 'missing-images', 'small-images', 'promotions', 'groups', 'admin', 'library', 'logs', 'history', 'new-products', 'updates', ...(isStockProduct() ? ['warehouse' as const] : [])].includes(view);
+  const moreActive = ['kits', 'progress', 'catalog-decisions', 'manufacturers', 'categories', 'catalog-hidden', 'missing-images', 'small-images', 'promotions', 'groups', 'admin', 'library', 'logs', 'history', 'new-products', 'updates', ...(isStockProduct() ? ['warehouse' as const] : [])].includes(view);
   return (
     <nav
       className="catalog-readable-light fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/95 dark:shadow-none lg:hidden"
@@ -342,6 +344,14 @@ export function MobileMoreSheet({
                   icon={<AlertTriangle className="h-4 w-4" />}
                   label={`Uzupełnianie danych (${decisionCount})`}
                   onClick={() => go('catalog-decisions')}
+                />
+              )}
+              {showCatalogTools && roleCan(role, 'viewProgress') && (
+                <SheetAction
+                  active={view === 'categories'}
+                  icon={<FolderTree className="h-4 w-4" />}
+                  label="Kategorie"
+                  onClick={() => go('categories')}
                 />
               )}
               {showCatalogTools && roleCan(role, 'viewProgress') && (

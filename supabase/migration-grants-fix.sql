@@ -11,7 +11,7 @@ begin
   -- pełny dostęp (zakres wierszy ogranicza RLS)
   foreach t in array array[
     'catalog_tasks', 'catalog_manufacturers', 'product_tech', 'catalog_product_overrides',
-    'promo_campaigns', 'promo_items'
+    'promo_campaigns', 'promo_items', 'catalog_categories'
   ] loop
     if to_regclass('public.' || t) is not null then
       execute format('grant select, insert, update, delete on public.%I to authenticated', t);

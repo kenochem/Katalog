@@ -24,6 +24,7 @@ import {
   TrendingUp,
   Wrench,
   Building2,
+  FolderTree,
 } from 'lucide-react';
 import type { View } from '../types';
 import { canAccessAdminPanel } from '../lib/adminAccess';
@@ -69,6 +70,7 @@ const DEFAULT_ORDER: View[] = [
   'catalog-decisions',
   'catalog-hidden',
   'manufacturers',
+  'categories',
   'small-images',
   'promotions',
   'labels',
@@ -295,6 +297,13 @@ export function LeftSidebarNav({
         highlight: catalogDecisionCount > 0,
         available: roleCan(role, 'viewProgress'),
         onClick: () => setView('catalog-decisions'),
+      },
+      {
+        id: 'categories',
+        icon: <FolderTree className="h-4 w-4" />,
+        label: 'Kategorie',
+        available: isCatalogProduct && roleCan(role, 'viewProgress'),
+        onClick: () => setView('categories'),
       },
       {
         id: 'manufacturers',

@@ -78,6 +78,7 @@ import { SystemAlertBanner } from './components/SystemAlertBanner';
 import { useAuth } from './lib/auth';
 import { isSupabaseConfigured } from './lib/supabase';
 import { loadManufacturerRegistry } from './lib/manufacturerRegistry';
+import { loadCategoryRegistry, useCategoryRegistry } from './lib/categoryRegistry';
 import { roleCan, ROLE_LABELS } from './lib/roles';
 import { branding, moduleEnabled, APP_PRODUCT } from './app/moduleRegistry';
 import { canUseCrmModule, canViewOpsModule, canUseCommsModule } from './app/productAccess';
@@ -180,6 +181,9 @@ const CatalogChangelogView = lazy(() =>
   import('./components/CatalogChangelogView').then((m) => ({
     default: m.CatalogChangelogView,
   })),
+);
+const CategoriesView = lazy(() =>
+  import('./components/CategoriesView').then((m) => ({ default: m.CategoriesView })),
 );
 const ManufacturersView = lazy(() =>
   import('./components/ManufacturersView').then((m) => ({ default: m.ManufacturersView })),
@@ -511,6 +515,7 @@ export default function App() {
     if (!roleCan(role, 'viewProgress') && view === 'catalog-decisions') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'catalog-hidden') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'manufacturers') setView(fallback);
+    if (!roleCan(role, 'viewProgress') && view === 'categories') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'small-images') setView(fallback);
     if (!roleCan(role, 'viewPrices') && view === 'promotions') setView(fallback);
     if (!roleCan(role, 'manageFavorites') && view === 'favorites') setView(fallback);
@@ -810,6 +815,7 @@ export default function App() {
   useEffect(() => {
     if (mode === 'loading' || opsStandalone) return;
     void loadManufacturerRegistry();
+    void loadCategoryRegistry();
   }, [mode, opsStandalone]);
 
   const initialCatalogLoadRef = useRef('');
@@ -1103,9 +1109,11 @@ export default function App() {
     return products.filter((p) => !isCatalogHiddenProduct(p));
   }, [products, visibilityFilter]);
 
+  const categoryTreeVersion = useCategoryRegistry();
   const categoryList = useMemo(
     () => deriveCategories(productsForVisibleStatus, catalogListFilter),
-    [productsForVisibleStatus, catalogListFilter],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [productsForVisibleStatus, catalogListFilter, categoryTreeVersion],
   );
 
   const manufacturerList = useMemo(
@@ -1121,7 +1129,9 @@ export default function App() {
   const shopCategoryGroups = useMemo(() => {
     if (!categoryList.length) return undefined;
     return getKenochemCategoryGroupsFor(categoryList);
-  }, [categoryList]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryList, categoryTreeVersion]);
+
 
   const debouncedSearch = useDebouncedCatalogSearch(search, 90);
   const favoriteSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
@@ -1990,6 +2000,17 @@ export default function App() {
             onHideProducts={roleCan(role, 'hideProducts') ? handleHideProducts : undefined}
             canExport={roleCan(role, 'exportData')}
           />
+        ) : view === 'categories' && isCatalogProduct() ? (
+          <Suspense fallback={<ViewFallback />}>
+            <CategoriesView
+              products={activeAllProducts}
+              canEdit={roleCan(role, 'manageCategories')}
+              onShowProducts={(name) => {
+                setCategory(name);
+                setView('catalog');
+              }}
+            />
+          </Suspense>
         ) : view === 'manufacturers' && isCatalogProduct() ? (
           <Suspense fallback={<ViewFallback />}>
             <ManufacturersView

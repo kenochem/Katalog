@@ -87,6 +87,15 @@ export const MIGRATION_PROBES: MigrationProbe[] = [
     "functions": []
   },
   {
+    "file": "migration-catalog-categories.sql",
+    "title": "Drzewo kategorii katalogu: kategorie dodane ręcznie oraz zmiany kategorii ze sklepu (przeniesienia, usunięcia).",
+    "tables": [
+      "catalog_categories"
+    ],
+    "columns": [],
+    "functions": []
+  },
+  {
     "file": "migration-catalog-leaderboard.sql",
     "title": "Ranking pracownikow w \"Moj profil\": punkty pracy (XP) z dziennika aktywnosci.",
     "tables": [],

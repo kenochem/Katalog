@@ -86,7 +86,7 @@ import { suggestShortDescription } from '../lib/productKnowledge';
 import { BaselinkerTag } from './BaselinkerTag';
 import { baselinkerLinkLabel, hasBaselinkerLink } from '../lib/baselinkerLink';
 import { useBaselinkerLinksVersion } from '../lib/baselinkerLive';
-import { getShopCategoryTree, walkShopLeaves } from '../lib/shopCategoryTree';
+import { addCategory, cleanCategoryName, getAssignableCategories, useCategoryRegistry } from '../lib/categoryRegistry';
 
 interface ProductDetailProps {
   product: Product;
@@ -631,16 +631,18 @@ export function ProductDetail({
     }
   }
 
+  const categoryTreeVersion = useCategoryRegistry();
   const editCategories = useMemo(() => {
-    const shopLeaves = walkShopLeaves(getShopCategoryTree().roots).map((leaf) => leaf.label);
+    // pełna lista: drzewo kategorii (sklep + własne z bazy) + kategorie akcesoriów + obecna kategoria produktu
     return Array.from(
       new Set([
         detail.category,
-        ...shopLeaves,
+        ...getAssignableCategories(),
         ...ACCESSORY_CATEGORIES.filter((c) => c !== 'Wszystkie'),
       ].filter(Boolean)),
     ).sort((a, b) => a.localeCompare(b, 'pl'));
-  }, [detail.category]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detail.category, categoryTreeVersion]);
   const displayManufacturer = effectiveManufacturer(detail);
 
   // ---- opisy: bieżące wartości (w edycji z edytora, poza edycją z zapisanego produktu) + BaseLinker ----
@@ -2706,15 +2708,34 @@ function CategoryPicker({
   onChange: (next: string) => void;
 }) {
   const [custom, setCustom] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [adding, setAdding] = useState(false);
   const all = useMemo(() => {
     const set = new Set(options.filter(Boolean));
     if (value) set.add(value);
     return [...set].sort((a, b) => a.localeCompare(b, 'pl'));
   }, [options, value]);
+  async function commit() {
+    setAdding(true);
+    try {
+      // zapis na stałe w bazie: kategoria trafia do wspólnej listy i jest dostępna w każdym produkcie
+      const saved = await addCategory(draft, null);
+      onChange(saved);
+      showToast(`Kategoria „${saved}” zapisana — dopracujesz jej położenie w sekcji Kategorie`, 'ok', 5000);
+      setCustom(false);
+      setDraft('');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Nie udało się dodać kategorii', 'error', 8000);
+    } finally {
+      setAdding(false);
+    }
+  }
+
   return (
     <>
       <select
         value={custom ? NEW_CATEGORY : value}
+
         onChange={(e) => {
           if (e.target.value === NEW_CATEGORY) {
             setCustom(true);
@@ -2734,13 +2755,29 @@ function CategoryPicker({
         <option value={NEW_CATEGORY}>+ Nowa kategoria…</option>
       </select>
       {custom && (
-        <input
-          autoFocus
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="Wpisz nazwę nowej kategorii"
-          className="input-field mt-2"
-        />
+        <div className="mt-2 flex gap-2">
+          <input
+            autoFocus
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                void commit();
+              }
+            }}
+            placeholder="Nazwa nowej kategorii"
+            className="input-field min-w-0 flex-1"
+          />
+          <button
+            type="button"
+            disabled={adding || !cleanCategoryName(draft)}
+            onClick={() => void commit()}
+            className="rounded-xl bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-500 disabled:opacity-50"
+          >
+            {adding ? 'Dodaję…' : 'Dodaj'}
+          </button>
+        </div>
       )}
     </>
   );

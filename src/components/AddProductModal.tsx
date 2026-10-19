@@ -4,6 +4,7 @@ import type { Product, CatalogType } from '../types';
 import { ACCESSORY_CATEGORIES, deriveCategories } from '../types';
 import { normalizeManufacturer } from '../lib/waproManufacturers';
 import { ManufacturerSelect } from './ManufacturerSelect';
+import { getAssignableCategories, useCategoryRegistry } from '../lib/categoryRegistry';
 
 import { createProduct } from '../lib/products';
 import { showToast } from '../lib/toast';
@@ -21,10 +22,14 @@ export function AddProductModal({
   catalog = 'accessories',
   existingProducts = [],
 }: AddProductModalProps) {
+  useCategoryRegistry();
+  const registryCategories = getAssignableCategories();
   const categoryOptions =
     catalog === 'shop'
-      ? deriveCategories(existingProducts).filter((c) => c !== 'Wszystkie')
-      : ACCESSORY_CATEGORIES.filter((c) => c !== 'Wszystkie');
+      ? [...new Set([...deriveCategories(existingProducts).filter((c) => c !== 'Wszystkie'), ...registryCategories])].sort((a, b) =>
+          a.localeCompare(b, 'pl'),
+        )
+      : [...new Set([...ACCESSORY_CATEGORIES.filter((c) => c !== 'Wszystkie'), ...registryCategories])];
   const defaultCategory =
     catalog === 'shop' ? categoryOptions[0] || 'Inne' : 'Inne części';
 

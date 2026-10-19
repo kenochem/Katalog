@@ -44,7 +44,8 @@ export type CapabilityId =
   | 'catalog.managePromotions'
   | 'catalog.manageManufacturers'
   | 'catalog.hideProducts'
-  | 'catalog.exportData';
+  | 'catalog.exportData'
+  | 'catalog.manageCategories';
 
 export interface CapabilityDef {
   id: CapabilityId;
@@ -252,7 +253,17 @@ export const CAPABILITY_REGISTRY: CapabilityDef[] = [
     requires: ['module.catalog'],
   },
   {
+    id: 'catalog.manageCategories',
+    label: 'Kategorie',
+    description: 'Zarządzanie drzewem kategorii: dodawanie, zmiana nazw, przenoszenie i usuwanie',
+    group: 'catalog',
+    roleAction: 'manageCategories',
+    moduleId: 'catalog',
+    requires: ['module.catalog'],
+  },
+  {
     id: 'catalog.exportData',
+
     label: 'Eksport danych',
     description: 'Eksport list produktów do pliku CSV',
     group: 'catalog',

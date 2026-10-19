@@ -17,6 +17,13 @@ export interface AppChangelogEntry {
  */
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
+    date: '2026-10-19',
+    title: 'Nowa sekcja „Kategorie”: drzewo kategorii zapisane na stałe w bazie; naprawa dodawania kategorii w produktach',
+    description:
+      'Zgłoszony błąd: kategoria dodana w jednym produkcie („+ Nowa kategoria…”) nie była widoczna w innych, bo istniała tylko w tym produkcie. Teraz nowa kategoria zapisuje się na stałe we wspólnej bazie i od razu jest na liście wyboru w każdym produkcie, przy dodawaniu produktu oraz w filtrach katalogu. W menu jest nowa sekcja „Kategorie” z drzewem: rozwijanie i szukanie, liczba produktów w każdej gałęzi, dodawanie kategorii głównych i podkategorii, zmiana nazwy (poprawia nazwę we wszystkich produktach), przenoszenie w drzewie i usuwanie z wyborem kategorii, do której trafią produkty. Kategorie ze sklepu też można przenosić, przemianowywać i usuwać (z możliwością przywrócenia), a kategorie wpisane wcześniej w produktach, których nie było w drzewie, można jednym kliknięciem dodać do drzewa. Nowe uprawnienie „Kategorie” w macierzy ról (operator i admin domyślnie). Wymaga migracji migration-catalog-categories.sql.',
+    tag: 'nowość',
+  },
+  {
     date: '2026-10-16',
     title: 'Producenci: większe loga na liście, bez etykiety „ręczny”',
     description:
