@@ -25,14 +25,14 @@ export const APP_CHANGELOG: AppChangelogEntry[] = [
   },
   {
     date: '2026-10-19',
-    title: 'Edycja masowa i szybka edycja w wierszu w Uzupełnianiu danych (Etap 2)',
+    title: 'Edycja masowa i szybka edycja w wierszu w Uzupełnianiu danych',
     description:
       'Nowe narzędzia w Uzupełnianiu danych. Edycja masowa zaznaczonych produktów: producent, kategoria, stawka VAT, jednostka, tagi (dodawanie i usuwanie) oraz ceny — ustaw wartość, zmień o procent albo o kwotę, z zaokrągleniem (do grosza, 10 groszy, złotych, końcówka ,99 lub ,90) i opcjonalnym przeliczeniem drugiej ceny sprzedaży netto ↔ brutto wg VAT. Przed zapisem jest podgląd „stare → nowe” dla każdego produktu i podsumowanie, a cała operacja zapisuje się jako jedna partia, którą można cofnąć (Logi → Operacje masowe). Szybka edycja w wierszu: przycisk „Szybka edycja” rozwija pola EAN (z ostrzeżeniem o nietypowej długości), producent, kategoria i cena sprzedaży brutto — zapis bez otwierania karty. Edycja wymaga uprawnienia edycji produktów, zmiany cen także uprawnienia do cen.',
     tag: 'nowość',
   },
   {
     date: '2026-10-19',
-    title: 'Historia zmian produktu z cofaniem oraz operacje masowe do cofnięcia (Etap 1)',
+    title: 'Historia zmian produktu z cofaniem oraz operacje masowe do cofnięcia',
     description:
       'W karcie produktu jest nowa zakładka „Historia”: oś czasu zmian z informacją, kto i kiedy zmienił pole oraz jaka była wartość przed i po (nazwa, opis, EAN, producent, kategoria, ceny, stan, zdjęcia, tagi i pola dodatkowe). Przy każdej zmianie jest przycisk „Przywróć” — stara wartość wraca do produktu, a samo przywrócenie też zostaje w historii. Operacje na wielu produktach naraz (ukrywanie, przywracanie, wyjątki, edycja masowa) dostają wspólny identyfikator partii; w Logi → „Operacje masowe” widać je z ostatnich 30 dni, z rozwijanym podglądem zmian i przyciskiem „Cofnij całość”, który przywraca wartości sprzed operacji (cofnięta partia jest oznaczona). Dziennik zapisuje teraz pełne wartości do 20 000 znaków (wcześniej obcinał do 300), więc cofnąć można także długie opisy; starsze, skrócone wpisy są oznaczone jako niemożliwe do automatycznego cofnięcia. Wymaga migracji migration-audit-log-product-history.sql (historia produktów widoczna dla wszystkich zalogowanych, pozostałe wpisy dziennika bez zmian).',
     tag: 'nowość',
