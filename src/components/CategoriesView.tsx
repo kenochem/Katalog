@@ -1,4 +1,20 @@
-import { ChevronDown, ChevronRight, FolderPlus, FolderTree, Loader2, Move, Pencil, Plus, RotateCcw, Search, Trash2 } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronRight,
+  Folder,
+  FolderOpen,
+  FolderPlus,
+  FolderTree,
+  GripVertical,
+  Loader2,
+  Move,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Search,
+  Tag as TagIcon,
+  Trash2,
+} from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { Product } from '../types';
 import { getProductDisplayCategory, isGenericSourceCategory, isLikelyProducerCategory } from '../lib/catalogCategory';
@@ -25,6 +41,8 @@ function subtreeNames(node: ShopCategoryNode): string[] {
   return [node.name, ...node.children.flatMap(subtreeNames)];
 }
 
+type TreeSort = 'shop' | 'name' | 'count';
+
 /** Zarządzanie drzewem kategorii katalogu: dodawanie, zmiana nazwy, przenoszenie i usuwanie (zapis w bazie). */
 export function CategoriesView({
   products,
@@ -41,6 +59,10 @@ export function CategoriesView({
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [rootDraft, setRootDraft] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
+  const [sort, setSort] = useState<TreeSort>('shop');
+  const [onlyEmpty, setOnlyEmpty] = useState(false);
+  const [dragging, setDragging] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<string | null>(null);
 
   const counts = useMemo(() => {
     const map = new Map<string, number>();
@@ -70,8 +92,21 @@ export function CategoriesView({
   }, [roots, selected]);
 
   const countOf = (node: ShopCategoryNode) => subtreeNames(node).reduce((s, n) => s + (counts.get(categoryKey(n)) || 0), 0);
+  const totalProducts = products.length;
+  const undecided = counts.get(categoryKey('Do decyzji')) || 0;
+  const leaves = flat.filter((c) => c.isLeaf);
+  const emptyLeaves = leaves.filter((c) => !(counts.get(categoryKey(c.name)) || 0));
+  const customCount = flat.filter((c) => !c.fromShop).length;
   const q = query.trim().toLowerCase();
   const matches = (node: ShopCategoryNode): boolean => node.name.toLowerCase().includes(q) || node.children.some(matches);
+  const isEmptyNode = (node: ShopCategoryNode) => countOf(node) === 0;
+  const visible = (node: ShopCategoryNode): boolean => (!q || matches(node)) && (!onlyEmpty || (node.children.length ? node.children.some(visible) : isEmptyNode(node)));
+
+  const sortNodes = (nodes: ShopCategoryNode[]): ShopCategoryNode[] => {
+    if (sort === 'name') return [...nodes].sort((a, b) => a.name.localeCompare(b.name, 'pl'));
+    if (sort === 'count') return [...nodes].sort((a, b) => countOf(b) - countOf(a) || a.name.localeCompare(b.name, 'pl'));
+    return nodes;
+  };
 
   function toggle(name: string) {
     setExpanded((prev) => {
@@ -96,36 +131,92 @@ export function CategoriesView({
     }
   }
 
+  async function dropOn(target: string | null) {
+    const name = dragging;
+    setDragging(null);
+    setDropTarget(null);
+    if (!name || !canEdit) return;
+    const cur = flat.find((c) => categoryKey(c.name) === categoryKey(name));
+    if (!cur || categoryKey(cur.parent ?? '') === categoryKey(target ?? '')) return;
+    await run('drag', () => moveCategory(name, target), () => `„${name}” przeniesiono do ${target ? `„${target}”` : 'kategorii głównych'}`);
+  }
+
   function renderNode(node: ShopCategoryNode, depth: number) {
-    if (q && !matches(node)) return null;
-    const isOpen = q ? true : expanded.has(node.name);
+    if (!visible(node)) return null;
+    const open = q ? true : expanded.has(node.name);
     const hasChildren = node.children.length > 0;
     const n = countOf(node);
+    const own = counts.get(categoryKey(node.name)) || 0;
     const nodeInfo = flat.find((c) => categoryKey(c.name) === categoryKey(node.name));
     const active = selected && categoryKey(selected) === categoryKey(node.name);
+    const share = totalProducts ? Math.round((n / totalProducts) * 100) : 0;
+    const canDrop = canEdit && !!dragging && (hasChildren || depth === 0) && categoryKey(dragging) !== categoryKey(node.name);
+    const isDrop = dropTarget === node.name && canDrop;
     return (
       <li key={node.name + depth}>
         <div
-          className={`flex items-center gap-1 rounded-xl px-2 py-1.5 transition hover:bg-slate-800/60 ${active ? 'bg-brand-500/15 ring-1 ring-brand-500/40' : ''}`}
-          style={{ paddingLeft: 8 + depth * 18 }}
+          draggable={canEdit}
+          onDragStart={(e) => {
+            setDragging(node.name);
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', node.name);
+          }}
+          onDragEnd={() => {
+            setDragging(null);
+            setDropTarget(null);
+          }}
+          onDragOver={(e) => {
+            if (canDrop) {
+              e.preventDefault();
+              setDropTarget(node.name);
+            }
+          }}
+          onDragLeave={() => setDropTarget((t) => (t === node.name ? null : t))}
+          onDrop={(e) => {
+            if (canDrop) {
+              e.preventDefault();
+              void dropOn(node.name);
+            }
+          }}
+          className={`group flex items-center gap-1.5 rounded-xl px-2 py-1.5 transition ${
+            isDrop
+              ? 'bg-brand-500/20 ring-2 ring-brand-500'
+              : active
+                ? 'bg-brand-500/15 ring-1 ring-brand-500/50'
+                : 'hover:bg-slate-800/60'
+          } ${dragging === node.name ? 'opacity-40' : ''}`}
         >
           <button
             type="button"
             onClick={() => hasChildren && toggle(node.name)}
-            className={`flex h-6 w-6 items-center justify-center rounded text-slate-400 ${hasChildren ? 'hover:bg-slate-700' : 'opacity-0'}`}
-            aria-label={isOpen ? 'Zwiń' : 'Rozwiń'}
+            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-400 ${hasChildren ? 'hover:bg-slate-700 hover:text-slate-100' : 'pointer-events-none opacity-0'}`}
+            aria-label={open ? 'Zwiń' : 'Rozwiń'}
           >
-            {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </button>
+          <span
+            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
+              hasChildren ? 'bg-amber-500/15 text-amber-300' : own === 0 ? 'bg-slate-800 text-slate-500' : 'bg-sky-500/15 text-sky-300'
+            }`}
+          >
+            {hasChildren ? open ? <FolderOpen className="h-4 w-4" /> : <Folder className="h-4 w-4" /> : <TagIcon className="h-3.5 w-3.5" />}
+          </span>
           <button type="button" onClick={() => setSelected(node.name)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
-            <span className={`truncate text-sm ${hasChildren ? 'font-semibold text-slate-100' : 'text-slate-200'}`}>{node.name}</span>
+            <span className={`truncate text-sm ${hasChildren ? 'font-semibold text-slate-50' : 'text-slate-200'}`}>{node.name}</span>
             {nodeInfo && !nodeInfo.fromShop && (
-              <span className="rounded-full bg-violet-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-violet-200">własna</span>
+              <span className="rounded-full bg-violet-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-violet-200">nowa</span>
             )}
+            {!hasChildren && own === 0 && <span className="text-[10px] text-slate-500">pusta</span>}
           </button>
-          <span className="shrink-0 text-xs tabular-nums text-slate-400">{n}</span>
+          {canEdit && <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-slate-600 opacity-0 transition group-hover:opacity-100" />}
+          <span className="hidden h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-slate-800 sm:block" title={`${share}% produktów`}>
+            <span className="block h-full rounded-full bg-brand-500/70" style={{ width: `${Math.min(100, share * 3)}%` }} />
+          </span>
+          <span className={`w-12 shrink-0 text-right text-xs tabular-nums ${n === 0 ? 'text-slate-600' : 'font-semibold text-slate-300'}`}>{n}</span>
         </div>
-        {hasChildren && isOpen && <ul>{node.children.map((c) => renderNode(c, depth + 1))}</ul>}
+        {hasChildren && open && (
+          <ul className="ml-[18px] border-l border-slate-700/70 pl-2">{sortNodes(node.children).map((c) => renderNode(c, depth + 1))}</ul>
+        )}
       </li>
     );
   }
@@ -152,18 +243,84 @@ export function CategoriesView({
     [version],
   );
 
+  const btn =
+    'rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800';
+
   return (
     <div className="catalog-readable-light w-full space-y-4 pb-10">
       <section className="surface-panel p-5">
-        <p className="text-xs font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Porządkowanie katalogu</p>
-        <h2 className="mt-1 flex items-center gap-2 text-xl font-bold text-slate-950 dark:text-slate-50">
-          <FolderTree className="h-5 w-5" /> Kategorie
-        </h2>
-        <p className="mt-1 max-w-3xl text-sm text-slate-700 dark:text-slate-400">
-          Drzewo kategorii katalogu. Zmiany zapisują się na stałe w bazie i od razu są dostępne przy wyborze kategorii w każdym produkcie.
-          Kategorie ze sklepu można przenosić, zmieniać im nazwy i usuwać (produkty trafiają wtedy do wybranej kategorii).
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">Porządkowanie katalogu</p>
+            <h2 className="mt-1 flex items-center gap-2 text-xl font-bold text-slate-950 dark:text-slate-50">
+              <FolderTree className="h-5 w-5" /> Kategorie
+            </h2>
+            <p className="mt-1 max-w-3xl text-sm text-slate-700 dark:text-slate-400">
+              Drzewo kategorii katalogu. Zmiany zapisują się na stałe w bazie i od razu są dostępne przy wyborze kategorii w każdym produkcie.
+              {canEdit && ' Kategorie możesz przeciągać na inne grupy, żeby je przenosić.'}
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {[
+              ['Kategorie', flat.length, 'text-slate-950 dark:text-slate-50'],
+              ['Własne', customCount, 'text-violet-700 dark:text-violet-300'],
+              ['Puste', emptyLeaves.length, emptyLeaves.length ? 'text-amber-700 dark:text-amber-300' : 'text-slate-950 dark:text-slate-50'],
+              ['Do decyzji', undecided, undecided ? 'text-rose-700 dark:text-rose-300' : 'text-emerald-700 dark:text-emerald-300'],
+            ].map(([label, value, tone]) => (
+              <div key={String(label)} className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-center dark:border-slate-700 dark:bg-slate-900">
+                <p className={`text-2xl font-bold tabular-nums ${tone}`}>{value}</p>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400">{label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
+
+      {orphans.length > 0 && canEdit && (
+        <section className="rounded-2xl border border-amber-400/50 bg-amber-50 p-4 dark:border-amber-500/30 dark:bg-amber-500/5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-sm font-bold text-amber-950 dark:text-amber-200">Kategorie z produktów, których nie ma w drzewie ({orphans.length})</p>
+              <p className="text-xs text-amber-900/80 dark:text-amber-200/70">
+                Wpisane wcześniej w produktach. Kliknij nazwę, aby dodać ją do drzewa — będzie dostępna do wyboru w każdym produkcie.
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={busy !== null}
+              onClick={() =>
+                void run(
+                  'orphan-all',
+                  async () => {
+                    for (const o of orphans) await addCategory(o.name, null);
+                    return orphans.length;
+                  },
+                  (n) => `Dodano ${n} kategorii do drzewa`,
+                )
+              }
+              className="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-500 disabled:opacity-50"
+            >
+              {busy === 'orphan-all' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              Dodaj wszystkie
+            </button>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {orphans.map((o) => (
+              <button
+                key={o.name}
+                type="button"
+                disabled={busy !== null}
+                onClick={() => void run('orphan:' + o.name, () => addCategory(o.name, null), (n) => `Dodano „${n}” do drzewa`)}
+                className="group inline-flex items-center gap-1.5 rounded-full border border-amber-400/60 bg-white px-3 py-1.5 text-sm font-medium text-amber-950 transition hover:border-amber-500 hover:bg-amber-100 disabled:opacity-50 dark:border-amber-500/40 dark:bg-slate-900 dark:text-amber-100 dark:hover:bg-slate-800"
+              >
+                <Plus className="h-3.5 w-3.5 text-amber-600 group-hover:scale-110" />
+                {o.name}
+                <span className="rounded-full bg-amber-200 px-1.5 text-[11px] font-semibold tabular-nums text-amber-900 dark:bg-amber-500/20 dark:text-amber-200">{o.count}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_26rem] 2xl:grid-cols-[minmax(0,1fr)_30rem]">
         <section className="min-w-0 space-y-3">
@@ -172,30 +329,38 @@ export function CategoriesView({
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
               <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Szukaj kategorii…" className="input-field with-icon" />
             </div>
-            <button
-              type="button"
-              onClick={() => setExpanded(new Set(flat.filter((c) => !c.isLeaf).map((c) => c.name)))}
-              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-            >
-              Rozwiń wszystko
+            <select value={sort} onChange={(e) => setSort(e.target.value as TreeSort)} className="input-field !w-auto" aria-label="Kolejność">
+              <option value="shop">Kolejność ze sklepu</option>
+              <option value="name">Nazwa A–Z</option>
+              <option value="count">Najwięcej produktów</option>
+            </select>
+            <button type="button" onClick={() => setOnlyEmpty((v) => !v)} className={`${btn} ${onlyEmpty ? '!border-amber-500 !bg-amber-50 !text-amber-900 dark:!bg-amber-500/15 dark:!text-amber-200' : ''}`}>
+              Tylko puste
             </button>
-            <button
-              type="button"
-              onClick={() => setExpanded(new Set())}
-              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-            >
+            <button type="button" onClick={() => setExpanded(new Set(flat.filter((c) => !c.isLeaf).map((c) => c.name)))} className={btn}>
+              Rozwiń
+            </button>
+            <button type="button" onClick={() => setExpanded(new Set())} className={btn}>
               Zwiń
             </button>
           </div>
+
           {canEdit && (
             <div className="flex gap-2">
               <input
                 value={rootDraft}
                 onChange={(e) => setRootDraft(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') e.currentTarget.nextElementSibling instanceof HTMLButtonElement && e.currentTarget.nextElementSibling.click();
+                  if (e.key === 'Enter' && rootDraft.trim()) {
+                    void run('root', () => addCategory(rootDraft, null), (n) => `Dodano kategorię „${n}”`).then((name) => {
+                      if (name) {
+                        setRootDraft('');
+                        setSelected(name);
+                      }
+                    });
+                  }
                 }}
-                placeholder="Nowa kategoria główna"
+                placeholder="Nowa kategoria główna…"
                 className="input-field min-w-0 flex-1"
               />
               <button
@@ -214,53 +379,48 @@ export function CategoriesView({
               </button>
             </div>
           )}
-          <ul className="space-y-0.5 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm dark:border-slate-800 dark:bg-slate-950/30 dark:shadow-none">
-            {roots.map((r) => renderNode(r, 0))}
-            {roots.length === 0 && <li className="px-4 py-8 text-center text-sm text-slate-600 dark:text-slate-400">Brak kategorii.</li>}
-          </ul>
-          {orphans.length > 0 && canEdit && (
-            <section className="surface-panel p-4">
-              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">Kategorie z produktów spoza drzewa</p>
-              <p className="mb-2 text-[11px] text-slate-600 dark:text-slate-400">
-                Te nazwy są wpisane w produktach, ale nie ma ich w drzewie (np. dodane wcześniej z karty produktu). Dodaj je do drzewa, żeby były dostępne do wyboru w każdym produkcie.
-              </p>
-              <ul className="space-y-1">
-                {orphans.map((o) => (
-                  <li key={o.name} className="flex items-center justify-between gap-2 text-sm">
-                    <span className="truncate text-slate-800 dark:text-slate-200">
-                      {o.name} <span className="text-xs text-slate-500">({o.count})</span>
-                    </span>
-                    <button
-                      type="button"
-                      disabled={busy !== null}
-                      onClick={() => void run('orphan:' + o.name, () => addCategory(o.name, null), (n) => `Dodano „${n}” do drzewa`)}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:underline dark:text-brand-300"
-                    >
-                      <Plus className="h-3.5 w-3.5" /> Dodaj do drzewa
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm dark:border-slate-800 dark:bg-slate-950/30 dark:shadow-none">
+            {canEdit && dragging && (
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDropTarget('__root__');
+                }}
+                onDragLeave={() => setDropTarget(null)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  void dropOn(null);
+                }}
+                className={`mb-2 rounded-xl border-2 border-dashed px-3 py-2 text-center text-xs font-semibold transition ${
+                  dropTarget === '__root__' ? 'border-brand-500 bg-brand-500/10 text-brand-700 dark:text-brand-300' : 'border-slate-400/50 text-slate-500'
+                }`}
+              >
+                Upuść tutaj, aby przenieść do kategorii głównych
+              </div>
+            )}
+            <ul className="space-y-0.5">
+              {sortNodes(roots).map((r) => renderNode(r, 0))}
+              {roots.length === 0 && <li className="px-4 py-8 text-center text-sm text-slate-600 dark:text-slate-400">Brak kategorii.</li>}
+            </ul>
+          </div>
+
           {removed.length > 0 && canEdit && (
             <section className="surface-panel p-4">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">Usunięte kategorie ze sklepu</p>
-              <ul className="space-y-1">
+              <div className="flex flex-wrap gap-2">
                 {removed.map((name) => (
-                  <li key={name} className="flex items-center justify-between gap-2 text-sm">
-                    <span className="truncate text-slate-800 dark:text-slate-200">{name}</span>
-                    <button
-                      type="button"
-                      disabled={busy !== null}
-                      onClick={() => void run('restore:' + name, () => restoreShopCategory(name), () => `Przywrócono „${name}”`)}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:underline dark:text-brand-300"
-                    >
-                      <RotateCcw className="h-3.5 w-3.5" /> Przywróć
-                    </button>
-                  </li>
+                  <button
+                    key={name}
+                    type="button"
+                    disabled={busy !== null}
+                    onClick={() => void run('restore:' + name, () => restoreShopCategory(name), () => `Przywrócono „${name}”`)}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1 text-sm text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5 text-brand-600" /> {name}
+                  </button>
                 ))}
-              </ul>
+              </div>
             </section>
           )}
         </section>
@@ -282,7 +442,9 @@ export function CategoriesView({
             />
           ) : (
             <div className="surface-panel p-6 text-sm text-slate-700 dark:text-slate-400">
-              Wybierz kategorię z drzewa, aby zobaczyć jej szczegóły, dodać podkategorię, zmienić nazwę, przenieść ją albo usunąć.
+              <p className="mb-2 font-semibold text-slate-900 dark:text-slate-100">Wybierz kategorię</p>
+              Kliknij kategorię w drzewie, aby zobaczyć jej szczegóły, dodać podkategorię, zmienić nazwę, przenieść ją albo usunąć. Możesz też przeciągnąć
+              kategorię na inną grupę.
             </div>
           )}
         </aside>

@@ -18,6 +18,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-19',
+    title: 'Kategorie: nowy wygląd drzewa, przeciąganie kategorii i porządek z „dzikimi” kategoriami',
+    description:
+      'Zakładka Kategorie została przebudowana wizualnie. Drzewo ma czytelne gałęzie z liniami prowadzącymi, ikony folderów (grupy) i etykiet (kategorie z produktami), pasek udziału i liczbę produktów przy każdej pozycji oraz oznaczenia „nowa” i „pusta”. Kategorie można przeciągać myszą na inną grupę (albo do kategorii głównych), żeby je przenosić. Na górze są liczniki: kategorie, własne, puste i „Do decyzji”. Doszły sortowanie drzewa (ze sklepu, A–Z, wg liczby produktów), filtr „Tylko puste” oraz Rozwiń / Zwiń. „Dzikie” kategorie wpisane w produktach, których nie ma w drzewie, są teraz w wyraźnym banerze na górze jako przyciski-pigułki: kliknięcie nazwy od razu dodaje ją do drzewa, a „Dodaj wszystkie” robi to hurtem. Usunięte kategorie ze sklepu można przywrócić jednym kliknięciem.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-19',
     title: 'Zdjęcia z BaseLinkera: walidacja wizualna — zdjęcia po obróbce nie są już „brakujące”',
     description:
       'Zdjęcie poprawione w katalogu (zmiana rozmiaru, wycięcie tła, margines, inny format) miało inny adres i nazwę pliku niż oryginał w BaseLinkerze, więc było uznawane za „inne”, a oryginał z BL za brakujący w katalogu. Teraz zdjęcia z BL są porównywane wizualnie (hash percepcyjny z przycięciem białych marginesów i traktowaniem przezroczystości jak bieli): jeśli wyglądają jak któreś zdjęcie z katalogu, są pomijane i oznaczone jako „te same po obróbce”, a do zaciągnięcia trafiają tylko naprawdę nowe zdjęcia (z miniaturami). Walidacja działa w karcie produktu oraz przy zaciąganiu hurtowym (opcja „sprawdź martwe linki i duplikaty”). Dodatkowo serwer traktuje oryginał zdjęcia głównego sprzed obróbki (image_url) jako obecny w katalogu. Zdjęć, których nie da się wczytać do porównania, nie pomijamy. Część serwerowa wymaga wdrożenia funkcji baselinker.',
