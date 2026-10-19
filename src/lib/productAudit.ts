@@ -25,6 +25,7 @@ const FIELD_MAP: Record<
   imageUrl: { column: 'image_url', group: 'image' },
   extraImageUrls: { column: 'extra_images', group: 'image' },
   hasImage: { column: 'has_image', group: 'image' },
+  tags: { column: 'tags', group: 'other' },
 };
 
 const FIELD_LABELS: Record<string, string> = {
@@ -46,6 +47,7 @@ const FIELD_LABELS: Record<string, string> = {
   imageUrl: 'Zdjęcie (URL)',
   extraImageUrls: 'Dodatkowe zdjęcia',
   hasImage: 'Ma zdjęcie',
+  tags: 'Tagi',
 };
 
 export interface ProductAuditSnapshot {

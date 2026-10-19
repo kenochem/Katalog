@@ -80,6 +80,12 @@ import { isSupabaseConfigured } from './lib/supabase';
 import { loadManufacturerRegistry } from './lib/manufacturerRegistry';
 import { loadCategoryRegistry, useCategoryRegistry } from './lib/categoryRegistry';
 import { setDataExceptions, type ExceptionKind } from './lib/dataExceptions';
+import { withAuditBatch } from './lib/auditLog';
+
+/** Operacje na wielu produktach naraz zapisujemy jako jedną partię (do cofnięcia); pojedyncze — zwykle. */
+function batchIfMany<T>(n: number, label: string, fn: () => Promise<T>): Promise<T> {
+  return n > 1 ? withAuditBatch(label, fn) : fn();
+}
 import { roleCan, ROLE_LABELS } from './lib/roles';
 import { branding, moduleEnabled, APP_PRODUCT } from './app/moduleRegistry';
 import { canUseCrmModule, canViewOpsModule, canUseCommsModule } from './app/productAccess';
@@ -1369,7 +1375,13 @@ export default function App() {
       }
       let failedIds: string[] = [];
       try {
-        failedIds = (await setDataExceptions(items.map((p) => p.id), kinds, note)).failed;
+        failedIds = (
+          await batchIfMany(
+            items.length,
+            kinds === null ? `Cofnięcie wyjątków (${items.length})` : `Wyjątek dla ${items.length} produktów: ${note || kinds.join(', ')}`,
+            () => setDataExceptions(items.map((p) => p.id), kinds, note),
+          )
+        ).failed;
       } catch (err) {
         console.error(err);
         failedIds = items.map((p) => p.id);
@@ -1385,6 +1397,27 @@ export default function App() {
     [],
   );
 
+  const handleQuickSave = useCallback(
+    async (product: Product, patch: Partial<Pick<Product, 'ean' | 'manufacturer' | 'category' | 'priceSaleGross'>>) => {
+      if (Object.keys(patch).length === 0) return;
+      patchProductInCache(product.id, patch);
+      try {
+        await updateProduct(product.id, patch);
+        showToast(`Zapisano ${product.sku}`, 'ok', 2000);
+      } catch (err) {
+        console.error(err);
+        patchProductInCache(product.id, () => product);
+        showToast(err instanceof Error ? err.message : 'Nie udało się zapisać produktu', 'error', 6000);
+        throw err;
+      }
+    },
+    [],
+  );
+
+  const handleBulkEditDone = useCallback((res: { patches: { id: string; patch: Partial<Product> }[] }) => {
+    for (const { id, patch } of res.patches) patchProductInCache(id, patch);
+  }, []);
+
   const handleRestoreHiddenMany = useCallback(async (items: Product[]) => {
     for (const product of items) {
       const nextMeta = { ...(product.meta ?? {}) };
@@ -1395,7 +1428,9 @@ export default function App() {
     }
     let failedIds: string[] = [];
     try {
-      failedIds = (await setProductsHidden(items.map((p) => p.id), false)).failed;
+      failedIds = (
+        await batchIfMany(items.length, `Przywrócenie ${items.length} produktów do katalogu`, () => setProductsHidden(items.map((p) => p.id), false))
+      ).failed;
     } catch (err) {
       console.error(err);
       failedIds = items.map((p) => p.id);
@@ -1445,7 +1480,9 @@ export default function App() {
     }
     let failedIds: string[] = [];
     try {
-      failedIds = (await setProductsHidden(items.map((p) => p.id), true, reason)).failed;
+      failedIds = (
+        await batchIfMany(items.length, `Ukrycie ${items.length} produktów: ${reason}`, () => setProductsHidden(items.map((p) => p.id), true, reason))
+      ).failed;
     } catch (err) {
       console.error(err);
       failedIds = items.map((p) => p.id);
@@ -2033,6 +2070,9 @@ export default function App() {
             onOpenManufacturers={() => setView('manufacturers')}
             onHideProducts={roleCan(role, 'hideProducts') ? handleHideProducts : undefined}
             onSetExceptions={roleCan(role, 'editProduct') ? handleSetExceptions : undefined}
+            onQuickSave={roleCan(role, 'editProduct') ? handleQuickSave : undefined}
+            onBulkEditDone={roleCan(role, 'editProduct') ? handleBulkEditDone : undefined}
+            canEditPrices={roleCan(role, 'viewPrices') && roleCan(role, 'editProduct')}
             canExport={roleCan(role, 'exportData')}
           />
         ) : view === 'categories' && isCatalogProduct() ? (
@@ -2227,6 +2267,9 @@ export default function App() {
             onOpenManufacturers={() => setView('manufacturers')}
             onHideProducts={roleCan(role, 'hideProducts') ? handleHideProducts : undefined}
             onSetExceptions={roleCan(role, 'editProduct') ? handleSetExceptions : undefined}
+            onQuickSave={roleCan(role, 'editProduct') ? handleQuickSave : undefined}
+            onBulkEditDone={roleCan(role, 'editProduct') ? handleBulkEditDone : undefined}
+            canEditPrices={roleCan(role, 'viewPrices') && roleCan(role, 'editProduct')}
             canExport={roleCan(role, 'exportData')}
           />
         )}

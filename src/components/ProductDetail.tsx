@@ -4,8 +4,9 @@ import {
   X, Camera, Upload, Loader2, Package, Pencil, Save, Trash2,
   Minus, Plus, Images, Printer, Tag, ArrowLeft,
   FileText, Barcode, Copy, Check, Scissors, Undo2, Layers,
-  Sparkles, TrendingUp, Star, Maximize2,
+  Sparkles, TrendingUp, Star, Maximize2, History as HistoryIcon,
 } from 'lucide-react';
+import { ProductHistoryPanel } from './product/ProductHistoryPanel';
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import type { Product, ProductVariant } from '../types';
 import { ACCESSORY_CATEGORIES } from '../types';
@@ -147,7 +148,7 @@ export function ProductDetail({
   const extraCameraRef = useRef<HTMLInputElement>(null);
   const [deleting, setDeleting] = useState(false);
   const [detailTab, setDetailTab] = useState<
-    'info' | 'desc' | 'variants' | 'photos' | 'ai' | 'sales'
+    'info' | 'desc' | 'variants' | 'photos' | 'ai' | 'sales' | 'history'
   >('info');
   const [copied, setCopied] = useState<'sku' | 'ean' | null>(null);
   const [stockSaving, setStockSaving] = useState(false);
@@ -747,7 +748,7 @@ export function ProductDetail({
   const canUploadImages = roleCan(role, 'uploadImage');
   const hubTabs = useMemo(() => {
     const tabs: {
-      id: 'info' | 'desc' | 'variants' | 'photos' | 'ai' | 'sales';
+      id: 'info' | 'desc' | 'variants' | 'photos' | 'ai' | 'sales' | 'history';
       label: string;
       icon: typeof Package;
     }[] = [
@@ -763,9 +764,30 @@ export function ProductDetail({
         : []),
       { id: 'desc', label: 'Opisy', icon: FileText },
       { id: 'ai', label: 'AI', icon: Sparkles },
+      ...(roleCan(role, 'viewProgress') ? [{ id: 'history' as const, label: 'Historia', icon: HistoryIcon }] : []),
     ];
     return tabs;
-  }, [variantCount, canUploadImages, showPrices]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [variantCount, canUploadImages, showPrices, role]);
+
+  /** Odświeża otwarty produkt z bazy (po przywróceniu wartości z historii). */
+  async function refreshDetailFromDb() {
+    try {
+      const full = await fetchProductById(product.id);
+      if (!full) return;
+      syncProduct({
+        ...full,
+        variants: full.variants?.length ? full.variants : detail.variants,
+        isGroup: full.isGroup ?? detail.isGroup,
+      });
+      setDescription(full.description ?? '');
+      setEan(full.ean || '');
+      setStock(full.stock ?? 0);
+      setEditMeta({ ...full.meta });
+    } catch (err) {
+      console.warn('refreshDetailFromDb', err);
+    }
+  }
 
   const allowHubImageDrop = hubStyle && canUploadImages && detailTab === 'photos';
 
@@ -1301,6 +1323,15 @@ export function ProductDetail({
           )}
 
           {hubStyle && !editing && detailTab === 'ai' && <ProductDetailAiPanel detail={detail} />}
+
+          {hubStyle && detailTab === 'history' && (
+            <ProductHistoryPanel
+              sku={detail.sku}
+              canEdit={roleCan(role, 'editProduct') && !editing}
+              onReverted={() => void refreshDetailFromDb()}
+            />
+          )}
+
 
           {hubStyle && !editing && detailTab === 'variants' && variantCount > 0 && detail.variants && (
             <ProductVariantsPanel variants={detail.variants} />

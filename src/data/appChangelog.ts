@@ -18,6 +18,20 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-19',
+    title: 'Edycja masowa i szybka edycja w wierszu w Uzupełnianiu danych (Etap 2)',
+    description:
+      'Nowe narzędzia w Uzupełnianiu danych. Edycja masowa zaznaczonych produktów: producent, kategoria, stawka VAT, jednostka, tagi (dodawanie i usuwanie) oraz ceny — ustaw wartość, zmień o procent albo o kwotę, z zaokrągleniem (do grosza, 10 groszy, złotych, końcówka ,99 lub ,90) i opcjonalnym przeliczeniem drugiej ceny sprzedaży netto ↔ brutto wg VAT. Przed zapisem jest podgląd „stare → nowe” dla każdego produktu i podsumowanie, a cała operacja zapisuje się jako jedna partia, którą można cofnąć (Logi → Operacje masowe). Szybka edycja w wierszu: przycisk „Szybka edycja” rozwija pola EAN (z ostrzeżeniem o nietypowej długości), producent, kategoria i cena sprzedaży brutto — zapis bez otwierania karty. Edycja wymaga uprawnienia edycji produktów, zmiany cen także uprawnienia do cen.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-19',
+    title: 'Historia zmian produktu z cofaniem oraz operacje masowe do cofnięcia (Etap 1)',
+    description:
+      'W karcie produktu jest nowa zakładka „Historia”: oś czasu zmian z informacją, kto i kiedy zmienił pole oraz jaka była wartość przed i po (nazwa, opis, EAN, producent, kategoria, ceny, stan, zdjęcia, tagi i pola dodatkowe). Przy każdej zmianie jest przycisk „Przywróć” — stara wartość wraca do produktu, a samo przywrócenie też zostaje w historii. Operacje na wielu produktach naraz (ukrywanie, przywracanie, wyjątki, edycja masowa) dostają wspólny identyfikator partii; w Logi → „Operacje masowe” widać je z ostatnich 30 dni, z rozwijanym podglądem zmian i przyciskiem „Cofnij całość”, który przywraca wartości sprzed operacji (cofnięta partia jest oznaczona). Dziennik zapisuje teraz pełne wartości do 20 000 znaków (wcześniej obcinał do 300), więc cofnąć można także długie opisy; starsze, skrócone wpisy są oznaczone jako niemożliwe do automatycznego cofnięcia. Wymaga migracji migration-audit-log-product-history.sql (historia produktów widoczna dla wszystkich zalogowanych, pozostałe wpisy dziennika bez zmian).',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-19',
     title: 'Profesjonalny, konfigurowalny eksport CSV',
     description:
       'Eksport do CSV ma teraz okno konfiguracji (przycisk „Eksportuj widok (CSV)” nad listą katalogu oraz „Eksport CSV” w Uzupełnianiu danych i w Ukrytych). Wybierasz dokładnie, co trafi do pliku: ponad 40 kolumn w grupach — identyfikacja (SKU, EAN, nazwy, producent, kategoria, typ), ceny i marża (sprzedaż brutto i netto, zakup netto i brutto, VAT, marża %, zysk, wartość zapasu), magazyn i logistyka (stan, lokalizacja, jednostka, waga, wymiary), opisy i kompletność (opis pełny, krótki, użycie, skład, bezpieczeństwo, % kompletności, czego brakuje), zdjęcia (czy ma, adresy URL), BaseLinker, status (ukryty, wyjątki, notatka) i sprzedaż z WAPRO. Kolejność kolumn zmieniasz strzałkami, a nagłówek każdej możesz nazwać po swojemu. Gotowe zestawy: Podstawowy, Cennik, Magazyn, Braki danych, Opisy i zdjęcia, Pełny — plus własne profile zapisywane pod nazwą w przeglądarce (ostatnie ustawienia pamiętane automatycznie). Format: separator (średnik, przecinek, tabulator), separator dziesiętny i liczba miejsc po przecinku, Tak/Nie lub 1/0, opisy jako zwykły tekst lub HTML, nagłówki czytelne lub techniczne, BOM dla Excela, cudzysłowy. Jest podgląd pierwszych wierszy, wybór zakresu (wszystkie lub zaznaczone) i zabezpieczenie przed „formułami” w Excelu. Opisy pełne są doczytywane z bazy tylko wtedy, gdy wybierzesz tę kolumnę. Eksport wymaga uprawnienia „Eksport danych”.',

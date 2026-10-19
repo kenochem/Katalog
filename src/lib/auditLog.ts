@@ -146,13 +146,47 @@ export interface AuditInput {
   changes?: Record<string, AuditChange>;
 }
 
+/** Limit długości wartości w dzienniku (opisy produktów mieszczą się w całości, żeby dało się je przywrócić). */
+export const AUDIT_CLIP = 20000;
+
 function clip(value: unknown): unknown {
-  if (typeof value === 'string') return value.length > 300 ? `${value.slice(0, 300)}…` : value;
+  if (typeof value === 'string') return value.length > AUDIT_CLIP ? `${value.slice(0, AUDIT_CLIP)}…` : value;
   if (value && typeof value === 'object') {
     const json = JSON.stringify(value);
-    return json.length > 300 ? `${json.slice(0, 300)}…` : value;
+    return json.length > AUDIT_CLIP ? `${json.slice(0, AUDIT_CLIP)}…` : value;
   }
   return value;
+}
+
+// ---- operacje masowe: wspólny identyfikator partii zapisywany w zmianach (klucze _batch*) ----
+interface AuditBatch {
+  id: string;
+  label: string;
+  undoes?: string;
+}
+let activeBatch: AuditBatch | null = null;
+
+/** Wykonuje funkcję tak, aby wszystkie wpisy dziennika z jej trakcie dostały ten sam identyfikator partii. */
+export async function withAuditBatch<T>(label: string, fn: (batchId: string) => Promise<T>, undoes?: string): Promise<T> {
+  const prev = activeBatch;
+  const id = `b${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+  activeBatch = { id, label, undoes };
+  try {
+    return await fn(id);
+  } finally {
+    activeBatch = prev;
+  }
+}
+
+export const BATCH_KEYS = ['_batch', '_batchLabel', '_batchUndoes'];
+
+function batchMarkers(b: AuditBatch): Record<string, AuditChange> {
+  const out: Record<string, AuditChange> = {
+    _batch: { from: null, to: b.id },
+    _batchLabel: { from: null, to: b.label },
+  };
+  if (b.undoes) out._batchUndoes = { from: null, to: b.undoes };
+  return out;
 }
 
 export function logAudit(input: AuditInput): void {
@@ -166,9 +200,9 @@ export function logAudit(input: AuditInput): void {
     p_entity_label: input.entityLabel ?? '',
     p_summary: input.summary ?? '',
     p_device: input.action === 'auth.login' ? collectDeviceInfo() : null,
-    p_changes: input.changes
+    p_changes: (activeBatch ? { ...(input.changes ?? {}), ...batchMarkers(activeBatch) } : input.changes)
       ? Object.fromEntries(
-          Object.entries(input.changes).map(([k, v]) => [
+          Object.entries(activeBatch ? { ...(input.changes ?? {}), ...batchMarkers(activeBatch) } : (input.changes as Record<string, AuditChange>)).map(([k, v]) => [
             k,
             { from: clip(v.from), to: clip(v.to) },
           ]),
@@ -219,6 +253,11 @@ function mapRow(r: Record<string, unknown>): AuditEntry {
 
 export interface AuditQuery {
   userId?: string;
+  entityType?: string;
+  /** Dokładny identyfikator encji (np. SKU produktu). */
+  entityId?: string;
+  /** Tylko wpisy jednej partii operacji masowej. */
+  batchId?: string;
   action?: string;
   search?: string;
   since?: string;
@@ -234,6 +273,9 @@ export async function fetchAuditLog(q: AuditQuery = {}): Promise<AuditEntry[]> {
     .order('created_at', { ascending: false })
     .limit(q.limit ?? 200);
   if (q.userId) query = query.eq('user_id', q.userId);
+  if (q.entityType) query = query.eq('entity_type', q.entityType);
+  if (q.entityId) query = query.eq('entity_id', q.entityId);
+  if (q.batchId) query = query.eq('changes->_batch->>to', q.batchId);
   if (q.action) query = query.eq('action', q.action);
   if (q.since) query = query.gte('created_at', q.since);
   if (q.before) query = query.lt('created_at', q.before);

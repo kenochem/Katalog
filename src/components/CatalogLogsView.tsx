@@ -16,8 +16,10 @@ import {
   Trash2,
   XCircle,
   Database,
+  Layers,
 } from 'lucide-react';
 import { MigrationsStatusView } from './MigrationsStatusView';
+import { BulkOperationsPanel } from './BulkOperationsPanel';
 
 import {
   clearCatalogLogs,
@@ -564,11 +566,12 @@ function CatalogSystemLogs({ userId }: CatalogLogsViewProps) {
 export function CatalogLogsView({ userId }: CatalogLogsViewProps) {
   const { role } = useAuth();
   const canAudit = roleCan(role, 'manageUsers');
-  const [tab, setTab] = useState<'status' | 'system' | 'activity' | 'migrations'>('status');
+  const [tab, setTab] = useState<'status' | 'system' | 'activity' | 'migrations' | 'bulk'>('status');
 
   const tabs = [
     ['status', 'Status systemów', Gauge],
     ['system', 'Zmiany produktów i raporty', ListTree],
+    ...(roleCan(role, 'viewProgress') ? ([['bulk', 'Operacje masowe', Layers]] as const) : []),
     ...(canAudit
       ? ([
           ['activity', 'Aktywność użytkowników', Activity],
@@ -600,6 +603,8 @@ export function CatalogLogsView({ userId }: CatalogLogsViewProps) {
         <SystemStatusView />
       ) : tab === 'system' || !canAudit ? (
         <CatalogSystemLogs userId={userId} />
+      ) : tab === 'bulk' ? (
+        <BulkOperationsPanel canUndo={roleCan(role, 'editProduct')} />
       ) : tab === 'migrations' ? (
         <MigrationsStatusView />
       ) : (

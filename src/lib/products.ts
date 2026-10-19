@@ -422,6 +422,7 @@ export async function updateProduct(
     if (updates.stockManual !== undefined) row.stock_manual = updates.stockManual;
     if (updates.extraImageUrls !== undefined) row.extra_images = updates.extraImageUrls;
     if (updates.catalog !== undefined) row.catalog = updates.catalog;
+    if (updates.tags !== undefined) row.tags = updates.tags;
     if (updates.sku !== undefined) row.sku = updates.sku.trim().toUpperCase();
     if (updates.pricePurchaseNet !== undefined) row.price_purchase_net = updates.pricePurchaseNet;
     if (updates.priceSaleNet !== undefined) row.price_sale_net = updates.priceSaleNet;

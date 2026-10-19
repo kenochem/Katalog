@@ -1,5 +1,5 @@
 import { AlertTriangle, Building2, CheckCircle2,
- CheckSquare, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, EyeOff, ImageOff, Loader2, RotateCcw, Search, ShieldOff, SlidersHorizontal, Square, Tag, X } from 'lucide-react';
+ CheckSquare, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, EyeOff, ImageOff, Loader2, Pencil, RotateCcw, Search, ShieldOff, SlidersHorizontal, Square, Tag, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { Product } from '../types';
 import { getProductImage } from '../lib/products';
@@ -8,6 +8,9 @@ import { effectiveManufacturer } from '../lib/waproManufacturers';
 import { hasBaselinkerLink } from '../lib/baselinkerLink';
 import { HIDE_REASON_PRESETS } from '../lib/hideReasons';
 import { CsvExportDialog } from './CsvExportDialog';
+import { BulkEditDialog } from './BulkEditDialog';
+import { QuickEditRow, type QuickPatch } from './QuickEditRow';
+import type { BulkRunResult } from '../lib/bulkEdit';
 import { EXCEPTION_KIND_LABEL, EXCEPTION_PRESETS, exceptionsOf, type ExceptionKind } from '../lib/dataExceptions';
 import { inferProductTypeLabel } from '../lib/catalogKind';
 import {
@@ -150,6 +153,9 @@ export function CatalogDecisionView({
   onOpenHidden,
   onHideProducts,
   onSetExceptions,
+  onQuickSave,
+  onBulkEditDone,
+  canEditPrices = false,
   onOpenManufacturers,
   canExport = true,
   initialKinds,
@@ -164,6 +170,11 @@ export function CatalogDecisionView({
   onHideProducts?: (products: Product[], reason: string) => void | Promise<void>;
   /** Ustawia wyjątki (kinds) albo je cofa (null). Brak = brak uprawnienia. */
   onSetExceptions?: (products: Product[], kinds: (ExceptionKind | 'all')[] | null, note: string) => void | Promise<void>;
+  /** Szybka edycja w wierszu (EAN, producent, kategoria, cena). Brak = brak uprawnienia do edycji produktów. */
+  onQuickSave?: (product: Product, patch: QuickPatch) => Promise<void>;
+  /** Edycja masowa zaznaczonych — wywoływane po zapisie, żeby odświeżyć dane w aplikacji. Brak = bez edycji masowej. */
+  onBulkEditDone?: (result: BulkRunResult) => void;
+  canEditPrices?: boolean;
   onOpenManufacturers?: () => void;
   /** Uprawnienie „Eksport danych”. */
   canExport?: boolean;
@@ -188,6 +199,8 @@ export function CatalogDecisionView({
 
   const [mode, setMode] = useState<'todo' | 'exceptions'>('todo');
   const [exportOpen, setExportOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [quickFor, setQuickFor] = useState<string | null>(null);
   const [exceptionNote, setExceptionNote] = useState('');
   const [exceptionBusy, setExceptionBusy] = useState(false);
   const [menuFor, setMenuFor] = useState<string | null>(null);
@@ -356,6 +369,17 @@ export function CatalogDecisionView({
 
   return (
     <div className="catalog-readable-light w-full space-y-4 pb-10">
+      {bulkOpen && onBulkEditDone && (
+        <BulkEditDialog
+          products={selectedRows.map((r) => r.product)}
+          canEditPrices={canEditPrices}
+          onClose={() => setBulkOpen(false)}
+          onDone={(res) => {
+            setSelected(new Set());
+            onBulkEditDone(res);
+          }}
+        />
+      )}
       {exportOpen && (
         <CsvExportDialog
           products={filteredRows.map((r) => r.product)}
@@ -566,6 +590,20 @@ export function CatalogDecisionView({
                           Ukryj
                         </button>
                       )}
+                      {onQuickSave && (
+                        <button
+                          type="button"
+                          onClick={() => setQuickFor(quickFor === p.id ? null : p.id)}
+                          className={`inline-flex items-center gap-1 rounded-xl border px-2.5 py-1.5 text-xs font-semibold ${
+                            quickFor === p.id
+                              ? 'border-brand-500 bg-brand-50 text-brand-800 dark:bg-brand-500/15 dark:text-brand-200'
+                              : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800'
+                          }`}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Szybka edycja
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => onOpenProduct(p)}
@@ -575,6 +613,17 @@ export function CatalogDecisionView({
                         <ChevronRight className="h-3.5 w-3.5" />
                       </button>
                     </span>
+                    {quickFor === p.id && onQuickSave && (
+                      <QuickEditRow
+                        product={p}
+                        canEditPrices={canEditPrices}
+                        onCancel={() => setQuickFor(null)}
+                        onSave={async (patch) => {
+                          await onQuickSave(p, patch);
+                          setQuickFor(null);
+                        }}
+                      />
+                    )}
                   </li>
                 );
               })}
@@ -743,7 +792,29 @@ export function CatalogDecisionView({
             </div>
           </section>
 
+          {onBulkEditDone && mode === 'todo' && (
+            <section className="surface-panel space-y-3 p-4">
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
+                <Pencil className="h-3.5 w-3.5" />
+                Edycja masowa
+              </p>
+              <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                Zmień producenta, kategorię, VAT, jednostkę, tagi lub ceny dla zaznaczonych produktów. Z podglądem przed zapisem i możliwością cofnięcia.
+              </p>
+              <button
+                type="button"
+                disabled={selected.size === 0}
+                onClick={() => setBulkOpen(true)}
+                className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-500 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Pencil className="h-4 w-4" />
+                Edytuj zaznaczone ({selected.size})
+              </button>
+            </section>
+          )}
+
           {onSetExceptions && (
+
             <section className="surface-panel space-y-3 p-4">
               <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                 <ShieldOff className="h-3.5 w-3.5" />

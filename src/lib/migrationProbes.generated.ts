@@ -30,6 +30,13 @@ export const MIGRATION_PROBES: MigrationProbe[] = [
     ]
   },
   {
+    "file": "migration-audit-log-product-history.sql",
+    "title": "Historia zmian produktu dla wszystkich zalogowanych: odczyt wpisów dziennika dotyczących produktów",
+    "tables": [],
+    "columns": [],
+    "functions": []
+  },
+  {
     "file": "migration-audit-log-self-read.sql",
     "title": "Statystyki i odznaki w \"Moj profil\": kazdy zalogowany moze ODCZYTAC wlasne wpisy dziennika aktywnosci.",
     "tables": [],
