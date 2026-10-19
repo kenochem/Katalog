@@ -106,7 +106,16 @@ export function computeCatalogStats(products: Product[]): CatalogStats {
     levels[k.level]++;
     histogram[Math.min(9, Math.floor(k.score / 10))]++;
     scoreSum += k.score;
-    for (const label of k.filled) checkFilled.set(label, (checkFilled.get(label) ?? 0) + 1);
+    // wyjątki z „Uzupełniania danych”: brak objęty wyjątkiem liczymy jak spełniony warunek
+    const ex = p.meta?.dataExceptions ?? [];
+    const filledLabels = new Set(k.filled);
+    if (ex.length) {
+      for (const label of k.missing) {
+        const kind = CHECK_ACTIONS.find((a) => a.match.test(label))?.kind;
+        if (ex.includes('all') || (kind && ex.includes(kind))) filledLabels.add(label);
+      }
+    }
+    for (const label of filledLabels) checkFilled.set(label, (checkFilled.get(label) ?? 0) + 1);
     if (photo) withPhoto++;
     if (ean) withEan++;
     if (manufacturer) withManufacturer++;

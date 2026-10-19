@@ -143,6 +143,10 @@ function lightProductMeta(meta?: ProductMeta): ProductMeta | undefined {
   }
   if (typeof meta.catalogHidden === 'boolean') light.catalogHidden = meta.catalogHidden;
   // opisy: do oceny kompletności na liście wystarczy początek tekstu (pełne wersje ładuje karta produktu)
+  if (Array.isArray(meta.dataExceptions) && meta.dataExceptions.length) {
+    light.dataExceptions = meta.dataExceptions;
+    if (meta.dataExceptionNote) light.dataExceptionNote = meta.dataExceptionNote;
+  }
   if (meta.shortDescription) light.shortDescription = meta.shortDescription.slice(0, 300);
   if (meta.descUsage) light.descUsage = meta.descUsage.slice(0, 200);
   if (meta.descComposition) light.descComposition = meta.descComposition.slice(0, 200);

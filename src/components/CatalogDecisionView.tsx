@@ -1,5 +1,5 @@
 import { AlertTriangle, Building2, CheckCircle2,
- CheckSquare, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, EyeOff, ImageOff, Loader2, Search, SlidersHorizontal, Square, Tag, X } from 'lucide-react';
+ CheckSquare, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, EyeOff, ImageOff, Loader2, RotateCcw, Search, ShieldOff, SlidersHorizontal, Square, Tag, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { Product } from '../types';
 import { getProductImage } from '../lib/products';
@@ -7,6 +7,7 @@ import { assessProductKnowledge } from '../lib/productKnowledge';
 import { effectiveManufacturer } from '../lib/waproManufacturers';
 import { hasBaselinkerLink } from '../lib/baselinkerLink';
 import { HIDE_REASON_PRESETS } from '../lib/hideReasons';
+import { EXCEPTION_KIND_LABEL, EXCEPTION_PRESETS, exceptionsOf, type ExceptionKind } from '../lib/dataExceptions';
 import { inferProductTypeLabel } from '../lib/catalogKind';
 import {
   getProductDisplayCategory,
@@ -19,6 +20,8 @@ import {
 type DecisionIssue = {
   label: string;
   tone: 'danger' | 'warn' | 'info';
+  /** Rodzaj braku — do wyjątków (photo, category, mfr, ean, price, low, type, bl). */
+  kind: ExceptionKind;
 };
 
 type DecisionRow = {
@@ -26,6 +29,8 @@ type DecisionRow = {
   issues: DecisionIssue[];
   score: number;
   knowledgeScore: number;
+  /** Wyjątki ustawione dla produktu (rodzaje braków albo „all”). */
+  exceptions: string[];
 };
 
 function describeIssues(product: Product, knowledgeScore = assessProductKnowledge(product).score): DecisionIssue[] {
@@ -36,32 +41,32 @@ function describeIssues(product: Product, knowledgeScore = assessProductKnowledg
   const targetCategory = getProductDisplayCategory(product);
 
   if (!getProductImage(product)) {
-    issues.push({ label: 'brak zdjęcia', tone: 'danger' });
+    issues.push({ label: 'brak zdjęcia', tone: 'danger', kind: 'photo' });
   }
   if (isGenericSourceCategory(sourceCategory)) {
-    issues.push({ label: `ogólna kategoria: ${sourceCategory}`, tone: 'danger' });
+    issues.push({ label: `ogólna kategoria: ${sourceCategory}`, tone: 'danger', kind: 'category' });
   } else if (isLikelyProducerCategory(sourceCategory, product)) {
-    issues.push({ label: `producent jako kategoria: ${sourceCategory}`, tone: 'danger' });
+    issues.push({ label: `producent jako kategoria: ${sourceCategory}`, tone: 'danger', kind: 'category' });
   } else if (productNeedsCategoryDecision(product)) {
-    issues.push({ label: `dopasować: ${sourceCategory} → ${targetCategory}`, tone: 'info' });
+    issues.push({ label: `dopasować: ${sourceCategory} → ${targetCategory}`, tone: 'info', kind: 'category' });
   }
   if (!manufacturer || manufacturer === 'Bez producenta') {
-    issues.push({ label: 'brak producenta', tone: 'warn' });
+    issues.push({ label: 'brak producenta', tone: 'warn', kind: 'mfr' });
   }
   if (!product.ean?.trim() && !product.variants?.some((v) => v.ean?.trim())) {
-    issues.push({ label: 'brak EAN', tone: 'warn' });
+    issues.push({ label: 'brak EAN', tone: 'warn', kind: 'ean' });
   }
   if (knowledgeScore < 65) {
-    issues.push({ label: `niska kompletność: ${knowledgeScore}%`, tone: 'warn' });
+    issues.push({ label: `niska kompletność: ${knowledgeScore}%`, tone: 'warn', kind: 'low' });
   }
   if (!product.priceSaleGross && !product.priceSaleNet) {
-    issues.push({ label: 'brak ceny sprzedaży', tone: 'warn' });
+    issues.push({ label: 'brak ceny sprzedaży', tone: 'warn', kind: 'price' });
   }
   if (['Akcesoria', 'Produkt sklepowy'].includes(typeLabel)) {
-    issues.push({ label: 'typ do potwierdzenia', tone: 'info' });
+    issues.push({ label: 'typ do potwierdzenia', tone: 'info', kind: 'type' });
   }
   if ((product.catalog || 'accessories') === 'shop' && !hasBaselinkerLink(product)) {
-    issues.push({ label: 'brak powiązania BaseLinker', tone: 'info' });
+    issues.push({ label: 'brak powiązania BaseLinker', tone: 'info', kind: 'bl' });
   }
 
   return issues;
@@ -73,19 +78,27 @@ function issueWeight(issue: DecisionIssue): number {
   return 1;
 }
 
-export function buildCatalogDecisionRows(products: Product[]): DecisionRow[] {
+/**
+ * Wiersze listy braków. Domyślnie z pominięciem braków objętych wyjątkami (produkt bez pozostałych braków znika).
+ * `mode: 'exceptions'` zwraca produkty z ustawionym wyjątkiem (do przeglądu i cofania).
+ */
+export function buildCatalogDecisionRows(products: Product[], mode: 'todo' | 'exceptions' = 'todo'): DecisionRow[] {
   return products
     .map((product) => {
       const knowledgeScore = assessProductKnowledge(product).score;
-      const issues = describeIssues(product, knowledgeScore);
+      const all = describeIssues(product, knowledgeScore);
+      const exceptions = exceptionsOf(product);
+      const skipAll = exceptions.includes('all');
+      const issues = mode === 'exceptions' ? all : skipAll ? [] : all.filter((i) => !exceptions.includes(i.kind));
       return {
         product,
         issues,
         knowledgeScore,
+        exceptions,
         score: issues.reduce((sum, issue) => sum + issueWeight(issue), 0),
       };
     })
-    .filter((row) => row.issues.length > 0)
+    .filter((row) => (mode === 'exceptions' ? row.exceptions.length > 0 : row.issues.length > 0))
     .sort(
       (a, b) =>
         b.score - a.score ||
@@ -135,6 +148,7 @@ export function CatalogDecisionView({
   categoryBusyId,
   onOpenHidden,
   onHideProducts,
+  onSetExceptions,
   onOpenManufacturers,
   canExport = true,
   initialKinds,
@@ -147,6 +161,8 @@ export function CatalogDecisionView({
   categoryBusyId?: string | null;
   onOpenHidden?: () => void;
   onHideProducts?: (products: Product[], reason: string) => void | Promise<void>;
+  /** Ustawia wyjątki (kinds) albo je cofa (null). Brak = brak uprawnienia. */
+  onSetExceptions?: (products: Product[], kinds: (ExceptionKind | 'all')[] | null, note: string) => void | Promise<void>;
   onOpenManufacturers?: () => void;
   /** Uprawnienie „Eksport danych”. */
   canExport?: boolean;
@@ -169,7 +185,13 @@ export function CatalogDecisionView({
   const [hideReason, setHideReason] = useState(HIDE_REASON_PRESETS[0]);
   const [hiding, setHiding] = useState(false);
 
-  const rows = useMemo(() => buildCatalogDecisionRows(products), [products]);
+  const [mode, setMode] = useState<'todo' | 'exceptions'>('todo');
+  const [exceptionNote, setExceptionNote] = useState('');
+  const [exceptionBusy, setExceptionBusy] = useState(false);
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+  const todoRows = useMemo(() => buildCatalogDecisionRows(products, 'todo'), [products]);
+  const exceptionRows = useMemo(() => buildCatalogDecisionRows(products, 'exceptions'), [products]);
+  const rows = mode === 'todo' ? todoRows : exceptionRows;
   const kindCounts = useMemo(
     () => new Map(ISSUE_KINDS.map((k) => [k.key, rows.filter((r) => k.test(r)).length])),
     [rows],
@@ -281,7 +303,22 @@ export function CatalogDecisionView({
     setSelected(allFilteredSelected ? new Set() : new Set(filteredRows.map((r) => r.product.id)));
   }
 
+  async function applyExceptions(kinds: (ExceptionKind | 'all')[] | null, note: string, items?: Product[]) {
+    if (!onSetExceptions) return;
+    const list = items ?? selectedRows.map((r) => r.product);
+    if (list.length === 0) return;
+    setExceptionBusy(true);
+    try {
+      await onSetExceptions(list, kinds, note);
+    } finally {
+      setExceptionBusy(false);
+      setMenuFor(null);
+      setSelected(new Set());
+    }
+  }
+
   async function hideSelected() {
+
     if (!onHideProducts) return;
     const items = selectedRows.map((row) => row.product);
     const reason = hideReason.trim();
@@ -470,6 +507,16 @@ export function CatalogDecisionView({
                         </span>
                       )}
                       <span className="mt-1.5 flex flex-wrap gap-1.5">
+                        {row.exceptions.length > 0 && (
+                          <span
+                            title={p.meta?.dataExceptionNote || 'Wyjątek'}
+                            className="inline-flex items-center gap-1 rounded-full border border-violet-300 bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-violet-900 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-200"
+                          >
+                            <ShieldOff className="h-3 w-3" />
+                            Wyjątek: {row.exceptions.map((k) => EXCEPTION_KIND_LABEL[k as ExceptionKind | 'all'] ?? k).join(', ')}
+                            {p.meta?.dataExceptionNote ? ` — ${p.meta.dataExceptionNote}` : ''}
+                          </span>
+                        )}
                         {row.issues.map((issue) => (
                           <IssueBadge key={issue.label} issue={issue} />
                         ))}
@@ -487,7 +534,46 @@ export function CatalogDecisionView({
                           {busy ? 'Zapisuję' : 'Ustaw kategorię'}
                         </button>
                       )}
-                      {onHideProducts && (
+                      {onSetExceptions && mode === 'todo' && (
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={() => setMenuFor(menuFor === p.id ? null : p.id)}
+                            className="inline-flex items-center gap-1 rounded-xl border border-violet-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-violet-800 hover:bg-violet-50 dark:border-violet-500/40 dark:bg-slate-900 dark:text-violet-200 dark:hover:bg-slate-800"
+                          >
+                            <ShieldOff className="h-3.5 w-3.5" />
+                            Wyjątek
+                          </button>
+                          {menuFor === p.id && (
+                            <div className="absolute right-0 z-20 mt-1 w-72 overflow-hidden rounded-xl border border-slate-300 bg-white py-1 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+                              {EXCEPTION_PRESETS.map((pr) => (
+                                <button
+                                  key={pr.id}
+                                  type="button"
+                                  disabled={exceptionBusy}
+                                  onClick={() => void applyExceptions(pr.kinds, pr.note, [p])}
+                                  className="block w-full px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800"
+                                >
+                                  <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">{pr.label}</span>
+                                  <span className="block text-[11px] text-slate-600 dark:text-slate-400">{pr.hint}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {onSetExceptions && mode === 'exceptions' && (
+                        <button
+                          type="button"
+                          disabled={exceptionBusy}
+                          onClick={() => void applyExceptions(null, '', [p])}
+                          className="inline-flex items-center gap-1 rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" />
+                          Cofnij wyjątek
+                        </button>
+                      )}
+                      {onHideProducts && mode === 'todo' && (
                         <button
                           type="button"
                           onClick={() => void onHideProducts([p], hideReason.trim() || HIDE_REASON_PRESETS[0])}
@@ -530,6 +616,31 @@ export function CatalogDecisionView({
         </div>
 
         <aside className="space-y-3 lg:sticky lg:top-3 lg:max-h-[calc(100vh-1.5rem)] lg:overflow-y-auto lg:pr-1">
+          <div className="grid grid-cols-2 gap-1 rounded-2xl border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-slate-900/60">
+            {(
+              [
+                ['todo', `Do uzupełnienia (${todoRows.length})`],
+                ['exceptions', `Wyjątki (${exceptionRows.length})`],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => {
+                  setMode(key);
+                  setKinds(new Set());
+                  setSelected(new Set());
+                }}
+                className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${
+                  mode === key
+                    ? 'bg-brand-600 text-white'
+                    : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <section className="surface-panel space-y-3 p-4">
             <div className="flex items-center justify-between">
               <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
@@ -650,8 +761,55 @@ export function CatalogDecisionView({
             </div>
           </section>
 
-          {onHideProducts && (
+          {onSetExceptions && (
             <section className="surface-panel space-y-3 p-4">
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
+                <ShieldOff className="h-3.5 w-3.5" />
+                {mode === 'todo' ? 'Wyjątek dla zaznaczonych' : 'Wyjątki zaznaczonych'}
+              </p>
+              {mode === 'todo' ? (
+                <>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                    Produkty, którym nie trzeba czegoś uzupełniać, znikają z listy braków (np. nie idą do BaseLinkera). Możesz to cofnąć w zakładce „Wyjątki”.
+                  </p>
+                  <input
+                    value={exceptionNote}
+                    onChange={(e) => setExceptionNote(e.target.value)}
+                    placeholder="Własna notatka (opcjonalnie)"
+                    className="input-field"
+                  />
+                  <div className="flex flex-col gap-1.5">
+                    {EXCEPTION_PRESETS.map((pr) => (
+                      <button
+                        key={pr.id}
+                        type="button"
+                        disabled={selected.size === 0 || exceptionBusy}
+                        onClick={() => void applyExceptions(pr.kinds, exceptionNote.trim() || pr.note)}
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-left hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
+                      >
+                        <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">{pr.label}</span>
+                        <span className="block text-[11px] text-slate-600 dark:text-slate-400">{pr.hint}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  disabled={selected.size === 0 || exceptionBusy}
+                  onClick={() => void applyExceptions(null, '')}
+                  className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {exceptionBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                  Cofnij wyjątki ({selected.size})
+                </button>
+              )}
+            </section>
+          )}
+
+          {onHideProducts && mode === 'todo' && (
+            <section className="surface-panel space-y-3 p-4">
+
               <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                 <EyeOff className="h-3.5 w-3.5" />
                 Ukryj zaznaczone

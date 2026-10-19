@@ -50,6 +50,10 @@ export interface ProductMeta {
   /** Krótki powód ukrycia, np. stara marka, produkt przestarzały. */
   catalogHiddenReason?: string;
   catalogHiddenAt?: string;
+  /** Rodzaje braków, których dla tego produktu nie wymagamy (np. bl, photo, ean) albo „all”. */
+  dataExceptions?: string[];
+  dataExceptionNote?: string;
+  dataExceptionAt?: string;
 }
 
 export const PRODUCT_META_LABELS: Record<
@@ -77,6 +81,9 @@ export const PRODUCT_META_LABELS: Record<
     | 'baselinkerSkipPrice'
     | 'catalogHidden'
     | 'catalogHiddenAt'
+    | 'dataExceptions'
+    | 'dataExceptionNote'
+    | 'dataExceptionAt'
   >,
   string
 > & { parameters: string } = {
@@ -130,6 +137,12 @@ export function normalizeProductMeta(raw: unknown): ProductMeta | undefined {
   str('waproImportedAt');
   str('catalogHiddenReason');
   str('catalogHiddenAt');
+  str('dataExceptionNote');
+  str('dataExceptionAt');
+  if (Array.isArray(o.dataExceptions)) {
+    const list = (o.dataExceptions as unknown[]).filter((x): x is string => typeof x === 'string' && !!x.trim());
+    if (list.length) meta.dataExceptions = list;
+  }
   num('weightKg');
   num('widthCm');
   num('heightCm');

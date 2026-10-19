@@ -79,6 +79,7 @@ import { useAuth } from './lib/auth';
 import { isSupabaseConfigured } from './lib/supabase';
 import { loadManufacturerRegistry } from './lib/manufacturerRegistry';
 import { loadCategoryRegistry, useCategoryRegistry } from './lib/categoryRegistry';
+import { setDataExceptions, type ExceptionKind } from './lib/dataExceptions';
 import { roleCan, ROLE_LABELS } from './lib/roles';
 import { branding, moduleEnabled, APP_PRODUCT } from './app/moduleRegistry';
 import { canUseCrmModule, canViewOpsModule, canUseCommsModule } from './app/productAccess';
@@ -1352,6 +1353,38 @@ export default function App() {
     invalidateProductsCache();
   }, []);
 
+  const handleSetExceptions = useCallback(
+    async (items: Product[], kinds: (ExceptionKind | 'all')[] | null, note: string) => {
+      for (const product of items) {
+        const meta = { ...(product.meta ?? {}) };
+        if (kinds === null) {
+          delete meta.dataExceptions;
+          delete meta.dataExceptionNote;
+          delete meta.dataExceptionAt;
+        } else {
+          meta.dataExceptions = [...new Set([...(meta.dataExceptions ?? []), ...kinds])];
+          if (note.trim()) meta.dataExceptionNote = note.trim();
+        }
+        patchProductInCache(product.id, () => ({ ...product, meta }));
+      }
+      let failedIds: string[] = [];
+      try {
+        failedIds = (await setDataExceptions(items.map((p) => p.id), kinds, note)).failed;
+      } catch (err) {
+        console.error(err);
+        failedIds = items.map((p) => p.id);
+      }
+      const failedSet = new Set(failedIds);
+      for (const product of items) {
+        if (failedSet.has(product.id)) patchProductInCache(product.id, () => product);
+      }
+      const ok = items.length - failedSet.size;
+      if (ok > 0) showToast(kinds === null ? `Cofnięto wyjątki (${ok})` : `Dodano wyjątek dla ${ok} produktów`, 'ok');
+      if (failedSet.size > 0) showToast(`Nie udało się zapisać ${failedSet.size} produktów`, 'error');
+    },
+    [],
+  );
+
   const handleRestoreHiddenMany = useCallback(async (items: Product[]) => {
     for (const product of items) {
       const nextMeta = { ...(product.meta ?? {}) };
@@ -1998,6 +2031,7 @@ export default function App() {
             onOpenHidden={() => setView('catalog-hidden')}
             onOpenManufacturers={() => setView('manufacturers')}
             onHideProducts={roleCan(role, 'hideProducts') ? handleHideProducts : undefined}
+            onSetExceptions={roleCan(role, 'editProduct') ? handleSetExceptions : undefined}
             canExport={roleCan(role, 'exportData')}
           />
         ) : view === 'categories' && isCatalogProduct() ? (
@@ -2189,9 +2223,11 @@ export default function App() {
             onOpenHidden={() => setView('catalog-hidden')}
             onOpenManufacturers={() => setView('manufacturers')}
             onHideProducts={roleCan(role, 'hideProducts') ? handleHideProducts : undefined}
+            onSetExceptions={roleCan(role, 'editProduct') ? handleSetExceptions : undefined}
             canExport={roleCan(role, 'exportData')}
           />
         )}
+
 
 
         {canUseCrmModule(role) &&

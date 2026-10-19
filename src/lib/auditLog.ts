@@ -74,6 +74,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'manufacturer.rename': 'Producent: zmiana nazwy',
   'manufacturer.remove': 'Producent: usunięcie',
   'task.done': 'Zadanie wykonane',
+  'product.exception': 'Wyjątek w uzupełnianiu danych',
 };
 
 let actor: AuditActor | null = null;
