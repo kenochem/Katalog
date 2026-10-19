@@ -1274,7 +1274,11 @@ export function ProductDetail({
             )}
 
           {hubStyle && showPrices && !editing && detailTab === 'info' && detail.sku && (
-            <BaselinkerProductPanel product={detail} onMissingImages={setBlMissing} />
+            <BaselinkerProductPanel
+              product={detail}
+              onMissingImages={setBlMissing}
+              onProductPatched={(patch) => syncProduct({ ...detail, ...patch })}
+            />
           )}
 
           {hubStyle && detailTab === 'info' && !isGroup && (

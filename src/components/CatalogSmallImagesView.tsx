@@ -25,6 +25,8 @@ interface Props {
   onProductClick: (p: Product) => void;
   onImageUpdated: (productId: string, url: string) => void;
   canEdit: boolean;
+  /** Odświeża produkt w pamięci aplikacji (po zaciągnięciu zdjęć z BaseLinkera). */
+  onProductPatched?: (productId: string, patch: Partial<Product>) => void;
 }
 
 /** Narzedzia zdjec: "Za male" (<500x500, hurtowa poprawa) i "BaseLinker" (dokladanie brakujacych zdjec). */
@@ -66,6 +68,8 @@ export function CatalogSmallImagesView(props: Props & { canBaselinker: boolean }
           products={props.products}
           onProductClick={props.onProductClick}
           canPush={props.canBaselinker}
+          canPull={props.canEdit}
+          onProductPatched={props.onProductPatched}
         />
       )}
     </div>

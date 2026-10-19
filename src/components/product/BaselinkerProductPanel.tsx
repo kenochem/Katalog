@@ -16,6 +16,7 @@ import {
 import { useAuth } from '../../lib/auth';
 import { roleCan } from '../../lib/roles';
 import { markBaselinkerLinked, markBaselinkerUnlinked } from '../../lib/baselinkerLive';
+import { findBrokenImages, planImagePull } from '../../lib/blImagePull';
 import { updateProduct } from '../../lib/products';
 import { mergeProductMeta } from '../../lib/productMeta';
 import { showToast } from '../../lib/toast';
@@ -57,10 +58,13 @@ function Cell({
 export function BaselinkerProductPanel({
   product,
   onMissingImages,
+  onProductPatched,
 }: {
   product: Product;
   /** Adresy zdjęć z katalogu, których nie ma w BaseLinkerze (do wyróżnienia w galerii). */
   onMissingImages?: (urls: string[]) => void;
+  /** Wywoływane po zaciągnięciu zdjęć z BL — pozwala odświeżyć otwarty produkt. */
+  onProductPatched?: (patch: Partial<Product>) => void;
 }) {
   const [data, setData] = useState<BaselinkerProduct | null>(null);
   const [loading, setLoading] = useState(false);
@@ -95,15 +99,67 @@ export function BaselinkerProductPanel({
   const [importing, setImporting] = useState(false);
   const [img, setImg] = useState<ImageStatusRow | null>(null);
   const [imgBusy, setImgBusy] = useState(false);
+  const [broken, setBroken] = useState<string[] | null>(null);
+  const [pulling, setPulling] = useState(false);
+  const canPullImages = roleCan(role, 'editProduct') || roleCan(role, 'uploadImage');
 
   async function loadImages() {
     try {
       const [row] = await fetchImageStatus([product.sku]);
       setImg(row ?? null);
       onMissingImages?.(row?.missing ?? []);
+      // martwe linki w katalogu (np. po zmianie adresów / formatu na serwerze zdjęć)
+      setBroken(null);
+      if (row?.ours?.length) {
+        void findBrokenImages(row.ours.slice(0, 10)).then(setBroken);
+      } else {
+        setBroken([]);
+      }
     } catch {
       setImg(null);
+      setBroken(null);
       onMissingImages?.([]);
+    }
+  }
+
+  async function pullImages() {
+    if (!img) return;
+    const plan = planImagePull(product, img.bl ?? [], broken ?? []);
+    if (!plan.changed) {
+      showToast('Katalog ma już wszystkie zdjęcia z BaseLinkera', 'info');
+      return;
+    }
+    const lines = [
+      plan.added.length ? `Dodane z BaseLinkera: ${plan.added.length}.` : '',
+      plan.removed.length ? `Usunięte martwe linki (nie ładują się): ${plan.removed.length}.` : '',
+      !product.customImageUrl && !product.imageUrl && plan.imageUrl ? 'Pierwsze zdjęcie z BL zostanie zdjęciem głównym.' : '',
+      'Działające zdjęcia w katalogu zostają bez zmian.',
+    ].filter(Boolean);
+    if (
+      !(await confirmDialog({
+        title: `Zaciągnąć zdjęcia z BaseLinkera do ${product.sku}?`,
+        tone: 'warn',
+        confirmLabel: 'Zaciągnij zdjęcia',
+        message: lines.join('\n'),
+      }))
+    )
+      return;
+    setPulling(true);
+    try {
+      const patch = {
+        imageUrl: plan.imageUrl,
+        customImageUrl: plan.customImageUrl,
+        extraImageUrls: plan.extraImageUrls,
+        hasImage: Boolean(plan.imageUrl || plan.customImageUrl || plan.extraImageUrls.length),
+      };
+      await updateProduct(product.id, patch);
+      onProductPatched?.(patch);
+      showToast(`Zaciągnięto z BaseLinkera: ${plan.added.length}${plan.removed.length ? `, usunięto martwych linków: ${plan.removed.length}` : ''}`, 'ok', 6000);
+      await loadImages();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Nie udało się zaciągnąć zdjęć', 'error', 7000);
+    } finally {
+      setPulling(false);
     }
   }
 
@@ -311,6 +367,12 @@ export function BaselinkerProductPanel({
                 {img.blOnly > 0 ? ` · inne w BL: ${img.blOnly}` : ''}
               </span>
             )}
+            {img && (img.blOnlyUrls?.length ?? 0) > 0 && (
+              <span className="rounded-md bg-sky-500/15 px-2 py-0.5 text-sky-300">brak w katalogu: {img.blOnlyUrls?.length}</span>
+            )}
+            {broken && broken.length > 0 && (
+              <span className="rounded-md bg-rose-500/15 px-2 py-0.5 text-rose-300">martwe linki w katalogu: {broken.length}</span>
+            )}
             <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-300">
               Opis: {data.descriptionLength ? `${data.descriptionLength} zn.` : 'brak'}
             </span>
@@ -327,8 +389,42 @@ export function BaselinkerProductPanel({
             )}
           </div>
 
+          {canPullImages && img && ((img.blOnlyUrls?.length ?? 0) > 0 || (broken?.length ?? 0) > 0) && (
+            <div className="space-y-2 rounded-lg border border-sky-500/30 bg-sky-500/5 p-2.5">
+              <p className="text-xs text-slate-300">
+                {(img.blOnlyUrls?.length ?? 0) > 0 && (
+                  <>
+                    W BaseLinkerze są zdjęcia, których <strong>brak w katalogu</strong> ({img.blOnlyUrls?.length}).{' '}
+                  </>
+                )}
+                {(broken?.length ?? 0) > 0 && (
+                  <>
+                    <strong className="text-rose-300">{broken?.length} zdjęć w katalogu się nie ładuje</strong> (martwe linki) — zastąpią je zdjęcia z BaseLinkera.
+                  </>
+                )}
+              </p>
+              {(img.blOnlyUrls?.length ?? 0) > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {img.blOnlyUrls?.slice(0, 8).map((u) => (
+                    <img key={u} src={u} alt="" loading="lazy" className="h-12 w-12 rounded-md border border-slate-700 bg-white object-contain" />
+                  ))}
+                </div>
+              )}
+              <button
+                type="button"
+                disabled={pulling}
+                onClick={() => void pullImages()}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-500 disabled:opacity-50"
+              >
+                {pulling && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Zaciągnij zdjęcia z BaseLinkera do katalogu
+              </button>
+            </div>
+          )}
+
           {isAdmin && (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-slate-800/70 pt-2">
+
               <button
                 type="button"
                 disabled={pushing !== null}

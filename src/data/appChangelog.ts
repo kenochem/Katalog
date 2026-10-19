@@ -18,6 +18,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-19',
+    title: 'Zdjęcia: zaciąganie z BaseLinkera do katalogu i wykrywanie martwych linków',
+    description:
+      'Synchronizacja zdjęć działa teraz w obie strony. W karcie produktu (panel BaseLinker) widać, ile zdjęć jest w BL, a nie ma ich w katalogu, oraz ile zdjęć w katalogu się nie ładuje (martwe linki, np. po zmianie adresów lub formatu png → jpg na serwerze zdjęć). Przycisk „Zaciągnij zdjęcia z BaseLinkera do katalogu” dokłada brakujące zdjęcia, zastępuje martwe linki zdjęciami z BL i ustawia pierwsze zdjęcie z BL jako główne, gdy produkt nie ma działającego głównego; działających zdjęć nie rusza (przed zapisem jest podsumowanie do potwierdzenia). Dopasowanie po nazwie pliku bez rozszerzenia nie dubluje tego samego zdjęcia z innego serwera czy w innym formacie. W Zdjęcia do poprawy → BaseLinker pojawił się przełącznik kierunku: „BaseLinker → katalog” pokazuje produkty (także te bez żadnego zdjęcia w katalogu) i zaciąga zdjęcia hurtem, z opcjonalnym sprawdzaniem martwych linków. Wymaga wdrożenia funkcji baselinker (lista zdjęć brakujących w katalogu).',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-19',
     title: 'Uzupełnianie danych: wyjątki (produkt znika z listy braków, gdy czegoś nie potrzebuje)',
     description:
       'Nowa funkcja wyjątków. Dla produktu można wskazać, że konkretnego braku nie trzeba uzupełniać: „Nie idzie do BaseLinkera”, „Tylko do użytku wewnętrznego”, „Zdjęcie niepotrzebne”, „Brak kodu EAN”, „Bez producenta”, „Bez ceny sprzedaży” albo „Cały produkt — nic nie trzeba”. Wyjątek ustawisz przyciskiem „Wyjątek” przy produkcie albo hurtem dla zaznaczonych (z własną notatką). Produkt bez pozostałych braków znika z listy, a pozostałe jego braki nadal są widoczne. W nowej zakładce „Wyjątki” widać wszystkie takie produkty z powodem i można je cofnąć jednym kliknięciem. Wyjątki są zapisane w danych produktu (wspólne dla wszystkich), uwzględniane w licznikach oraz w Statystykach i w podpowiedzi „Następny krok”, a zmiany trafiają do dziennika aktywności, ale nie dają punktów.',

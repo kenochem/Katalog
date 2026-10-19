@@ -562,6 +562,8 @@ interface ImageCompare {
   bl: string[];
   missing: string[];
   blOnly: number;
+  /** Zdjęcia, które są w BL, a których nie ma w katalogu (do zaciągnięcia). */
+  blOnlyUrls: string[];
 }
 
 async function compareImages(admin: Admin, skusIn: string[]): Promise<ImageCompare[]> {
@@ -587,14 +589,15 @@ async function compareImages(admin: Admin, skusIn: string[]): Promise<ImageCompa
     const ours = our.get(sku) ?? [];
     const blId = links.get(sku) ?? null;
     const bl = blId != null ? (blImgs.get(blId) ?? []) : [];
-    if (blId == null) return { sku, state: 'not-in-bl', blId, ours, bl, missing: [], blOnly: 0 };
-    if (!ours.length) return { sku, state: 'no-local', blId, ours, bl, missing: [], blOnly: bl.length };
+    if (blId == null) return { sku, state: 'not-in-bl', blId, ours, bl, missing: [], blOnly: 0, blOnlyUrls: [] };
+    if (!ours.length) return { sku, state: 'no-local', blId, ours, bl, missing: [], blOnly: bl.length, blOnlyUrls: bl };
     const blSet = toImageSet(bl);
     const ourSet = toImageSet(ours);
     const missing = ours.filter((u) => !imageSetHas(blSet, u));
-    const blOnly = bl.filter((u) => !imageSetHas(ourSet, u)).length;
+    const blOnlyUrls = bl.filter((u) => !imageSetHas(ourSet, u));
+    const blOnly = blOnlyUrls.length;
     const state = missing.length === 0 ? 'synced' : missing.length === ours.length ? 'none' : 'partial';
-    return { sku, state, blId, ours, bl, missing, blOnly };
+    return { sku, state, blId, ours, bl, missing, blOnly, blOnlyUrls };
   });
 }
 
@@ -1184,7 +1187,9 @@ Deno.serve(async (req) => {
           blCount: r.bl.length,
           missingCount: r.missing.length,
           blOnly: r.blOnly,
+          blOnlyUrls: r.blOnlyUrls,
           ours: r.ours,
+
           bl: r.bl,
           missing: r.missing,
         })),

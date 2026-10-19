@@ -196,6 +196,8 @@ export interface ImageStatusRow {
   missingCount: number;
   /** Zdjęcia w BL, których nie ma w katalogu (zostają — nic nie usuwamy). */
   blOnly: number;
+  /** Zdjęcia z BL, których brak w katalogu (do zaciągnięcia). */
+  blOnlyUrls?: string[];
   ours: string[];
   bl: string[];
   missing: string[];

@@ -1,7 +1,8 @@
 import { useMemo, useRef, useState } from 'react';
 import { CheckSquare, Loader2, RefreshCw, Send, Square } from 'lucide-react';
 import type { Product } from '../types';
-import { getProductImages } from '../lib/products';
+import { getProductImages, updateProduct } from '../lib/products';
+import { findBrokenImages, planImagePull } from '../lib/blImagePull';
 import { getLiveLinkId, useBaselinkerLinksVersion } from '../lib/baselinkerLive';
 import {
   fetchImageStatus,
@@ -20,13 +21,20 @@ interface Props {
   onProductClick: (p: Product) => void;
   /** Uprawnienie „manageBaselinker” — bez niego tylko podgląd różnic. */
   canPush: boolean;
+  /** Uprawnienie do edycji zdjęć produktów — wymagane do zaciągania zdjęć z BL do katalogu. */
+  canPull?: boolean;
+  /** Odświeża produkt w pamięci aplikacji po zaciągnięciu zdjęć. */
+  onProductPatched?: (productId: string, patch: Partial<Product>) => void;
 }
 
 /**
  * Hurtowe porównanie zdjęć katalog ↔ BaseLinker i DOKŁADANIE brakujących.
  * Zdjęcia, które już są w BaseLinkerze, nigdy nie są usuwane ani podmieniane — nowe trafiają na koniec.
  */
-export function CatalogBaselinkerImagesPanel({ products, onProductClick, canPush }: Props) {
+export function CatalogBaselinkerImagesPanel({ products, onProductClick, canPush, canPull = false, onProductPatched }: Props) {
+  const [mode, setMode] = useState<'push' | 'pull'>('push');
+  const [probeBroken, setProbeBroken] = useState(true);
+  const [pullProgress, setPullProgress] = useState<{ done: number; total: number } | null>(null);
   const linksVersion = useBaselinkerLinksVersion();
   const [rows, setRows] = useState<Map<string, ImageStatusRow>>(new Map());
   const [checking, setChecking] = useState<{ done: number; total: number } | null>(null);
@@ -39,18 +47,24 @@ export function CatalogBaselinkerImagesPanel({ products, onProductClick, canPush
   const candidates = useMemo(() => {
     void linksVersion;
     return products.filter(
-      (p) => p.sku && getProductImages(p).length > 0 && getLiveLinkId(p.sku) !== undefined,
+      (p) =>
+        p.sku &&
+        // do zaciągania z BL liczą się też produkty bez żadnego (działającego) zdjęcia w katalogu
+        (mode === 'pull' || getProductImages(p).length > 0) &&
+        getLiveLinkId(p.sku) !== undefined,
     );
-  }, [products, linksVersion]);
+  }, [products, linksVersion, mode]);
 
   const bySku = useMemo(() => new Map(products.map((p) => [p.sku.toUpperCase(), p])), [products]);
 
   const needing = useMemo(
     () =>
-      [...rows.values()].filter(
-        (r) => (r.state === 'none' || r.state === 'partial') && (filter === 'all' || r.state === filter),
-      ),
-    [rows, filter],
+      mode === 'pull'
+        ? [...rows.values()].filter((r) => (r.blOnlyUrls?.length ?? 0) > 0)
+        : [...rows.values()].filter(
+            (r) => (r.state === 'none' || r.state === 'partial') && (filter === 'all' || r.state === filter),
+          ),
+    [rows, filter, mode],
   );
   const counts = useMemo(() => {
     let synced = 0;
@@ -92,6 +106,65 @@ export function CatalogBaselinkerImagesPanel({ products, onProductClick, canPush
       else n.add(sku);
       return n;
     });
+  }
+
+  async function pullSelected() {
+    const picked = needing.filter((r) => selected.has(r.sku));
+    if (!picked.length) return;
+    const totalNew = picked.reduce((s, r) => s + (r.blOnlyUrls?.length ?? 0), 0);
+    if (
+      !(await confirmDialog({
+        title: `Zaciągnąć zdjęcia z BaseLinkera (${picked.length} produktów)?`,
+        tone: 'warn',
+        confirmLabel: 'Zaciągnij zdjęcia',
+        message: `Do katalogu trafi do ${totalNew} zdjęć z BaseLinkera.\n\nDziałające zdjęcia w katalogu zostają bez zmian.${
+          probeBroken
+            ? ' Sprawdzimy też, czy zdjęcia w katalogu się ładują — martwe linki zostaną zastąpione zdjęciami z BaseLinkera.'
+            : ''
+        }\nProdukt bez zdjęcia głównego dostaje pierwsze zdjęcie z BL.`,
+      }))
+    )
+      return;
+    setPullProgress({ done: 0, total: picked.length });
+    let updated = 0;
+    let added = 0;
+    let removed = 0;
+    try {
+      for (let i = 0; i < picked.length; i++) {
+        const r = picked[i];
+        const p = bySku.get(r.sku);
+        if (p) {
+          const broken = probeBroken ? await findBrokenImages(r.ours.slice(0, 8)) : [];
+          const plan = planImagePull(p, r.bl ?? [], broken);
+          if (plan.changed) {
+            const patch = {
+              imageUrl: plan.imageUrl,
+              customImageUrl: plan.customImageUrl,
+              extraImageUrls: plan.extraImageUrls,
+              hasImage: Boolean(plan.imageUrl || plan.customImageUrl || plan.extraImageUrls.length),
+            };
+            await updateProduct(p.id, patch);
+            onProductPatched?.(p.id, patch);
+            updated++;
+            added += plan.added.length;
+            removed += plan.removed.length;
+          }
+        }
+        setPullProgress({ done: i + 1, total: picked.length });
+      }
+      setSelected(new Set());
+      const fresh = await fetchImageStatus(picked.map((r) => r.sku));
+      setRows((prev) => {
+        const n = new Map(prev);
+        for (const it of fresh) n.set(it.sku.toUpperCase(), it);
+        return n;
+      });
+      showToast(`Zaciągnięto zdjęcia: ${added} w ${updated} produktach${removed ? `, usunięto martwych linków: ${removed}` : ''}`, 'ok', 8000);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Błąd zaciągania zdjęć', 'error', 8000);
+    } finally {
+      setPullProgress(null);
+    }
   }
 
   async function pushSelected() {
@@ -146,23 +219,49 @@ export function CatalogBaselinkerImagesPanel({ products, onProductClick, canPush
     }
   }
 
-  const busy = !!checking || !!pushing;
+  const busy = !!checking || !!pushing || !!pullProgress;
   const allSelected = needing.length > 0 && needing.every((r) => selected.has(r.sku));
   const checked = rows.size;
 
   return (
     <div className="space-y-4">
+      <div className="inline-flex gap-1 rounded-xl border border-slate-800 bg-slate-900/60 p-1">
+        {(
+          [
+            ['push', 'Katalog → BaseLinker (dołóż do BL)'],
+            ['pull', 'BaseLinker → katalog (zaciągnij do katalogu)'],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              setMode(key);
+              setSelected(new Set());
+              setRows(new Map());
+            }}
+            className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${mode === key ? 'bg-sky-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold text-slate-100">Zdjęcia: katalog ↔ BaseLinker</h2>
+            <h2 className="text-base font-semibold text-slate-100">
+              {mode === 'push' ? 'Zdjęcia: katalog → BaseLinker' : 'Zdjęcia: BaseLinker → katalog'}
+            </h2>
             <p className="mt-1 text-xs text-slate-400">
-              Produkty powiązane z BaseLinkerem i ze zdjęciem w katalogu: {candidates.length}
+              {mode === 'push' ? 'Produkty powiązane z BaseLinkerem i ze zdjęciem w katalogu' : 'Produkty powiązane z BaseLinkerem'}: {candidates.length}
               {checked > 0 && (
                 <>
                   {' '}
                   · sprawdzono {checked} · aktualne: <span className="text-emerald-300">{counts.synced}</span> ·
-                  do dołożenia: <span className="font-semibold text-amber-300">{counts.none + counts.partial}</span>
+                  {mode === 'push' ? 'do dołożenia' : 'do zaciągnięcia'}:{' '}
+                  <span className="font-semibold text-amber-300">{mode === 'push' ? counts.none + counts.partial : needing.length}</span>
                 </>
               )}
             </p>
@@ -191,15 +290,15 @@ export function CatalogBaselinkerImagesPanel({ products, onProductClick, canPush
           )}
         </div>
         <p className="mt-2 text-[11px] text-slate-500">
-          Porównanie jest tylko do odczytu. Dokładanie nigdy nie usuwa ani nie podmienia zdjęć, które już są w
-          BaseLinkerze — brakujące trafiają na koniec galerii (max 16). Zdjęcia dopasowujemy po adresie / nazwie
-          pliku, więc zdjęcia wgrane do BL w inny sposób mogą być widziane jako „inne”.
+          {mode === 'push'
+            ? 'Porównanie jest tylko do odczytu. Dokładanie nigdy nie usuwa ani nie podmienia zdjęć, które już są w BaseLinkerze — brakujące trafiają na koniec galerii (max 16). Zdjęcia dopasowujemy po adresie / nazwie pliku, więc zdjęcia wgrane do BL w inny sposób mogą być widziane jako „inne”.'
+            : 'Lista pokazuje produkty, w których BaseLinker ma zdjęcia, a katalog ich nie ma (np. po zmianie adresów lub formatu zdjęć). Zaciąganie dokłada zdjęcia z BL do katalogu i może zastąpić martwe linki; działających zdjęć nie rusza.'}
         </p>
       </div>
 
       {checked > 0 && (
         <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/60 p-3">
-          <div className="flex gap-1 rounded-lg border border-slate-800 p-0.5">
+          <div className={`flex gap-1 rounded-lg border border-slate-800 p-0.5 ${mode === 'pull' ? 'hidden' : ''}`}>
             {(
               [
                 ['all', `Wszystkie (${counts.none + counts.partial})`],
@@ -219,7 +318,33 @@ export function CatalogBaselinkerImagesPanel({ products, onProductClick, canPush
               </button>
             ))}
           </div>
-          {canPush && needing.length > 0 && (
+          {mode === 'pull' && canPull && needing.length > 0 && (
+            <>
+              <label className="inline-flex items-center gap-1.5 text-xs text-slate-300" title="Sprawdza w przeglądarce, czy zdjęcia z katalogu się ładują (wolniejsze)">
+                <input type="checkbox" checked={probeBroken} onChange={(e) => setProbeBroken(e.target.checked)} className="h-4 w-4 accent-sky-500" />
+                sprawdź martwe linki
+              </label>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setSelected(allSelected ? new Set() : new Set(needing.map((r) => r.sku)))}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+              >
+                {allSelected ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+                {allSelected ? 'Odznacz' : 'Zaznacz wszystkie'}
+              </button>
+              <button
+                type="button"
+                disabled={busy || selected.size === 0}
+                onClick={() => void pullSelected()}
+                className="ml-auto inline-flex items-center gap-1.5 rounded-xl bg-sky-600 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-500 disabled:opacity-50"
+              >
+                {pullProgress ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 rotate-180" />}
+                {pullProgress ? `Zaciągam ${pullProgress.done}/${pullProgress.total}…` : `Zaciągnij zdjęcia do katalogu (${selected.size})`}
+              </button>
+            </>
+          )}
+          {mode === 'push' && canPush && needing.length > 0 && (
             <>
               <button
                 type="button"
@@ -261,7 +386,10 @@ export function CatalogBaselinkerImagesPanel({ products, onProductClick, canPush
 
       {checked > 0 && needing.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-700 py-10 text-center text-sm text-slate-500">
-          Wszystkie sprawdzone produkty mają zdjęcia z katalogu w BaseLinkerze.
+          {mode === 'push'
+            ? 'Wszystkie sprawdzone produkty mają zdjęcia z katalogu w BaseLinkerze.'
+            : 'Katalog ma już wszystkie zdjęcia, które są w BaseLinkerze (dla sprawdzonych produktów).'}
+
         </div>
       ) : (
         <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
@@ -274,7 +402,7 @@ export function CatalogBaselinkerImagesPanel({ products, onProductClick, canPush
                   selected.has(r.sku) ? 'border-sky-500/50 bg-sky-500/10' : 'border-slate-800 bg-slate-900/80'
                 }`}
               >
-                {canPush && (
+                {(mode === 'push' ? canPush : canPull) && (
                   <input
                     type="checkbox"
                     checked={selected.has(r.sku)}
@@ -289,8 +417,8 @@ export function CatalogBaselinkerImagesPanel({ products, onProductClick, canPush
                   onClick={() => p && onProductClick(p)}
                   className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
                 >
-                  {r.ours[0] ? (
-                    <img src={r.ours[0]} alt="" loading="lazy" className="h-14 w-14 shrink-0 rounded-lg bg-slate-800 object-contain" />
+                  {(mode === 'pull' ? r.blOnlyUrls?.[0] ?? r.ours[0] : r.ours[0]) ? (
+                    <img src={mode === 'pull' ? r.blOnlyUrls?.[0] ?? r.ours[0] : r.ours[0]} alt="" loading="lazy" className="h-14 w-14 shrink-0 rounded-lg bg-white object-contain" />
                   ) : (
                     <div className="h-14 w-14 shrink-0 rounded-lg bg-slate-800" />
                   )}
@@ -300,10 +428,16 @@ export function CatalogBaselinkerImagesPanel({ products, onProductClick, canPush
                     <span className="mt-0.5 flex flex-wrap gap-1 text-[10px] font-semibold">
                       <span className="rounded-full bg-slate-800 px-1.5 py-0.5 text-slate-300">katalog {r.oursCount}</span>
                       <span className="rounded-full bg-slate-800 px-1.5 py-0.5 text-slate-300">BL {r.blCount}</span>
-                      <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-amber-300">
-                        brak w BL {r.missingCount}
-                      </span>
-                      {r.blOnly > 0 && (
+                      {mode === 'pull' ? (
+                        <span className="rounded-full bg-sky-500/15 px-1.5 py-0.5 text-sky-300">
+                          do zaciągnięcia {r.blOnlyUrls?.length ?? 0}
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-amber-300">
+                          brak w BL {r.missingCount}
+                        </span>
+                      )}
+                      {mode === 'push' && r.blOnly > 0 && (
                         <span className="rounded-full bg-sky-500/15 px-1.5 py-0.5 text-sky-300">
                           inne w BL {r.blOnly}
                         </span>

@@ -2208,6 +2208,7 @@ export default function App() {
               onImageUpdated={handleImageUpdated}
               canEdit={roleCan(role, 'uploadImage')}
               canBaselinker={roleCan(role, 'manageBaselinker')}
+              onProductPatched={(id, patch) => patchProductInCache(id, patch)}
             />
           </InlineErrorBoundary>
         ) : (
