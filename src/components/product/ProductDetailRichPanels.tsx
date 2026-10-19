@@ -1,4 +1,25 @@
-import { Copy, Check, Loader2, Sparkles, Star } from 'lucide-react';
+import {
+  Barcode,
+  Boxes,
+  Check,
+  ChevronRight,
+  Copy,
+  Factory,
+  Fingerprint,
+  Hash,
+  Image as ImageIcon,
+  Layers,
+  Link2,
+  Loader2,
+  MapPin,
+  Package,
+  Percent,
+  Ruler,
+  Scale,
+  Sparkles,
+  Star,
+  Tag as TagIcon,
+} from 'lucide-react';
 import type { ReactNode } from 'react';
 import { AddToCollectionMenu } from '../AddToCollectionMenu';
 import { showToast } from '../../lib/toast';
@@ -74,7 +95,9 @@ export function DetailRow({
   );
 }
 
-function SourceBadge({ source }: { source: 'wapro' | 'baselinker' }) {
+type FactSource = 'wapro' | 'baselinker';
+
+function SourceBadge({ source }: { source: FactSource }) {
   return (
     <span
       className={`catalog-source-badge catalog-source-badge--${source}`}
@@ -85,13 +108,93 @@ function SourceBadge({ source }: { source: 'wapro' | 'baselinker' }) {
   );
 }
 
-function FactSection({ title, children }: { title: string; children: ReactNode }) {
+function copyValue(text: string, what: string) {
+  void navigator.clipboard
+    ?.writeText(text)
+    .then(() => showToast(`Skopiowano ${what}`, 'ok', 1500))
+    .catch(() => showToast('Nie udało się skopiować', 'error'));
+}
+
+/** Karta sekcji (Identyfikacja, Magazyn…) z nagłówkiem i ikoną. */
+function FactCard({ title, icon, children }: { title: string; icon: ReactNode; children: ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-800 bg-white dark:bg-slate-950/30">
-      <p className="border-b border-slate-800 bg-slate-900/80 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-        {title}
-      </p>
-      <dl className="grid gap-px bg-slate-800 text-sm sm:grid-cols-2">{children}</dl>
+    <section className="overflow-hidden rounded-2xl border border-slate-800 bg-white shadow-sm dark:bg-slate-950/30 dark:shadow-none">
+      <header className="flex items-center gap-2 border-b border-slate-800 bg-slate-900/70 px-4 py-2">
+        <span className="text-slate-400">{icon}</span>
+        <h3 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{title}</h3>
+      </header>
+      <div className="p-4">{children}</div>
+    </section>
+  );
+}
+
+/** Wartość z podpisem (siatka definicji). */
+function Field({
+  label,
+  children,
+  source,
+  wide,
+}: {
+  label: string;
+  children: ReactNode;
+  source?: FactSource;
+  wide?: boolean;
+}) {
+  return (
+    <div className={`min-w-0 ${wide ? 'sm:col-span-2' : ''}`}>
+      <dt className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+        {label}
+        {source ? <SourceBadge source={source} /> : null}
+      </dt>
+      <dd className="mt-1 min-w-0 break-words text-sm font-medium text-slate-100">{children}</dd>
+    </div>
+  );
+}
+
+/** Ścieżka kategorii jako okruszki. */
+function Crumbs({ path }: { path: string }) {
+  const parts = path
+    .split(/\s*[>›]\s*/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  return (
+    <span className="flex flex-wrap items-center gap-1">
+      {parts.map((part, i) => (
+        <span key={`${part}-${i}`} className="inline-flex items-center gap-1">
+          {i > 0 && <ChevronRight className="h-3 w-3 text-slate-500" />}
+          <span className={i === parts.length - 1 ? 'font-semibold text-slate-100' : 'text-slate-400'}>{part}</span>
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function Tile({
+  icon,
+  label,
+  value,
+  sub,
+  source,
+  tone = 'text-slate-50',
+}: {
+  icon: ReactNode;
+  label: string;
+  value: ReactNode;
+  sub?: ReactNode;
+  source?: FactSource;
+  tone?: string;
+}) {
+  return (
+    <div className="min-w-0 rounded-xl border border-slate-800 bg-slate-900/50 px-3 py-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+          <span className="text-slate-500">{icon}</span>
+          {label}
+        </span>
+        {source ? <SourceBadge source={source} /> : null}
+      </div>
+      <p className={`mt-1 truncate text-lg font-bold tabular-nums ${tone}`}>{value}</p>
+      {sub ? <p className="truncate text-[11px] text-slate-500">{sub}</p> : null}
     </div>
   );
 }
@@ -122,99 +225,148 @@ export function ProductDetailFacts({
   const isWapro = !isBaselinker || Boolean(meta?.waproImport || meta?.waproSku || detail.waproSalesStats);
   const targetCategory = getProductDisplayCategory(detail);
   const sourceCategory = getProductSourceCategory(detail);
+  const stock = detail.stock ?? 0;
+  const dims = formatDimensions(meta);
+  const showOfferTitle = detail.name !== detail.displayName;
+  const blLabel = isBaselinker ? (baselinkerLinkLabel(detail) ?? 'Powiązany') : '';
 
   return (
-    <div className="space-y-2">
-      <FactSection title="Identyfikacja">
-        <DetailRow label="SKU" value={detail.sku} mono prominent source={isWapro ? 'wapro' : undefined} />
-        {!isGroup && (
-          <DetailRow
-            label="EAN"
-            value={detail.ean || '—'}
-            mono
-            prominent
-            source={isBaselinker ? 'baselinker' : isWapro ? 'wapro' : undefined}
-          />
-        )}
-        {detail.id !== detail.sku ? <DetailRow label="ID rekordu" value={detail.id} mono span /> : null}
-        {hasBaselinkerLink(detail) ? (
-          <DetailRow
-            label="BaseLinker"
-            value={baselinkerLinkLabel(detail) ?? 'Powiązany'}
-            mono
-            source="baselinker"
-          />
-        ) : null}
-        {meta?.shopCategoryPath ? (
-          <DetailRow label="Kategoria sklepu" value={meta.shopCategoryPath} span source="baselinker" />
-        ) : null}
-        <DetailRow
-          label="Typ produktu"
-          value={productTypeLabel}
-        />
-        {isWaproSkeletonProduct(detail) ? (
-          <DetailRow
-            label="Źródło"
-            value="Mag WAPRO — szkielet (SKU, nazwa, ceny; zdjęcie do uzupełnienia)"
-            span
-          />
-        ) : null}
-        <DetailRow
-          label="Kategoria docelowa"
-          value={targetCategory}
-          source={isBaselinker ? 'baselinker' : undefined}
-        />
-        {productNeedsCategoryDecision(detail) && sourceCategory !== targetCategory ? (
-          <DetailRow
-            label="Kategoria źródłowa"
-            value={sourceCategory}
-            source={isBaselinker ? 'baselinker' : undefined}
-          />
-        ) : null}
-        {mfr ? <DetailRow label="Producent" value={mfr} span source={isWapro ? 'wapro' : undefined} /> : null}
-        {detail.name !== detail.displayName ? (
-          <DetailRow
-            label="Nazwa WAPRO / BL"
-            value={detail.name}
-            span
-            source={isBaselinker ? 'baselinker' : isWapro ? 'wapro' : undefined}
-          />
-        ) : null}
-        {detail.name !== detail.displayName ? (
-          <DetailRow label="Tytuł oferty" value={detail.displayName} span source={isBaselinker ? 'baselinker' : undefined} />
-        ) : null}
-      </FactSection>
+    <div className="space-y-3">
+      <FactCard title="Identyfikacja" icon={<Fingerprint className="h-4 w-4" />}>
+        {/* kody: SKU i EAN jako główne identyfikatory */}
+        <div className={`grid gap-3 ${isGroup ? '' : 'sm:grid-cols-2'}`}>
+          <button
+            type="button"
+            onClick={() => copyValue(detail.sku, 'SKU')}
+            title="Kliknij, aby skopiować SKU"
+            className="group min-w-0 rounded-xl border border-slate-800 bg-slate-900/50 px-3 py-2.5 text-left transition hover:border-brand-500/50"
+          >
+            <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+              <Hash className="h-3 w-3" /> SKU {isWapro ? <SourceBadge source="wapro" /> : null}
+              <Copy className="ml-auto h-3 w-3 opacity-0 transition group-hover:opacity-100" />
+            </span>
+            <span className="mt-1 block truncate font-mono text-xl font-semibold tracking-wide text-slate-50">{detail.sku}</span>
+          </button>
+          {!isGroup && (
+            <button
+              type="button"
+              disabled={!detail.ean}
+              onClick={() => detail.ean && copyValue(detail.ean, 'EAN')}
+              title={detail.ean ? 'Kliknij, aby skopiować EAN' : 'Brak kodu EAN'}
+              className="group min-w-0 rounded-xl border border-slate-800 bg-slate-900/50 px-3 py-2.5 text-left transition enabled:hover:border-brand-500/50"
+            >
+              <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                <Barcode className="h-3 w-3" /> EAN {detail.ean && isBaselinker ? <SourceBadge source="baselinker" /> : null}
+                {detail.ean ? <Copy className="ml-auto h-3 w-3 opacity-0 transition group-hover:opacity-100" /> : null}
+              </span>
+              <span className={`mt-1 block truncate font-mono text-xl tracking-wide ${detail.ean ? 'font-semibold text-slate-50' : 'text-amber-400'}`}>
+                {detail.ean || 'brak'}
+              </span>
+            </button>
+          )}
+        </div>
 
-      <FactSection title="Magazyn · media · logistyka">
-        <DetailRow
-          label="Stan"
-          value={
-            detail.stockManual
-              ? `${formatStock(detail.stock ?? 0)} · ręczny`
-              : formatStock(detail.stock ?? 0)
-          }
-          prominent
-          source="wapro"
-        />
-        {isGroup && variantCount > 0 ? (
-          <DetailRow label="Warianty" value={`${variantCount} pozycji SKU`} source="wapro" />
-        ) : null}
-        {locationCode ? <DetailRow label="Lokalizacja" value={locationCode} mono source="wapro" /> : null}
-        <DetailRow label="Zdjęcia" value={imageCount > 0 ? `${imageCount} plików` : 'Brak'} />
-        {meta?.weightKg != null ? (
-          <DetailRow label="Waga" value={`${meta.weightKg} kg`} source="baselinker" />
-        ) : null}
-        {formatDimensions(meta) ? (
-          <DetailRow label="Wymiary" value={formatDimensions(meta)!} mono source="baselinker" />
-        ) : null}
-        {meta?.unit ? <DetailRow label="Jednostka" value={meta.unit} source="baselinker" /> : null}
-        {meta?.vatRate != null ? (
-          <DetailRow label="VAT" value={`${meta.vatRate}%`} source="baselinker" />
-        ) : null}
+        <dl className="mt-4 grid gap-x-6 gap-y-3.5 sm:grid-cols-2">
+          {mfr ? (
+            <Field label="Producent" source={isWapro ? 'wapro' : undefined}>
+              <span className="inline-flex items-center gap-2">
+                <Factory className="h-3.5 w-3.5 text-slate-500" />
+                {mfr}
+              </span>
+            </Field>
+          ) : null}
+          <Field label="Typ produktu">{productTypeLabel}</Field>
+          <Field label="Kategoria docelowa" source={isBaselinker ? 'baselinker' : undefined}>
+            {targetCategory}
+          </Field>
+          {productNeedsCategoryDecision(detail) && sourceCategory !== targetCategory ? (
+            <Field label="Kategoria źródłowa" source={isBaselinker ? 'baselinker' : undefined}>
+              <span className="text-slate-300">{sourceCategory}</span>
+            </Field>
+          ) : null}
+          {meta?.shopCategoryPath ? (
+            <Field label="Ścieżka w sklepie" source="baselinker" wide>
+              <Crumbs path={meta.shopCategoryPath} />
+            </Field>
+          ) : null}
+          {isBaselinker ? (
+            <Field label="Powiązanie BaseLinker" source="baselinker">
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 font-mono text-xs text-sky-200">
+                <Link2 className="h-3 w-3" />
+                {blLabel}
+              </span>
+            </Field>
+          ) : null}
+          {showOfferTitle ? (
+            <Field label="Nazwa WAPRO / BL" source={isBaselinker ? 'baselinker' : isWapro ? 'wapro' : undefined} wide>
+              <span className="text-slate-300">{detail.name}</span>
+            </Field>
+          ) : null}
+          {showOfferTitle ? (
+            <Field label="Tytuł oferty" source={isBaselinker ? 'baselinker' : undefined} wide>
+              {detail.displayName}
+            </Field>
+          ) : null}
+          {isWaproSkeletonProduct(detail) ? (
+            <Field label="Źródło" wide>
+              <span className="text-amber-300">Mag WAPRO — szkielet (SKU, nazwa, ceny; zdjęcie do uzupełnienia)</span>
+            </Field>
+          ) : null}
+          {detail.id !== detail.sku ? (
+            <Field label="ID rekordu" wide>
+              <button
+                type="button"
+                onClick={() => copyValue(detail.id, 'ID rekordu')}
+                title="Kliknij, aby skopiować"
+                className="inline-flex items-center gap-1.5 font-mono text-xs text-slate-400 hover:text-slate-200"
+              >
+                {detail.id}
+                <Copy className="h-3 w-3" />
+              </button>
+            </Field>
+          ) : null}
+        </dl>
+      </FactCard>
+
+      <FactCard title="Magazyn · media · logistyka" icon={<Boxes className="h-4 w-4" />}>
+        <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3">
+          <Tile
+            icon={<Boxes className="h-3 w-3" />}
+            label="Stan"
+            value={formatStock(stock)}
+            sub={detail.stockManual ? 'ustawiony ręcznie' : stock <= 0 ? 'brak na magazynie' : 'z WAPRO'}
+            source="wapro"
+            tone={stock <= 0 ? 'text-rose-400' : 'text-emerald-300'}
+          />
+          {isGroup && variantCount > 0 ? (
+            <Tile icon={<Layers className="h-3 w-3" />} label="Warianty" value={variantCount} sub="pozycji SKU" source="wapro" />
+          ) : null}
+          {locationCode ? <Tile icon={<MapPin className="h-3 w-3" />} label="Lokalizacja" value={locationCode} source="wapro" /> : null}
+          <Tile
+            icon={<ImageIcon className="h-3 w-3" />}
+            label="Zdjęcia"
+            value={imageCount > 0 ? imageCount : 'Brak'}
+            sub={imageCount > 0 ? 'plików' : 'do uzupełnienia'}
+            tone={imageCount > 0 ? 'text-slate-50' : 'text-amber-400'}
+          />
+          {meta?.weightKg != null ? (
+            <Tile icon={<Scale className="h-3 w-3" />} label="Waga" value={`${meta.weightKg} kg`} source="baselinker" />
+          ) : null}
+          {dims ? <Tile icon={<Ruler className="h-3 w-3" />} label="Wymiary" value={dims} source="baselinker" /> : null}
+          {meta?.unit ? <Tile icon={<Package className="h-3 w-3" />} label="Jednostka" value={meta.unit} source="baselinker" /> : null}
+          {meta?.vatRate != null ? <Tile icon={<Percent className="h-3 w-3" />} label="VAT" value={`${meta.vatRate}%`} source="baselinker" /> : null}
+        </div>
         {detail.tags?.length ? (
-          <DetailRow label="Tagi" value={detail.tags.join(' · ')} span />
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            <TagIcon className="h-3.5 w-3.5 text-slate-500" />
+            {detail.tags.map((t) => (
+              <span key={t} className="rounded-full border border-slate-700 bg-slate-900/60 px-2.5 py-0.5 text-[11px] text-slate-300">
+                {t}
+              </span>
+            ))}
+          </div>
         ) : null}
-      </FactSection>
+      </FactCard>
     </div>
   );
 }

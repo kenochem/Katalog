@@ -18,6 +18,13 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-19',
+    title: 'Karta produktu: przebudowane sekcje „Identyfikacja” i „Magazyn · media · logistyka”',
+    description:
+      'Dane identyfikacyjne produktu zostały uporządkowane w dwie czytelne karty. W Identyfikacji SKU i EAN są dużymi, klikalnymi polami (kliknięcie kopiuje kod; brak EAN jest wyraźnie zaznaczony), poniżej siatka z producentem, typem, kategorią docelową, ścieżką kategorii w sklepie jako okruszki, powiązaniem z BaseLinkerem (znacznik z ID), nazwą WAPRO / tytułem oferty i identyfikatorem rekordu do skopiowania. Magazyn, media i logistyka to teraz kafelki z ikonami: stan (kolor zależny od dostępności), lokalizacja, liczba zdjęć, waga, wymiary, jednostka, VAT i warianty, a tagi są chipami. Znaczniki źródła danych (W — WAPRO, BL — BaseLinker) zostały, ale są dyskretne.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-19',
     title: 'Zaciąganie zdjęć z BaseLinkera: naprawa fałszywego „katalog ma już wszystkie zdjęcia”',
     description:
       'Przycisk „Zaciągnij zdjęcia z BaseLinkera do katalogu” przy produktach, w których BL miał inne zdjęcia o tej samej nazwie pliku (np. image.jpg w różnych folderach), uznawał je za już obecne i nic nie dodawał, choć panel pokazywał „brak w katalogu”. Teraz do katalogu trafiają dokładnie te zdjęcia, które panel wskazuje jako brakujące (z miniaturami), a dodatkowo zdjęcia z BL będące odpowiednikiem martwego linku (ta sama nazwa pliku, np. po zmianie png → jpg).',
