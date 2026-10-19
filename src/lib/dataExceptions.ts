@@ -7,7 +7,7 @@ import { invalidateProductsCache } from './products';
  * (np. nie trafi do BaseLinkera, nie ma EAN, zdjęcie niepotrzebne), znika z listy braków.
  * Zapis w product_meta produktu (wspólny dla wszystkich).
  */
-export type ExceptionKind = 'photo' | 'category' | 'mfr' | 'ean' | 'price' | 'low' | 'type' | 'bl' | 'validation';
+export type ExceptionKind = 'photo' | 'category' | 'mfr' | 'ean' | 'price' | 'low' | 'type' | 'bl' | 'validation' | 'attrs';
 
 export const EXCEPTION_KIND_LABEL: Record<ExceptionKind | 'all', string> = {
   photo: 'Zdjęcie',
@@ -19,6 +19,7 @@ export const EXCEPTION_KIND_LABEL: Record<ExceptionKind | 'all', string> = {
   type: 'Typ produktu',
   bl: 'BaseLinker',
   validation: 'Walidacje jakości',
+  attrs: 'Atrybuty',
   all: 'Wszystko',
 };
 

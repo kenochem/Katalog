@@ -25,6 +25,8 @@ export interface BulkEditSpec {
   unit?: string;
   tagsAdd?: string[];
   tagsRemove?: string[];
+  /** Ustawia wartość atrybutu strukturalnego (klucz → wartość). */
+  attr?: { key: string; value: string | number | boolean };
   price?: {
     field: PriceField;
     mode: PriceMode;
@@ -100,6 +102,10 @@ export function computeChanges(src: BulkSource, spec: BulkEditSpec): FieldChange
     const next = [...src.tags.filter((t) => !remove.has(t.toLowerCase()))];
     for (const t of spec.tagsAdd ?? []) if (!next.some((x) => x.toLowerCase() === t.toLowerCase())) next.push(t);
     push({ label: 'Tagi', column: 'tags', from: src.tags, to: next });
+  }
+  if (spec.attr) {
+    const cur = (src.meta.attrs && typeof src.meta.attrs === 'object' ? (src.meta.attrs as Record<string, unknown>) : {}) as Record<string, unknown>;
+    push({ label: 'meta: attrs', metaKey: 'attrs', from: Object.keys(cur).length ? cur : null, to: { ...cur, [spec.attr.key]: spec.attr.value } });
   }
   if (spec.price) {
     const { field, mode, value, round, recompute } = spec.price;

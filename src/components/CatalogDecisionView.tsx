@@ -9,6 +9,7 @@ import { hasBaselinkerLink } from '../lib/baselinkerLink';
 import { HIDE_REASON_PRESETS } from '../lib/hideReasons';
 import { CsvExportDialog } from './CsvExportDialog';
 import { BulkEditDialog } from './BulkEditDialog';
+import { attrValuesOf, attributesFor, hasAttrValue } from '../lib/attributes';
 import { VALIDATION_LABEL, buildValidationContext, validateProduct, type ValidationContext } from '../lib/validations';
 
 import { QuickEditRow, type QuickPatch } from './QuickEditRow';
@@ -78,6 +79,11 @@ function describeIssues(
   if ((product.catalog || 'accessories') === 'shop' && !hasBaselinkerLink(product)) {
     issues.push({ label: 'brak powiązania BaseLinker', tone: 'info', kind: 'bl' });
   }
+  for (const d of attributesFor(product)) {
+    if (d.required && !hasAttrValue(attrValuesOf(product)[d.key])) {
+      issues.push({ label: `brak atrybutu: ${d.label}`, tone: 'warn', kind: 'attrs' });
+    }
+  }
   if (vctx) {
     for (const f of validateProduct(product, vctx)) issues.push({ label: f.label, tone: f.tone, kind: 'validation' });
   }
@@ -141,6 +147,7 @@ const ISSUE_KINDS: IssueKind[] = [
   { key: 'low', label: 'Niska kompletność', test: (r) => r.issues.some((i) => i.label.startsWith('niska kompletność')) },
   { key: 'type', label: 'Typ do potwierdzenia', test: (r) => r.issues.some((i) => i.label === 'typ do potwierdzenia') },
   { key: 'bl', label: 'Brak powiązania BaseLinker', test: (r) => r.issues.some((i) => i.label === 'brak powiązania BaseLinker') },
+  { key: 'attrs', label: 'Brak wymaganych atrybutów', test: (r) => r.issues.some((i) => i.label.startsWith('brak atrybutu')) },
   { key: 'eanBad', label: VALIDATION_LABEL.eanBad, test: (r) => r.issues.some((i) => i.label.startsWith('błędny EAN')) },
   { key: 'dupEan', label: VALIDATION_LABEL.dupEan, test: (r) => r.issues.some((i) => i.label.startsWith('duplikat EAN')) },
   { key: 'dupName', label: VALIDATION_LABEL.dupName, test: (r) => r.issues.some((i) => i.label.startsWith('duplikat nazwy')) },

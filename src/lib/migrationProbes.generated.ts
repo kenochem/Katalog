@@ -85,6 +85,15 @@ export const MIGRATION_PROBES: MigrationProbe[] = [
     "functions": []
   },
   {
+    "file": "migration-catalog-attributes.sql",
+    "title": "Atrybuty strukturalne produktów (parametry): definicje (typ, jednostka, lista wartości, zakres kategorii).",
+    "tables": [
+      "catalog_attributes"
+    ],
+    "columns": [],
+    "functions": []
+  },
+  {
     "file": "migration-catalog-brand-overrides.sql",
     "title": "Uruchom w Supabase SQL Editor",
     "tables": [
@@ -127,6 +136,15 @@ export const MIGRATION_PROBES: MigrationProbe[] = [
       "catalog_manufacturers.removed",
       "catalog_manufacturers.updated_at"
     ],
+    "functions": []
+  },
+  {
+    "file": "migration-catalog-rules.sql",
+    "title": "Reguły jakości katalogu: „jeśli produkt spełnia warunki, to wykonaj akcję” (ustaw kategorię / producenta,",
+    "tables": [
+      "catalog_rules"
+    ],
+    "columns": [],
     "functions": []
   },
   {

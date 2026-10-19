@@ -45,7 +45,8 @@ export type CapabilityId =
   | 'catalog.manageManufacturers'
   | 'catalog.hideProducts'
   | 'catalog.exportData'
-  | 'catalog.manageCategories';
+  | 'catalog.manageCategories'
+  | 'catalog.manageRules';
 
 export interface CapabilityDef {
   id: CapabilityId;
@@ -258,6 +259,15 @@ export const CAPABILITY_REGISTRY: CapabilityDef[] = [
     description: 'Zarządzanie drzewem kategorii: dodawanie, zmiana nazw, przenoszenie i usuwanie',
     group: 'catalog',
     roleAction: 'manageCategories',
+    moduleId: 'catalog',
+    requires: ['module.catalog'],
+  },
+  {
+    id: 'catalog.manageRules',
+    label: 'Reguły jakości',
+    description: 'Tworzenie reguł „jeśli… to…” i uruchamianie ich na produktach (z cofaniem)',
+    group: 'catalog',
+    roleAction: 'manageRules',
     moduleId: 'catalog',
     requires: ['module.catalog'],
   },

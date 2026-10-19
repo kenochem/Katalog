@@ -18,6 +18,20 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-10-19',
+    title: 'Nowa strona startowa: powitanie, wyszukiwarka, zdrowie katalogu i proponowany następny krok',
+    description:
+      'Ekran startowy katalogu został zaprojektowany od nowa. Na górze duży baner z powitaniem po imieniu, datą, wyszukiwarką produktu (nazwa, SKU, EAN, producent — Enter od razu otwiera katalog z wynikami), przyciskiem „Skanuj EAN” i czterema wskaźnikami: produkty, na stanie, ze zdjęciem i średnia jakość danych. Niżej karta „Proponowany następny krok” wyliczana z danych (co najbardziej podniesie jakość katalogu, z przyciskiem „Zacznij teraz” otwierającym właściwą listę) oraz kolejne zalecenia, a sekcja „Zdrowie katalogu” pokazuje cztery pierścienie postępu: jakość danych, zdjęcia, kody EAN i pokrycie w BaseLinkerze. Dalej są kafle narzędzi i skrótów z liczbami, aktywność (nowości z WAPRO i ostatnie zmiany w produktach wykonane przez zespół), informacja o najnowszej aktualizacji katalogu z numerem wersji oraz biblioteka.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-19',
+    title: 'Atrybuty produktów (parametry strukturalne) i reguły jakości',
+    description:
+      'Dwie nowe sekcje w menu. Atrybuty: definiujesz parametry (pojemność, stężenie, zapach, kolor…) z typem (tekst, liczba, lista wartości, tak/nie), jednostką, listą dozwolonych wartości i kategoriami, w których obowiązują (razem z podkategoriami); atrybut można oznaczyć jako wymagany — brak wartości jest wtedy zgłaszany w Uzupełnianiu danych. W karcie produktu pojawia się panel „Parametry produktu” z polami zależnymi od kategorii (podgląd i edycja), atrybut można ustawić hurtem w Edycji masowej (z cofaniem), kolumny atrybutów są dostępne w eksporcie CSV, a Statystyki pokazują pokrycie atrybutów. Reguły jakości: „jeśli produkt spełnia wszystkie warunki (nazwa, SKU, producent, kategoria, EAN, stan, cena, zdjęcie, tag), to wykonaj akcję” — ustaw kategorię lub producenta, dodaj tag, ukryj albo ustaw wyjątek. Każda reguła pokazuje na żywo, ilu produktów dotyczy, i ma podgląd listy; uruchomienie to jedna partia do cofnięcia w Logi → Operacje masowe. Są gotowe szablony (np. Śmietnik Piotra, części myjek). Wymaga migracji migration-catalog-attributes.sql i migration-catalog-rules.sql oraz uprawnień „Kategorie” (atrybuty) i „Reguły jakości”.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-19',
     title: 'Walidacje jakości danych: błędne EAN, duplikaty, niespójne ceny i tytuły',
     description:
       'Uzupełnianie danych wykrywa teraz błędy jakości, nie tylko braki. Sprawdzamy: poprawność kodu EAN (długość i cyfra kontrolna GS1: EAN-8, UPC-A, EAN-13, GTIN-14), duplikaty EAN i duplikaty nazw (z podaniem, z jakimi SKU się powtarzają; ten sam produkt w dwóch katalogach nie jest duplikatem), sprzedaż netto poniżej ceny zakupu, niespójność ceny brutto z netto i VAT, tytuł dłuższy niż 75 znaków oraz nazwy ze zbędnymi spacjami lub pisane samymi wielkimi literami. Każdy rodzaj błędu ma własny filtr z licznikiem na liście, a w Statystykach pojawił się wykres „Walidacje jakości danych” (kliknięcie otwiera właściwą listę) i podpowiedzi w „Następnym kroku”. Produkty, które mają tak być, można wyłączyć gotowym wyjątkiem „Ignoruj walidacje jakości”.',

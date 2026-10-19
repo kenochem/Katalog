@@ -53,6 +53,8 @@ export interface ProductMeta {
   /** Rodzaje braków, których dla tego produktu nie wymagamy (np. bl, photo, ean) albo „all”. */
   dataExceptions?: string[];
   dataExceptionNote?: string;
+  /** Atrybuty strukturalne (parametry): klucz atrybutu → wartość. */
+  attrs?: Record<string, string | number | boolean>;
   dataExceptionAt?: string;
 }
 
@@ -83,6 +85,7 @@ export const PRODUCT_META_LABELS: Record<
     | 'catalogHiddenAt'
     | 'dataExceptions'
     | 'dataExceptionNote'
+    | 'attrs'
     | 'dataExceptionAt'
   >,
   string
@@ -139,6 +142,13 @@ export function normalizeProductMeta(raw: unknown): ProductMeta | undefined {
   str('catalogHiddenAt');
   str('dataExceptionNote');
   str('dataExceptionAt');
+  if (o.attrs && typeof o.attrs === 'object' && !Array.isArray(o.attrs)) {
+    const attrs: Record<string, string | number | boolean> = {};
+    for (const [k, v] of Object.entries(o.attrs as Record<string, unknown>)) {
+      if (typeof v === 'string' ? v.trim() !== '' : typeof v === 'number' || typeof v === 'boolean') attrs[k] = v as string | number | boolean;
+    }
+    if (Object.keys(attrs).length) meta.attrs = attrs;
+  }
   if (Array.isArray(o.dataExceptions)) {
     const list = (o.dataExceptions as unknown[]).filter((x): x is string => typeof x === 'string' && !!x.trim());
     if (list.length) meta.dataExceptions = list;

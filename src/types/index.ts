@@ -121,6 +121,8 @@ export type View =
   | 'catalog-hidden'
   | 'manufacturers'
   | 'categories'
+  | 'rules'
+  | 'attributes'
 
 
   | 'progress'

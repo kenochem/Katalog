@@ -16,7 +16,7 @@ import { EXCEPTION_KIND_LABEL, exceptionsOf } from './dataExceptions';
  * Konfigurowalny eksport CSV produktów: wybór i kolejność kolumn, ceny (sprzedaż brutto/netto, zakup),
  * format liczb, separator, kodowanie. Profile zapisywane lokalnie w przeglądarce.
  */
-export type ColumnGroup = 'ident' | 'price' | 'stock' | 'content' | 'media' | 'bl' | 'status' | 'sales';
+export type ColumnGroup = 'ident' | 'price' | 'stock' | 'content' | 'media' | 'bl' | 'status' | 'sales' | 'attrs';
 
 export const GROUP_LABEL: Record<ColumnGroup, string> = {
   ident: 'Identyfikacja',
@@ -27,9 +27,10 @@ export const GROUP_LABEL: Record<ColumnGroup, string> = {
   bl: 'BaseLinker i sklep',
   status: 'Status i uwagi',
   sales: 'Sprzedaż (WAPRO)',
+  attrs: 'Atrybuty (parametry)',
 };
 
-export const GROUP_ORDER: ColumnGroup[] = ['ident', 'price', 'stock', 'content', 'media', 'bl', 'status', 'sales'];
+export const GROUP_ORDER: ColumnGroup[] = ['ident', 'price', 'stock', 'content', 'media', 'bl', 'status', 'sales', 'attrs'];
 
 export type CellValue = string | number | null | undefined;
 
@@ -169,6 +170,30 @@ function descField(raw: string | undefined, ctx: ExportContext): string {
 }
 
 export const COLUMN_BY_ID = new Map(EXPORT_COLUMNS.map((c) => [c.id, c]));
+
+/** Dopisuje kolumny atrybutów strukturalnych (id „attr:klucz”) do dostępnych kolumn eksportu. */
+export function syncAttributeColumns(defs: { key: string; label: string; type: string; unit?: string }[]): void {
+  for (let i = EXPORT_COLUMNS.length - 1; i >= 0; i--) {
+    if (EXPORT_COLUMNS[i].id.startsWith('attr:')) {
+      COLUMN_BY_ID.delete(EXPORT_COLUMNS[i].id);
+      EXPORT_COLUMNS.splice(i, 1);
+    }
+  }
+  for (const d of defs) {
+    const col: ExportColumn = {
+      id: `attr:${d.key}`,
+      label: d.unit ? `${d.label} (${d.unit})` : d.label,
+      group: 'attrs',
+      kind: d.type === 'number' ? 'decimal' : d.type === 'bool' ? 'bool' : 'text',
+      get: (p) => {
+        const v = (p.meta as { attrs?: Record<string, string | number | boolean> } | undefined)?.attrs?.[d.key];
+        return v === undefined ? null : v;
+      },
+    };
+    EXPORT_COLUMNS.push(col);
+    COLUMN_BY_ID.set(col.id, col);
+  }
+}
 
 // ---------------------------------------------------------------------------------------------
 // Konfiguracja

@@ -1,4 +1,4 @@
-import { AlertTriangle, BarChart3, BookOpen, Building2, FolderTree,
+import { AlertTriangle, BarChart3, BookOpen, Building2, FolderTree, Wand2, ListChecks,
  EyeOff, Home, Layers, Maximize2, Printer, Search, Star } from 'lucide-react';
 import type { View } from '../../types';
 
@@ -40,6 +40,8 @@ export function HubCatalogSubNav({
   if (role.progress) {
     tabs.push({ id: 'progress', label: 'Statystyki', icon: BarChart3 });
     tabs.push({ id: 'catalog-decisions', label: 'Uzupełnianie danych', icon: AlertTriangle, count: counts.decisions });
+    tabs.push({ id: 'attributes', label: 'Atrybuty', icon: ListChecks });
+    tabs.push({ id: 'rules', label: 'Reguły', icon: Wand2 });
     tabs.push({ id: 'categories', label: 'Kategorie', icon: FolderTree });
     tabs.push({ id: 'manufacturers', label: 'Producenci', icon: Building2 });
     tabs.push({ id: 'catalog-hidden', label: 'Ukryte', icon: EyeOff, count: counts.hidden });

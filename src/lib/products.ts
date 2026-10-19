@@ -143,6 +143,7 @@ function lightProductMeta(meta?: ProductMeta): ProductMeta | undefined {
   }
   if (typeof meta.catalogHidden === 'boolean') light.catalogHidden = meta.catalogHidden;
   // opisy: do oceny kompletności na liście wystarczy początek tekstu (pełne wersje ładuje karta produktu)
+  if (meta.attrs && typeof meta.attrs === 'object' && Object.keys(meta.attrs).length) light.attrs = meta.attrs;
   if (Array.isArray(meta.dataExceptions) && meta.dataExceptions.length) {
     light.dataExceptions = meta.dataExceptions;
     if (meta.dataExceptionNote) light.dataExceptionNote = meta.dataExceptionNote;

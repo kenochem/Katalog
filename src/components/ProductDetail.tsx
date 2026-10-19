@@ -7,6 +7,8 @@ import {
   Sparkles, TrendingUp, Star, Maximize2, History as HistoryIcon,
 } from 'lucide-react';
 import { ProductHistoryPanel } from './product/ProductHistoryPanel';
+import { ProductAttributesPanel } from './product/ProductAttributesPanel';
+import { attrValuesOf, type AttrValue } from '../lib/attributes';
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import type { Product, ProductVariant } from '../types';
 import { ACCESSORY_CATEGORIES } from '../types';
@@ -1305,6 +1307,22 @@ export function ProductDetail({
 
           {hubStyle && detailTab === 'info' && !isGroup && (
             <ProductTechPanel product={detail} canEdit={roleCan(role, 'editProduct')} />
+          )}
+
+          {hubStyle && detailTab === 'info' && !isGroup && (
+            <ProductAttributesPanel
+              product={detail}
+              values={editing ? (editMeta.attrs ?? {}) : attrValuesOf(detail)}
+              editing={editing}
+              onChange={(key, value) =>
+                setEditMeta((m: ProductMeta) => {
+                  const next: Record<string, AttrValue> = { ...(m.attrs ?? {}) };
+                  if (value === undefined) delete next[key];
+                  else next[key] = value;
+                  return { ...m, attrs: Object.keys(next).length ? next : undefined };
+                })
+              }
+            />
           )}
 
           {hubStyle && !editing && detailTab === 'info' && (

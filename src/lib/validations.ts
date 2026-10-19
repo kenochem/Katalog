@@ -59,6 +59,7 @@ const EAN_REASON: Record<Exclude<EanCheck, 'empty' | 'ok'>, string> = {
 export function normalizeName(name: string): string {
   return name
     .toLowerCase()
+    .replace(/ł/g, 'l')
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, ' ')

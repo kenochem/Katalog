@@ -4,6 +4,7 @@ import type { Product, View } from '../../types';
 import { computeCatalogStats, suggestNext, type GroupStat, type Suggestion } from '../../lib/catalogStats';
 import { FIX_IDS, FIX_LABEL, detectFixes, type ActivityRow } from '../../lib/profileStats';
 import { VALIDATION_KINDS, VALIDATION_LABEL } from '../../lib/validations';
+import { attributeCoverage, getAttributes, useAttributesVersion } from '../../lib/attributes';
 
 import { fetchAuditLog, type AuditEntry } from '../../lib/auditLog';
 import { ChartCard, Columns, Donut, HBars, Kpi, PALETTE, Trend, type SeriesPoint } from './ChartCards';
@@ -68,7 +69,7 @@ export function CatalogProgressView({ products, onOpenDecisions, onOpenProduct }
         ))}
       </nav>
 
-      {tab === 'overview' && <Overview stats={stats} suggestions={suggestions} onOpenDecisions={onOpenDecisions} />}
+      {tab === 'overview' && <Overview stats={stats} suggestions={suggestions} products={products} onOpenDecisions={onOpenDecisions} />}
       {tab === 'media' && <MediaTab stats={stats} onOpenDecisions={onOpenDecisions} />}
       {tab === 'manufacturers' && <GroupTab kind="manufacturers" stats={stats} onOpenDecisions={onOpenDecisions} />}
       {tab === 'categories' && <GroupTab kind="categories" stats={stats} onOpenDecisions={onOpenDecisions} />}
@@ -103,11 +104,30 @@ function NextStep({ suggestion, onGo }: { suggestion: Suggestion; onGo: (s: Sugg
 // Przegląd
 // ---------------------------------------------------------------------------------------------
 
+function AttributesCoverageCard({ products, onOpenDecisions }: { products: Product[]; onOpenDecisions: CatalogProgressViewProps['onOpenDecisions'] }) {
+  const version = useAttributesVersion();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const rows = useMemo(() => attributeCoverage(products, getAttributes()).filter((r) => r.inScope > 0), [products, version]);
+  if (rows.length === 0) return null;
+  return (
+    <ChartCard title="Atrybuty produktów — pokrycie" subtitle="Ile produktów w zakresie atrybutu ma uzupełnioną wartość">
+      <HBars
+        data={rows.map((r) => ({ name: r.def.label, value: r.pct, color: r.pct < 40 ? PALETTE.rose : r.pct < 75 ? PALETTE.amber : PALETTE.green }))}
+        unit="%"
+        max={100}
+        onClick={() => onOpenDecisions(['attrs'])}
+      />
+    </ChartCard>
+  );
+}
+
 function Overview({
   stats,
   suggestions,
+  products,
   onOpenDecisions,
 }: {
+  products: Product[];
   stats: ReturnType<typeof computeCatalogStats>;
   suggestions: Suggestion[];
   onOpenDecisions: CatalogProgressViewProps['onOpenDecisions'];
@@ -176,6 +196,8 @@ function Overview({
           />
         </ChartCard>
       </div>
+
+      <AttributesCoverageCard products={products} onOpenDecisions={onOpenDecisions} />
 
       <ChartCard title="Walidacje jakości danych" subtitle="Produkty z błędami: EAN, duplikaty, ceny, tytuły — kliknij, aby poprawiać">
         <HBars

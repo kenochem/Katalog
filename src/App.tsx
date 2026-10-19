@@ -79,6 +79,7 @@ import { useAuth } from './lib/auth';
 import { isSupabaseConfigured } from './lib/supabase';
 import { loadManufacturerRegistry } from './lib/manufacturerRegistry';
 import { loadCategoryRegistry, useCategoryRegistry } from './lib/categoryRegistry';
+import { loadAttributes } from './lib/attributes';
 import { setDataExceptions, type ExceptionKind } from './lib/dataExceptions';
 import { withAuditBatch } from './lib/auditLog';
 
@@ -188,6 +189,12 @@ const CatalogChangelogView = lazy(() =>
   import('./components/CatalogChangelogView').then((m) => ({
     default: m.CatalogChangelogView,
   })),
+);
+const AttributesView = lazy(() =>
+  import('./components/AttributesView').then((m) => ({ default: m.AttributesView })),
+);
+const RulesView = lazy(() =>
+  import('./components/RulesView').then((m) => ({ default: m.RulesView })),
 );
 const CategoriesView = lazy(() =>
   import('./components/CategoriesView').then((m) => ({ default: m.CategoriesView })),
@@ -523,6 +530,8 @@ export default function App() {
     if (!roleCan(role, 'viewProgress') && view === 'catalog-hidden') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'manufacturers') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'categories') setView(fallback);
+    if (!roleCan(role, 'viewProgress') && view === 'rules') setView(fallback);
+    if (!roleCan(role, 'viewProgress') && view === 'attributes') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'small-images') setView(fallback);
     if (!roleCan(role, 'viewPrices') && view === 'promotions') setView(fallback);
     if (!roleCan(role, 'manageFavorites') && view === 'favorites') setView(fallback);
@@ -823,6 +832,7 @@ export default function App() {
     if (mode === 'loading' || opsStandalone) return;
     void loadManufacturerRegistry();
     void loadCategoryRegistry();
+    void loadAttributes();
   }, [mode, opsStandalone]);
 
   const initialCatalogLoadRef = useRef('');
@@ -1973,6 +1983,15 @@ export default function App() {
             missingImagesCount={missingImages.length}
             decisionCount={catalogDecisionRows.length}
             quickActions={catalogHomeQuickActions}
+            userName={displayLabel && !displayLabel.includes('@') && displayLabel !== 'Konto' ? displayLabel.trim().split(/\s+/)[0] : undefined}
+            onSearch={(q) => {
+              if (q) setSearch(q);
+              setCatalogFilter('all');
+              setView('catalog');
+            }}
+            onOpenStats={() => setView('progress')}
+            onOpenDecisions={(kinds) => openDecisions(kinds ?? [])}
+            onOpenUpdates={() => setView('updates')}
             onOpenCatalog={() => setCatalogFilter('all')}
             onOpenMissingImages={() => openMissingImages()}
             onOpenScanner={() => setShowScanner(true)}
@@ -2075,6 +2094,22 @@ export default function App() {
             canEditPrices={roleCan(role, 'viewPrices') && roleCan(role, 'editProduct')}
             canExport={roleCan(role, 'exportData')}
           />
+        ) : view === 'attributes' && isCatalogProduct() ? (
+          <Suspense fallback={<ViewFallback />}>
+            <AttributesView products={activeAllProducts} canEdit={roleCan(role, 'manageCategories')} />
+          </Suspense>
+        ) : view === 'rules' && isCatalogProduct() ? (
+          <Suspense fallback={<ViewFallback />}>
+            <RulesView
+              products={activeAllProducts}
+              canEdit={roleCan(role, 'manageRules')}
+              onApplied={(rule, res) => {
+                for (const { id, patch } of res.patches) patchProductInCache(id, patch);
+                for (const id of res.hiddenIds) patchProductInCache(id, (p) => ({ ...p, meta: { ...(p.meta ?? {}), catalogHidden: true } }));
+                for (const id of res.exceptionIds) patchProductInCache(id, (p) => ({ ...p, meta: { ...(p.meta ?? {}), dataExceptions: [...new Set([...(p.meta?.dataExceptions ?? []), ...(rule.action.type === 'exception' ? rule.action.kinds : [])])] } }));
+              }}
+            />
+          </Suspense>
         ) : view === 'categories' && isCatalogProduct() ? (
           <Suspense fallback={<ViewFallback />}>
             <CategoriesView

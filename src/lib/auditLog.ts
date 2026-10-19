@@ -75,6 +75,12 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'manufacturer.remove': 'Producent: usunięcie',
   'task.done': 'Zadanie wykonane',
   'product.exception': 'Wyjątek w uzupełnianiu danych',
+  'rule.save': 'Reguła jakości: zapis',
+  'rule.delete': 'Reguła jakości: usunięcie',
+  'category.add': 'Kategoria: dodanie',
+  'category.rename': 'Kategoria: zmiana nazwy',
+  'category.move': 'Kategoria: przeniesienie',
+  'category.remove': 'Kategoria: usunięcie',
 };
 
 let actor: AuditActor | null = null;

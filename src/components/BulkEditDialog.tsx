@@ -16,6 +16,7 @@ import { getAssignableCategories, useCategoryRegistry } from '../lib/categoryReg
 import { confirmDialog } from '../lib/dialog';
 import { showToast } from '../lib/toast';
 import { ManufacturerSelect } from './ManufacturerSelect';
+import { coerceAttrValue, getAttributes, useAttributesVersion } from '../lib/attributes';
 
 const splitTags = (s: string) =>
   s
@@ -58,6 +59,11 @@ export function BulkEditDialog({
   onDone: (result: BulkRunResult) => void;
 }) {
   useCategoryRegistry();
+  useAttributesVersion();
+  const attrDefs = getAttributes();
+  const [useAttr, setUseAttr] = useState(false);
+  const [attrKey, setAttrKey] = useState('');
+  const [attrValue, setAttrValue] = useState('');
   const [useMfr, setUseMfr] = useState(false);
   const [mfr, setMfr] = useState('');
   const [useCat, setUseCat] = useState(false);
@@ -96,11 +102,16 @@ export function BulkEditDialog({
       if (add.length) s.tagsAdd = add;
       if (remove.length) s.tagsRemove = remove;
     }
+    if (useAttr && attrKey) {
+      const def = attrDefs.find((d) => d.key === attrKey);
+      const v = def ? coerceAttrValue(def, attrValue) : undefined;
+      if (v !== undefined) s.attr = { key: attrKey, value: v };
+    }
     if (usePrice && canEditPrices && priceValue.trim() && Number.isFinite(priceNum)) {
       s.price = { field: priceField, mode: priceMode, value: priceNum, round: priceRound, recompute };
     }
     return s;
-  }, [useMfr, mfr, useCat, cat, useVat, vat, useUnit, unit, useTags, tagsAdd, tagsRemove, usePrice, canEditPrices, priceValue, priceNum, priceField, priceMode, priceRound, recompute]);
+  }, [useAttr, attrKey, attrValue, attrDefs, useMfr, mfr, useCat, cat, useVat, vat, useUnit, unit, useTags, tagsAdd, tagsRemove, usePrice, canEditPrices, priceValue, priceNum, priceField, priceMode, priceRound, recompute]);
 
   const hasSpec = Object.keys(spec).length > 0;
 
@@ -205,6 +216,42 @@ export function BulkEditDialog({
               <input value={tagsAdd} onChange={(e) => setTagsAdd(e.target.value)} className={sel} placeholder="Dodaj tagi (po przecinku)" />
               <input value={tagsRemove} onChange={(e) => setTagsRemove(e.target.value)} className={sel} placeholder="Usuń tagi (po przecinku)" />
             </Section>
+            {attrDefs.length > 0 && (
+              <Section title="Atrybut (parametr)" enabled={useAttr} onToggle={setUseAttr}>
+                <select value={attrKey} onChange={(e) => { setAttrKey(e.target.value); setAttrValue(''); }} className={sel}>
+                  <option value="">— wybierz atrybut —</option>
+                  {attrDefs.map((d) => (
+                    <option key={d.key} value={d.key}>
+                      {d.label}
+                    </option>
+                  ))}
+                </select>
+                {(() => {
+                  const d = attrDefs.find((x) => x.key === attrKey);
+                  if (!d) return null;
+                  if (d.type === 'select')
+                    return (
+                      <select value={attrValue} onChange={(e) => setAttrValue(e.target.value)} className={sel}>
+                        <option value="">— wartość —</option>
+                        {d.options.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </select>
+                    );
+                  if (d.type === 'bool')
+                    return (
+                      <select value={attrValue} onChange={(e) => setAttrValue(e.target.value)} className={sel}>
+                        <option value="">— wartość —</option>
+                        <option value="true">Tak</option>
+                        <option value="false">Nie</option>
+                      </select>
+                    );
+                  return <input value={attrValue} onChange={(e) => setAttrValue(e.target.value)} className={sel} placeholder={d.unit ? `wartość (${d.unit})` : 'wartość'} />;
+                })()}
+              </Section>
+            )}
             {canEditPrices && (
               <Section title="Ceny" enabled={usePrice} onToggle={setUsePrice}>
                 <select value={priceField} onChange={(e) => setPriceField(e.target.value as PriceField)} className={sel}>

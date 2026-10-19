@@ -25,6 +25,8 @@ import {
   Wrench,
   Building2,
   FolderTree,
+  Wand2,
+  ListChecks,
 } from 'lucide-react';
 import type { View } from '../types';
 import { canAccessAdminPanel } from '../lib/adminAccess';
@@ -71,6 +73,8 @@ const DEFAULT_ORDER: View[] = [
   'catalog-hidden',
   'manufacturers',
   'categories',
+  'rules',
+  'attributes',
   'small-images',
   'promotions',
   'labels',
@@ -297,6 +301,20 @@ export function LeftSidebarNav({
         highlight: catalogDecisionCount > 0,
         available: roleCan(role, 'viewProgress'),
         onClick: () => setView('catalog-decisions'),
+      },
+      {
+        id: 'attributes',
+        icon: <ListChecks className="h-4 w-4" />,
+        label: 'Atrybuty',
+        available: isCatalogProduct && roleCan(role, 'viewProgress'),
+        onClick: () => setView('attributes'),
+      },
+      {
+        id: 'rules',
+        icon: <Wand2 className="h-4 w-4" />,
+        label: 'Reguły jakości',
+        available: isCatalogProduct && roleCan(role, 'viewProgress'),
+        onClick: () => setView('rules'),
       },
       {
         id: 'categories',
