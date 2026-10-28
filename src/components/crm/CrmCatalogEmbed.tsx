@@ -180,7 +180,7 @@ export function CrmCatalogEmbed({
         </div>
 
         {filtersOpen && (
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
             <label className="block text-[10px] uppercase tracking-wide text-slate-500">
               Kategoria
               <select
@@ -245,7 +245,7 @@ export function CrmCatalogEmbed({
               <ProductCard
                 key={product.id}
                 product={product}
-                density={gridDensity}
+                density={gridDensity === 'list' ? 'md' : gridDensity}
                 showPrices={showPrices}
                 showCatalogKind={catalogKind === 'all'}
                 orderQty={orderQtys[product.id] ?? 0}

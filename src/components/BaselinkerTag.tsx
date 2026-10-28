@@ -30,11 +30,12 @@ export function BaselinkerTag({ product, size = 'sm', className = '' }: Baselink
   );
 }
 
-/** Pomarańczowy tag „W” — pozycja założona automatycznie z Mag WAPRO. */
+/** Pomarańczowy tag „W” — pozycja z Mag WAPRO, której nie ma jeszcze w BaseLinkerze (każdy produkt ma „B” albo „W”). */
 export function WaproMagTag({ product, size = 'sm', className = '' }: BaselinkerTagProps) {
   useBaselinkerLinksVersion();
-  // Produkt dodany do BaseLinkera dostaje niebieskie „B” zamiast „W”.
-  if (!isWaproSkeletonProduct(product) || hasBaselinkerLink(product)) return null;
+  // Produkt dodany do BaseLinkera dostaje niebieskie „B” zamiast „W”; grupy mają własny znacznik.
+  if (product.isGroup || hasBaselinkerLink(product)) return null;
+  const skeleton = isWaproSkeletonProduct(product);
 
   const dim = size === 'md' ? 'h-5 min-w-5 px-1 text-[11px]' : 'h-[18px] min-w-[18px] text-[10px]';
 
@@ -42,7 +43,7 @@ export function WaproMagTag({ product, size = 'sm', className = '' }: Baselinker
     <span
       className={`inline-flex shrink-0 items-center justify-center rounded-[4px] font-extrabold leading-none text-white ${dim} ${className}`}
       style={{ backgroundColor: '#f97316', boxShadow: '0 0 0 1px rgba(249,115,22,0.42)' }}
-      title="Mag WAPRO — pozycja do uzupełnienia, nie ma jej jeszcze w BaseLinkerze"
+      title={skeleton ? 'Mag WAPRO — pozycja do uzupełnienia, nie ma jej jeszcze w BaseLinkerze' : 'Mag WAPRO — nie ma jeszcze oferty w BaseLinkerze'}
       aria-label="Mag WAPRO"
     >
       W

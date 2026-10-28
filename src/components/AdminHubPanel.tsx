@@ -163,7 +163,7 @@ function OpsAdminSection() {
   ];
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
+    <div className="grid grid-cols-1 gap-5 xl:grid-cols-[0.95fr_1.05fr]">
       <section className="rounded-2xl border border-slate-800 bg-slate-900/50 p-4 sm:p-5">
         <div className="flex items-start gap-3">
           <span className="rounded-2xl bg-brand-500/15 p-3 text-brand-300">
@@ -216,7 +216,7 @@ function OpsAdminSection() {
             </p>
           </div>
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {tools.map(([name, desc]) => (
             <div key={name} className="rounded-xl border border-slate-800 bg-slate-950/50 p-3">
               <p className="text-sm font-semibold text-slate-100">{name}</p>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CopyName } from './CopyName';
 import { CheckSquare, Loader2, Maximize2, Play, ScanSearch, Square, Wand2 } from 'lucide-react';
 import type { Product } from '../types';
 import { getProductImage, updateProductImage } from '../lib/products';
@@ -319,7 +320,7 @@ function SmallImagesPanel({ products, onProductClick, onImageUpdated, canEdit }:
           )}
         </div>
       ) : (
-        <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {visible.map((r) => (
             <li
               key={r.product.id}
@@ -352,7 +353,7 @@ function SmallImagesPanel({ products, onProductClick, onImageUpdated, canEdit }:
                 />
                 <span className="min-w-0 flex-1">
                   <span className="block font-mono text-[11px] text-brand-400">{r.product.sku}</span>
-                  <span className="line-clamp-2 text-xs text-slate-200">{r.product.displayName}</span>
+                  <span className="line-clamp-2 text-xs text-slate-200"><CopyName text={r.product.displayName}>{r.product.displayName}</CopyName></span>
                   <span className="mt-0.5 inline-block rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300">
                     {r.w}×{r.h} px
                   </span>

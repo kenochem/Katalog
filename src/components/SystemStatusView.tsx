@@ -72,7 +72,7 @@ function exactTime(iso: string): string {
 }
 
 /** Status systemów (karty) + wspólny strumień zdarzeń z serwera. */
-export function SystemStatusView() {
+export function SystemStatusView({ onOpenSku }: { onOpenSku?: (sku: string) => void } = {}) {
   const [days, setDays] = useState<number>(3);
   const [data, setData] = useState<SystemData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -205,7 +205,7 @@ export function SystemStatusView() {
           <Loader2 className="h-6 w-6 animate-spin" />
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {cards.map((c) => {
             const t = TONE_STYLE[c.tone];
             return (
@@ -331,7 +331,7 @@ export function SystemStatusView() {
         ) : (
           <ul className="divide-y divide-slate-800 overflow-hidden rounded-xl border border-slate-800">
             {visible.map((e) => (
-              <EventRow key={e.id} e={e} open={openId === e.id} onToggle={() => setOpenId(openId === e.id ? null : e.id)} />
+              <EventRow key={e.id} e={e} onOpenSku={onOpenSku} open={openId === e.id} onToggle={() => setOpenId(openId === e.id ? null : e.id)} />
             ))}
           </ul>
         )}
@@ -349,10 +349,10 @@ export function SystemStatusView() {
   );
 }
 
-function EventRow({ e, open, onToggle }: { e: SysEvent; open: boolean; onToggle: () => void }) {
+function EventRow({ e, open, onToggle, onOpenSku }: { e: SysEvent; open: boolean; onToggle: () => void; onOpenSku?: (sku: string) => void }) {
   const L = LEVEL_STYLE[e.level];
   const Icon = L.icon;
-  const hasMore = e.message.length > 120 || (e.details && Object.keys(e.details).length > 0);
+  const hasMore = e.message.length > 120 || (e.details && Object.keys(e.details).length > 0) || !!e.products?.length;
   return (
     <li className={e.level === 'error' ? 'bg-red-500/5' : ''}>
       <button
@@ -392,10 +392,42 @@ function EventRow({ e, open, onToggle }: { e: SysEvent; open: boolean; onToggle:
           <p>
             <span className="text-slate-500">Czas:</span> {exactTime(e.at)}
           </p>
+          {e.products && e.products.length > 0 && (
+            <div>
+              <p className="text-slate-500">Produkty ({e.products.length}{e.products.length >= 20 ? ' — próbka' : ''}):</p>
+              <ul className="mt-1 max-h-64 space-y-0.5 overflow-y-auto rounded-lg bg-slate-900/70 p-2 text-[11px] text-slate-200">
+                {e.products.map((p, i) => (
+                  <li key={i} className="flex flex-wrap items-baseline gap-x-2">
+                    {onOpenSku ? (
+                      <button type="button" onClick={() => onOpenSku(p.sku)} className="font-mono text-emerald-300 underline-offset-2 hover:underline" title="Otwórz kartę produktu">
+                        {p.sku}
+                      </button>
+                    ) : (
+                      <span className="font-mono text-emerald-300">{p.sku}</span>
+                    )}
+                    <span className="break-words text-slate-300">{p.label}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {e.details &&
             Object.entries(e.details).map(([k, v]) => (
               <p key={k}>
-                <span className="text-slate-500">{k}:</span> <span className="text-slate-200">{String(v)}</span>
+                <span className="text-slate-500">{k}:</span>{' '}
+                {Array.isArray(v) ? (
+                  v.length === 0 ? (
+                    <span className="text-slate-500">brak</span>
+                  ) : (
+                    <ul className="mt-1 max-h-56 space-y-0.5 overflow-y-auto rounded-lg bg-slate-900/70 p-2 font-mono text-[11px] text-slate-200">
+                      {v.map((x, i) => (
+                        <li key={i} className="break-words">{String(x)}</li>
+                      ))}
+                    </ul>
+                  )
+                ) : (
+                  <span className="text-slate-200">{String(v)}</span>
+                )}
               </p>
             ))}
         </div>

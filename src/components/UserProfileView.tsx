@@ -98,8 +98,8 @@ const START_VIEWS: { id: View; label: string }[] = [
 
 interface Props {
   products: Product[];
-  gridDensity: 'sm' | 'md' | 'lg';
-  onGridDensityChange: (d: 'sm' | 'md' | 'lg') => void;
+  gridDensity: 'sm' | 'md' | 'lg' | 'list';
+  onGridDensityChange: (d: 'sm' | 'md' | 'lg' | 'list') => void;
   onOpenProduct: (p: Product) => void;
   onOpenView: (v: View) => void;
 }
@@ -490,7 +490,7 @@ export function UserProfileView({ products, gridDensity, onGridDensityChange, on
       {tab === 'board' && <BoardPanel meId={userId} card={card} />}
 
       {tab === 'settings' && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className={card}>
             <h3 className="mb-3 text-sm font-semibold text-slate-100">Personalizacja profilu</h3>
             <label className="block text-[11px] font-medium text-slate-400">
@@ -548,6 +548,7 @@ export function UserProfileView({ products, gridDensity, onGridDensityChange, on
                   ['lg', 'Duże kafelki'],
                   ['md', 'Średnie'],
                   ['sm', 'Małe'],
+                  ['list', 'Lista'],
                 ] as const
               ).map(([key, label]) => (
                 <button
@@ -580,7 +581,7 @@ export function UserProfileView({ products, gridDensity, onGridDensityChange, on
             <button
               type="button"
               onClick={() => {
-                if (userId) scheduleSaveUserPreferences(userId, { catalog: { sidebarOrder: [], sidebarHidden: [] } });
+                if (userId) scheduleSaveUserPreferences(userId, { catalog: { sidebarOrder: [], sidebarHidden: [], sidebarGroups: {} } });
                 showToast('Układ menu bocznego przywrócony — zobaczysz go po odświeżeniu strony', 'ok', 5000);
               }}
               className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs text-slate-300 hover:bg-slate-800"
@@ -1309,7 +1310,7 @@ function NewTaskForm({
   }
 
   return (
-    <div className="mb-3 grid gap-2 rounded-xl border border-slate-700 bg-slate-950/50 p-3 sm:grid-cols-2">
+    <div className="mb-3 grid grid-cols-1 gap-2 rounded-xl border border-slate-700 bg-slate-950/50 p-3 sm:grid-cols-2">
       <label className="text-[11px] text-slate-400">
         Rodzaj
         <select className={inp} value={kind} onChange={(e) => setKind(e.target.value as TaskKind)}>

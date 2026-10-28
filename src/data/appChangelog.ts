@@ -17,6 +17,309 @@ export interface AppChangelogEntry {
  */
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
+    date: '2026-10-28',
+    title: 'Porządkowanie asortymentu: graf kategorii, przeciąganie produktów, analiza',
+    description:
+      'Nowy widok Słowniki → Porządkowanie. Drzewo kategorii jako rozwijany graf z gałęziami: produkty z tacki po lewej przeciągasz na kategorię (pojedynczo lub zaznaczone grupą, Shift = zakres), a całe gałęzie możesz przenosić między działami. Zakładka Producenci działa tak samo — przeciągasz produkty na kafelek producenta, w tym na „Bez producenta”. Zakładka Analiza pokazuje produkty bez kategorii, podpowiedzi przypisań wyliczone z nazw (z pewnością w %), przeładowane i puste kategorie, podpowiedzi producenta z nazwy oraz duplikaty nazw. Każde przeniesienie trafia do dziennika i można je cofnąć w Logi → Operacje masowe.',
+    tag: 'nowość',
+    size: 'major',
+  },
+  {
+    date: '2026-10-28',
+    title: 'Produkty bez producenta: filtr w katalogu i wiersz w Producentach',
+    description:
+      'W filtrze producentów w katalogu pojawiła się pozycja „Bez producenta” z liczbą produktów, które nie mają przypisanego żadnego producenta. Ta sama pozycja jest na górze listy w widoku Producenci — kliknięcie otwiera te produkty w katalogu.',
+    tag: 'nowość',
+    size: 'minor',
+  },
+  {
+    date: '2026-10-28',
+    title: 'Statystyki: nowy wygląd i komplet kluczowych wskaźników',
+    description:
+      'Panel statystyk przebudowany w spokojnym, systemowym stylu: duże liczby, cienkie wykresy i wartości podpisane obok danych — bez dymków i legend nachodzących na wykresy. Nowe zakładki Magazyn (wartość zapasu, rozkład stanów, zapas wg producentów i kategorii, największe zapasy) oraz Ceny i marże (marża średnia i ważona, rozkład marż i cen, najniższe marże). Przegląd zawiera tabelę wszystkich wskaźników: asortyment, magazyn, wartość, zdjęcia i opisy, BaseLinker i błędy jakości.',
+    tag: 'nowość',
+    size: 'minor',
+  },
+  {
+    date: '2026-10-28',
+    title: 'Strona startowa: spokojniejszy, bardziej profesjonalny wygląd',
+    description:
+      'Przeprojektowana strona startowa: bez gradientów, rozmyć i cieni. Płaskie karty z cienką ramką, jeden kolor akcentu, wskaźniki jakości jako cienkie paski zamiast kolorowych pierścieni, kafelki skrótów z neutralnymi ikonami oraz czytelniejsza typografia i pasek wskaźników na górze. Zawartość i funkcje bez zmian.',
+    tag: 'poprawka',
+    size: 'patch',
+  },
+  {
+    date: '2026-10-28',
+    title: 'Menu boczne: sekcje z ikonami, pozycje wcięte',
+    description:
+      'Nazwy sekcji menu (Produkty, Jakość danych, Słowniki, Analizy, System) są większe i mają ikony, a pozycje należące do sekcji są wcięte w prawo z linią prowadzącą — jak w BaseLinkerze. Łatwiej odróżnić grupy i nawigować.',
+    tag: 'poprawka',
+    size: 'patch',
+  },
+  {
+    date: '2026-10-28',
+    title: 'Aktywność: jakie produkty ktoś wysłał do BaseLinkera',
+    description:
+      'Wpisy w Aktywności o wysyłce stanów i cen, dokładaniu zdjęć i imporcie do BaseLinkera pokazują po rozwinięciu listę produktów: SKU (link do produktu), nazwa i co wysłano. W wierszu widać pierwsze produkty. Dotyczy nowych operacji; starsze wpisy nie mają listy.',
+    tag: 'nowość',
+    size: 'minor',
+  },
+  {
+    date: '2026-10-28',
+    title: 'Logi: które produkty poszły do BaseLinkera',
+    description:
+      'Wpisy wysyłek do BaseLinkera (stany, ceny, zdjęcia) mają po rozwinięciu listę produktów: SKU, nazwa i wysłana wartość. Kliknięcie SKU otwiera kartę produktu. Funkcja zapisuje teraz do 100 produktów na wpis (wcześniej 20) — wymaga wdrożenia funkcji baselinker w Supabase.',
+    tag: 'nowość',
+    size: 'minor',
+  },
+  {
+    date: '2026-10-27',
+    title: 'Pełne nazwy produktów z WAPRO (koniec z uciętymi nazwami)',
+    description:
+      'Pole nazwy w WAPRO mieści tylko 40 znaków, więc nowe produkty miały nazwy ucięte (np. „Bęben automatyczny kompletny z wężami -”). Synchronizacja pobiera teraz pełną nazwę z pola NAZWA_CALA i uzupełnia już ucięte nazwy w katalogu — tylko tam, gdzie nazwa nie była ręcznie zmieniana. Wymaga wgrania nowego skryptu synchronizacji na serwer WAPRO.',
+    tag: 'poprawka',
+    size: 'patch',
+  },
+  {
+    date: '2026-10-27',
+    title: 'Grupy: powrót do wizytówki, lista produktów grupy i wygodniejszy konfigurator',
+    description:
+      'W karcie produktu należącego do grupy jest pasek z powrotem do wizytówki grupy, listą wszystkich produktów grupy i przejściami poprzedni/następny (także po wejściu z katalogu). Usunięto zakładkę „Pojemności”. Konfigurator grup otwiera się na całej stronie zamiast w okienku: wyszukiwanie po kilku słowach, zaznaczanie wielu wyników i dodawanie hurtem, podgląd zdjęć i stanów.',
+    tag: 'nowość',
+    size: 'minor',
+  },
+  {
+    date: '2026-10-27',
+    title: 'Grupy produktów: własne zdjęcie grupy i wybór źródła kopiowania zdjęć',
+    description:
+      'Żaden produkt w grupie nie jest już „główny”: grupa ma własne zdjęcie, które edycja grupy nie nadpisuje. Przycisk „Zdjęcia dla grupy / wszystkich” pozwala wybrać produkt, z którego skopiować zdjęcia, i zaznaczyć, gdzie je wgrać — do wybranych produktów oraz jako zdjęcie samej grupy.',
+    tag: 'nowość',
+    size: 'minor',
+  },
+  {
+    date: '2026-10-27',
+    title: 'Warianty grup: kopiowanie zdjęć do pozostałych wariantów, każdy wariant zawsze dostępny',
+    description:
+      'Przy wariancie w grupie jest przycisk „zdjęcia → inne”: wybierasz, którym wariantom skopiować zdjęcia (domyślnie tym bez zdjęcia). Pliki są kopiowane osobno, więc usunięcie zdjęcia w jednym produkcie nie rusza pozostałych. Warianty, których nie ma na załadowanej liście, są dociągane z bazy po SKU, więc każdy wariant można otworzyć i przeklikać strzałkami.',
+    tag: 'nowość',
+    size: 'minor',
+  },
+  {
+    date: '2026-10-27',
+    title: 'Grupy produktów: warianty z ceną, zdjęciem i znacznikami W/B oraz przechodzenie między wariantami',
+    description:
+      'Lista wariantów w grupie pokazuje miniaturę (albo ikonę braku zdjęcia), znaczniki W/B, cenę i stan; kliknięcie wariantu otwiera jego pełny podgląd. W podglądzie wariantu jest pasek „Grupa: …” z powrotem do grupy oraz strzałkami do poprzedniego i następnego wariantu. Podział ekranu: prawy panel nie przelicza się już przy każdym znaku w wyszukiwarce i nie blokuje ładowania katalogu.',
+    tag: 'nowość',
+    size: 'minor',
+  },
+  {
+    date: '2026-10-27',
+    title: 'Logi: koniec spamu z synchronizacji stanów, lista produktów w szczegółach wpisu',
+    description:
+      'Automatyczna synchronizacja zapisuje wpis w logach tylko gdy zmieni się obraz (liczba produktów z ręcznym stanem, brakujących w WAPRO, ostrzeżeń) lub raz na 6 godzin. Naprawiono błąd, przez który ok. 27 produktów bez stanu i cen było „aktualizowanych” w każdym przebiegu. Rozwinięty wpis pokazuje listę produktów z ręcznym stanem i brakujących w WAPRO.',
+    tag: 'poprawka',
+    size: 'minor',
+  },
+  {
+    date: '2026-10-27',
+    title: 'Podział ekranu: wybór widoku w każdym panelu i przeciąganie kafelków z menu',
+    description:
+      'Oba panele podzielonego ekranu mają własną listę wyboru widoku. Kafelek z menu bocznego można chwycić i upuścić na wybrany panel (albo na prawą połowę ekranu, żeby otworzyć widok obok).',
+    tag: 'nowość',
+    size: 'patch',
+  },
+  {
+    date: '2026-10-26',
+    title: 'Podział ekranu: katalog po lewej, konfigurator grup (lub inny widok) po prawej',
+    description:
+      'Na dużych ekranach przycisk „Podziel ekran” pokazuje obok bieżącego widoku drugi panel z własnym przewijaniem. W prawym panelu wybierasz widok z listy (łączenie w grupy, grupy produktów, uzupełnianie danych, atrybuty, kategorie i inne). Wybór jest zapamiętywany.',
+    tag: 'nowość',
+    size: 'minor',
+  },
+  {
+    date: '2026-10-26',
+    title: 'Grupy produktów: łączenie dowolnych produktów (dysze, części), nie tylko pojemności',
+    description:
+      'W sekcji Grupy produktów jest zakładka „Łączenie w grupy”: można złożyć grupę z dowolnych produktów (wyszukiwarka, wybór wariantu głównego dającego zdjęcie i cenę), edytować istniejące grupy oraz skorzystać z propozycji „Części i dysze” wykrywanych po kodzie na końcu nazwy. Osobne pozycje menu „Warianty pojemności” zastąpiono jednym wejściem.',
+    tag: 'nowość',
+    size: 'minor',
+  },
+  {
+    date: '2026-10-26',
+    title: 'Podgląd produktu: zwarta góra, bez szybkiej zmiany stanu; telefon: nic nie ucieka w bok',
+    description:
+      'W podglądzie produktu góra karty zajmuje teraz mniej miejsca: na telefonie zniknął osobny pasek „Lista produktów” (zamyka krzyżyk), tytuł jest mniejszy, a SKU, EAN, stan i cena siedzą w jednym poziomym rzędzie mniejszych plakietek (z możliwością przewinięcia, gdyby się nie zmieściły; na komputerze bez zmian). Logo producenta na telefonie jest ukryte. Z karty usunięto też stały panel „Stan magazynowy” z przyciskami plus i minus — stan zmienia się teraz wyłącznie w trybie edycji produktu (to rzadka operacja, więc nie wisi na wierzchu). Na telefonach naprawiono elementy wychodzące poza szerokość ekranu: m.in. na stronie głównej karty „Proponowany następny krok” i „Dalej w kolejce” były szersze niż ekran. Przyczyną były siatki bez zdefiniowanej kolumny bazowej; dodano ją w 154 miejscach w całej aplikacji (jedna kolumna o szerokości ekranu), a dodatkowo włączono zabezpieczenie przed poziomym przewijaniem strony i łamanie bardzo długich ciągów znaków.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-26',
+    title: 'Nawigacja jak w aplikacji mobilnej: dolny pasek z przyciskiem Menu i boczna szuflada',
+    description:
+      'Na telefonie katalog ma teraz dolny pasek z pięcioma miejscami: Start, Katalog, duży środkowy przycisk Skan (kody kreskowe), Ulubione (albo Zamówienie, jeśli masz dostęp do CRM) oraz Menu. Przycisk Menu otwiera boczną szufladę wysuwaną z lewej strony, z kontem u góry i pełną nawigacją w tych samych zwijanych grupach co panel boczny na komputerze (Produkty, Jakość danych, Słowniki, Analizy, System — z licznikami i własnym ustawieniem kolejności), a pod nią akcje (dodaj produkt, tryb edycji, administracja, instalacja aplikacji) i ustawienia (motyw, odświeżanie, synchronizacja stanów, wylogowanie). Szufladę zamykasz przyciskiem X, dotknięciem tła, klawiszem Esc albo przesunięciem w lewo; wybór pozycji zamyka ją automatycznie. Aktywna zakładka dolnego paska jest podświetlona, a pozycje mają większe, wygodniejsze pola dotyku. Dotychczasowe okno „Więcej” wysuwane od dołu zastąpiła ta szuflada.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-26',
+    title: 'Widok telefonu: lista produktów w wierszach, zwięzłe statystyki i szybkie filtry',
+    description:
+      'Katalog na telefonie ma nowy, czytelny układ. Domyślnie (przy pierwszym wejściu na telefonie) produkty są w wierszach: miniatura po lewej, nazwa do dwóch linii, pod nią SKU (dotknięcie kopiuje), znaczniki B/W i kategoria, a po prawej stan magazynowy w kolorze (zielony, żółty przy niskim, czerwony przy braku), cena i gwiazdka ulubionych. Cały wiersz jest dużym celem dotyku, który otwiera produkt, a wszystkie wiersze mają równą wysokość. Pasek statystyk to teraz jedna linia („4335 z 5597 · na stanie … · brak …”), którą rozwijasz dotknięciem; pod wyszukiwarką jest przewijany rząd szybkich filtrów (Wszystkie, Na stanie, Niski stan, Brak, Bez zdjęcia). Przełącznik widoku ma nową opcję „Lista” (jest też w profilu), a poprzednie kafelki zostają do wyboru. Widok listy działa również na większych ekranach w 2–3 kolumnach; w trybie edycji stanów i w zamówieniach nadal używane są karty.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-26',
+    title: 'Naprawa: zdublowane zdjęcia dodatkowe w produktach',
+    description:
+      'Przyczyna: import zdjęć ze sklepu dokładał do produktu nowe zdjęcia (adresy wp-content) i jednocześnie zostawiał stare kopie tych samych plików (adresy /hpeciai/), przez co w galerii pojawiały się po dwa razy. W bazie oczyszczono 2448 produktów (usunięto 7228 zdublowanych adresów, z kopią zapasową poprzednich list w tabeli products_extra_images_backup), galeria w katalogu Akcesoria pomija teraz kopie i powtórzenia tak jak katalog Produkty, a skrypt importu zdjęć ze sklepu nie dokłada już starych kopii. Zdjęcia różniące się plikiem (np. dwie oferty tego samego produktu) zostają.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-23',
+    title: 'Wydajność: szybsze wczytywanie listy produktów i odporność na awarię serwera zdjęć',
+    description:
+      'Lista produktów jest pobierana z bazy równolegle (wcześniej strony po 1000 produktów pobierały się jedna po drugiej), co skraca wczytywanie katalogu po zalogowaniu; gdyby baza nie zwróciła licznika, aplikacja wraca do bezpiecznego pobierania po kolei. Doszedł bezpiecznik hostów zdjęć: gdy zewnętrzny serwer zdjęć (np. sklep) przestaje odpowiadać i kilka różnych zdjęć z niego zawiedzie pod rząd, aplikacja na 5 minut przestaje o nie prosić — przełącza się na kolejne dostępne zdjęcie produktu albo pokazuje zastępnik z podpowiedzią „serwer zdjęć nie odpowiada”, zamiast trzymać setki zawieszonych żądań i puste karty przez kilkadziesiąt sekund. Własny magazyn zdjęć nie podlega temu bezpiecznikowi. Nowo wgrywane zdjęcia dostają długi czas przechowywania w pamięci podręcznej przeglądarki (adresy mają parametr wersji, więc zmiana zdjęcia nadal działa od razu).',
+    tag: 'wydajność',
+  },
+  {
+    date: '2026-10-21',
+    title: 'Grupowe dopasowanie zdjęć produktu pod BaseLinker; aparat tylko na urządzeniach mobilnych',
+    description:
+      'W zakładce Zdjęcia produktu jest nowy przycisk „Dopasuj wszystkie zdjęcia pod BaseLinker”. Otwiera okno z miniaturami wszystkich zdjęć produktu (główne i dodatkowe), pokazuje ich wymiary i oznacza za małe (poniżej 500×500 px), które są domyślnie zaznaczone; wybierasz tryb (przeskalowanie lub kwadrat z dopełnieniem) i jednym kliknięciem przetwarzasz zaznaczone, z paskiem postępu. Zdjęcia są podmieniane w tej samej kolejności, a poprzednia wersja zdjęcia głównego zostaje zachowana do przywrócenia. Dotychczasowa opcja dla pojedynczego zdjęcia zostaje jako „Tylko to zdjęcie pod BaseLinker”. Przyciski „Aparat” / „Zrób zdjęcie” (w karcie produktu i przy dodawaniu produktu) pokazują się teraz wyłącznie na telefonach i tabletach — na komputerach ich nie ma.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-21',
+    title: 'Wgrywanie wielu zdjęć naraz i odświeżona zakładka Zdjęcia w produkcie',
+    description:
+      'W karcie produktu można teraz wgrać kilka zdjęć jednym ruchem: przeciągnij je na pole wgrywania (albo na podgląd zdjęcia) lub kliknij „Wybierz pliki” i zaznacz wiele plików (Ctrl / Shift). Zdjęcia wgrywają się po kolei z paskiem postępu „Wgrywanie zdjęć 2 / 5”; jeśli produkt nie ma jeszcze zdjęcia głównego, pierwsze zostaje głównym, a pozostałe trafiają do galerii. Zakładka Zdjęcia ma nowy układ: duże pole wgrywania, osobna sekcja „Podmień zdjęcie główne” (z pliku lub z aparatu), „Obróbka wybranego zdjęcia” (wycinanie białego tła, przygotowanie pod BaseLinker, przywracanie) oraz licznik zdjęć. Naprawiono też skakanie do zakładki „Dane” po wgraniu zdjęcia: karta zostaje w zakładce Zdjęcia, a wybrane zdjęcie nie jest resetowane przy aktualizacji produktu.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-21',
+    title: 'Zdjęcia produktu: zmiana kolejności przeciąganiem miniatur',
+    description:
+      'W podglądzie produktu miniatury zdjęć można przeciągać myszą w nowe miejsce — kolejność zapisuje się od razu, a pierwsze zdjęcie staje się zdjęciem głównym (widocznym na karcie w katalogu). Dla dotyku i klawiatury doszły przyciski „przesuń w lewo” i „przesuń w prawo” przy wybranym zdjęciu. Ręcznie ustawiona kolejność jest zachowywana także w katalogu Produkty (wcześniej zdjęcia dodatkowe były tam zawsze sortowane według źródła). Wymaga prawa wgrywania zdjęć.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-21',
+    title: 'Segregacja produktów atrybutami: typ towaru, grupa części i konkretne właściwości z nazwy',
+    description:
+      'W sekcji Atrybuty doszła zakładka „Auto-uzupełnianie” oraz zestaw atrybutów segregujących (instalowany jednym kliknięciem, istniejących nie nadpisuje): Typ towaru (chemia, część do myjek, pianownica/opryskiwacz, sprzątanie, zapachy, dozowniki i higiena, sprzęt, usługa), Grupa części (dysze, lance i pistolety, węże i bębny, szybkozłącza, nyple i kolanka, zawory, pompy, uszczelnienia, filtry, manometry, obudowy), a także konkretne właściwości odczytywane z nazwy: kąt rozpylania i rozmiar dyszy, gwint/przyłącze, materiał, ciśnienie maksymalne, długość węża, pasuje do (marki myjek), pojemność (ml), masa (g) i forma produktu; dodatkowo Przeznaczenie do ręcznego wyboru. Program klasyfikuje po rzeczowniku głównym nazwy i oznacza propozycje jako „pewne” lub „do sprawdzenia”; można je filtrować po typie, poprawić typ i grupę przy produkcie, a zapis to jedna partia do cofnięcia w Logi → Operacje masowe. Atrybuty mogą teraz być zależne od innych (np. Grupa części pokazuje się tylko dla części, kąt dyszy tylko dla dysz) — ustawisz to w edycji atrybutu w polu „Pokazuj tylko, gdy”. Wymaga migracji migration-catalog-attributes-showwhen.sql (już wgrana).',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-21',
+    title: 'Podgląd zdjęcia: zamknięcie wraca do produktu, a nie do katalogu',
+    description:
+      'Po otwarciu podglądu zdjęcia w karcie produktu przycisk X, kliknięcie w tło podglądu oraz klawisz Esc zamykają teraz tylko podgląd i zostawiasz otwartą kartę produktu. Wcześniej kliknięcie „przechodziło” również do tła karty produktu i zamykało ją, wracając do listy katalogu. To samo naprawiono w oknach „Przygotuj zdjęcie” i „Usuń tło”.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-21',
+    title: 'Porządek w migracjach: usunięto starą migrację poczty CRM',
+    description:
+      'Plik migration-crm-mailbox.sql (stara skrzynka e-mail w CRM, wyłączona) został usunięty z repozytorium, więc nie jest już sprawdzany w Logi → Migracje bazy i nie może wyświetlać się jako brakujący. Komunikaty w panelu poczty CRM nie odsyłają już do tej migracji, a dokumentacja bazy danych nie wymienia jej wśród migracji do uruchomienia.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-21',
+    title: 'Menu boczne: własny podział na sekcje (przeciąganie pozycji między sekcjami)',
+    description:
+      'W trybie edycji menu (ikona zębatki) każdą pozycję można przeciągnąć do innej sekcji: upuszczenie na inną pozycję wstawia ją w tym miejscu tej sekcji, upuszczenie na nagłówek sekcji dodaje ją na koniec (puste sekcje też pokazują miejsce do upuszczenia). Własny podział zapisuje się razem z kolejnością i ukrytymi pozycjami (w profilu, więc działa na każdym urządzeniu), a przycisk „Przywróć domyślną kolejność” przywraca też domyślne sekcje. Domyślnie „Nowe produkty” trafiły do sekcji „Produkty”.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-20',
+    title: 'Znacznik „Blokada WAPRO” oraz zwijane filtry i wyjątki w Uzupełnianiu danych',
+    description:
+      'Produkty ukryte automatycznie, bo są zablokowane w WAPRO, mają mały pomarańczowy znacznik „Blokada WAPRO” na karcie (obok „Ukryty”) i „WAPRO” w sekcji Ukryte, dzięki czemu odróżnisz je od ukryć ręcznych. W panelu bocznym Uzupełniania danych filtry (szybkie filtry braków, kategoria, producent, stan, katalog, sortowanie, liczba na stronie) są schowane pod przyciskiem „Filtry” — wyszukiwarka zostaje zawsze widoczna, a przy aktywnych filtrach pojawia się plakietka „aktywne”. Panel „Wyjątek dla zaznaczonych” też jest zwijany i domyślnie zamknięty.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-20',
+    title: 'Artykuły zablokowane w WAPRO są automatycznie ukrywane w katalogu',
+    description:
+      'Synchronizacja z WAPRO sprawdza teraz blokadę artykułów (kolumna w tabeli ARTYKUL wykrywana automatycznie albo wskazana w pliku .env jako WAPRO_BLOCKED_COLUMN i WAPRO_BLOCKED_VALUE). Zablokowany artykuł dostaje w katalogu ukrycie z powodem „Zablokowany w WAPRO” (widać go w sekcji Ukryte, znika z listy katalogu), a po odblokowaniu w WAPRO sam wraca do katalogu — przywracane są tylko produkty ukryte przez tę funkcję, ręczne ukrycia zostają bez zmian. Zabezpieczenie: gdy wykryta kolumna oznaczałaby podejrzanie dużo artykułów (ponad 30% albo ponad 200 pozycji), nic nie jest ukrywane, a sprawa trafia do logu synchronizacji. Wymaga wgrania nowej wersji skryptu sync-wapro-stock-server.ps1 na serwer WAPRO; można ją wyłączyć wpisem WAPRO_BLOCKED_SYNC=0. Powód „Zablokowany w WAPRO” jest też na liście gotowych powodów ukrycia.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-20',
+    title: 'Naprawa: produkty ze zdjęciami tylko z kenochem.com/hpeciai nie miały podglądu',
+    description:
+      'Część produktów (np. HYD000936 — wąż kanalizacyjny, kilka pianownic, dysze inżektora i trzy grupy dysz; łącznie 33 pozycje) miała zdjęcia w karcie, ale ani jednego na liście i w podglądzie. Przyczyną było pomijanie wszystkich adresów kenochem.com/hpeciai (bo galerie sklepu mają te same zdjęcia dwa razy), także gdy był to jedyny adres zdjęć produktu. Teraz takie adresy są używane jako rezerwa, gdy produkt nie ma żadnego innego źródła zdjęcia: pojawia się zdjęcie poglądowe i pełna galeria. Produkty, które mają zdjęcia z lepszych źródeł, działają jak dotąd.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-20',
+    title: 'Wydajność: edycja produktu nie przelicza już całego katalogu',
+    description:
+      'Licznik w menu „Uzupełnianie danych” i lista braków były przeliczane od zera dla wszystkich produktów po każdej zmianie jednego z nich (ok. sekundy na komputerze, więcej na telefonie). Teraz braki niezależne od innych produktów są zapamiętywane per produkt i unieważniane tylko wtedy, gdy zmieni się sam produkt, jego kategoria, lista atrybutów, producenci albo powiązania z BaseLinkerem, więc po edycji liczy się praktycznie tylko ten jeden produkt (duplikaty i walidacje porównujące produkty między sobą nadal liczą się na bieżąco). Pierwsze wejście policzy wszystko od zera, ale w ok. połowie krótszym czasie niż wcześniej. Odświeżanie alertów katalogu (niski stan, brak zdjęć) czeka teraz 2,5 s po ostatniej zmianie zamiast liczyć się przy każdej.',
+    tag: 'wydajność',
+  },
+  {
+    date: '2026-10-20',
+    title: 'Wydajność: szybszy start, statystyki i ocena kompletności produktów',
+    description:
+      'Kolejne usprawnienia: ocena kompletności produktu (używana na stronie startowej, w statystykach, filtrach i Uzupełnianiu danych) jest teraz zapamiętywana per produkt, więc po edycji jednego produktu przeliczany jest tylko on, a nie cały katalog. Przyspieszono rozpoznawanie kategorii (zapamiętane normalizacje fraz zamiast powtarzania ich dla każdego produktu: z ok. 1 s do ok. 0,15 s dla całego katalogu) i odczyt lokalnych lokalizacji magazynowych (bez wielokrotnego parsowania tych samych danych). Pasek statystyk nad listą liczy się z niższym priorytetem, żeby lista produktów pojawiała się pierwsza. Zmierzone na działającej stronie: wejście w katalog z ok. 1,4 s do ok. 0,7 s, a wyszukiwanie i czyszczenie wyszukiwarki nie powoduje już zauważalnych zacięć.',
+    tag: 'wydajność',
+  },
+  {
+    date: '2026-10-20',
+    title: 'Wydajność: sortowanie katalogu kilkanaście razy szybsze',
+    description:
+      'Znaleziono i usunięto główną przyczynę przycinania katalogu: sortowanie listy (domyślnie po kategorii i nazwie) porównywało polskie napisy tak, że przy ponad 5 tysiącach produktów trwało od 1,5 do 5 sekund przy każdym wejściu do katalogu, wyczyszczeniu wyszukiwarki czy zmianie sortowania. Teraz porównania używają jednego, zapamiętanego mechanizmu (ten sam wynik sortowania), a klucze sortowania są liczone raz na produkt. Sortowanie całej listy trwa ułamek sekundy; poprawka działa też we wszystkich innych widokach z sortowaniem po polskich nazwach.',
+    tag: 'wydajność',
+  },
+  {
+    date: '2026-10-20',
+    title: 'Kopiowanie nazwy produktu jednym kliknięciem',
+    description:
+      'Kliknięcie nazwy produktu kopiuje ją do schowka (pojawia się potwierdzenie „Skopiowano nazwę”), bez otwierania produktu. Działa na kartach w katalogu, w Uzupełnianiu danych, Standardzie nazw, Ukrytych, Zdjęciach do poprawy, Promocjach oraz w nagłówku karty produktu. Otwarcie produktu nadal jest pod zdjęciem i resztą karty, a zaznaczanie fragmentu nazwy myszą działa jak dotąd (przy zaznaczonym tekście kliknięcie nic nie kopiuje).',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-20',
+    title: 'Menu boczne w grupach: Produkty, Jakość danych, Słowniki, Analizy, System',
+    description:
+      'Menu boczne katalogu jest uporządkowane w zwijane grupy, jak w panelach typu BaseLinker. Na górze zostały codzienne pozycje (Start, Katalog, Ulubione, Foldery, Nowe produkty), a niżej: Produkty (Warianty pojemności, Grupy produktów, Zestawy, Promocje, Etykiety, Magazyn, Biblioteka), Jakość danych (Uzupełnianie danych, Standard nazw, Reguły jakości, Zdjęcia do poprawy, Ukryte), Słowniki (Kategorie, Producenci, Atrybuty), Analizy (Statystyki, Zmiany w czasie) i System (Logi, Aktualizacje, Administracja). Kliknięcie nagłówka zwija lub rozwija grupę (zapamiętujemy to w przeglądarce); zwinięta grupa pokazuje sumę liczników wymagających uwagi, a przejście do widoku z zwiniętej grupy rozwija ją. Edycja menu (kolejność i ukrywanie pozycji) działa jak dotąd. W „Wariantach pojemności” doszły: odrzucanie propozycji, które nie są wariantami (z możliwością przywrócenia), ostrzeżenie o różnych kategoriach wariantów i cena wariantu w podpowiedzi.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-20',
+    title: 'Warianty pojemności: jeden produkt (np. zapach) w kilku pojemnościach jako grupa',
+    description:
+      'Nowa sekcja „Warianty pojemności” w menu wykrywa produkty, które różnią się tylko pojemnością lub wagą (np. olejek Kala Chanti Cashmere w 100 ml, 250 ml i 500 ml, także 1 kg), i proponuje połączenie ich w jedną grupę: jeden zapach = jedna grupa, a warianty to pojemności. Zdjęcie i cena grupy pochodzą z wariantu 500 ml (albo najbliższego 500 ml); wariant główny można zmienić jednym kliknięciem w pojemność, a nazwę grupy poprawić przed utworzeniem. Dostępne są filtry „Olejki i zapachy” oraz „Bez zdjęcia głównego”, a grupy tworzy się zbiorczo. Zakładka „Utworzone” pozwala odświeżyć zdjęcie grupy, gdy wariant główny dostanie nowe zdjęcie, oraz rozwiązać grupę (produkty zostają osobno). Synchronizacja stanów z WAPRO sumuje stan wariantów, a cenę grupy bierze z wariantu głównego. Na liście katalogu warianty są pokazane tylko wewnątrz grupy.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-20',
+    title: 'Każdy produkt ma znacznik B lub W; warianty grup nie dublują się na liście',
+    description:
+      'Znacznik „W” (pomarańczowy) pojawia się teraz przy każdym produkcie z Mag WAPRO, którego nie ma jeszcze w BaseLinkerze, a „B” (niebieski) przy każdym powiązanym z ofertą — dzięki temu każdy produkt ma jeden z dwóch znaczników (wcześniej „W” miały tylko pozycje bez zdjęcia z importu). Grupy mają własny znacznik „Grupa”. Na liście katalogu produkty będące wariantami grupy są chowane, gdy sama grupa jest na liście (np. po wpisaniu „dysza wody 1/4” widać grupę, a jej warianty są w środku); wyszukiwanie po SKU lub EAN konkretnego wariantu nadal go pokazuje.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-20',
+    title: 'Standard nazw produktów: kontrola i poprawianie nazw jednym kliknięciem',
+    description:
+      'Nowa sekcja „Standard nazw” w menu pilnuje wzoru PRODUCENT Nazwa własna Pojemność - krótki opis, do 60 znaków (celujemy w 50). Wykrywa: nazwy dłuższe niż 60 znaków, brak producenta na początku, inny zapis marki niż w pozostałych produktach marki, powtórzoną markę, brak pojemności (tylko tam, gdzie ma sens — akcesoria i części są pomijane), nieprawidłowy zapis pojemności (5L, 750ml, 20kg bez spacji), pojemność w złym miejscu, złe separatory, zbędne spacje, nazwy pisane wersalikami i zbyt krótkie. Dla każdej nazwy powstaje propozycja poprawki, którą można edytować; poprawki „bezpieczne” (sam porządek zapisu) zaznaczysz jednym przyciskiem, a skracanie opisu, dopisywanie producenta i zmiany wielkości liter są oznaczone do przeglądu. Zastosowanie jest jedną partią do cofnięcia w Logi → Operacje masowe. Które marki wymagamy w nazwie, ustawiasz w panelu „Marki w nazwach” (dostawcy i części typu HYDROFLEX są pomijane automatycznie); pojedynczy produkt można pominąć jako celowo nietypowy. Limit długości tytułu w walidacjach jakości zmieniono z 75 na 60 znaków.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-20',
+    title: 'Zmiany w czasie: przegląd cen całego katalogu, alerty marży i wykres marży',
+    description:
+      'Zakładka „Zmiany w czasie” ma teraz dwa widoki. „Przegląd zmian cen” pokazuje wszystkie produkty, którym zmieniła się cena w wybranym okresie (24 h, 7 dni, 30 dni, wszystko): cenę zakupu i sprzedaży netto było → jest z procentem zmiany, marżę przed i po oraz kiedy to się stało; liczniki podwyżek i obniżek, filtry kierunku i tekstowy oraz eksport do CSV. Alerty marży wskazują: sprzedaż poniżej zakupu, marżę poniżej ustawionego progu, wzrost ceny zakupu przy niezmienionej sprzedaży i duże skoki cen (możliwe błędy w WAPRO); progi (minimalna marża, skok w %) ustawiasz przyciskiem „Progi alertów”. Kliknięcie produktu otwiera „Historię produktu”, gdzie do wykresów cen i stanu doszedł wykres „Marża w czasie” (w % i w zł).',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-20',
+    title: 'Cienkie paski przewijania bez białego tła',
+    description:
+      'W całym katalogu paski przewijania są teraz smukłe i przezroczyste: widoczny jest tylko zaokrąglony uchwyt (jak w nowoczesnych przeglądarkach), bez białego tła i strzałek. Uchwyt lekko podświetla się po najechaniu.',
+    tag: 'poprawka',
+  },
+  {
     date: '2026-10-19',
     title: 'Nowa strona startowa: powitanie, wyszukiwarka, zdrowie katalogu i proponowany następny krok',
     description:

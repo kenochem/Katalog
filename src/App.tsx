@@ -14,8 +14,10 @@ import {
   FolderOpen,
   ScanBarcode,
   Boxes,
+  Columns2,
   AlertTriangle,
   EyeOff,
+  List,
 } from 'lucide-react';
 import type { Product, Kit, View, CatalogType, CatalogListFilter } from './types';
 import { CATALOG_LABELS, deriveCategories } from './types';
@@ -25,7 +27,7 @@ import {
   recordWaproSyncError,
   recordWaproSyncStarted,
 } from './lib/syncNotifications';
-import { fetchProducts, fetchKits, getProductImage, updateProduct, invalidateProductsCache, productListSignature, setProductsHidden } from './lib/products';
+import { fetchProductsBySkus, fetchProducts, fetchKits, getProductImage, updateProduct, invalidateProductsCache, productListSignature, setProductsHidden } from './lib/products';
 import { getProductSearchIndex } from './lib/productSearchIndex';
 import { isCatalogSearchPending, useDebouncedCatalogSearch } from './lib/useDebouncedCatalogSearch';
 import {
@@ -193,8 +195,17 @@ const CatalogChangelogView = lazy(() =>
 const AttributesView = lazy(() =>
   import('./components/AttributesView').then((m) => ({ default: m.AttributesView })),
 );
+const VariantGroupsView = lazy(() =>
+  import('./components/VariantGroupsView').then((m) => ({ default: m.VariantGroupsView })),
+);
+const NameStandardView = lazy(() =>
+  import('./components/NameStandardView').then((m) => ({ default: m.NameStandardView })),
+);
 const RulesView = lazy(() =>
   import('./components/RulesView').then((m) => ({ default: m.RulesView })),
+);
+const AssortmentStudio = lazy(() =>
+  import('./components/AssortmentStudio').then((m) => ({ default: m.AssortmentStudio })),
 );
 const CategoriesView = lazy(() =>
   import('./components/CategoriesView').then((m) => ({ default: m.CategoriesView })),
@@ -214,18 +225,19 @@ const CATALOG_LIST_FILTER_KEY = 'katalog-catalog-list-filter';
 const SORT_STORAGE_KEY = 'katalog-sort';
 const GRID_DENSITY_KEY = 'katalog-grid-density';
 
-type GridDensity = 'sm' | 'md' | 'lg';
+type GridDensity = 'sm' | 'md' | 'lg' | 'list';
 
 function loadGridDensity(): GridDensity {
   const cached = getCachedCatalogPreferences().gridDensity;
-  if (cached === 'sm' || cached === 'md' || cached === 'lg') return cached;
+  if (cached === 'sm' || cached === 'md' || cached === 'lg' || cached === 'list') return cached;
   try {
     const v = localStorage.getItem(GRID_DENSITY_KEY);
-    if (v === 'sm' || v === 'md' || v === 'lg') return v;
+    if (v === 'sm' || v === 'md' || v === 'lg' || v === 'list') return v;
   } catch {
     /* ignore */
   }
-  return 'md';
+  // pierwsze wejście na telefonie: czytelna lista zamiast dużych kafelków
+  return typeof window !== 'undefined' && window.innerWidth < 640 ? 'list' : 'md';
 }
 
 const GRID_CLASS: Record<GridDensity, string> = {
@@ -233,6 +245,8 @@ const GRID_CLASS: Record<GridDensity, string> = {
   md: 'grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7',
   /** Duże = mniej w rzędzie, większe zdjęcia (karty pionowe). */
   lg: 'grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3',
+  /** Wiersze: jedna kolumna na telefonie, na większych ekranach 2–3 kolumny. */
+  list: 'grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3',
 };
 
 
@@ -290,6 +304,35 @@ export default function App() {
     loadSavedCatalogListFilter,
   );
   const [view, setView] = useState<View>(() => getInitialView());
+  // Podzielony ekran (tylko duże ekrany): prawy panel pokazuje wybrany widok obok głównego
+  const [splitOn, setSplitOn] = useState<boolean>(() => {
+    try { return localStorage.getItem('kenochem.split.on') === '1'; } catch { return false; }
+  });
+  const [draggingView, setDraggingView] = useState<View | null>(null);
+  useEffect(() => {
+    const onStart = (e: DragEvent) => {
+      const el = (e.target as HTMLElement | null)?.closest?.('[data-nav-view]') as HTMLElement | null;
+      if (el?.dataset.navView) setDraggingView(el.dataset.navView as View);
+    };
+    const onEnd = () => setDraggingView(null);
+    document.addEventListener('dragstart', onStart);
+    document.addEventListener('dragend', onEnd);
+    document.addEventListener('drop', onEnd);
+    return () => {
+      document.removeEventListener('dragstart', onStart);
+      document.removeEventListener('dragend', onEnd);
+      document.removeEventListener('drop', onEnd);
+    };
+  }, []);
+  const [splitView, setSplitView] = useState<View>(() => {
+    try { return (localStorage.getItem('kenochem.split.view') as View) || 'variant-groups'; } catch { return 'variant-groups'; }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('kenochem.split.on', splitOn ? '1' : '0');
+      localStorage.setItem('kenochem.split.view', splitView);
+    } catch { /* brak dostępu do storage */ }
+  }, [splitOn, splitView]);
   const [search, setSearch] = useState('');
   const handleSearchChange = useCallback((value: string) => {
     setSearch(value);
@@ -327,6 +370,8 @@ export default function App() {
   const [restoreHiddenBusyId, setRestoreHiddenBusyId] = useState<string | null>(null);
   const [categoryBusyId, setCategoryBusyId] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  /** Grupa, z której otwarto wariant — pozwala wrócić do grupy i przeklikiwać warianty. */
+  const [groupBack, setGroupBack] = useState<Product | null>(null);
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   /** Gotowy filtr listy „Uzupełnianie danych” (np. z podpowiedzi w Postępach): rodzaje braków i kategoria. */
@@ -373,7 +418,7 @@ export default function App() {
           /* ignore */
         }
       }
-      if (c?.gridDensity === 'sm' || c?.gridDensity === 'md' || c?.gridDensity === 'lg') {
+      if (c?.gridDensity === 'sm' || c?.gridDensity === 'md' || c?.gridDensity === 'lg' || c?.gridDensity === 'list') {
         setGridDensity(c.gridDensity);
         try {
           localStorage.setItem(GRID_DENSITY_KEY, c.gridDensity);
@@ -530,7 +575,10 @@ export default function App() {
     if (!roleCan(role, 'viewProgress') && view === 'catalog-hidden') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'manufacturers') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'categories') setView(fallback);
+    if (!roleCan(role, 'viewProgress') && view === 'assortment') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'rules') setView(fallback);
+    if (!roleCan(role, 'viewProgress') && view === 'names') setView(fallback);
+    if (!roleCan(role, 'viewProgress') && view === 'variant-groups') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'attributes') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'small-images') setView(fallback);
     if (!roleCan(role, 'viewPrices') && view === 'promotions') setView(fallback);
@@ -717,12 +765,17 @@ export default function App() {
 
   useEffect(() => {
     if (opsStandalone || mode !== 'signed_in' || !user?.id || allProducts.length === 0) return;
-    const stats = computeCatalogStats(allProducts);
-    seedCatalogAlerts(user.id, {
-      lowStock: stats.lowStock,
-      outOfStock: stats.outOfStock,
-      withoutImage: stats.withoutImage,
-    });
+    const userId = user.id;
+    // liczymy po chwili ciszy (bez blokowania interakcji po każdej edycji produktu)
+    const t = window.setTimeout(() => {
+      const stats = computeCatalogStats(allProducts);
+      seedCatalogAlerts(userId, {
+        lowStock: stats.lowStock,
+        outOfStock: stats.outOfStock,
+        withoutImage: stats.withoutImage,
+      });
+    }, 2500);
+    return () => window.clearTimeout(t);
   }, [opsStandalone, mode, user?.id, allProducts]);
 
   useEffect(() => {
@@ -1187,6 +1240,7 @@ export default function App() {
       baselinkerFilter,
       waproMagFilter,
       visibilityFilter,
+      collapseGroupMembers: true,
     });
   }, [products, allProducts, debouncedSearch, category, manufacturer, sort, stockFilter, imageFilter, knowledgeFilter, baselinkerFilter, waproMagFilter, visibilityFilter, view, favoriteSet, reservedVersion, promosVersion]);
 
@@ -1423,6 +1477,28 @@ export default function App() {
     },
     [],
   );
+
+  const handleApplyNames = useCallback(async (items: { product: Product; name: string }[]) => {
+    const failed: string[] = [];
+    const run = async () => {
+      for (let i = 0; i < items.length; i += 8) {
+        await Promise.all(
+          items.slice(i, i + 8).map(async ({ product, name }) => {
+            try {
+              await updateProduct(product.id, { displayName: name });
+              patchProductInCache(product.id, { displayName: name });
+            } catch (err) {
+              console.error(err);
+              failed.push(product.sku);
+            }
+          }),
+        );
+      }
+    };
+    await batchIfMany(items.length, `Standard nazw: ${items.length} produktów`, run);
+    showToast(failed.length ? `Zmieniono ${items.length - failed.length}, błędy: ${failed.length}` : `Zmieniono nazwy: ${items.length}`, failed.length ? 'error' : 'ok', 4000);
+    return { failed };
+  }, []);
 
   const handleBulkEditDone = useCallback((res: { patches: { id: string; patch: Partial<Product> }[] }) => {
     for (const { id, patch } of res.patches) patchProductInCache(id, patch);
@@ -1693,7 +1769,535 @@ export default function App() {
     return <LoginGate />;
   }
 
+  const canSplit = !embeddedInHub && isCatalogProduct() && !opsStandalone && !sellStandalone && ['catalog', 'favorites', 'home', 'variant-groups', 'groups', 'attributes', 'names', 'rules', 'categories', 'assortment', 'manufacturers', 'catalog-decisions', 'catalog-hidden', 'small-images', 'new-products', 'history', 'library', 'promotions', 'kits', 'logs', 'updates', 'progress'].includes(view);
+  const splitChoices: { id: View; label: string }[] = [
+    { id: 'variant-groups', label: 'Łączenie w grupy' },
+    { id: 'groups', label: 'Grupy produktów' },
+    ...(roleCan(role, 'viewProgress')
+      ? ([
+          { id: 'catalog-decisions', label: 'Uzupełnianie danych' },
+          { id: 'attributes', label: 'Atrybuty' },
+          { id: 'names', label: 'Standard nazw' },
+          { id: 'assortment', label: 'Porządkowanie' },
+          { id: 'categories', label: 'Kategorie' },
+          { id: 'manufacturers', label: 'Producenci' },
+          { id: 'small-images', label: 'Zdjęcia do poprawy' },
+          { id: 'catalog-hidden', label: 'Ukryte' },
+          { id: 'history', label: 'Zmiany w czasie' },
+        ] as { id: View; label: string }[])
+      : []),
+    { id: 'new-products', label: 'Nowe produkty' },
+    { id: 'library', label: 'Biblioteka' },
+  ];
+  const splitActive = splitOn && canSplit && view !== 'home';
+  const leftChoices: { id: View; label: string }[] = [
+    { id: 'catalog', label: 'Katalog' },
+    ...(roleCan(role, 'manageFavorites') ? ([{ id: 'favorites', label: 'Ulubione' }] as { id: View; label: string }[]) : []),
+    ...splitChoices,
+  ];
+  const withCurrent = (choices: { id: View; label: string }[], cur: View) =>
+    choices.some((c) => c.id === cur) ? choices : [...choices, { id: cur, label: String(cur) }];
+  /** Upuszczenie kafelka z menu: panel prawy przyjmuje widoki z listy, katalog/ulubione trafiają do lewego. */
+  const dropIntoPane = (target: 'left' | 'right', id: View) => {
+    const rightOk = splitChoices.some((c) => c.id === id);
+    const leftOk = leftChoices.some((c) => c.id === id);
+    setDraggingView(null);
+    if (target === 'right' && rightOk) {
+      setSplitView(id);
+      setSplitOn(true);
+    } else if (target === 'right' && leftOk) {
+      setView(id);
+      setSplitOn(true);
+    } else if (target === 'left' && leftOk) {
+      setView(id);
+    }
+  };
+  const dropZoneProps = (target: 'left' | 'right') => ({
+    onDragOver: (e: React.DragEvent) => {
+      if (!draggingView) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+    },
+    onDrop: (e: React.DragEvent) => {
+      e.preventDefault();
+      const id = (e.dataTransfer.getData('application/x-kenochem-view') || draggingView) as View | null;
+      if (id) dropIntoPane(target, id);
+    },
+  });
+  const dropHint = (label: string) => (
+    <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-2xl border-2 border-dashed border-brand-500 bg-brand-500/10 text-sm font-semibold text-brand-700 backdrop-blur-[1px] dark:text-brand-200">
+      {label}
+    </div>
+  );
   const showSidebar = !embeddedInHub && view !== 'ops' && view !== 'crm' && view !== 'admin';
+
+  /** Zakładka „Łączenie w grupy” w sekcji Grupy produktów (tworzenie i edycja grup z wariantami). */
+  const renderGroupMerge = () => (
+    <Suspense fallback={<ViewFallback />}>
+      <VariantGroupsView
+        products={activeAllProducts}
+        canEdit={roleCan(role, 'editProduct')}
+        onCreated={(created) =>
+          setCatalogCache((prev) => {
+            const next = { ...prev };
+            for (const g of created) {
+              const cat = g.catalog || 'accessories';
+              next[cat] = [...(next[cat] ?? []), g];
+            }
+            return next;
+          })
+        }
+        onDeleted={handleProductDeleted}
+        onPatched={(id, patch) => patchProductInCache(id, patch)}
+        onOpenProduct={setSelectedProduct}
+      />
+    </Suspense>
+  );
+
+  /** Treść widoku — wywoływana dla panelu głównego i (na dużych ekranach) prawego panelu podzielonego ekranu. */
+  // eslint-disable-next-line @typescript-eslint/no-shadow
+  const renderViewBody = (view: View, setView: (v: View) => void) => (
+        loading && products.length === 0 && !opsStandalone ? (
+          <div className="flex flex-col items-center justify-center py-24">
+            <Loader2 className="h-10 w-10 animate-spin text-brand-500" />
+            <p className="mt-4 text-slate-400">Ładowanie — {branding.headerTitle}...</p>
+          </div>
+        ) : error && products.length === 0 && allProducts.length === 0 ? (
+          <div className="rounded-2xl border border-red-900/50 bg-red-950/30 p-6 text-center">
+            <p className="text-red-300">{error}</p>
+            <button
+              type="button"
+              onClick={loadData}
+              className="mt-4 rounded-xl bg-brand-600 px-4 py-2 text-sm text-white hover:bg-brand-500"
+            >
+              Spróbuj ponownie
+            </button>
+          </div>
+        ) : view === 'home' && isCatalogProduct() ? (
+          <CatalogHomeView
+            allProducts={activeAllProducts}
+            missingImagesCount={missingImages.length}
+            decisionCount={catalogDecisionRows.length}
+            quickActions={catalogHomeQuickActions}
+            userName={displayLabel && !displayLabel.includes('@') && displayLabel !== 'Konto' ? displayLabel.trim().split(/\s+/)[0] : undefined}
+            onSearch={(q) => {
+              if (q) setSearch(q);
+              setCatalogFilter('all');
+              setView('catalog');
+            }}
+            onOpenStats={() => setView('progress')}
+            onOpenDecisions={(kinds) => openDecisions(kinds ?? [])}
+            onOpenUpdates={() => setView('updates')}
+            onOpenCatalog={() => setCatalogFilter('all')}
+            onOpenMissingImages={() => openMissingImages()}
+            onOpenScanner={() => setShowScanner(true)}
+            onOpenNews={() => {
+              setView('new-products');
+              setSelectedProduct(null);
+            }}
+            onOpenLibrary={() => {
+              setView('library');
+              setSelectedProduct(null);
+            }}
+            onOpenNotInBaselinker={() => {
+              setBaselinkerFilter('not-linked');
+              setCatalogFilter('all');
+            }}
+          />
+        ) : view === 'catalog' || view === 'favorites' ? (
+          <CatalogView
+            filterSearch={debouncedSearch}
+            isSearchPending={isCatalogSearchPending(search, debouncedSearch)}
+            category={category}
+            onCategoryChange={setCategory}
+            manufacturer={manufacturer}
+            onManufacturerChange={setManufacturer}
+            manufacturerList={manufacturerList}
+            manufacturerCounts={manufacturerCountMap}
+            sort={sort}
+            onSortChange={handleSortChange}
+            stockFilter={stockFilter}
+            onStockFilterChange={setStockFilter}
+            imageFilter={imageFilter}
+            onImageFilterChange={setImageFilter}
+            knowledgeFilter={knowledgeFilter}
+            onKnowledgeFilterChange={setKnowledgeFilter}
+            baselinkerFilter={baselinkerFilter}
+            onBaselinkerFilterChange={setBaselinkerFilter}
+            waproMagFilter={waproMagFilter}
+            onWaproMagFilterChange={setWaproMagFilter}
+            visibilityFilter={visibilityFilter}
+            onVisibilityFilterChange={setVisibilityFilter}
+            filtered={filtered}
+            categoryList={categoryList}
+            categoryCounts={categoryCounts}
+            shopCategoryGroups={shopCategoryGroups}
+            onProductClick={setSelectedProduct}
+            editMode={editMode}
+            favoriteIds={favoriteIds}
+            onToggleFavorite={handleToggleFavorite}
+            onStockDelta={handleStockDelta}
+            stockBusyId={stockBusyId}
+            emptyFavorites={view === 'favorites' && favoriteCount === 0}
+            gridDensity={gridDensity}
+            onGridDensityChange={changeGridDensity}
+            onOrderDelta={canUseCrmModule(role) ? handleOrderDelta : undefined}
+            orderQtys={orderQtys}
+            hideImages={!roleCan(role, 'viewImages')}
+            showPrices={roleCan(role, 'viewPrices')}
+            showCatalogStats={isCatalogProduct()}
+            canExport={roleCan(role, 'exportData')}
+            catalogProducts={products}
+            catalogLabel={catalogExportLabel}
+            useHubFilters={isCatalogProduct()}
+            // podział Akcesoria / Produkty w filtrach usunięty (nikt z niego nie korzystał) — zawsze „Wszystkie”
+            showCatalogKindBadge={catalogListFilter === 'all'}
+            shopLoading={shopLoading}
+            canAddProduct={roleCan(role, 'addProduct')}
+            onAddProduct={() => setShowAddProduct(true)}
+            canToggleEdit={!opsStandalone && !sellStandalone && roleCan(role, 'editStock')}
+            onToggleEdit={() => setEditMode((v) => !v)}
+            collectionUserKey={collectionUserKey || undefined}
+            onCollectionsChange={() => setCollectionsRevision((r) => r + 1)}
+          />
+        ) : view === 'collections' && isCatalogProduct() && collectionUserKey ? (
+          <Suspense fallback={<ViewFallback />}>
+            <ProductCollectionsView
+              userKey={collectionUserKey}
+              products={allProducts}
+              onOpenProduct={setSelectedProduct}
+              hideImages={!roleCan(role, 'viewImages')}
+              showPrices={roleCan(role, 'viewPrices')}
+              onCollectionsChange={() => setCollectionsRevision((r) => r + 1)}
+            />
+          </Suspense>
+        ) : view === 'catalog-decisions' && isCatalogProduct() ? (
+          <CatalogDecisionView
+            key={`preset-${decisionPreset?.nonce ?? 0}`}
+            products={activeProducts}
+            initialKinds={decisionPreset?.kinds}
+            initialCategory={decisionPreset?.category}
+            initialManufacturer={decisionPreset?.manufacturer}
+            onOpenProduct={setSelectedProduct}
+            onApplyCategory={handleApplyDecisionCategory}
+            categoryBusyId={categoryBusyId}
+            onOpenHidden={() => setView('catalog-hidden')}
+            onOpenManufacturers={() => setView('manufacturers')}
+            onHideProducts={roleCan(role, 'hideProducts') ? handleHideProducts : undefined}
+            onSetExceptions={roleCan(role, 'editProduct') ? handleSetExceptions : undefined}
+            onQuickSave={roleCan(role, 'editProduct') ? handleQuickSave : undefined}
+            onBulkEditDone={roleCan(role, 'editProduct') ? handleBulkEditDone : undefined}
+            canEditPrices={roleCan(role, 'viewPrices') && roleCan(role, 'editProduct')}
+            canExport={roleCan(role, 'exportData')}
+          />
+        ) : view === 'attributes' && isCatalogProduct() ? (
+          <Suspense fallback={<ViewFallback />}>
+            <AttributesView
+              products={activeAllProducts}
+              canEdit={roleCan(role, 'manageCategories')}
+              onPatched={(patches) => {
+                for (const { id, patch } of patches) patchProductInCache(id, patch);
+              }}
+            />
+          </Suspense>
+        ) : view === 'variant-groups' && isCatalogProduct() ? (
+          <InlineErrorBoundary label="Grupy produktów">
+            <Suspense fallback={<ViewFallback />}>
+              <ProductGroupsView
+                products={activeAllProducts}
+                canEdit={roleCan(role, 'editProduct')}
+                who={displayLabel}
+                hideImages={!roleCan(role, 'viewImages')}
+                onOpenProduct={setSelectedProduct}
+                renderMerge={renderGroupMerge}
+                initialTab="merge"
+              />
+            </Suspense>
+          </InlineErrorBoundary>
+        ) : view === 'names' && isCatalogProduct() ? (
+          <Suspense fallback={<ViewFallback />}>
+            <NameStandardView
+              products={activeAllProducts}
+              canEdit={roleCan(role, 'editProduct')}
+              onApply={handleApplyNames}
+              onSetExceptions={roleCan(role, 'editProduct') ? handleSetExceptions : undefined}
+              onOpenProduct={setSelectedProduct}
+            />
+          </Suspense>
+        ) : view === 'rules' && isCatalogProduct() ? (
+          <Suspense fallback={<ViewFallback />}>
+            <RulesView
+              products={activeAllProducts}
+              canEdit={roleCan(role, 'manageRules')}
+              onApplied={(rule, res) => {
+                for (const { id, patch } of res.patches) patchProductInCache(id, patch);
+                for (const id of res.hiddenIds) patchProductInCache(id, (p) => ({ ...p, meta: { ...(p.meta ?? {}), catalogHidden: true } }));
+                for (const id of res.exceptionIds) patchProductInCache(id, (p) => ({ ...p, meta: { ...(p.meta ?? {}), dataExceptions: [...new Set([...(p.meta?.dataExceptions ?? []), ...(rule.action.type === 'exception' ? rule.action.kinds : [])])] } }));
+              }}
+            />
+          </Suspense>
+        ) : view === 'assortment' && isCatalogProduct() ? (
+          <Suspense fallback={<ViewFallback />}>
+            <AssortmentStudio
+              products={activeAllProducts}
+              canEditCategories={roleCan(role, 'manageCategories')}
+              canEditManufacturers={roleCan(role, 'manageManufacturers')}
+              onPatched={(patches) => {
+                for (const { id, patch } of patches) patchProductInCache(id, patch);
+              }}
+              onShowCategory={(name) => {
+                setCategory(name);
+                setView('catalog');
+              }}
+              onShowManufacturer={(name) => {
+                setManufacturer(name);
+                setView('catalog');
+              }}
+            />
+          </Suspense>
+        ) : view === 'categories' && isCatalogProduct() ? (
+          <Suspense fallback={<ViewFallback />}>
+            <CategoriesView
+              products={activeAllProducts}
+              canEdit={roleCan(role, 'manageCategories')}
+              onShowProducts={(name) => {
+                setCategory(name);
+                setView('catalog');
+              }}
+            />
+          </Suspense>
+        ) : view === 'manufacturers' && isCatalogProduct() ? (
+          <Suspense fallback={<ViewFallback />}>
+            <ManufacturersView
+              products={activeAllProducts}
+              canEdit={roleCan(role, 'manageManufacturers')}
+              onShowProducts={(name) => {
+                setManufacturer(name);
+                setView('catalog');
+              }}
+            />
+          </Suspense>
+
+        ) : view === 'catalog-hidden' && isCatalogProduct() ? (
+          <Suspense fallback={<ViewFallback />}>
+            <CatalogHiddenView
+              products={hiddenProducts}
+              restoringId={restoreHiddenBusyId}
+              onOpenProduct={setSelectedProduct}
+              onRestoreProduct={roleCan(role, 'hideProducts') ? handleRestoreHiddenProduct : undefined}
+              onRestoreMany={roleCan(role, 'hideProducts') ? handleRestoreHiddenMany : undefined}
+              onChangeReason={roleCan(role, 'hideProducts') ? handleHideProducts : undefined}
+              canExport={roleCan(role, 'exportData')}
+            />
+          </Suspense>
+        ) : view === 'logs' && isCatalogProduct() ? (
+          <Suspense fallback={<ViewFallback />}>
+            <CatalogLogsView
+              userId={user?.id}
+              onOpenSku={(sku) => {
+                const key = sku.toUpperCase();
+                const hit = allProducts.find((p) => p.sku.toUpperCase() === key);
+                if (hit) setSelectedProduct(hit);
+                else void fetchProductsBySkus([key]).then((r) => { if (r[0]) setSelectedProduct(r[0]); });
+              }}
+            />
+          </Suspense>
+        ) : view === 'history' && isCatalogProduct() ? (
+          <Suspense fallback={<ViewFallback />}>
+            <CatalogHistoryView products={activeAllProducts} />
+          </Suspense>
+        ) : view === 'new-products' && isCatalogProduct() ? (
+          <Suspense fallback={<ViewFallback />}>
+            <CatalogNewProductsView
+              gridDensity={gridDensity === 'list' ? 'md' : gridDensity}
+              hideImages={!roleCan(role, 'viewImages')}
+              showPrices={roleCan(role, 'viewPrices')}
+              onProductClick={setSelectedProduct}
+              collectionUserKey={collectionUserKey || undefined}
+              onCollectionsChange={() => setCollectionsRevision((r) => r + 1)}
+            />
+          </Suspense>
+        ) : view === 'updates' && isCatalogProduct() ? (
+          <Suspense fallback={<ViewFallback />}>
+            <CatalogChangelogView />
+          </Suspense>
+        ) : view === 'library' ? (
+          <Suspense fallback={<ViewFallback />}>
+            <LibraryView />
+          </Suspense>
+        ) : view === 'warehouse' && isStockProduct() ? (
+          <Suspense fallback={<ViewFallback />}>
+            <WarehouseHubPanel
+              products={allProducts}
+              labelQueueCount={labelQueue.length}
+              onOpenLabels={() => {
+                refreshLabelQueue();
+                setView('labels');
+              }}
+              onLocationSaved={handleWarehouseLocationSaved}
+            />
+          </Suspense>
+        ) : view === 'labels' ? (
+          <LabelStudioView
+            products={activeAllProducts}
+            queue={labelQueue}
+            onQueueChange={refreshLabelQueue}
+          />
+        ) : view === 'admin' && canAccessAdminPanel(role) && !embeddedInHub ? (
+          <Suspense fallback={<ViewFallback />}>
+            <AdminHubPanel
+              onBack={() => setView(opsStandalone ? 'ops' : 'catalog')}
+              backLabel={opsStandalone ? 'Wroc do Operacji' : undefined}
+              title={opsStandalone ? 'Administracja Operacji' : undefined}
+              description={
+                opsStandalone
+                  ? 'Uzytkownicy, uprawnienia i kontrola dostepu do narzedzi finansowo-ksiegowych.'
+                  : undefined
+              }
+              product={opsStandalone ? 'ops' : 'catalog'}
+            />
+          </Suspense>
+        ) : view === 'crm' && canUseCrmModule(role) && CrmHubView ? (
+          <Suspense fallback={<ViewFallback />}>
+            <CrmHubView
+              authorLabel={displayLabel}
+              displayLabel={displayLabel}
+              roleLabel={ROLE_LABELS[role]}
+              products={allProducts}
+              cloudEnabled={mode === 'signed_in'}
+              orderCount={orderCount}
+              onChanged={refreshOrderCount}
+              onOpenCatalog={sellStandalone ? undefined : () => setView('catalog')}
+            />
+          </Suspense>
+        ) : view === 'ops' && canViewOpsModule(role) && OpsHubView ? (
+          <Suspense fallback={<ViewFallback />}>
+            <OpsHubView />
+          </Suspense>
+        ) : view === 'kits' && roleCan(role, 'manageKits') ? (
+          <Suspense fallback={<ViewFallback />}>
+            <KitsView
+              kits={catalogKits}
+              products={allProducts}
+              onKitsChange={loadData}
+              canAddToOrder={canUseCrmModule(role)}
+              onOrderDraftChange={refreshOrderCount}
+              canSyncBl={roleCan(role, 'manageBaselinker')}
+              canEdit={roleCan(role, 'editProduct')}
+              showPrices={roleCan(role, 'viewPrices')}
+            />
+          </Suspense>
+        ) : view === 'progress' ? (
+          <Suspense fallback={<ViewFallback />}>
+            <CatalogProgressView
+              products={activeProducts}
+              onOpenDecisions={openDecisions}
+              onOpenProduct={setSelectedProduct}
+              onOpenView={setView}
+            />
+
+          </Suspense>
+        ) : view === 'profile' && isCatalogProduct() ? (
+          <InlineErrorBoundary label="Mój profil">
+            <Suspense fallback={<ViewFallback />}>
+              <UserProfileView
+                products={activeAllProducts}
+                gridDensity={gridDensity}
+                onGridDensityChange={changeGridDensity}
+                onOpenProduct={setSelectedProduct}
+                onOpenView={setView}
+              />
+            </Suspense>
+          </InlineErrorBoundary>
+        ) : view === 'groups' && isCatalogProduct() ? (
+          <InlineErrorBoundary label="Grupy produktów">
+            <Suspense fallback={<ViewFallback />}>
+            <ProductGroupsView
+              products={activeAllProducts}
+              canEdit={roleCan(role, 'editProduct')}
+              who={displayLabel}
+              hideImages={!roleCan(role, 'viewImages')}
+              onOpenProduct={setSelectedProduct}
+              renderMerge={renderGroupMerge}
+            />
+            </Suspense>
+          </InlineErrorBoundary>
+        ) : view === 'promotions' && isCatalogProduct() ? (
+          <InlineErrorBoundary label="Promocje">
+            <PromotionsView
+              products={activeAllProducts}
+              canEdit={roleCan(role, 'managePromotions')}
+              canSeeMargins={roleCan(role, 'viewPrices')}
+              onOpenLabels={() => setView('labels')}
+            />
+          </InlineErrorBoundary>
+        ) : view === 'small-images' && isCatalogProduct() ? (
+          <InlineErrorBoundary label="Zdjęcia do poprawy">
+            <CatalogSmallImagesView
+              products={activeProducts}
+              onProductClick={setSelectedProduct}
+              onImageUpdated={handleImageUpdated}
+              canEdit={roleCan(role, 'uploadImage')}
+              canBaselinker={roleCan(role, 'manageBaselinker')}
+              onProductPatched={(id, patch) => patchProductInCache(id, patch)}
+            />
+          </InlineErrorBoundary>
+        ) : (
+          <CatalogDecisionView
+            key={`preset-${decisionPreset?.nonce ?? 0}`}
+            products={activeProducts}
+            initialKinds={decisionPreset?.kinds ?? ['photo']}
+            initialCategory={decisionPreset?.category}
+            initialManufacturer={decisionPreset?.manufacturer}
+            onOpenProduct={setSelectedProduct}
+            onApplyCategory={handleApplyDecisionCategory}
+            categoryBusyId={categoryBusyId}
+            onOpenHidden={() => setView('catalog-hidden')}
+            onOpenManufacturers={() => setView('manufacturers')}
+            onHideProducts={roleCan(role, 'hideProducts') ? handleHideProducts : undefined}
+            onSetExceptions={roleCan(role, 'editProduct') ? handleSetExceptions : undefined}
+            onQuickSave={roleCan(role, 'editProduct') ? handleQuickSave : undefined}
+            onBulkEditDone={roleCan(role, 'editProduct') ? handleBulkEditDone : undefined}
+            canEditPrices={roleCan(role, 'viewPrices') && roleCan(role, 'editProduct')}
+            canExport={roleCan(role, 'exportData')}
+          />
+        )
+  );
+
+  // przejścia między wariantami grupy w podglądzie produktu
+  const variantNav = (() => {
+    if (!selectedProduct || selectedProduct.isGroup) return null;
+    const mySku = selectedProduct.sku.toUpperCase();
+    // grupa, z której wchodzimy; gdy produkt otwarto z katalogu — pierwsza grupa, do której należy
+    const parent =
+      groupBack && groupBack.id !== selectedProduct.id
+        ? groupBack
+        : (allProducts.find((g) => g.isGroup && (g.variants ?? []).some((v) => String(v.sku).toUpperCase() === mySku)) ?? null);
+    if (!parent) return null;
+    const groupBackNow = parent;
+    const skus = (groupBackNow.variants ?? []).map((v) => String(v.sku).toUpperCase());
+    const idx = skus.indexOf(mySku);
+    if (idx < 0) return null;
+    const bySku = new Map(allProducts.map((p) => [p.sku.toUpperCase(), p] as const));
+    const go = (to: number) => {
+      const p = bySku.get(skus[to]);
+      if (p) setSelectedProduct(p);
+      else void fetchProductsBySkus([skus[to]]).then((r) => { if (r[0]) setSelectedProduct(r[0]); });
+    };
+    return {
+      groupName: groupBackNow.displayName || groupBackNow.name,
+      index: idx,
+      total: skus.length,
+      items: (groupBackNow.variants ?? []).map((v) => String(bySku.get(String(v.sku).toUpperCase())?.displayName || v.name || v.sku)),
+      onJump: go,
+      onBack: () => {
+        setSelectedProduct(groupBackNow);
+        setGroupBack(null);
+      },
+      onPrev: idx > 0 ? () => go(idx - 1) : undefined,
+      onNext: idx < skus.length - 1 ? () => go(idx + 1) : undefined,
+    };
+  })();
 
   const appShell = (
     <div
@@ -1718,7 +2322,7 @@ export default function App() {
       >
       <header className="border-b border-slate-800/80">
         {/* Mobile: logo + switch; Desktop (lg+): pełny pasek */}
-        <div className="grid gap-2 px-3 py-2 sm:px-4 lg:grid-cols-[minmax(19rem,auto)_minmax(18rem,34rem)_auto] lg:items-center lg:gap-3 lg:py-3 xl:grid-cols-[minmax(22rem,auto)_minmax(22rem,42rem)_auto] xl:px-6">
+        <div className="grid grid-cols-1 gap-2 px-3 py-2 sm:px-4 lg:grid-cols-[minmax(19rem,auto)_minmax(18rem,34rem)_auto] lg:items-center lg:gap-3 lg:py-3 xl:grid-cols-[minmax(22rem,auto)_minmax(22rem,42rem)_auto] xl:px-6">
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <a
               href="https://kenochem.com"
@@ -1764,7 +2368,7 @@ export default function App() {
               modeSwitcherColumns(canViewOpsModule(role), canUseCrmModule(role)) >
                 0 ? (
               <div
-                className="grid gap-1 rounded-xl bg-slate-900 p-1 ring-1 ring-slate-800"
+                className="grid grid-cols-1 gap-1 rounded-xl bg-slate-900 p-1 ring-1 ring-slate-800"
                 style={{
                   gridTemplateColumns: `repeat(${modeSwitcherColumns(
                     canViewOpsModule(role),
@@ -1806,7 +2410,7 @@ export default function App() {
             modeSwitcherColumns(canViewOpsModule(role), canUseCrmModule(role)) >
               0 ? (
             <div
-              className="grid gap-1 rounded-xl bg-slate-900 p-1 ring-1 ring-slate-800"
+              className="grid grid-cols-1 gap-1 rounded-xl bg-slate-900 p-1 ring-1 ring-slate-800"
               style={{
                 gridTemplateColumns: `repeat(${modeSwitcherColumns(
                   canViewOpsModule(role),
@@ -1961,352 +2565,75 @@ export default function App() {
             }}
           />
         )}
-        {loading && products.length === 0 && !opsStandalone ? (
-          <div className="flex flex-col items-center justify-center py-24">
-            <Loader2 className="h-10 w-10 animate-spin text-brand-500" />
-            <p className="mt-4 text-slate-400">Ładowanie — {branding.headerTitle}...</p>
+        {canSplit && view !== 'home' && !splitActive && draggingView && (
+          <div
+            className="fixed bottom-4 right-4 top-20 z-40 hidden w-[calc(50%-10rem)] items-center justify-center rounded-2xl border-2 border-dashed border-brand-500 bg-brand-500/10 text-center text-sm font-semibold text-brand-700 backdrop-blur-sm dark:text-brand-200 xl:flex"
+            {...dropZoneProps('right')}
+          >
+            Upuść tutaj, aby otworzyć obok
           </div>
-        ) : error && products.length === 0 && allProducts.length === 0 ? (
-          <div className="rounded-2xl border border-red-900/50 bg-red-950/30 p-6 text-center">
-            <p className="text-red-300">{error}</p>
+        )}
+        {canSplit && view !== 'home' && !splitActive && (
+          <div className="mb-2 hidden justify-end xl:flex">
             <button
               type="button"
-              onClick={loadData}
-              className="mt-4 rounded-xl bg-brand-600 px-4 py-2 text-sm text-white hover:bg-brand-500"
+              onClick={() => setSplitOn(true)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              title="Pokaż drugi widok obok (np. konfigurator grup)"
             >
-              Spróbuj ponownie
+              <Columns2 className="h-4 w-4" /> Podziel ekran
             </button>
           </div>
-        ) : view === 'home' && isCatalogProduct() ? (
-          <CatalogHomeView
-            allProducts={activeAllProducts}
-            missingImagesCount={missingImages.length}
-            decisionCount={catalogDecisionRows.length}
-            quickActions={catalogHomeQuickActions}
-            userName={displayLabel && !displayLabel.includes('@') && displayLabel !== 'Konto' ? displayLabel.trim().split(/\s+/)[0] : undefined}
-            onSearch={(q) => {
-              if (q) setSearch(q);
-              setCatalogFilter('all');
-              setView('catalog');
-            }}
-            onOpenStats={() => setView('progress')}
-            onOpenDecisions={(kinds) => openDecisions(kinds ?? [])}
-            onOpenUpdates={() => setView('updates')}
-            onOpenCatalog={() => setCatalogFilter('all')}
-            onOpenMissingImages={() => openMissingImages()}
-            onOpenScanner={() => setShowScanner(true)}
-            onOpenNews={() => {
-              setView('new-products');
-              setSelectedProduct(null);
-            }}
-            onOpenLibrary={() => {
-              setView('library');
-              setSelectedProduct(null);
-            }}
-            onOpenNotInBaselinker={() => {
-              setBaselinkerFilter('not-linked');
-              setCatalogFilter('all');
-            }}
-          />
-        ) : view === 'catalog' || view === 'favorites' ? (
-          <CatalogView
-            filterSearch={debouncedSearch}
-            isSearchPending={isCatalogSearchPending(search, debouncedSearch)}
-            category={category}
-            onCategoryChange={setCategory}
-            manufacturer={manufacturer}
-            onManufacturerChange={setManufacturer}
-            manufacturerList={manufacturerList}
-            manufacturerCounts={manufacturerCountMap}
-            sort={sort}
-            onSortChange={handleSortChange}
-            stockFilter={stockFilter}
-            onStockFilterChange={setStockFilter}
-            imageFilter={imageFilter}
-            onImageFilterChange={setImageFilter}
-            knowledgeFilter={knowledgeFilter}
-            onKnowledgeFilterChange={setKnowledgeFilter}
-            baselinkerFilter={baselinkerFilter}
-            onBaselinkerFilterChange={setBaselinkerFilter}
-            waproMagFilter={waproMagFilter}
-            onWaproMagFilterChange={setWaproMagFilter}
-            visibilityFilter={visibilityFilter}
-            onVisibilityFilterChange={setVisibilityFilter}
-            filtered={filtered}
-            categoryList={categoryList}
-            categoryCounts={categoryCounts}
-            shopCategoryGroups={shopCategoryGroups}
-            onProductClick={setSelectedProduct}
-            editMode={editMode}
-            favoriteIds={favoriteIds}
-            onToggleFavorite={handleToggleFavorite}
-            onStockDelta={handleStockDelta}
-            stockBusyId={stockBusyId}
-            emptyFavorites={view === 'favorites' && favoriteCount === 0}
-            gridDensity={gridDensity}
-            onGridDensityChange={changeGridDensity}
-            onOrderDelta={canUseCrmModule(role) ? handleOrderDelta : undefined}
-            orderQtys={orderQtys}
-            hideImages={!roleCan(role, 'viewImages')}
-            showPrices={roleCan(role, 'viewPrices')}
-            showCatalogStats={isCatalogProduct()}
-            canExport={roleCan(role, 'exportData')}
-            catalogProducts={products}
-            catalogLabel={catalogExportLabel}
-            useHubFilters={isCatalogProduct()}
-            // podział Akcesoria / Produkty w filtrach usunięty (nikt z niego nie korzystał) — zawsze „Wszystkie”
-            showCatalogKindBadge={catalogListFilter === 'all'}
-            shopLoading={shopLoading}
-            canAddProduct={roleCan(role, 'addProduct')}
-            onAddProduct={() => setShowAddProduct(true)}
-            canToggleEdit={!opsStandalone && !sellStandalone && roleCan(role, 'editStock')}
-            onToggleEdit={() => setEditMode((v) => !v)}
-            collectionUserKey={collectionUserKey || undefined}
-            onCollectionsChange={() => setCollectionsRevision((r) => r + 1)}
-          />
-        ) : view === 'collections' && isCatalogProduct() && collectionUserKey ? (
-          <Suspense fallback={<ViewFallback />}>
-            <ProductCollectionsView
-              userKey={collectionUserKey}
-              products={allProducts}
-              onOpenProduct={setSelectedProduct}
-              hideImages={!roleCan(role, 'viewImages')}
-              showPrices={roleCan(role, 'viewPrices')}
-              onCollectionsChange={() => setCollectionsRevision((r) => r + 1)}
-            />
-          </Suspense>
-        ) : view === 'catalog-decisions' && isCatalogProduct() ? (
-          <CatalogDecisionView
-            key={`preset-${decisionPreset?.nonce ?? 0}`}
-            products={activeProducts}
-            initialKinds={decisionPreset?.kinds}
-            initialCategory={decisionPreset?.category}
-            initialManufacturer={decisionPreset?.manufacturer}
-            onOpenProduct={setSelectedProduct}
-            onApplyCategory={handleApplyDecisionCategory}
-            categoryBusyId={categoryBusyId}
-            onOpenHidden={() => setView('catalog-hidden')}
-            onOpenManufacturers={() => setView('manufacturers')}
-            onHideProducts={roleCan(role, 'hideProducts') ? handleHideProducts : undefined}
-            onSetExceptions={roleCan(role, 'editProduct') ? handleSetExceptions : undefined}
-            onQuickSave={roleCan(role, 'editProduct') ? handleQuickSave : undefined}
-            onBulkEditDone={roleCan(role, 'editProduct') ? handleBulkEditDone : undefined}
-            canEditPrices={roleCan(role, 'viewPrices') && roleCan(role, 'editProduct')}
-            canExport={roleCan(role, 'exportData')}
-          />
-        ) : view === 'attributes' && isCatalogProduct() ? (
-          <Suspense fallback={<ViewFallback />}>
-            <AttributesView products={activeAllProducts} canEdit={roleCan(role, 'manageCategories')} />
-          </Suspense>
-        ) : view === 'rules' && isCatalogProduct() ? (
-          <Suspense fallback={<ViewFallback />}>
-            <RulesView
-              products={activeAllProducts}
-              canEdit={roleCan(role, 'manageRules')}
-              onApplied={(rule, res) => {
-                for (const { id, patch } of res.patches) patchProductInCache(id, patch);
-                for (const id of res.hiddenIds) patchProductInCache(id, (p) => ({ ...p, meta: { ...(p.meta ?? {}), catalogHidden: true } }));
-                for (const id of res.exceptionIds) patchProductInCache(id, (p) => ({ ...p, meta: { ...(p.meta ?? {}), dataExceptions: [...new Set([...(p.meta?.dataExceptions ?? []), ...(rule.action.type === 'exception' ? rule.action.kinds : [])])] } }));
-              }}
-            />
-          </Suspense>
-        ) : view === 'categories' && isCatalogProduct() ? (
-          <Suspense fallback={<ViewFallback />}>
-            <CategoriesView
-              products={activeAllProducts}
-              canEdit={roleCan(role, 'manageCategories')}
-              onShowProducts={(name) => {
-                setCategory(name);
-                setView('catalog');
-              }}
-            />
-          </Suspense>
-        ) : view === 'manufacturers' && isCatalogProduct() ? (
-          <Suspense fallback={<ViewFallback />}>
-            <ManufacturersView
-              products={activeAllProducts}
-              canEdit={roleCan(role, 'manageManufacturers')}
-              onShowProducts={(name) => {
-                setManufacturer(name);
-                setView('catalog');
-              }}
-            />
-          </Suspense>
-
-        ) : view === 'catalog-hidden' && isCatalogProduct() ? (
-          <Suspense fallback={<ViewFallback />}>
-            <CatalogHiddenView
-              products={hiddenProducts}
-              restoringId={restoreHiddenBusyId}
-              onOpenProduct={setSelectedProduct}
-              onRestoreProduct={roleCan(role, 'hideProducts') ? handleRestoreHiddenProduct : undefined}
-              onRestoreMany={roleCan(role, 'hideProducts') ? handleRestoreHiddenMany : undefined}
-              onChangeReason={roleCan(role, 'hideProducts') ? handleHideProducts : undefined}
-              canExport={roleCan(role, 'exportData')}
-            />
-          </Suspense>
-        ) : view === 'logs' && isCatalogProduct() ? (
-          <Suspense fallback={<ViewFallback />}>
-            <CatalogLogsView userId={user?.id} />
-          </Suspense>
-        ) : view === 'history' && isCatalogProduct() ? (
-          <Suspense fallback={<ViewFallback />}>
-            <CatalogHistoryView products={activeAllProducts} />
-          </Suspense>
-        ) : view === 'new-products' && isCatalogProduct() ? (
-          <Suspense fallback={<ViewFallback />}>
-            <CatalogNewProductsView
-              gridDensity={gridDensity}
-              hideImages={!roleCan(role, 'viewImages')}
-              showPrices={roleCan(role, 'viewPrices')}
-              onProductClick={setSelectedProduct}
-              collectionUserKey={collectionUserKey || undefined}
-              onCollectionsChange={() => setCollectionsRevision((r) => r + 1)}
-            />
-          </Suspense>
-        ) : view === 'updates' && isCatalogProduct() ? (
-          <Suspense fallback={<ViewFallback />}>
-            <CatalogChangelogView />
-          </Suspense>
-        ) : view === 'library' ? (
-          <Suspense fallback={<ViewFallback />}>
-            <LibraryView />
-          </Suspense>
-        ) : view === 'warehouse' && isStockProduct() ? (
-          <Suspense fallback={<ViewFallback />}>
-            <WarehouseHubPanel
-              products={allProducts}
-              labelQueueCount={labelQueue.length}
-              onOpenLabels={() => {
-                refreshLabelQueue();
-                setView('labels');
-              }}
-              onLocationSaved={handleWarehouseLocationSaved}
-            />
-          </Suspense>
-        ) : view === 'labels' ? (
-          <LabelStudioView
-            products={activeAllProducts}
-            queue={labelQueue}
-            onQueueChange={refreshLabelQueue}
-          />
-        ) : view === 'admin' && canAccessAdminPanel(role) && !embeddedInHub ? (
-          <Suspense fallback={<ViewFallback />}>
-            <AdminHubPanel
-              onBack={() => setView(opsStandalone ? 'ops' : 'catalog')}
-              backLabel={opsStandalone ? 'Wroc do Operacji' : undefined}
-              title={opsStandalone ? 'Administracja Operacji' : undefined}
-              description={
-                opsStandalone
-                  ? 'Uzytkownicy, uprawnienia i kontrola dostepu do narzedzi finansowo-ksiegowych.'
-                  : undefined
-              }
-              product={opsStandalone ? 'ops' : 'catalog'}
-            />
-          </Suspense>
-        ) : view === 'crm' && canUseCrmModule(role) && CrmHubView ? (
-          <Suspense fallback={<ViewFallback />}>
-            <CrmHubView
-              authorLabel={displayLabel}
-              displayLabel={displayLabel}
-              roleLabel={ROLE_LABELS[role]}
-              products={allProducts}
-              cloudEnabled={mode === 'signed_in'}
-              orderCount={orderCount}
-              onChanged={refreshOrderCount}
-              onOpenCatalog={sellStandalone ? undefined : () => setView('catalog')}
-            />
-          </Suspense>
-        ) : view === 'ops' && canViewOpsModule(role) && OpsHubView ? (
-          <Suspense fallback={<ViewFallback />}>
-            <OpsHubView />
-          </Suspense>
-        ) : view === 'kits' && roleCan(role, 'manageKits') ? (
-          <Suspense fallback={<ViewFallback />}>
-            <KitsView
-              kits={catalogKits}
-              products={allProducts}
-              onKitsChange={loadData}
-              canAddToOrder={canUseCrmModule(role)}
-              onOrderDraftChange={refreshOrderCount}
-              canSyncBl={roleCan(role, 'manageBaselinker')}
-              canEdit={roleCan(role, 'editProduct')}
-              showPrices={roleCan(role, 'viewPrices')}
-            />
-          </Suspense>
-        ) : view === 'progress' ? (
-          <Suspense fallback={<ViewFallback />}>
-            <CatalogProgressView
-              products={activeProducts}
-              onOpenDecisions={openDecisions}
-              onOpenProduct={setSelectedProduct}
-              onOpenView={setView}
-            />
-
-          </Suspense>
-        ) : view === 'profile' && isCatalogProduct() ? (
-          <InlineErrorBoundary label="Mój profil">
-            <Suspense fallback={<ViewFallback />}>
-              <UserProfileView
-                products={activeAllProducts}
-                gridDensity={gridDensity}
-                onGridDensityChange={changeGridDensity}
-                onOpenProduct={setSelectedProduct}
-                onOpenView={setView}
-              />
-            </Suspense>
-          </InlineErrorBoundary>
-        ) : view === 'groups' && isCatalogProduct() ? (
-          <InlineErrorBoundary label="Grupy produktów">
-            <Suspense fallback={<ViewFallback />}>
-            <ProductGroupsView
-              products={activeAllProducts}
-              canEdit={roleCan(role, 'editProduct')}
-              who={displayLabel}
-              hideImages={!roleCan(role, 'viewImages')}
-              onOpenProduct={setSelectedProduct}
-            />
-            </Suspense>
-          </InlineErrorBoundary>
-        ) : view === 'promotions' && isCatalogProduct() ? (
-          <InlineErrorBoundary label="Promocje">
-            <PromotionsView
-              products={activeAllProducts}
-              canEdit={roleCan(role, 'managePromotions')}
-              canSeeMargins={roleCan(role, 'viewPrices')}
-              onOpenLabels={() => setView('labels')}
-            />
-          </InlineErrorBoundary>
-        ) : view === 'small-images' && isCatalogProduct() ? (
-          <InlineErrorBoundary label="Zdjęcia do poprawy">
-            <CatalogSmallImagesView
-              products={activeProducts}
-              onProductClick={setSelectedProduct}
-              onImageUpdated={handleImageUpdated}
-              canEdit={roleCan(role, 'uploadImage')}
-              canBaselinker={roleCan(role, 'manageBaselinker')}
-              onProductPatched={(id, patch) => patchProductInCache(id, patch)}
-            />
-          </InlineErrorBoundary>
+        )}
+        {splitActive ? (
+          <div className="grid min-w-0 gap-4 xl:grid-cols-2">
+            <div className="relative min-w-0 rounded-2xl border border-slate-200 p-3 dark:border-slate-800 xl:max-h-[calc(100dvh-7rem)] xl:overflow-y-auto" {...dropZoneProps('left')}>
+              {draggingView && dropHint('Upuść, aby pokazać tutaj')}
+              <div className="mb-3 flex items-center gap-2">
+                <label className="sr-only" htmlFor="split-left-select">Widok w lewym panelu</label>
+                <select
+                  id="split-left-select"
+                  value={view}
+                  onChange={(e) => setView(e.target.value as View)}
+                  className="input-field min-w-0 flex-1 text-sm font-semibold"
+                >
+                  {withCurrent(leftChoices, view).map((c) => (
+                    <option key={c.id} value={c.id}>{c.label}</option>
+                  ))}
+                </select>
+              </div>
+              {renderViewBody(view, setView)}
+            </div>
+            <div className="relative min-w-0 rounded-2xl border border-slate-200 p-3 dark:border-slate-800 xl:max-h-[calc(100dvh-7rem)] xl:overflow-y-auto" {...dropZoneProps('right')}>
+              {draggingView && dropHint('Upuść, aby pokazać tutaj')}
+              <div className="mb-3 flex items-center gap-2">
+                <label className="sr-only" htmlFor="split-view-select">Widok w prawym panelu</label>
+                <select
+                  id="split-view-select"
+                  value={splitView}
+                  onChange={(e) => setSplitView(e.target.value as View)}
+                  className="input-field min-w-0 flex-1 text-sm font-semibold"
+                >
+                  {withCurrent(splitChoices, splitView).map((c) => (
+                    <option key={c.id} value={c.id}>{c.label}</option>
+                  ))}
+                </select>
+                <button type="button" onClick={() => setSplitOn(false)} className="shrink-0 rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" title="Zamknij podział ekranu" aria-label="Zamknij podział ekranu">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              {loading ? (
+                <ViewFallback />
+              ) : (
+                <MemoPane
+                  render={() => renderViewBody(splitView, setSplitView)}
+                  deps={[splitView, allProducts, activeAllProducts, activeProducts, products, role, selectedProduct, displayLabel, collectionUserKey, catalogKits, decisionPreset, categoryBusyId, editMode]}
+                />
+              )}
+            </div>
+          </div>
         ) : (
-          <CatalogDecisionView
-            key={`preset-${decisionPreset?.nonce ?? 0}`}
-            products={activeProducts}
-            initialKinds={decisionPreset?.kinds ?? ['photo']}
-            initialCategory={decisionPreset?.category}
-            initialManufacturer={decisionPreset?.manufacturer}
-            onOpenProduct={setSelectedProduct}
-            onApplyCategory={handleApplyDecisionCategory}
-            categoryBusyId={categoryBusyId}
-            onOpenHidden={() => setView('catalog-hidden')}
-            onOpenManufacturers={() => setView('manufacturers')}
-            onHideProducts={roleCan(role, 'hideProducts') ? handleHideProducts : undefined}
-            onSetExceptions={roleCan(role, 'editProduct') ? handleSetExceptions : undefined}
-            onQuickSave={roleCan(role, 'editProduct') ? handleQuickSave : undefined}
-            onBulkEditDone={roleCan(role, 'editProduct') ? handleBulkEditDone : undefined}
-            canEditPrices={roleCan(role, 'viewPrices') && roleCan(role, 'editProduct')}
-            canExport={roleCan(role, 'exportData')}
-          />
+          renderViewBody(view, setView)
         )}
 
 
@@ -2330,7 +2657,17 @@ export default function App() {
         <Suspense fallback={null}>
           <ProductDetail
             product={selectedProduct}
-            onClose={() => setSelectedProduct(null)}
+            onClose={() => {
+              setSelectedProduct(null);
+              setGroupBack(null);
+            }}
+            catalogProducts={allProducts}
+            onOpenVariant={(v) => {
+              setGroupBack(selectedProduct);
+              setSelectedProduct(v);
+            }}
+            groupNav={variantNav ?? undefined}
+            onVariantPatched={(id, patch) => patchProductInCache(id, patch)}
             onImageUpdated={handleImageUpdated}
             onProductUpdated={handleProductUpdated}
             onProductDeleted={handleProductDeleted}
@@ -2381,9 +2718,11 @@ export default function App() {
         favoriteCount={favoriteCount}
         labelCount={labelQueue.length}
         orderCount={orderCount}
+        showHome={isCatalogProduct() && !sellStandalone}
         showCatalog={!sellStandalone}
         showCatalogTools={!sellStandalone}
         onMore={() => setShowMobileMore(true)}
+        onScan={() => setShowScanner(true)}
         onView={(v) => {
           if (v === 'labels') refreshLabelQueue();
           if (v === 'missing-images') openMissingImages();
@@ -2409,6 +2748,35 @@ export default function App() {
         collectionsCount={collectionCount}
         showCollections={isCatalogProduct() && !!collectionUserKey}
         newProductsCount={newProductsCount}
+        navigation={
+          showSidebar ? (
+            <LeftSidebarNav
+              variant="embedded"
+              onNavigate={() => setShowMobileMore(false)}
+              view={view}
+              setView={setView}
+              role={role}
+              userId={user?.id}
+              isCatalogProduct={isCatalogProduct()}
+              isStockProduct={isStockProduct()}
+              collectionUserKey={collectionUserKey}
+              productsCount={products.length}
+              favoriteCount={favoriteCount}
+              collectionCount={collectionCount}
+              catalogKitsCount={catalogKits.length}
+              catalogDecisionCount={catalogDecisionRows.length}
+              hiddenProductsCount={hiddenProducts.length}
+              missingImagesCount={missingImages.length}
+              labelQueueCount={labelQueue.length}
+              newProductsCount={newProductsCount}
+              onOpenMissingImages={openMissingImages}
+              onOpenLabels={() => {
+                refreshLabelQueue();
+                setView('labels');
+              }}
+            />
+          ) : undefined
+        }
         onView={(v) => {
           if (v === 'labels') refreshLabelQueue();
           if (v === 'missing-images') openMissingImages();
@@ -2488,6 +2856,15 @@ export default function App() {
   }
 
   return appShell;
+}
+
+/**
+ * Prawy panel podzielonego ekranu: ponownie renderuje się tylko przy zmianie danych (a nie przy każdym znaku
+ * wpisanym w wyszukiwarkę katalogu po lewej).
+ */
+function MemoPane({ render, deps }: { render: () => ReactNode; deps: unknown[] }) {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => render(), deps);
 }
 
 function ViewFallback() {
@@ -2947,6 +3324,7 @@ function CatalogView({
                   { id: 'sm' as const, icon: LayoutGrid, label: 'Małe' },
                   { id: 'md' as const, icon: Rows2, label: 'Średnie' },
                   { id: 'lg' as const, icon: Square, label: 'Duże' },
+                  { id: 'list' as const, icon: List, label: 'Lista' },
                 ] as const
               ).map((opt) => (
                 <button

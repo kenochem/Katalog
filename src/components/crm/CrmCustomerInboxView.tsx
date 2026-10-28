@@ -191,7 +191,7 @@ export function CrmCustomerInboxView({
 
       <InboxFilterBar active={filter} onChange={setFilter} counts={counts} />
 
-      <div className="grid gap-3 lg:min-h-[calc(100dvh-14rem)] lg:grid-cols-5 lg:gap-4">
+      <div className="grid grid-cols-1 gap-3 lg:min-h-[calc(100dvh-14rem)] lg:grid-cols-5 lg:gap-4">
         <ul className={`space-y-1 lg:col-span-2 ${activeThread ? 'hidden lg:block' : ''}`}>
           {filtered.length === 0 ? (
             <li className="rounded-xl border border-dashed border-slate-800 py-10 text-center text-sm text-slate-500">

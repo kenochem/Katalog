@@ -330,7 +330,7 @@ export function AdminBaselinkerSection() {
       )}
 
       {config && (
-        <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
           {(
             [
               ['Token API', config.configured.token ? 'ustawiony' : 'BRAK', config.configured.token],
@@ -387,7 +387,7 @@ export function AdminBaselinkerSection() {
             Automat uruchamia agent na serwerze WAPRO po każdym syncu i wysyła tylko produkty, którym coś się zmieniło.
           </p>
 
-          <div className="grid gap-2 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
             <Toggle
               checked={draft.stockAuto}
               onChange={(v) => setDraft({ ...draft, stockAuto: v })}
@@ -408,7 +408,7 @@ export function AdminBaselinkerSection() {
             />
           </div>
 
-          <div className="grid gap-3 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             <label className="block">
               <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Grupa cenowa BaseLinker (dla cen)

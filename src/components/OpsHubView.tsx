@@ -1032,7 +1032,7 @@ function FinanceOperationsHome({
       />
 
       {current ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <FinanceKpiTile
             label={`Sprzedaz ${monthLabel(current.month)}`}
             value={formatPricePln(current.sprzedaz)}
@@ -1063,7 +1063,7 @@ function FinanceOperationsHome({
       ) : null}
 
       {current ? (
-        <section className="grid gap-3 xl:grid-cols-4">
+        <section className="grid grid-cols-1 gap-3 xl:grid-cols-4">
           <FinanceLaneCard
             title="E-commerce"
             icon={<Store className="h-4 w-4" />}
@@ -1095,7 +1095,7 @@ function FinanceOperationsHome({
         </section>
       ) : null}
 
-      <section className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+      <section className="grid grid-cols-1 gap-5 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-3">
           <SectionTitle
             title="Narzedzia operacji"
@@ -1271,7 +1271,7 @@ function FinanceOperationsHome({
         </div>
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+      <section className="grid grid-cols-1 gap-5 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
           <div className="mb-3 flex items-center justify-between gap-2">
             <SectionTitle
@@ -1477,7 +1477,7 @@ function WorkspaceBuilderPanel({
 
       <SonaxWorkspaceTile onOpen={() => setSonaxOpen(true)} />
 
-      <section className="grid gap-5 xl:grid-cols-[0.82fr_1.18fr]">
+      <section className="grid grid-cols-1 gap-5 xl:grid-cols-[0.82fr_1.18fr]">
         <div className="space-y-4">
           <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
             <SectionTitle
@@ -1577,7 +1577,7 @@ function WorkspaceBuilderPanel({
                   </button>
                 </div>
 
-                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
                   <Field label="Metryka liczbowa">
                     <select
                       value={metricId}
@@ -1616,14 +1616,14 @@ function WorkspaceBuilderPanel({
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <FinanceKpiTile label="Wiersze" value={String(selected.rows.length)} hint="rekordy w planszy" />
                 <FinanceKpiTile label="Suma metryki" value={formatPricePln(metricTotal)} hint={columnName(selected, metricId)} />
                 <FinanceKpiTile label="Srednia" value={formatPricePln(metricAvg)} hint="srednia wartosc wiersza" />
                 <FinanceKpiTile label="Odchylenie" value={formatPricePln(metricSd)} hint="zmiennosc danych" />
               </div>
 
-              <section className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+              <section className="grid grid-cols-1 gap-5 xl:grid-cols-[1.05fr_0.95fr]">
                 <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
                   <SectionTitle
                     title="Wykres planszy"
@@ -1774,7 +1774,7 @@ function AdvancedAnalyticsLab({
         </div>
       </header>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <FinanceKpiTile label="Trend wyniku" value={`${regression.m >= 0 ? '+' : ''}${formatPricePln(regression.m)}/mies.`} hint="simple-statistics: regresja liniowa" tone={regression.m >= 0 ? 'good' : 'bad'} />
         <FinanceKpiTile label="Korelacja" value={correlation.toFixed(2)} hint="sprzedaz vs wynik netto" />
         <FinanceKpiTile label="Anomalie" value={String(anomalie.length)} hint="|z-score| >= 1.4" tone={anomalie.length ? 'warn' : 'good'} />
@@ -1782,7 +1782,7 @@ function AdvancedAnalyticsLab({
         <FinanceKpiTile label="Perspective" value={perspectiveStatus} hint="pivot/datagrid WASM" />
       </div>
 
-      <section className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+      <section className="grid grid-cols-1 gap-5 xl:grid-cols-[1.05fr_0.95fr]">
         <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
           <SectionTitle
             title="ECharts: wynik, sprzedaz i koszty"
@@ -1826,7 +1826,7 @@ function AdvancedAnalyticsLab({
         <AnalyticsTanStackTable rows={rows} sorting={sorting} onSortingChange={setSorting} />
       </section>
 
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         <EngineCard
           title="DuckDB-WASM"
           text="Docelowo: SQL na raportach CSV/Parquet, joiny WAPRO + bank + marketplace i agregacje bez backendu."
@@ -1908,7 +1908,7 @@ function StatsBuilderPanel({
         </div>
       </header>
 
-      <section className="grid gap-5 xl:grid-cols-[0.85fr_1.15fr]">
+      <section className="grid grid-cols-1 gap-5 xl:grid-cols-[0.85fr_1.15fr]">
         <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-4 sm:p-5">
           <SectionTitle title="Ustawienia wykresu" subtitle="Konfiguracja zapisuje sie lokalnie. Pozniej przeniesiemy to do profilu uzytkownika." />
           <div className="mt-4 space-y-3">
@@ -1933,7 +1933,7 @@ function StatsBuilderPanel({
                 ))}
               </div>
             </Field>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Metryka glowna">
                 <select value={metric} onChange={(e) => setMetric(e.target.value as ChartMetric)} className={INPUT_CLS}>
                   {Object.entries(CHART_METRIC_LABELS).map(([id, label]) => (
@@ -2001,7 +2001,7 @@ function StatsBuilderPanel({
             <ChartPreview months={financeMonths} preference={activePref} />
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <FinanceKpiTile
               label="Ostatnia wartosc"
               value={latest ? formatMetric(metricValue(latest, metric), metric) : '-'}
@@ -2048,7 +2048,7 @@ function StatsBuilderPanel({
 
       <section className="rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
         <SectionTitle title="Dane kanalow do analizy" subtitle="Szybkie porownanie kanalow, z ktorych mozna budowac kolejne wykresy." />
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {channels.map((channel) => (
             <div key={channel.channel} className="rounded-xl border border-slate-800 bg-slate-950/50 p-3">
               <p className="truncate text-sm font-semibold text-slate-100">{channel.channel}</p>
@@ -2132,13 +2132,13 @@ function CostModelPanel({
         </div>
       </header>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <FinanceKpiTile label="Budzet" value={formatPricePln(totalBudget)} hint={`${categories.length} kategorii`} />
         <FinanceKpiTile label="Wykonanie" value={formatPricePln(totalActual)} hint={`${(totalBudget > 0 ? (totalActual / totalBudget) * 100 : 0).toFixed(1)}% budzetu`} tone={totalActual <= totalBudget ? 'good' : 'bad'} />
         <FinanceKpiTile label="Odchylenie" value={formatPricePln(totalBudget - totalActual)} hint="budzet - wykonanie" tone={totalBudget - totalActual >= 0 ? 'good' : 'warn'} />
       </div>
 
-      <section className="grid gap-5 xl:grid-cols-[0.75fr_1.25fr]">
+      <section className="grid grid-cols-1 gap-5 xl:grid-cols-[0.75fr_1.25fr]">
         <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-4 sm:p-5">
           <SectionTitle title="Nowa kategoria" subtitle="Kategorie moga pozniej mapowac sie na importy z WAPRO, banku albo marketplace." />
           <div className="mt-4 space-y-3">
@@ -2155,7 +2155,7 @@ function CostModelPanel({
                 <option value="warehouse">Magazyn</option>
               </select>
             </Field>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Budzet miesieczny">
                 <input value={budget} onChange={(e) => setBudget(e.target.value)} inputMode="decimal" className={INPUT_CLS} />
               </Field>
@@ -2288,14 +2288,14 @@ function SalesRepsPanel({
         </div>
       </header>
 
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
         <FinanceKpiTile label="Sprzedaz handlowcow" value={formatPricePln(totalSales)} hint={`${reps.length} uzytkownikow`} />
         <FinanceKpiTile label="Wynik po rozliczeniu" value={formatPricePln(totalContribution)} hint="marza - prowizje - koszty" tone={totalContribution >= 0 ? 'good' : 'bad'} />
         <FinanceKpiTile label="Srednia marza" value={`${avg(reps.map((rep) => rep.marginPct)).toFixed(1)}%`} hint="wazenie uproszczone" />
         <FinanceKpiTile label="Prowizje" value={formatPricePln(reps.reduce((sum, rep) => sum + repCommission(rep), 0))} hint="do wyplaty" tone="warn" />
       </div>
 
-      <section className="grid gap-5 xl:grid-cols-[0.85fr_1.15fr]">
+      <section className="grid grid-cols-1 gap-5 xl:grid-cols-[0.85fr_1.15fr]">
         <div className="space-y-4">
           <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
             <SectionTitle title="Dodaj / symuluj handlowca" subtitle="Pola pozniej podepniemy pod uzytkownika i jego transakcje CRM." />
@@ -2306,7 +2306,7 @@ function SalesRepsPanel({
               <Field label="Sprzedaz netto">
                 <input value={sales} onChange={(e) => setSales(e.target.value)} inputMode="decimal" className={INPUT_CLS} />
               </Field>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Field label="Marza %">
                   <input value={marginPct} onChange={(e) => setMarginPct(e.target.value)} inputMode="decimal" className={INPUT_CLS} />
                 </Field>
@@ -2518,7 +2518,7 @@ function DataSupplyPanel({
         </div>
       </header>
 
-      <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-[0.9fr_1.1fr]">
         <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-4 sm:p-5">
           <SectionTitle
             title="Dodaj raport"
@@ -2542,7 +2542,7 @@ function DataSupplyPanel({
                 ))}
               </select>
             </Field>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Miesiac">
                 <input value={month} onChange={(e) => setMonth(e.target.value)} className={INPUT_CLS} />
               </Field>
@@ -2572,7 +2572,7 @@ function DataSupplyPanel({
                 <p className="mt-1 text-[11px] text-slate-500">Wczytano: {fileName}</p>
               )}
             </Field>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Wiersze">
                 <input value={rows} onChange={(e) => setRows(e.target.value)} inputMode="numeric" className={INPUT_CLS} />
               </Field>
@@ -2707,7 +2707,7 @@ function OpsToolPanel({
         </div>
       </header>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {cfg.kpis.map((kpi) => (
           <FinanceKpiTile
             key={kpi.label}
@@ -2719,7 +2719,7 @@ function OpsToolPanel({
         ))}
       </div>
 
-      <section className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+      <section className="grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_0.8fr]">
         <CalculationTable rows={cfg.rows} />
         <div className="space-y-4">
           <section className="rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
@@ -3578,7 +3578,7 @@ function SalesRepDetail({ rep }: { rep: SalesRepConfig }) {
           {targetGap.toFixed(1)} pp do celu
         </span>
       </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MiniStat label="Sprzedaz" value={formatPricePln(rep.sales)} />
         <MiniStat label="Marza" value={formatPricePln(margin)} />
         <MiniStat label="Prowizja" value={formatPricePln(commission)} />
@@ -3632,7 +3632,7 @@ function OpsToolGroup({
         <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-400">{title}</p>
         {subtitle && <p className="truncate text-[11px] text-slate-500">{subtitle}</p>}
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">{children}</div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">{children}</div>
     </div>
   );
 }
@@ -3698,7 +3698,7 @@ function OpsCommandDock({
   return (
     <section className="lg:sticky lg:top-2 lg:z-20">
       <div className="rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg shadow-slate-200/40 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95 dark:shadow-slate-950/20">
-        <div className="grid gap-3 xl:grid-cols-[0.75fr_1.45fr_0.8fr]">
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-[0.75fr_1.45fr_0.8fr]">
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/70">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -3719,7 +3719,7 @@ function OpsCommandDock({
             </div>
           </div>
 
-          <div className="grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2 2xl:grid-cols-3">
             {priorities.slice(0, 3).map((item) => (
               <button
                 key={item.id}

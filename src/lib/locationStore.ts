@@ -6,15 +6,32 @@ const KEY = 'katalog-warehouse-locations';
 
 type Store = Record<string, WarehouseLocation>;
 
+let legacyRaw: string | null | undefined;
+let legacyParsed: Store = {};
+
+/** Odczyt z localStorage z buforem: JSON parsujemy tylko, gdy zawartość się zmieniła (wywoływane dla każdego produktu). */
 function readLegacy(): Store {
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return {};
+    if (raw === legacyRaw) return legacyParsed;
+    legacyRaw = raw;
+    if (!raw) {
+      legacyParsed = {};
+      return legacyParsed;
+    }
     const parsed = JSON.parse(raw) as Store;
-    return parsed && typeof parsed === 'object' ? parsed : {};
+    legacyParsed = parsed && typeof parsed === 'object' ? parsed : {};
+    return legacyParsed;
   } catch {
+    legacyRaw = undefined;
     return {};
   }
+}
+
+/** Podpis zawartości lokalnych lokalizacji — do unieważniania buforów wyników zależnych od lokalizacji. */
+export function legacyLocationsSignature(): string | null {
+  readLegacy();
+  return legacyRaw ?? null;
 }
 
 function writeLegacy(store: Store): void {

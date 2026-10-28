@@ -699,7 +699,7 @@ export function OpsProductSalesAnalytics({ onBack }: { onBack: () => void }) {
       </button>
 
       <header className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950">
-        <div className="grid gap-0 lg:grid-cols-[1.35fr_1fr]">
+        <div className="grid grid-cols-1 gap-0 lg:grid-cols-[1.35fr_1fr]">
           <div className="p-5 sm:p-6">
             <div className="flex items-center gap-2 text-brand-400">
               <TrendingUp className="h-5 w-5" />
@@ -823,7 +823,7 @@ export function OpsProductSalesAnalytics({ onBack }: { onBack: () => void }) {
             Ukryj wykluczone w tabeli
           </label>
         </div>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
           <FilterSelect
             label="Okres analizy"
             value={String(period)}

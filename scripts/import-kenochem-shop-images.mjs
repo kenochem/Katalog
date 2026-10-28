@@ -63,15 +63,31 @@ function shouldUpdate(product) {
   return false;
 }
 
+/** Klucz zdjęcia: nazwa pliku bez parametrów — ta sama fotka pod /hpeciai/ i /wp-content/ ma tę samą nazwę. */
+function imageKey(url) {
+  return String(url || '').split('?')[0].split('/').pop().toLowerCase();
+}
+
 function buildPatch(product, wc) {
   const currentPrimary = String(product.image_url || '').trim();
   const currentExtras = Array.isArray(product.extra_images) ? product.extra_images : [];
   const primary = wc.urls[0];
-  const extras = uniqueHttpUrls([
+  // stare adresy /hpeciai/ to kopie tych samych zdjęć, które sklep zwraca teraz z /wp-content/ — nie dokładamy ich drugi raz
+  const freshKeys = new Set(wc.urls.map(imageKey));
+  const keepOld = (u) => !(isDeadKenochemUrl(u) && freshKeys.has(imageKey(u)));
+  const merged = uniqueHttpUrls([
     ...wc.urls.slice(1),
-    ...currentExtras,
-    ...(currentPrimary && currentPrimary !== primary ? [currentPrimary] : []),
+    ...currentExtras.filter(keepOld),
+    ...(currentPrimary && currentPrimary !== primary && keepOld(currentPrimary) ? [currentPrimary] : []),
   ]).filter((u) => u.split('?')[0] !== primary.split('?')[0]);
+  // jedna fotka = jeden adres (po nazwie pliku), pierwszy wygrywa
+  const seenKeys = new Set([imageKey(primary)]);
+  const extras = merged.filter((u) => {
+    const k = imageKey(u);
+    if (seenKeys.has(k)) return false;
+    seenKeys.add(k);
+    return true;
+  });
 
   if (primary === currentPrimary && JSON.stringify(extras) === JSON.stringify(currentExtras)) {
     return null;

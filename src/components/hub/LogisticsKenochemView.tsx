@@ -40,7 +40,7 @@ export function LogisticsKenochemView() {
           Trasy wizyt, magazyn i zaopatrzenie — moduły Kenochem (bez demo PO z huba).
         </p>
       </header>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Tile
           icon={<MapPin className="h-5 w-5" />}
           title="Trasy i mapa CRM"

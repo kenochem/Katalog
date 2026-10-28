@@ -141,7 +141,7 @@ export function WorkspaceKenochemView({
         </p>
       </div>
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-3">
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="rounded-2xl border border-slate-800 bg-slate-900/40 px-4 py-3">
           <p className="text-xs text-slate-500">Produkty</p>
           <p className="text-2xl font-bold text-slate-100">{productCount}</p>
@@ -156,7 +156,7 @@ export function WorkspaceKenochemView({
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Tile
           title="Katalog"
           desc={`Przeglądaj ${productCount} pozycji — Akcesoria i Produkty sklepu.`}

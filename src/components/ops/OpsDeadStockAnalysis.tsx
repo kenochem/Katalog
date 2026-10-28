@@ -369,7 +369,7 @@ export function OpsDeadStockAnalysis({ onBack }: { onBack: () => void }) {
         </p>
       </section>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="surface-panel p-5">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Pozycji martwego stocku</p>
           <p className="mt-1 text-3xl font-bold text-slate-50">{summary.count.toLocaleString('pl-PL')}</p>

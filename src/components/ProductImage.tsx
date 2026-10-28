@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ImageOff } from 'lucide-react';
 import { collectProductImageCandidates, type ProductImageSource } from '../lib/products';
+import { isImageHostDown, recordImageError, recordImageOk, useImageHostHealthVersion } from '../lib/imageHostHealth';
 
 type ProductImageProps = {
   product: ProductImageSource;
@@ -23,20 +24,24 @@ export function ProductImage({
 }: ProductImageProps) {
   const candidates = useMemo(() => collectProductImageCandidates(product), [product]);
   const [index, setIndex] = useState(0);
+  // odświeża kartę, gdy któryś host zdjęć zostanie uznany za niedostępny (albo wróci)
+  useImageHostHealthVersion();
 
   useEffect(() => {
     setIndex(0);
   }, [candidates.join('|')]);
 
-  const src = candidates[index] ?? null;
+  // pierwszy adres od bieżącego, którego host nie jest uznany za niedostępny
+  let at = index;
+  while (at < candidates.length && isImageHostDown(candidates[at])) at++;
+  const src = candidates[at] ?? null;
+  const hostDown = !src && candidates.length > 0 && at >= candidates.length && candidates.slice(index).some((u) => isImageHostDown(u));
 
   if (!src) {
     return (
       <div
-        className={
-          placeholderClassName ||
-          'flex h-full w-full items-center justify-center text-slate-500'
-        }
+        className={placeholderClassName || 'flex h-full w-full items-center justify-center text-slate-500'}
+        title={hostDown ? 'Zdjęcie chwilowo niedostępne — serwer zdjęć nie odpowiada' : undefined}
       >
         <ImageOff className="h-9 w-9" />
       </div>
@@ -53,8 +58,10 @@ export function ProductImage({
       referrerPolicy="no-referrer"
       sizes={sizes}
       onClick={onClick}
+      onLoad={() => recordImageOk(src)}
       onError={() => {
-        setIndex((i) => (i + 1 < candidates.length ? i + 1 : candidates.length));
+        recordImageError(src);
+        setIndex(at + 1 < candidates.length ? at + 1 : candidates.length);
       }}
     />
   );

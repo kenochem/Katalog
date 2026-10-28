@@ -137,7 +137,7 @@ export function LabelStudioView({ products, queue, onQueueChange }: Props) {
         </p>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
         <div className="min-w-0 space-y-4">
           {/* 1. wybór produktów */}
           <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">

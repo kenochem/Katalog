@@ -37,7 +37,7 @@ export function formatCrmMailError(raw: string): string {
   const lower = m.toLowerCase();
 
   if (/does not exist|schema cache|crm_inbox_sync|crm_mailbox/.test(lower)) {
-    return 'Brak tabel poczty w Supabase — uruchom plik migration-crm-mailbox.sql w SQL Editor.';
+    return 'Poczta w CRM jest wyłączona — w bazie nie ma tabel poczty.';
   }
   if (/brak uprawnień|403|forbidden/.test(lower)) {
     return 'Brak uprawnień do poczty CRM. Zaloguj się jako admin, operator lub handlowiec.';

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { CopyName } from './CopyName';
 import {
   Copy,
   Loader2,
@@ -323,7 +324,7 @@ export function PromotionsView({ products, canEdit, canSeeMargins, onOpenLabels 
           {canEdit && <p className="mt-1 text-sm text-slate-500">Kliknij „Nowa kampania”, żeby zacząć.</p>}
         </div>
       ) : (
-        <ul className="grid gap-3 md:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {shown.map((c) => (
             <li key={c.id} className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
               <div className="flex items-start justify-between gap-2">
@@ -713,10 +714,10 @@ function PromoEditor({
       )}
 
       {/* dane kampanii */}
-      <section className="grid gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 md:grid-cols-4">
+      <section className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 md:grid-cols-4">
         <div className="md:col-span-4">
           <span className="mb-1 block text-xs text-slate-400">Rodzaj kampanii</span>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {(
               [
                 ['baselinker', 'Promocja do sklepu internetowego', 'Ceny promocyjne trafiają do BaseLinkera (osobna grupa cenowa), po końcu wraca cena zwykła.'],
@@ -911,7 +912,7 @@ function PromoEditor({
                       className="h-4 w-4 accent-brand-500"
                     />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-slate-100">{p.displayName}</span>
+                      <span className="block truncate text-slate-100"><CopyName text={p.displayName}>{p.displayName}</CopyName></span>
                       <span className="block font-mono text-[11px] text-brand-400">{p.sku}</span>
                     </span>
                     <span className="shrink-0 text-xs tabular-nums text-slate-300">

@@ -362,7 +362,7 @@ export function CrmMapRoutesView({
         )}
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,320px)_1fr]">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,320px)_1fr]">
         {/* Sidebar */}
         <div className="flex max-h-[min(70vh,560px)] flex-col gap-3 overflow-hidden lg:max-h-[min(75vh,640px)]">
           <section className="shrink-0 rounded-2xl border border-slate-800 bg-slate-900/60 p-3">

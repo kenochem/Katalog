@@ -242,7 +242,7 @@ export function CrmPipelinePanel({ clients, onOpenOrder, authorLabel }: CrmPipel
         </div>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <div className="rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-3">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Wartość lejka</p>
           <p className="mt-0.5 text-xl font-bold tabular-nums text-brand-300">{formatPricePln(pipelineTotal)}</p>

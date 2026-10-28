@@ -126,7 +126,7 @@ export function OpsCustomersPanel({ onBack }: OpsCustomersPanelProps) {
         </div>
       </header>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <CustomerStat label="Rekordy w widoku" value={loading ? '...' : String(rows.length)} hint={`z ${count}`} />
         <CustomerStat label="W bazie WAPRO" value={String(stats.inBase)} hint="status techniczny importu" />
         <CustomerStat label="Z NIP" value={String(stats.withNip)} hint="gotowe do laczenia faktur" />

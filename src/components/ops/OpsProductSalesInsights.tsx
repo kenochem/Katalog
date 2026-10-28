@@ -113,7 +113,7 @@ export function OpsProductSalesInsights({
         </div>
       ) : null}
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <section className="rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
           <div className="flex items-center gap-2">
             <p className="text-sm font-semibold text-slate-100">

@@ -266,7 +266,7 @@ export function ProductDetailFacts({
           )}
         </div>
 
-        <dl className="mt-4 grid gap-x-6 gap-y-3.5 sm:grid-cols-2">
+        <dl className="mt-4 grid grid-cols-1 gap-x-6 gap-y-3.5 sm:grid-cols-2">
           {mfr ? (
             <Field label="Producent" source={isWapro ? 'wapro' : undefined}>
               <span className="inline-flex items-center gap-2">
@@ -629,7 +629,7 @@ export function ProductDetailCommercialExtras({ detail }: { detail: Product }) {
           </p>
           <dl className="divide-y divide-slate-800 text-sm">
             {paramEntries.map(([k, v]) => (
-              <div key={k} className="grid gap-1 px-4 py-2.5 sm:grid-cols-[minmax(8rem,12rem)_1fr]">
+              <div key={k} className="grid grid-cols-1 gap-1 px-4 py-2.5 sm:grid-cols-[minmax(8rem,12rem)_1fr]">
                 <dt className="text-xs font-medium text-slate-500">{k}</dt>
                 <dd className="text-slate-200">{String(v)}</dd>
               </div>

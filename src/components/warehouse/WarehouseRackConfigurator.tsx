@@ -59,7 +59,7 @@ export function WarehouseRackConfigurator({
         </div>
       </div>
 
-      <div className="grid gap-4 p-4 lg:grid-cols-[minmax(7rem,9rem)_1fr]">
+      <div className="grid grid-cols-1 gap-4 p-4 lg:grid-cols-[minmax(7rem,9rem)_1fr]">
         <div
           className="wh-rack-preview flex min-h-[10rem] flex-col-reverse overflow-hidden rounded-xl border-2 shadow-inner"
           style={{ borderColor: accent, background: `${accent}12` }}

@@ -86,7 +86,7 @@ export function CrmMailboxPanel({ onSynced }: CrmMailboxPanelProps) {
     if (res.schemaOk === false) {
       setSchemaOk(false);
       setPanelError(
-        'Brak tabel poczty w Supabase. Uruchom migration-crm-mailbox.sql w SQL Editor.',
+        'Poczta w CRM jest wyłączona (brak tabel poczty w bazie).',
       );
     } else {
       setSchemaOk(true);
@@ -240,7 +240,7 @@ function formatDiagnostics(d: unknown): string | null {
   }
 
   const serverFields = (
-    <div className="mt-3 grid gap-2 rounded-xl border border-slate-800 bg-slate-950/40 p-3 sm:max-w-lg">
+    <div className="mt-3 grid grid-cols-1 gap-2 rounded-xl border border-slate-800 bg-slate-950/40 p-3 sm:max-w-lg">
           <p className="text-xs text-slate-500">
             Webio: IMAP 993, SMTP 465. Jeśli Test IMAP pada w chmurze, użyj skryptu{' '}
             <code className="font-mono text-[10px]">scripts/crm-mail-pull.mjs</code> na serwerze
@@ -261,7 +261,7 @@ function formatDiagnostics(d: unknown): string | null {
           ))}
         </select>
       </label>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <label className="block sm:col-span-2">
           <span className="text-xs text-slate-500">Serwer IMAP</span>
           <input
@@ -320,8 +320,7 @@ function formatDiagnostics(d: unknown): string | null {
       {!schemaOk && (
         <div className="mb-3 flex gap-2 rounded-xl border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          Brak tabel poczty w Supabase — w Dashboard → SQL uruchom{' '}
-          <code className="font-mono">migration-crm-mailbox.sql</code>, potem odśwież stronę.
+          Poczta w CRM jest wyłączona — w bazie nie ma tabel poczty.
         </div>
       )}
 
@@ -346,7 +345,7 @@ function formatDiagnostics(d: unknown): string | null {
       </div>
 
       {!configured ? (
-        <div className="grid gap-3 sm:max-w-lg">
+        <div className="grid grid-cols-1 gap-3 sm:max-w-lg">
           <p className="text-xs text-slate-500">
             Inna skrzynka? „Zmień konto / hasło / serwery” — jedno konto na login CRM
             (np. handel@ → potem biuro@ zastępuje poprzednie). Auto-sync: Harmonogram
@@ -451,7 +450,7 @@ function formatDiagnostics(d: unknown): string | null {
             Zmień konto / hasło / serwery
           </button>
           {showAdvanced && (
-            <div className="mt-2 grid gap-2 border-t border-slate-800 pt-3">
+            <div className="mt-2 grid grid-cols-1 gap-2 border-t border-slate-800 pt-3">
               <input
                 type="email"
                 value={mailboxEmail}

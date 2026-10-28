@@ -90,8 +90,15 @@ const MANUFACTURER_LOOKUP = new Map<string, string>(
 
 /** Producenci spoza listy WAPRO (dodani ręcznie / pobrani z BaseLinkera) — ustawiani przy starcie aplikacji. */
 let EXTRA_MANUFACTURERS: string[] = [];
+let manufacturersVersion = 0;
+
+/** Numer wersji list producentów — do unieważniania buforów wyników zależnych od nazw producentów. */
+export function getManufacturersVersion(): number {
+  return manufacturersVersion;
+}
 
 export function setExtraManufacturers(names: string[]): void {
+  manufacturersVersion++;
   for (const n of EXTRA_MANUFACTURERS) {
     const k = normalizeManufacturerKey(n);
     if (!WAPRO_MANUFACTURERS.some((m) => normalizeManufacturerKey(m) === k)) MANUFACTURER_LOOKUP.delete(k);
@@ -111,6 +118,7 @@ export function getExtraManufacturers(): string[] {
 let REMOVED_MANUFACTURERS = new Set<string>();
 
 export function setRemovedManufacturers(names: string[]): void {
+  manufacturersVersion++;
   REMOVED_MANUFACTURERS = new Set(names.map((n) => normalizeManufacturerKey(n)));
 }
 
@@ -179,11 +187,18 @@ export function manufacturerOptions(existing: string[] = []): string[] {
   return out.sort((a, b) => a.localeCompare(b, 'pl', { sensitivity: 'base' }));
 }
 
+/** Pseudo-producent w filtrach: produkty bez przypisanego producenta. */
+export const NO_MANUFACTURER = 'Bez producenta';
+
 export function deriveManufacturers(products: Product[]): string[] {
   const counts = new Map<string, number>();
+  let missing = false;
   for (const p of products) {
     const m = effectiveManufacturer(p);
-    if (!m) continue;
+    if (!m) {
+      missing = true;
+      continue;
+    }
     counts.set(m, (counts.get(m) || 0) + 1);
   }
 
@@ -204,7 +219,7 @@ export function deriveManufacturers(products: Product[]): string[] {
         a.localeCompare(b, 'pl', { sensitivity: 'base' }),
     );
 
-  return ['Wszyscy', ...ordered, ...rest];
+  return ['Wszyscy', ...(missing ? [NO_MANUFACTURER] : []), ...ordered, ...rest];
 }
 
 export function manufacturerCounts(products: Product[]): Record<string, number> {
@@ -212,7 +227,7 @@ export function manufacturerCounts(products: Product[]): Record<string, number> 
   for (const p of products) {
     const m = effectiveManufacturer(p);
     if (!m) {
-      counts['Bez producenta'] = (counts['Bez producenta'] || 0) + 1;
+      counts[NO_MANUFACTURER] = (counts[NO_MANUFACTURER] || 0) + 1;
       continue;
     }
     counts[m] = (counts[m] || 0) + 1;

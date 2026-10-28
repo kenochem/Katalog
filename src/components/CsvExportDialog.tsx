@@ -238,7 +238,7 @@ export function CsvExportDialog({
             </div>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {/* dostępne kolumny */}
             <section className="rounded-xl border border-slate-800 bg-slate-950/40">
               <div className="relative border-b border-slate-800 p-2">
@@ -258,7 +258,7 @@ export function CsvExportDialog({
                           {all ? 'odznacz grupę' : 'zaznacz grupę'}
                         </button>
                       </div>
-                      <div className="grid gap-x-3 gap-y-1 sm:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-x-3 gap-y-1 sm:grid-cols-2">
                         {cols.map((c) => (
                           <label key={c.id} className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-sm text-slate-200 hover:bg-slate-800/60">
                             <input type="checkbox" checked={chosen.has(c.id)} onChange={() => toggleColumn(c.id)} className="h-4 w-4 accent-brand-500" />
@@ -324,7 +324,7 @@ export function CsvExportDialog({
               </span>
             </button>
             {showOptions && (
-              <div className="grid gap-3 border-t border-slate-800 p-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 border-t border-slate-800 p-4 sm:grid-cols-2 lg:grid-cols-3">
                 <label className="block text-xs text-slate-400">
                   Separator kolumn
                   <select value={o.delimiter} onChange={(e) => setOption('delimiter', e.target.value as ExportOptions['delimiter'])} className={`${sel} mt-1 !w-full`}>

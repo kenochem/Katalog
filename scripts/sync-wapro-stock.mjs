@@ -215,14 +215,18 @@ for (const p of products || []) {
     let priceBuy = null;
     let priceSale = null;
     let priceGross = null;
+    // grupa wariantów pojemności: ceny grupy = ceny wariantu głównego (np. 500 ml)
+    const primarySku = String(p.product_meta?.groupPrimarySku ?? '').trim().toUpperCase();
     const nextVariants = p.variants.map((v) => {
       const hit = resolveWaproRowForProduct({ sku: v.sku, id: v.sku, product_meta: {} }, waproMaps);
       const row = hit?.row;
       if (!row) return v;
       touched = true;
-      if (row.price_purchase_net != null) priceBuy = row.price_purchase_net;
-      if (row.price_sale_net != null) priceSale = row.price_sale_net;
-      if (row.price_sale_gross != null) priceGross = row.price_sale_gross;
+      if (!primarySku || String(v.sku).trim().toUpperCase() === primarySku) {
+        if (row.price_purchase_net != null) priceBuy = row.price_purchase_net;
+        if (row.price_sale_net != null) priceSale = row.price_sale_net;
+        if (row.price_sale_gross != null) priceGross = row.price_sale_gross;
+      }
       if (p.stock_manual) return v;
       return { ...v, stock: row.stock };
     });

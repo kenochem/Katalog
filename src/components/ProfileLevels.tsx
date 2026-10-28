@@ -124,7 +124,7 @@ export function LevelsPanel({ level, states, accent, frame, bg, overlay, onPick,
 
       <div>
         <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">Rangi</h3>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {RANKS.map((r) => {
             const reached = level.level >= r.from;
             const current = level.level >= r.from && level.level <= r.to;

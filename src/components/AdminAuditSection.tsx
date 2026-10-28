@@ -165,7 +165,7 @@ export function AdminAuditSection() {
 
   return (
     <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 sm:p-5">
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
         <select
           value={userId}
           onChange={(e) => setUserId(e.target.value)}
@@ -327,14 +327,24 @@ export function AdminAuditSection() {
                     </p>
                   )}
                   {e.changes &&
-                    Object.entries(e.changes).map(([field, v]) => (
+                    Object.entries(e.changes).map(([field, v]) =>
+                      e.app === 'baselinker' && /^baselinker\.(push|images|import)$/.test(e.action) ? (
+                        <p key={field} className="break-all text-slate-300">
+                          <a href={productUrl(field)} target="_blank" rel="noopener noreferrer" className="font-mono text-brand-300 hover:underline" title="Otwórz produkt w nowej karcie">
+                            {field}
+                          </a>
+                          {v.from ? <span className="text-slate-400"> · {fmtValue(v.from)}</span> : null}
+                          <span className="text-emerald-300"> → {fmtValue(v.to)}</span>
+                        </p>
+                      ) : (
                       <p key={field} className="break-all text-slate-300">
                         <span className="font-medium text-slate-100">{field}:</span>{' '}
                         <span className="text-red-300/90">{fmtValue(v.from)}</span>
                         {' → '}
                         <span className="text-emerald-300">{fmtValue(v.to)}</span>
                       </p>
-                    ))}
+                      ),
+                    )}
                 </div>
               )}
             </li>

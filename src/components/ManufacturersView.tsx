@@ -29,7 +29,7 @@ import {
   useManufacturerRegistry,
   type ManufacturerProfile,
 } from '../lib/manufacturerRegistry';
-import { effectiveManufacturer, isStaticManufacturer, manufacturerOptions } from '../lib/waproManufacturers';
+import { effectiveManufacturer, isStaticManufacturer, manufacturerOptions, NO_MANUFACTURER } from '../lib/waproManufacturers';
 import { confirmDialog } from '../lib/dialog';
 import { showToast } from '../lib/toast';
 
@@ -99,6 +99,8 @@ export function ManufacturersView({
     }
     return map;
   }, [products]);
+
+  const noManufacturerCount = useMemo(() => products.filter((p) => !effectiveManufacturer(p)).length, [products]);
 
   const rows: Row[] = useMemo(() => {
     const names = manufacturerOptions([...products.map((p) => p.manufacturer ?? ''), ...(blNames ? [...blNames] : [])]).filter(
@@ -226,7 +228,7 @@ export function ManufacturersView({
         </div>
       </section>
 
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_26rem] 2xl:grid-cols-[minmax(0,1fr)_30rem]">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_26rem] 2xl:grid-cols-[minmax(0,1fr)_30rem]">
         <section className="min-w-0 space-y-3">
           <div className="flex flex-wrap gap-2">
             <div className="relative min-w-[12rem] flex-1">
@@ -261,6 +263,24 @@ export function ManufacturersView({
           )}
 
           <ul className="divide-y divide-slate-200 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-950/30 dark:shadow-none">
+            {noManufacturerCount > 0 && (
+              <li>
+                <button
+                  type="button"
+                  onClick={() => onShowProducts(NO_MANUFACTURER)}
+                  className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-slate-50 dark:hover:bg-slate-900/60"
+                >
+                  <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-2xl font-semibold text-amber-800 dark:bg-amber-500/20 dark:text-amber-300">?</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-base font-semibold text-slate-950 dark:text-slate-50">{NO_MANUFACTURER}</span>
+                    <span className="mt-0.5 block text-[11px] text-slate-600 dark:text-slate-400">Produkty bez przypisanego producenta — kliknij, aby je zobaczyć w katalogu</span>
+                  </span>
+                  <span className="text-right text-xs tabular-nums text-slate-600 dark:text-slate-400">
+                    <strong className="text-sm text-slate-900 dark:text-slate-100">{noManufacturerCount}</strong> prod.
+                  </span>
+                </button>
+              </li>
+            )}
             {shown.map((r) => {
               const reg = getManufacturerEntry(r.name);
               const active = r.name === selectedName;
@@ -557,7 +577,7 @@ function ManufacturerDetail({
           placeholder="np. Włoski producent chemii samochodowej, linia profesjonalna do myjni ręcznych…"
         />
       </label>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="block">
           <span className={label}>Strona WWW</span>
           <input value={form.website} onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))} className="input-field" placeholder="https://" />

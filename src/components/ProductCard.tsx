@@ -8,6 +8,7 @@ import {
   Plus,
   Star,
 } from 'lucide-react';
+import { CopyName } from './CopyName';
 import { memo, useRef, useState, type MouseEvent } from 'react';
 import type { Product } from '../types';
 import { CATALOG_LABELS } from '../types';
@@ -346,6 +347,16 @@ export const ProductCard = memo(
             Ukryty
           </span>
         )}
+        {catalogHidden && product.meta?.waproBlocked && (
+          <span
+            className={`mb-1 inline-flex w-fit max-w-full truncate rounded-md border border-orange-300 bg-orange-50 px-2 py-0.5 font-semibold leading-none text-orange-800 dark:border-orange-500/40 dark:bg-orange-500/15 dark:text-orange-200 ${
+              compact ? 'text-[9px]' : 'text-[10px]'
+            }`}
+            title="Artykuł zablokowany w WAPRO — ukryty automatycznie przez synchronizację"
+          >
+            Blokada WAPRO
+          </span>
+        )}
         <h3
           className={`font-medium leading-snug text-slate-100 ${
             compact
@@ -355,7 +366,7 @@ export const ProductCard = memo(
                 : 'line-clamp-2 text-sm'
           }`}
         >
-          {product.displayName}
+          <CopyName text={product.displayName}>{product.displayName}</CopyName>
         </h3>
         {hasPrice && (
           <p

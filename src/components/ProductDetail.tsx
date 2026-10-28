@@ -1,10 +1,13 @@
 ﻿import { confirmDialog } from '../lib/dialog';
 import { HIDE_REASON_PRESETS } from '../lib/hideReasons';
+import { CopyName } from './CopyName';
+import { BatchPrepareModal } from './BatchPrepareModal';
+import { isMobileDevice } from '../lib/device';
 import {
   X, Camera, Upload, Loader2, Package, Pencil, Save, Trash2,
   Minus, Plus, Images, Printer, Tag, ArrowLeft,
   FileText, Barcode, Copy, Check, Scissors, Undo2, Layers,
-  Sparkles, TrendingUp, Star, Maximize2, History as HistoryIcon,
+  Sparkles, TrendingUp, Star, Maximize2, History as HistoryIcon, ChevronLeft, ChevronRight, ImageOff,
 } from 'lucide-react';
 import { ProductHistoryPanel } from './product/ProductHistoryPanel';
 import { ProductAttributesPanel } from './product/ProductAttributesPanel';
@@ -18,9 +21,9 @@ import { ManufacturerLogo } from './ManufacturerLogo';
 
 
 import { ProductImage } from './ProductImage';
-import { getProductImage, getProductImages, updateProductImage, addProductExtraImage, setProductPrimaryImage,
+import { getProductImage, getProductImages, updateProductImage, addProductExtraImage, setProductPrimaryImage, reorderProductImages, replaceProductImages,
   updateProduct, deleteProductImage, deleteProductExtraImage, fetchProductById,
-  deleteProduct, isProductSkuTaken,
+  deleteProduct, isProductSkuTaken, fetchProductsBySkus, copyImagesToProducts,
 } from '../lib/products';
 import {
   customerGrossPrice,
@@ -46,6 +49,7 @@ import { DescriptionBlBar, ProductDescriptionsEditor, ProductDescriptionsView } 
 import { RichTextField } from './product/RichTextField';
 
 import { showToast } from '../lib/toast';
+import { withAuditBatch } from '../lib/auditLog';
 import { roleCan, type AppRole } from '../lib/roles';
 import { ProductTechPanel } from './product/ProductTechPanel';
 import { canUseCrmModule } from '../app/productAccess';
@@ -58,7 +62,7 @@ import { RemoveBackgroundModal } from './RemoveBackgroundModal';
 import { PrepareImageModal } from './PrepareImageModal';
 import { useReservedQty } from '../lib/reservedStock';
 import { useLivePromo } from '../lib/promotions';
-import type { PrepareResult } from '../lib/imagePrepare';
+import { prepareImage, type PrepareMode, type PrepareResult } from '../lib/imagePrepare';
 import { ContextHelp } from './ContextHelp';
 import {
   WarehouseLocationFields,
@@ -86,7 +90,7 @@ import {
 } from '../lib/productMeta';
 import { ProductKnowledgeStatus } from './product/ProductKnowledgeStatus';
 import { suggestShortDescription } from '../lib/productKnowledge';
-import { BaselinkerTag } from './BaselinkerTag';
+import { BaselinkerTag, WaproMagTag } from './BaselinkerTag';
 import { baselinkerLinkLabel, hasBaselinkerLink } from '../lib/baselinkerLink';
 import { useBaselinkerLinksVersion } from '../lib/baselinkerLive';
 import { addCategory, cleanCategoryName, getAssignableCategories, useCategoryRegistry } from '../lib/categoryRegistry';
@@ -106,6 +110,14 @@ interface ProductDetailProps {
   onToggleFavorite?: (productId: string) => void;
   collectionUserKey?: string;
   onCollectionsChange?: () => void;
+  /** Wszystkie produkty — do rozwiązania wariantów grupy na pełne produkty (zdjęcie, cena, znaczniki W/B). */
+  catalogProducts?: Product[];
+  /** Otwórz wariant grupy jako osobny podgląd produktu. */
+  onOpenVariant?: (variant: Product) => void;
+  /** Gdy produkt otwarto z grupy: powrót do grupy i przechodzenie między wariantami. */
+  /** Po skopiowaniu zdjęć do wariantów — odśwież je na liście. */
+  onVariantPatched?: (id: string, patch: Partial<Product>) => void;
+  groupNav?: { groupName: string; index: number; total: number; onBack: () => void; onPrev?: () => void; onNext?: () => void; items?: string[]; onJump?: (i: number) => void };
 }
 
 export function ProductDetail({
@@ -122,11 +134,16 @@ export function ProductDetail({
   onToggleFavorite,
   collectionUserKey,
   onCollectionsChange,
+  catalogProducts,
+  onOpenVariant,
+  onVariantPatched,
+  groupNav,
 }: ProductDetailProps) {
   useBaselinkerLinksVersion();
   const [detail, setDetail] = useState(product);
   const [uploading, setUploading] = useState(false);
   const [uploadingExtra, setUploadingExtra] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<[number, number] | null>(null);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [displayName, setDisplayName] = useState(product.displayName);
@@ -144,6 +161,10 @@ export function ProductDetail({
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [localPrimaryImage, setLocalPrimaryImage] = useState<string | null>(null);
   const [localExtraImages, setLocalExtraImages] = useState<string[]>([]);
+  const [imgDrag, setImgDrag] = useState<{ from: number; over: number | null } | null>(null);
+  const [reordering, setReordering] = useState(false);
+  const [batchPrepareOpen, setBatchPrepareOpen] = useState(false);
+  const isMobile = useMemo(() => isMobileDevice(), []);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const extraFileRef = useRef<HTMLInputElement>(null);
@@ -153,7 +174,6 @@ export function ProductDetail({
     'info' | 'desc' | 'variants' | 'photos' | 'ai' | 'sales' | 'history'
   >('info');
   const [copied, setCopied] = useState<'sku' | 'ean' | null>(null);
-  const [stockSaving, setStockSaving] = useState(false);
   const [removeBgOpen, setRemoveBgOpen] = useState(false);
   const [blMissing, setBlMissing] = useState<string[]>([]);
   const reservedQty = useReservedQty(detail?.sku ?? product.sku);
@@ -191,7 +211,15 @@ export function ProductDetail({
     return merged;
   }, [detail, localPrimaryImage, localExtraImages]);
 
+  const lastProductIdRef = useRef<string | null>(null);
+
   useEffect(() => {
+    // ten sam produkt, tylko zaktualizowany (np. po wgraniu zdjęcia): zostajemy w tej samej zakładce i bez resetu formularza
+    if (lastProductIdRef.current === product.id) {
+      setDetail((prev) => ({ ...prev, ...product, description: prev.description || product.description }));
+      return;
+    }
+    lastProductIdRef.current = product.id;
     let active = true;
     setDetail(product);
     setImagePreviewOpen(false);
@@ -328,6 +356,54 @@ export function ProductDetail({
     }
   }
 
+  /** Dopasowuje wskazane zdjęcia produktu pod BaseLinker (min. 500×500) i podmienia je w tej samej kolejności. */
+  async function handleBatchPrepare(
+    urls: string[],
+    mode: PrepareMode,
+    onProgress: (done: number, total: number) => void,
+  ): Promise<number> {
+    const files = new Map<string, File>();
+    let failed = 0;
+    let done = 0;
+    for (const url of urls) {
+      try {
+        const res = await prepareImage(url, mode);
+        const ext = res.blob.type === 'image/png' ? 'png' : res.blob.type === 'image/webp' ? 'webp' : 'jpg';
+        files.set(url, new File([res.blob], `${detail.sku || detail.id}.${ext}`, { type: res.blob.type || 'image/jpeg' }));
+      } catch (err) {
+        console.error(err);
+        failed++;
+      }
+      onProgress(++done, urls.length);
+    }
+    if (files.size === 0) {
+      showToast('Nie udało się przetworzyć zdjęć (blokada CORS?) — wgraj pliki z dysku', 'error', 6000);
+      return 0;
+    }
+    try {
+      const primary = allImages[0];
+      if (primary && files.has(primary)) {
+        try {
+          await backupPrimaryImageForRevert(product.id, primary);
+          setHasImageRevert(true);
+        } catch (err) {
+          console.warn('Kopia zdjęcia głównego pominięta', err);
+        }
+      }
+      const order = await replaceProductImages(product.id, allImages, files);
+      setLocalPrimaryImage(order[0]);
+      setLocalExtraImages([]);
+      syncProduct({ ...detail, customImageUrl: order[0], extraImageUrls: order.slice(1), hasImage: true });
+      if (order[0] !== primaryImage) onImageUpdated?.(product.id, order[0]);
+      showToast(failed ? `Dopasowano ${files.size}, błędy: ${failed}` : `Dopasowano zdjęcia pod BaseLinker: ${files.size}`, failed ? 'warn' : 'ok', 5000);
+      return files.size;
+    } catch (err) {
+      console.error(err);
+      showToast(err instanceof Error ? err.message : 'Nie udało się zapisać zdjęć', 'error', 6000);
+      return 0;
+    }
+  }
+
   async function handleUpload(file: File, opts?: { skipRevertToast?: boolean }) {
     setUploading(true);
     try {
@@ -406,6 +482,65 @@ export function ProductDetail({
     }
   }
 
+  /** Wgrywa kilka zdjęć naraz (po kolei): bez zdjęcia głównego pierwsze zostaje głównym, reszta trafia do galerii. */
+  async function handleUploadFiles(files: File[]) {
+    const images = files.filter((f) => f.type.startsWith('image/'));
+    if (images.length === 0) {
+      showToast('Wrzuć pliki graficzne (JPG, PNG, WebP…)', 'warn');
+      return;
+    }
+    if (uploading || uploadingExtra) return;
+    setUploadingExtra(true);
+    setUploadProgress([0, images.length]);
+    let newPrimary: string | null = null;
+    const added: string[] = [];
+    let failed = 0;
+    try {
+      const queue = [...images];
+      let done = 0;
+      if (!hasPrimary) {
+        const first = queue.shift()!;
+        try {
+          newPrimary = await updateProductImage(product.id, first);
+        } catch (err) {
+          console.error(err);
+          failed++;
+        }
+        setUploadProgress([++done, images.length]);
+      }
+      for (const file of queue) {
+        try {
+          added.push(await addProductExtraImage(product.id, file));
+        } catch (err) {
+          console.error(err);
+          failed++;
+        }
+        setUploadProgress([++done, images.length]);
+      }
+    } finally {
+      setUploadingExtra(false);
+      setUploadProgress(null);
+    }
+    if (!newPrimary && added.length === 0) {
+      showToast('Nie udało się wgrać zdjęć', 'error');
+      return;
+    }
+    if (newPrimary) {
+      setLocalPrimaryImage(newPrimary);
+      onImageUpdated?.(product.id, newPrimary);
+    }
+    if (added.length) setLocalExtraImages((prev) => [...prev, ...added.filter((u) => !prev.includes(u))]);
+    syncProduct({
+      ...detail,
+      customImageUrl: newPrimary ?? detail.customImageUrl,
+      extraImageUrls: [...(detail.extraImageUrls || []), ...added],
+      hasImage: true,
+    });
+    setSelectedIdx(newPrimary ? 0 : allImages.length);
+    const ok = (newPrimary ? 1 : 0) + added.length;
+    showToast(failed ? `Wgrano ${ok}, błędy: ${failed}` : ok === 1 ? 'Dodano zdjęcie' : `Dodano zdjęcia: ${ok}`, failed ? 'warn' : 'ok');
+  }
+
   function applyImageFile(file: File) {
     if (!file.type.startsWith('image/')) {
       showToast('Wrzuć plik graficzny (JPG, PNG, WebP…)', 'warn');
@@ -420,6 +555,64 @@ export function ProductDetail({
     // Przeciągnięty plik na produkt, który ma już zdjęcie główne, dodaje zdjęcie dodatkowe
     // (we wszystkich katalogach, także w sklepie).
     void handleUploadExtra(file);
+  }
+
+  async function handleReorderImages(from: number, to: number) {
+    if (reordering || from === to || from < 0 || to < 0 || from >= allImages.length || to >= allImages.length) return;
+    const order = [...allImages];
+    const [moved] = order.splice(from, 1);
+    order.splice(to, 0, moved);
+    const selectedUrl = displayImage;
+    setReordering(true);
+    try {
+      await reorderProductImages(product.id, order);
+      setLocalPrimaryImage(order[0]);
+      setLocalExtraImages([]);
+      syncProduct({ ...detail, customImageUrl: order[0], extraImageUrls: order.slice(1), hasImage: true });
+      if (selectedUrl) setSelectedIdx(Math.max(0, order.indexOf(selectedUrl)));
+      if (order[0] !== primaryImage) onImageUpdated?.(product.id, order[0]);
+      showToast('Zmieniono kolejność zdjęć', 'ok', 1800);
+    } catch (err) {
+      console.error(err);
+      showToast('Nie udało się zmienić kolejności zdjęć', 'error');
+    } finally {
+      setReordering(false);
+    }
+  }
+
+  /** Miniatury przeciągane myszą (tylko dla osób z prawem wgrywania zdjęć). */
+  function thumbDnd(idx: number) {
+    if (!canUploadImages || allImages.length < 2) return {};
+    return {
+      draggable: true,
+      onDragStart: (e: React.DragEvent) => {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', String(idx));
+        setImgDrag({ from: idx, over: null });
+      },
+      onDragOver: (e: React.DragEvent) => {
+        if (!imgDrag) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (imgDrag.over !== idx) setImgDrag({ ...imgDrag, over: idx });
+      },
+      onDrop: (e: React.DragEvent) => {
+        if (!imgDrag) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const from = imgDrag.from;
+        setImgDrag(null);
+        void handleReorderImages(from, idx);
+      },
+      onDragEnd: () => setImgDrag(null),
+    };
+  }
+
+  function thumbDndClass(idx: number): string {
+    if (!imgDrag) return '';
+    if (imgDrag.from === idx) return ' opacity-30';
+    if (imgDrag.over === idx) return ' ring-2 ring-brand-300 ring-offset-1 ring-offset-slate-900';
+    return '';
   }
 
   async function handleSetAsPrimary() {
@@ -601,25 +794,6 @@ export function ProductDetail({
       showToast('Nie udało się usunąć produktu', 'error');
     } finally {
       setDeleteProductBusy(false);
-    }
-  }
-
-  async function quickStockDelta(delta: number) {
-    if (!roleCan(role, 'editStock') || editing) return;
-    const next = Math.max(0, Math.round((detail.stock ?? 0) + delta));
-    setStockSaving(true);
-    setDetail((d) => ({ ...d, stock: next, stockManual: true }));
-    setStock(next);
-    try {
-      await updateProduct(detail.id, { stock: next, stockManual: true });
-      onProductUpdated?.({ ...detail, stock: next, stockManual: true });
-      showToast(`Stan: ${next}`, 'ok', 1800);
-    } catch {
-      setDetail((d) => ({ ...d, stock: detail.stock, stockManual: detail.stockManual }));
-      setStock(detail.stock ?? 0);
-      showToast('Nie udało się zapisać stanu', 'error');
-    } finally {
-      setStockSaving(false);
     }
   }
 
@@ -882,7 +1056,7 @@ export function ProductDetail({
       >
         {hubStyle ? (
           <div className="catalog-product-modal__head shrink-0 border-b border-slate-800 bg-slate-900/95 backdrop-blur">
-            <div className="flex items-center gap-2 border-b border-slate-800/60 px-4 py-2.5">
+            <div className="hidden items-center gap-2 border-b border-slate-800/60 px-4 py-2.5 lg:flex">
               <button
                 type="button"
                 onClick={onClose}
@@ -892,7 +1066,8 @@ export function ProductDetail({
                 Lista produktów
               </button>
             </div>
-            <div className="flex items-start justify-between gap-2 px-4 py-3">
+            {groupNav && <GroupNavStrip nav={groupNav} />}
+            <div className="flex items-start justify-between gap-2 px-3 py-2.5 sm:px-4 sm:py-3">
               <div className="min-w-0 flex-1">
                 {editing ? (
                   <input
@@ -901,13 +1076,13 @@ export function ProductDetail({
                     className="input-field text-lg font-semibold"
                   />
                 ) : (
-                  <h2 className="line-clamp-2 text-lg font-semibold leading-snug text-slate-50 lg:text-xl">
-                    {displayName}
+                  <h2 className="line-clamp-2 text-base font-semibold leading-snug text-slate-50 sm:text-lg lg:text-xl">
+                    <CopyName text={displayName}>{displayName}</CopyName>
                   </h2>
                 )}
-                <div className="mt-2 flex flex-wrap items-center gap-2">
+                <div className="-mx-3 mt-1.5 flex flex-nowrap items-center gap-1.5 overflow-x-auto px-3 scrollbar-none sm:mx-0 sm:mt-2 sm:flex-wrap sm:gap-2 sm:overflow-visible sm:px-0 [&>*]:shrink-0">
                   {isGroup && variantCount > 0 ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-brand-500/30 bg-brand-500/10 px-3 py-1.5 text-sm font-medium text-brand-200">
+                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-brand-500/30 bg-brand-500/10 px-2 py-1 text-xs font-medium text-brand-200 sm:px-3 sm:py-1.5 sm:text-sm">
                       <Layers className="h-4 w-4 shrink-0" />
                       Grupa · {variantCount} wariantów
                     </span>
@@ -915,26 +1090,26 @@ export function ProductDetail({
                   <button
                     type="button"
                     onClick={() => void copyText(detail.sku, 'sku')}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/90 px-3 py-1.5 font-mono text-sm font-medium text-brand-200 hover:bg-slate-700"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/90 px-2 py-1 font-mono text-xs font-medium text-brand-200 hover:bg-slate-700 sm:px-3 sm:py-1.5 sm:text-sm"
                     title="Kopiuj SKU"
                   >
-                    {copied === 'sku' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                    SKU {detail.sku}
+                    {copied === 'sku' ? <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Copy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
+                    <span className="hidden sm:inline">SKU </span>{detail.sku}
                   </button>
                   )}
                   {detail.ean && (
                     <button
                       type="button"
                       onClick={() => void copyText(detail.ean, 'ean')}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/90 px-3 py-1.5 font-mono text-sm text-slate-200 hover:bg-slate-700"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/90 px-2 py-1 font-mono text-xs text-slate-200 hover:bg-slate-700 sm:px-3 sm:py-1.5 sm:text-sm"
                       title="Kopiuj EAN"
                     >
-                      {copied === 'ean' ? <Check className="h-4 w-4" /> : <Barcode className="h-4 w-4" />}
-                      EAN {detail.ean}
+                      {copied === 'ean' ? <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Barcode className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
+                      <span className="hidden sm:inline">EAN </span>{detail.ean}
                     </button>
                   )}
-                  <span className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-semibold ${stockTone}`}>
-                    Stan: {availableStock <= 0 ? 'Brak' : formatStock(availableStock)}
+                  <span className={`inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-semibold sm:px-3 sm:py-1.5 sm:text-sm ${stockTone}`}>
+                    <span className="hidden sm:inline">Stan: </span>{availableStock <= 0 ? 'Brak' : formatStock(availableStock)}
                     {reservedQty > 0 && (
                       <span
                         className="rounded bg-amber-400 px-1.5 text-xs font-bold text-amber-950"
@@ -974,7 +1149,9 @@ export function ProductDetail({
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <ManufacturerLogo name={displayManufacturer} className="!h-12 !w-24" />
+                <span className="hidden sm:block">
+                  <ManufacturerLogo name={displayManufacturer} className="!h-12 !w-24" />
+                </span>
                 {roleCan(role, 'editProduct') && (
                   <ProductEditActions
                     editing={editing}
@@ -995,7 +1172,7 @@ export function ProductDetail({
                 </button>
               </div>
             </div>
-            <div className="catalog-product-tabs flex snap-x snap-mandatory gap-1 overflow-x-auto px-4 pb-2 scrollbar-none">
+            <div className="catalog-product-tabs flex snap-x snap-mandatory gap-1 overflow-x-auto px-3 pb-1.5 scrollbar-none sm:px-4 sm:pb-2">
               {hubTabs.map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
@@ -1012,7 +1189,9 @@ export function ProductDetail({
             </div>
           </div>
         ) : (
-        <div className="sticky top-0 flex items-center justify-between border-b border-slate-800 bg-slate-900/95 px-4 py-3 backdrop-blur">
+        <>
+        {groupNav && <GroupNavStrip nav={groupNav} sticky />}
+        <div className={`sticky ${groupNav ? 'top-9' : 'top-0'} flex items-center justify-between border-b border-slate-800 bg-slate-900/95 px-4 py-3 backdrop-blur`}>
           <span className="font-mono text-sm text-brand-400">
             {isGroup ? `Grupa · ${variantCount} wariantów` : detail.sku}
           </span>
@@ -1035,6 +1214,7 @@ export function ProductDetail({
             </button>
           </div>
         </div>
+        </>
         )}
 
         <div
@@ -1091,8 +1271,9 @@ export function ProductDetail({
               ? (e) => {
                   e.preventDefault();
                   setImageDragOver(false);
-                  const file = e.dataTransfer.files?.[0];
-                  if (file) applyImageFile(file);
+                  const dropped = Array.from(e.dataTransfer.files ?? []);
+                  if (dropped.length > 1) void handleUploadFiles(dropped);
+                  else if (dropped[0]) applyImageFile(dropped[0]);
                 }
               : undefined
           }
@@ -1116,6 +1297,36 @@ export function ProductDetail({
                 />
               </button>
               <div className="absolute right-3 top-3 flex items-center gap-1.5">
+                {canUploadImages && allImages.length > 1 && (
+                  <div className="flex overflow-hidden rounded-lg bg-slate-800/90 shadow-lg backdrop-blur">
+                    <button
+                      type="button"
+                      disabled={reordering || selectedIdx === 0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void handleReorderImages(selectedIdx, selectedIdx - 1);
+                      }}
+                      className="px-2 py-2 text-white hover:bg-slate-700 disabled:opacity-30"
+                      title="Przesuń zdjęcie w lewo (wcześniej)"
+                      aria-label="Przesuń zdjęcie w lewo"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={reordering || selectedIdx >= allImages.length - 1}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void handleReorderImages(selectedIdx, selectedIdx + 1);
+                      }}
+                      className="border-l border-slate-700 px-2 py-2 text-white hover:bg-slate-700 disabled:opacity-30"
+                      title="Przesuń zdjęcie w prawo (później)"
+                      aria-label="Przesuń zdjęcie w prawo"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
                 {canUploadImages && isExtraSelected && (
                   <button
                     type="button"
@@ -1160,14 +1371,15 @@ export function ProductDetail({
                       key={url}
                       type="button"
                       onClick={() => setSelectedIdx(idx)}
+                      {...thumbDnd(idx)}
                       className={`relative h-12 w-12 overflow-hidden rounded-lg border-2 transition ${
                         idx === selectedIdx
                           ? 'border-brand-400'
                           : isMissingInBl(url)
                             ? 'border-amber-400'
                             : 'border-transparent opacity-70 hover:opacity-100'
-                      }`}
-                      title={isMissingInBl(url) ? 'Brak tego zdjęcia w BaseLinkerze' : undefined}
+                      }${thumbDndClass(idx)}`}
+                      title={isMissingInBl(url) ? 'Brak tego zdjęcia w BaseLinkerze' : canUploadImages && allImages.length > 1 ? 'Przeciągnij, aby zmienić kolejność' : undefined}
                     >
                       <img src={url} alt="" className="h-full w-full object-cover" />
                       {isMissingInBl(url) && (
@@ -1212,15 +1424,20 @@ export function ProductDetail({
                 key={url}
                 type="button"
                 onClick={() => setSelectedIdx(idx)}
+                {...thumbDnd(idx)}
                 className={`relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 transition ${
                   idx === selectedIdx
                     ? 'border-brand-500'
                     : isMissingInBl(url)
                       ? 'border-amber-400'
                       : 'border-slate-700 opacity-70 hover:opacity-100'
-                }`}
+                }${thumbDndClass(idx)}`}
                 title={
-                  isMissingInBl(url) ? `Zdjęcie ${idx + 1} — brak w BaseLinkerze` : `Zdjęcie ${idx + 1}`
+                  isMissingInBl(url)
+                    ? `Zdjęcie ${idx + 1} — brak w BaseLinkerze`
+                    : canUploadImages && allImages.length > 1
+                      ? `Zdjęcie ${idx + 1} — przeciągnij, aby zmienić kolejność`
+                      : `Zdjęcie ${idx + 1}`
                 }
               >
                 <img src={url} alt="" className="h-full w-full object-cover" />
@@ -1253,33 +1470,6 @@ export function ProductDetail({
         </div>
 
         <div className={hubStyle ? 'min-w-0 space-y-3 pb-1 sm:pb-0' : 'space-y-4 p-4'}>
-          {hubStyle && roleCan(role, 'editStock') && detailTab === 'info' && !editing && (
-            <div className="flex items-center justify-center gap-4 rounded-2xl border border-slate-800 bg-slate-950/60 py-2">
-              <button
-                type="button"
-                disabled={stockSaving}
-                onClick={() => void quickStockDelta(-1)}
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-700 text-slate-200 disabled:opacity-50"
-              >
-                <Minus className="h-4 w-4" />
-              </button>
-              <div className="text-center">
-                <p className="text-[10px] uppercase tracking-wide text-slate-500">Stan magazynowy</p>
-                <p className="text-2xl font-bold tabular-nums text-slate-50">
-                  {formatStock(detail.stock ?? 0)}
-                </p>
-              </div>
-              <button
-                type="button"
-                disabled={stockSaving}
-                onClick={() => void quickStockDelta(1)}
-                className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white disabled:opacity-50"
-              >
-                <Plus className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-
           {hubStyle &&
             !editing &&
             (detailTab === 'info' || detailTab === 'desc' || detailTab === 'ai') && (
@@ -1352,7 +1542,7 @@ export function ProductDetail({
 
 
           {hubStyle && !editing && detailTab === 'variants' && variantCount > 0 && detail.variants && (
-            <ProductVariantsPanel variants={detail.variants} />
+            <ProductVariantsPanel variants={detail.variants} catalogProducts={catalogProducts} onOpenVariant={onOpenVariant} showPrices={showPrices} canEditImages={roleCan(role, 'uploadImage')} onVariantPatched={onVariantPatched} groupProduct={detail} onGroupPatched={(p) => setDetail((d) => ({ ...d, ...p }))} />
           )}
 
           {hubStyle && !editing && detailTab === 'desc' && (
@@ -1504,7 +1694,7 @@ export function ProductDetail({
                     className="input-field resize-y text-sm"
                   />
                 </label>
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <label className="block">
                     <span className="mb-1 text-xs text-slate-500">Waga (kg)</span>
                     <input
@@ -1604,30 +1794,30 @@ export function ProductDetail({
               <p className="text-xs text-slate-500">
                 Warianty tylko do podglądu — SKU i stany pochodzą z WAPRO.
               </p>
-              <ProductVariantsPanel variants={detail.variants} />
+              <ProductVariantsPanel variants={detail.variants} catalogProducts={catalogProducts} onOpenVariant={onOpenVariant} showPrices={showPrices} canEditImages={roleCan(role, 'uploadImage')} onVariantPatched={onVariantPatched} groupProduct={detail} onGroupPatched={(p) => setDetail((d) => ({ ...d, ...p }))} />
             </div>
           )}
 
           {hubStyle && detailTab === 'photos' && canUploadImages && (
             <HubProductPhotosPanel
               busy={uploading || uploadingExtra}
+              uploadProgress={uploadProgress}
+              imageCount={allImages.length}
               hasPrimary={hasPrimary}
-              allowExtra
               displayImage={displayImage}
               isPrimarySelected={isPrimarySelected}
               hasImageRevert={hasImageRevert}
               removeBgBusy={removeBgBusy}
               revertBusy={revertBusy}
-              onPickFile={applyImageFile}
+              onPickFiles={(files) => void handleUploadFiles(files)}
               onOpenRemoveBg={() => setRemoveBgOpen(true)}
               onOpenPrepare={() => setPrepareOpen(true)}
+              onOpenBatchPrepare={() => setBatchPrepareOpen(true)}
+              isMobile={isMobile}
               onRestoreBeforeNobg={() => void handleRestoreImageBeforeNobg()}
               fileRef={fileRef}
               cameraRef={cameraRef}
-              extraFileRef={extraFileRef}
-              extraCameraRef={extraCameraRef}
               onUploadPrimary={handleUpload}
-              onUploadExtra={handleUploadExtra}
             />
           )}
 
@@ -1866,7 +2056,7 @@ export function ProductDetail({
               )}
 
               {variantCount > 0 && detail.variants && (
-                <ProductVariantsPanel variants={detail.variants} />
+                <ProductVariantsPanel variants={detail.variants} catalogProducts={catalogProducts} onOpenVariant={onOpenVariant} showPrices={showPrices} canEditImages={roleCan(role, 'uploadImage')} onVariantPatched={onVariantPatched} groupProduct={detail} onGroupPatched={(p) => setDetail((d) => ({ ...d, ...p }))} />
               )}
             </>
           )}
@@ -1897,19 +2087,21 @@ export function ProductDetail({
                   e.target.value = '';
                 }}
               />
-              <button
-                type="button"
-                disabled={uploading || uploadingExtra}
-                onClick={() => cameraRef.current?.click()}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-600 py-3 text-sm font-medium text-white transition hover:bg-brand-500 disabled:opacity-50"
-              >
-                {uploading ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <Camera className="h-5 w-5" />
-                )}
-                {hasPrimary ? 'Zmień główne' : 'Zrób zdjęcie'}
-              </button>
+              {isMobile && (
+                <button
+                  type="button"
+                  disabled={uploading || uploadingExtra}
+                  onClick={() => cameraRef.current?.click()}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-600 py-3 text-sm font-medium text-white transition hover:bg-brand-500 disabled:opacity-50"
+                >
+                  {uploading ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Camera className="h-5 w-5" />
+                  )}
+                  {hasPrimary ? 'Zmień główne' : 'Zrób zdjęcie'}
+                </button>
+              )}
               <button
                 type="button"
                 disabled={uploading || uploadingExtra}
@@ -1970,10 +2162,11 @@ export function ProductDetail({
                   ref={extraFileRef}
                   type="file"
                   accept="image/*"
+                  multiple
                   className="hidden"
                   onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handleUploadExtra(f);
+                    const list = Array.from(e.target.files ?? []);
+                    if (list.length) void handleUploadFiles(list);
                     e.target.value = '';
                   }}
                 />
@@ -1989,19 +2182,21 @@ export function ProductDetail({
                     e.target.value = '';
                   }}
                 />
-                <button
-                  type="button"
-                  disabled={uploading || uploadingExtra}
-                  onClick={() => extraCameraRef.current?.click()}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-brand-500/40 bg-brand-500/10 py-3 text-sm font-medium text-brand-200 transition hover:bg-brand-500/20 disabled:opacity-50"
-                >
-                  {uploadingExtra ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <Images className="h-5 w-5" />
-                  )}
-                  Dodaj kolejne
-                </button>
+                {isMobile && (
+                  <button
+                    type="button"
+                    disabled={uploading || uploadingExtra}
+                    onClick={() => extraCameraRef.current?.click()}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-brand-500/40 bg-brand-500/10 py-3 text-sm font-medium text-brand-200 transition hover:bg-brand-500/20 disabled:opacity-50"
+                  >
+                    {uploadingExtra ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <Images className="h-5 w-5" />
+                    )}
+                    Dodaj kolejne
+                  </button>
+                )}
                 <button
                   type="button"
                   disabled={uploading || uploadingExtra}
@@ -2139,6 +2334,15 @@ export function ProductDetail({
           onClose={() => setImagePreviewOpen(false)}
         />
       )}
+      {/* okna zdjęć leżą wewnątrz tła produktu — kliknięcie w nich nie może zamykać produktu */}
+      <div onClick={(e) => e.stopPropagation()}>
+      <BatchPrepareModal
+        open={batchPrepareOpen}
+        images={allImages}
+        productName={detail.displayName}
+        onClose={() => setBatchPrepareOpen(false)}
+        onApply={handleBatchPrepare}
+      />
       <PrepareImageModal
         open={prepareOpen}
         sourceUrl={displayImage}
@@ -2155,63 +2359,87 @@ export function ProductDetail({
         onClose={() => !removeBgBusy && !uploading && setRemoveBgOpen(false)}
         onApply={(preset, src) => void handleApplyRemoveBackground(preset, src)}
       />
+      </div>
     </div>
   );
 }
 
 function HubProductPhotosPanel({
   busy,
+  uploadProgress,
+  imageCount,
   hasPrimary,
-  allowExtra,
   displayImage,
   isPrimarySelected,
   hasImageRevert,
   removeBgBusy,
   revertBusy,
-  onPickFile,
+  onPickFiles,
   onOpenRemoveBg,
   onOpenPrepare,
+  onOpenBatchPrepare,
+  isMobile,
   onRestoreBeforeNobg,
   fileRef,
   cameraRef,
-  extraFileRef,
-  extraCameraRef,
   onUploadPrimary,
-  onUploadExtra,
 }: {
   busy: boolean;
+  uploadProgress: [number, number] | null;
+  imageCount: number;
   hasPrimary: boolean;
-  allowExtra: boolean;
   displayImage: string | null;
   isPrimarySelected: boolean;
   hasImageRevert: boolean;
   removeBgBusy: boolean;
   revertBusy: boolean;
-  onPickFile: (file: File) => void;
+  onPickFiles: (files: File[]) => void;
   onOpenRemoveBg: () => void;
   onOpenPrepare: () => void;
+  onOpenBatchPrepare: () => void;
+  isMobile: boolean;
   onRestoreBeforeNobg: () => void;
   fileRef: RefObject<HTMLInputElement | null>;
   cameraRef: RefObject<HTMLInputElement | null>;
-  extraFileRef: RefObject<HTMLInputElement | null>;
-  extraCameraRef: RefObject<HTMLInputElement | null>;
   onUploadPrimary: (file: File) => void;
-  onUploadExtra: (file: File) => void;
 }) {
+  const toolBtn =
+    'flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/60 px-3 py-2.5 text-left text-xs font-medium text-slate-200 transition hover:border-brand-500/40 hover:bg-slate-800 disabled:opacity-50';
   return (
     <div className="space-y-4">
-      <p className="text-xs text-slate-500">
-        Podgląd po lewej — możesz też przeciągnąć plik na zdjęcie. Miniaturki u dołu
-        przełączają galerię.
-      </p>
-      <HubImageDropZone
-        busy={busy}
-        hasPrimary={hasPrimary}
-        allowExtra={allowExtra}
-        onPickFile={onPickFile}
-      />
-      <div className="space-y-2">
-        <div className="flex gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <h4 className="flex items-center gap-2 text-sm font-semibold text-slate-100">
+          <Images className="h-4 w-4 text-brand-300" /> Zdjęcia produktu
+        </h4>
+        <span className="rounded-full bg-slate-800 px-2.5 py-0.5 text-[11px] font-semibold tabular-nums text-slate-300">
+          {imageCount} {imageCount === 1 ? 'zdjęcie' : 'zdjęć'}
+        </span>
+      </div>
+
+      <HubImageDropZone busy={busy} hasPrimary={hasPrimary} isMobile={isMobile} onPickFiles={onPickFiles} />
+
+      {uploadProgress && (
+        <div className="space-y-1.5 rounded-xl border border-brand-500/30 bg-brand-500/10 px-3 py-2.5">
+          <div className="flex items-center justify-between text-xs font-medium text-brand-100">
+            <span className="flex items-center gap-1.5">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Wgrywanie zdjęć
+            </span>
+            <span className="tabular-nums">
+              {uploadProgress[0]} / {uploadProgress[1]}
+            </span>
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-slate-800">
+            <div
+              className="h-full rounded-full bg-brand-400 transition-all"
+              style={{ width: `${Math.round((uploadProgress[0] / Math.max(1, uploadProgress[1])) * 100)}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {hasPrimary && (
+        <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-3">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Podmień zdjęcie główne</p>
           <input
             ref={fileRef}
             type="file"
@@ -2235,120 +2463,58 @@ function HubProductPhotosPanel({
               e.target.value = '';
             }}
           />
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => cameraRef.current?.click()}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-600 py-3 text-sm font-medium text-white transition hover:bg-brand-500 disabled:opacity-50"
-          >
-            {busy ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <Camera className="h-5 w-5" />
-            )}
-            {hasPrimary ? 'Zmień główne' : 'Zrób zdjęcie'}
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => fileRef.current?.click()}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 py-3 text-sm font-medium text-slate-300 transition hover:bg-slate-800 disabled:opacity-50"
-          >
-            <Upload className="h-5 w-5" />
-            {hasPrimary ? 'Wgraj główne' : 'Wgraj plik'}
-          </button>
-        </div>
-
-        {displayImage && (
-          <button
-            type="button"
-            disabled={busy || removeBgBusy}
-            onClick={onOpenRemoveBg}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-600 bg-slate-800/80 py-3 text-sm font-medium text-slate-200 transition hover:border-brand-500/40 hover:bg-slate-800 disabled:opacity-50"
-          >
-            <Scissors className="h-5 w-5 text-brand-300" />
-            Wytnij białe tło (podgląd)
-          </button>
-        )}
-
-        {displayImage && (
-          <button
-            type="button"
-            disabled={busy || removeBgBusy}
-            onClick={onOpenPrepare}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-600 bg-slate-800/80 py-3 text-sm font-medium text-slate-200 transition hover:border-brand-500/40 hover:bg-slate-800 disabled:opacity-50"
-          >
-            <Maximize2 className="h-5 w-5 text-brand-300" />
-            Przygotuj pod BaseLinker (min. 500×500)
-          </button>
-        )}
-
-        {hasImageRevert && isPrimarySelected && (
-          <button
-            type="button"
-            disabled={busy || revertBusy || removeBgBusy}
-            onClick={onRestoreBeforeNobg}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 py-3 text-sm font-medium text-amber-200 transition hover:bg-amber-500/15 disabled:opacity-50"
-          >
-            {revertBusy ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <Undo2 className="h-5 w-5" />
-            )}
-            Przywróć poprzednie zdjęcie (przed zmianą)
-          </button>
-        )}
-
-        {hasPrimary && allowExtra && (
-          <div className="flex gap-2">
-            <input
-              ref={extraFileRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) onUploadExtra(f);
-                e.target.value = '';
-              }}
-            />
-            <input
-              ref={extraCameraRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) onUploadExtra(f);
-                e.target.value = '';
-              }}
-            />
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => extraCameraRef.current?.click()}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-brand-500/40 bg-brand-500/10 py-3 text-sm font-medium text-brand-200 transition hover:bg-brand-500/20 disabled:opacity-50"
-            >
-              <Images className="h-5 w-5" />
-              Dodaj kolejne
+          <div className={`grid gap-2 ${isMobile ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            <button type="button" disabled={busy} onClick={() => fileRef.current?.click()} className={toolBtn}>
+              <Upload className="h-4 w-4 shrink-0 text-brand-300" /> Z pliku
             </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => extraFileRef.current?.click()}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 py-3 text-sm font-medium text-slate-300 transition hover:bg-slate-800 disabled:opacity-50"
-            >
-              <Upload className="h-5 w-5" />
-              Wgraj dodatkowe
+            {isMobile && (
+              <button type="button" disabled={busy} onClick={() => cameraRef.current?.click()} className={toolBtn}>
+                <Camera className="h-4 w-4 shrink-0 text-brand-300" /> Z aparatu
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {displayImage && (
+        <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-3">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Obróbka wybranego zdjęcia</p>
+          <button
+            type="button"
+            disabled={busy || removeBgBusy || imageCount === 0}
+            onClick={onOpenBatchPrepare}
+            className="mb-2 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-3 py-2.5 text-xs font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
+          >
+            <Maximize2 className="h-4 w-4 shrink-0" /> Dopasuj wszystkie zdjęcia pod BaseLinker ({imageCount})
+          </button>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <button type="button" disabled={busy || removeBgBusy} onClick={onOpenRemoveBg} className={toolBtn}>
+              <Scissors className="h-4 w-4 shrink-0 text-brand-300" /> Wytnij białe tło
+            </button>
+            <button type="button" disabled={busy || removeBgBusy} onClick={onOpenPrepare} className={toolBtn}>
+              <Maximize2 className="h-4 w-4 shrink-0 text-brand-300" /> Tylko to zdjęcie pod BaseLinker
             </button>
           </div>
-        )}
-      </div>
+          {hasImageRevert && isPrimarySelected && (
+            <button
+              type="button"
+              disabled={busy || revertBusy || removeBgBusy}
+              onClick={onRestoreBeforeNobg}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 py-2.5 text-xs font-medium text-amber-200 transition hover:bg-amber-500/15 disabled:opacity-50"
+            >
+              {revertBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Undo2 className="h-4 w-4" />}
+              Przywróć poprzednie zdjęcie (przed zmianą)
+            </button>
+          )}
+        </div>
+      )}
+
+      <p className="text-[11px] leading-relaxed text-slate-500">
+        Kolejność zmienisz przeciągając miniatury pod podglądem — pierwsze zdjęcie jest zdjęciem głównym (widocznym na liście katalogu).
+      </p>
     </div>
   );
 }
-
 function ProductImagePreviewModal({
   title,
   images,
@@ -2372,7 +2538,10 @@ function ProductImagePreviewModal({
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        onClose();
+      }
       if (e.key === 'ArrowLeft') move(-1);
       if (e.key === 'ArrowRight') move(1);
     }
@@ -2387,13 +2556,20 @@ function ProductImagePreviewModal({
       className="fixed inset-0 z-[70] flex flex-col bg-slate-950/95 text-white backdrop-blur"
       role="dialog"
       aria-label="Podgląd zdjęcia produktu"
-      onClick={onClose}
+      // podgląd jest wewnątrz okna produktu — bez stopPropagation kliknięcie bąbelkowałoby do tła produktu i zamykało go
+      onClick={(e) => {
+        e.stopPropagation();
+        onClose();
+      }}
     >
       <div className="flex shrink-0 items-center justify-between gap-3 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
         <p className="min-w-0 truncate text-sm font-semibold">{title}</p>
         <button
           type="button"
-          onClick={onClose}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
           className="rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
           aria-label="Zamknij podgląd"
         >
@@ -2459,30 +2635,24 @@ function ProductImagePreviewModal({
 function HubImageDropZone({
   busy,
   hasPrimary,
-  allowExtra,
-  onPickFile,
+  isMobile,
+  onPickFiles,
 }: {
   busy: boolean;
   hasPrimary: boolean;
-  allowExtra: boolean;
-  onPickFile: (file: File) => void;
+  isMobile: boolean;
+  onPickFiles: (files: File[]) => void;
 }) {
   const localFileRef = useRef<HTMLInputElement>(null);
   const localCameraRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
 
-  const hint = !hasPrimary
-    ? 'Dodaj główne zdjęcie produktu'
-    : allowExtra
-      ? 'Dodaj kolejne zdjęcie (galeria)'
-      : 'Zastąp główne zdjęcie';
+  const hint = !hasPrimary ? 'Pierwsze zdjęcie zostanie zdjęciem głównym' : 'Zdjęcia zostaną dodane do galerii produktu';
 
   return (
     <div
-      className={`rounded-xl border-2 border-dashed px-3 py-4 transition ${
-        dragOver
-          ? 'border-brand-500 bg-brand-500/10'
-          : 'border-slate-600 bg-slate-900/40 hover:border-slate-500'
+      className={`rounded-2xl border-2 border-dashed px-4 py-6 transition ${
+        dragOver ? 'border-brand-400 bg-brand-500/10' : 'border-slate-600 bg-slate-900/40 hover:border-slate-500'
       } ${busy ? 'pointer-events-none opacity-60' : ''}`}
       onDragEnter={(e) => {
         e.preventDefault();
@@ -2499,18 +2669,19 @@ function HubImageDropZone({
       onDrop={(e) => {
         e.preventDefault();
         setDragOver(false);
-        const file = e.dataTransfer.files?.[0];
-        if (file) onPickFile(file);
+        const files = Array.from(e.dataTransfer.files ?? []);
+        if (files.length) onPickFiles(files);
       }}
     >
       <input
         ref={localFileRef}
         type="file"
         accept="image/*"
+        multiple
         className="hidden"
         onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) onPickFile(f);
+          const files = Array.from(e.target.files ?? []);
+          if (files.length) onPickFiles(files);
           e.target.value = '';
         }}
       />
@@ -2521,40 +2692,44 @@ function HubImageDropZone({
         capture="environment"
         className="hidden"
         onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) onPickFile(f);
+          const files = Array.from(e.target.files ?? []);
+          if (files.length) onPickFiles(files);
           e.target.value = '';
         }}
       />
       <div className="flex flex-col items-center gap-2 text-center">
-        <Upload className="h-6 w-6 text-slate-400" />
-        <p className="text-sm font-medium text-slate-200">Przeciągnij zdjęcie tutaj</p>
+        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-500/15 text-brand-300">
+          <Upload className="h-6 w-6" />
+        </span>
+        <p className="text-sm font-semibold text-slate-100">Przeciągnij tutaj jedno lub kilka zdjęć</p>
         <p className="text-xs text-slate-500">{hint}</p>
-        <div className="mt-1 flex w-full max-w-xs gap-2">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => localCameraRef.current?.click()}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-brand-600 py-2 text-xs font-medium text-white hover:bg-brand-500 disabled:opacity-50"
-          >
-            <Camera className="h-4 w-4" />
-            Aparat
-          </button>
+        <div className="mt-1 flex w-full max-w-sm gap-2">
           <button
             type="button"
             disabled={busy}
             onClick={() => localFileRef.current?.click()}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-600 py-2 text-xs font-medium text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-brand-600 py-2.5 text-sm font-medium text-white hover:bg-brand-500 disabled:opacity-50"
           >
-            <Upload className="h-4 w-4" />
-            Plik
+            <Images className="h-4 w-4" />
+            Wybierz pliki
           </button>
+          {isMobile && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => localCameraRef.current?.click()}
+              className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-600 px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+            >
+              <Camera className="h-4 w-4" />
+              Aparat
+            </button>
+          )}
         </div>
+        <p className="text-[11px] text-slate-600">{isMobile ? 'Możesz zaznaczyć kilka zdjęć naraz.' : 'W oknie wyboru zaznacz kilka plików naraz (Ctrl / Shift).'}</p>
       </div>
     </div>
   );
 }
-
 function ProductEditActions({
   editing,
   saving,
@@ -2650,13 +2825,227 @@ function ProductWarehouseEditDetails({
   );
 }
 
+/** Pasek grupy nad kartą produktu: powrót do wizytówki grupy, lista wszystkich produktów grupy i przejścia poprzedni/następny. */
+function GroupNavStrip({ nav, sticky }: { nav: NonNullable<ProductDetailProps['groupNav']>; sticky?: boolean }) {
+  return (
+    <div className={`flex items-center gap-1.5 border-b border-slate-800/60 bg-brand-500/10 px-3 py-1.5 sm:px-4 ${sticky ? 'sticky top-0 z-10 backdrop-blur' : ''}`}>
+      <button
+        type="button"
+        onClick={nav.onBack}
+        className="inline-flex min-w-0 items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-semibold text-brand-300 hover:bg-brand-500/15"
+        title="Wróć do wizytówki grupy"
+      >
+        <ArrowLeft className="h-3.5 w-3.5 shrink-0" />
+        <Layers className="h-3.5 w-3.5 shrink-0" />
+        <span className="truncate">Grupa: {nav.groupName}</span>
+      </button>
+      {nav.items && nav.onJump && (
+        <select
+          value={nav.index}
+          onChange={(e) => nav.onJump?.(Number(e.target.value))}
+          className="ml-auto min-w-0 max-w-[45%] truncate rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200"
+          aria-label="Przejdź do produktu w grupie"
+        >
+          {nav.items.map((label, i) => (
+            <option key={i} value={i}>
+              {i + 1}. {label}
+            </option>
+          ))}
+        </select>
+      )}
+      <span className={`${nav.items ? '' : 'ml-auto'} text-xs tabular-nums text-slate-500`}>
+        {nav.index + 1} / {nav.total}
+      </span>
+      <button type="button" onClick={nav.onPrev} disabled={!nav.onPrev} className="rounded-lg p-1.5 text-slate-300 hover:bg-slate-800 disabled:opacity-30" aria-label="Poprzedni produkt" title="Poprzedni produkt">
+        <ChevronLeft className="h-4 w-4" />
+      </button>
+      <button type="button" onClick={nav.onNext} disabled={!nav.onNext} className="rounded-lg p-1.5 text-slate-300 hover:bg-slate-800 disabled:opacity-30" aria-label="Następny produkt" title="Następny produkt">
+        <ChevronRight className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
+/** Kopiowanie zdjęć między produktami grupy: wybierasz, z którego produktu wziąć zdjęcia i do których je wgrać (także jako zdjęcie samej grupy). */
+function CopyImagesDialog({
+  members,
+  group,
+  initialSource,
+  onClose,
+  onDone,
+}: {
+  members: Product[];
+  group?: Product;
+  initialSource?: string;
+  onClose: () => void;
+  onDone: (patches: Map<string, string[]>) => void;
+}) {
+  const withImg = members.filter((m) => getProductImages(m).length > 0);
+  const [sourceId, setSourceId] = useState<string>(initialSource ?? withImg[0]?.id ?? '');
+  const source = members.find((m) => m.id === sourceId);
+  const targets = useMemo(() => [...(group ? [group] : []), ...members.filter((m) => m.id !== sourceId)], [group, members, sourceId]);
+  const [picked, setPicked] = useState<Set<string>>(() => new Set());
+  const [busy, setBusy] = useState<[number, number] | null>(null);
+  const urls = useMemo(() => (source ? getProductImages(source) : []), [source]);
+
+  useEffect(() => {
+    setPicked(new Set(targets.filter((t) => getProductImages(t).length === 0).map((t) => t.id)));
+  }, [sourceId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggle = (id: string) =>
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  async function run() {
+    const ids = targets.filter((t) => picked.has(t.id)).map((t) => t.id);
+    if (!ids.length || !urls.length || !source) return;
+    setBusy([0, ids.length]);
+    try {
+      const result = await withAuditBatch(`Kopiowanie zdjęć z ${source.sku} do ${ids.length} produktów`, () =>
+        copyImagesToProducts(urls, ids, (d, t) => setBusy([d, t])),
+      );
+      showToast(`Skopiowano zdjęcia do ${ids.length} produktów`, 'ok');
+      onDone(result);
+      onClose();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Nie udało się skopiować zdjęć', 'error', 7000);
+      setBusy(null);
+    }
+  }
+
+  const thumb = (p: Product, has: boolean) => (
+    <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-800 bg-white">
+      {has ? <ProductImage product={p} className="h-full w-full object-contain" /> : <ImageOff className="h-4 w-4 text-slate-400" />}
+    </span>
+  );
+
+  return (
+    <div className="fixed inset-0 z-[95] flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" onClick={busy ? undefined : onClose}>
+      <div className="flex max-h-[92dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-3xl border border-slate-700 bg-slate-900 shadow-2xl sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="border-b border-slate-800 px-4 py-3">
+          <h3 className="text-base font-bold text-slate-50">Kopiowanie zdjęć w grupie</h3>
+          <p className="mt-0.5 text-xs text-slate-400">Żaden produkt nie jest „główny” — wybierz źródło, potem produkty docelowe. Zdjęcia zaznaczonych zostaną zastąpione.</p>
+        </div>
+        <div className="border-b border-slate-800 px-4 py-2">
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">1. Skopiuj zdjęcia z</p>
+          <div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto">
+            {withImg.length === 0 && <span className="text-xs text-slate-500">Żaden wariant nie ma jeszcze zdjęcia.</span>}
+            {withImg.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                disabled={!!busy}
+                onClick={() => setSourceId(m.id)}
+                title={m.displayName}
+                className={`flex items-center gap-1.5 rounded-lg border px-1.5 py-1 text-left text-[11px] ${m.id === sourceId ? 'border-brand-500 bg-brand-500/10 text-brand-200' : 'border-slate-700 text-slate-300 hover:bg-slate-800'}`}
+              >
+                <span className="h-7 w-7 shrink-0 overflow-hidden rounded bg-white"><ProductImage product={m} className="h-full w-full object-contain" /></span>
+                <span className="max-w-[9rem] truncate">{m.displayName}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 border-b border-slate-800 px-4 py-2 text-xs">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">2. Wgraj do</span>
+          <button type="button" className="text-brand-300 hover:underline" onClick={() => setPicked(new Set(targets.map((t) => t.id)))}>Wszystkie</button>
+          <button type="button" className="text-brand-300 hover:underline" onClick={() => setPicked(new Set(targets.filter((t) => getProductImages(t).length === 0).map((t) => t.id)))}>Tylko bez zdjęcia</button>
+          <button type="button" className="text-slate-400 hover:underline" onClick={() => setPicked(new Set())}>Żadne</button>
+        </div>
+        <ul className="min-h-0 flex-1 divide-y divide-slate-800 overflow-y-auto">
+          {targets.map((t) => {
+            const has = getProductImages(t).length > 0;
+            const isGroupRow = !!group && t.id === group.id;
+            return (
+              <li key={t.id}>
+                <label className="flex cursor-pointer items-center gap-3 px-4 py-2 hover:bg-slate-800/50">
+                  <input type="checkbox" checked={picked.has(t.id)} onChange={() => toggle(t.id)} disabled={!!busy} />
+                  {thumb(t, has)}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm text-slate-200">{isGroupRow ? `Zdjęcie grupy: ${t.displayName}` : t.displayName}</span>
+                    <span className="block font-mono text-[11px] text-slate-500">{isGroupRow ? 'grupa' : t.sku}{has ? ' · ma zdjęcia' : ' · brak zdjęcia'}</span>
+                  </span>
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="flex items-center justify-end gap-2 border-t border-slate-800 px-4 py-3">
+          <button type="button" onClick={onClose} disabled={!!busy} className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800 disabled:opacity-40">Anuluj</button>
+          <button type="button" onClick={() => void run()} disabled={!!busy || picked.size === 0 || !urls.length} className="rounded-xl bg-brand-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-500 disabled:opacity-40">
+            {busy ? `Kopiuję… ${busy[0]}/${busy[1]}` : `Skopiuj do ${picked.size}`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ProductVariantsPanel({
   variants,
   compact,
+  catalogProducts,
+  onOpenVariant,
+  showPrices,
+  canEditImages,
+  onVariantPatched,
+  groupProduct,
+  onGroupPatched,
 }: {
   variants: ProductVariant[];
   compact?: boolean;
+  catalogProducts?: Product[];
+  onOpenVariant?: (variant: Product) => void;
+  showPrices?: boolean;
+  canEditImages?: boolean;
+  onVariantPatched?: (id: string, patch: Partial<Product>) => void;
+  groupProduct?: Product;
+  onGroupPatched?: (patch: Partial<Product>) => void;
 }) {
+  // pełne produkty wariantów (zdjęcie, cena, znaczniki W/B) — po SKU
+  const baseResolved = useMemo(() => {
+    const m = new Map<string, Product>();
+    if (!catalogProducts) return m;
+    const want = new Set(variants.map((v) => String(v.sku).toUpperCase()));
+    for (const p of catalogProducts) {
+      const k = p.sku.toUpperCase();
+      if (want.has(k) && !p.isGroup) m.set(k, p);
+    }
+    return m;
+  }, [catalogProducts, variants]);
+  // warianty, których nie ma na załadowanej liście (np. ukryte, inny katalog) — dociągamy z bazy po SKU
+  const [fetched, setFetched] = useState<Map<string, Product>>(new Map());
+  useEffect(() => {
+    const missing = variants.map((v) => String(v.sku).trim().toUpperCase()).filter((k) => k && !baseResolved.has(k));
+    if (!missing.length) return;
+    let cancelled = false;
+    fetchProductsBySkus(missing)
+      .then((rows) => {
+        if (cancelled || !rows.length) return;
+        setFetched(new Map(rows.filter((p) => !p.isGroup).map((p) => [p.sku.toUpperCase(), p] as const)));
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [variants, baseResolved]);
+  const resolved = useMemo(() => {
+    if (!fetched.size) return baseResolved;
+    const m = new Map(fetched);
+    for (const [k, v] of baseResolved) m.set(k, v);
+    return m;
+  }, [baseResolved, fetched]);
+  const [copyOpen, setCopyOpen] = useState<{ source?: string } | null>(null);
+  // zdjęcia widoczne od razu po skopiowaniu (bez czekania na odświeżenie listy)
+  const [localImages, setLocalImages] = useState<Map<string, string[]>>(new Map());
+  const withLocal = (p: Product): Product => {
+    const urls = localImages.get(p.id);
+    return urls ? { ...p, customImageUrl: urls[0], extraImageUrls: urls.slice(1), hasImage: true } : p;
+  };
+
   async function copySku(sku: string) {
     try {
       await navigator.clipboard.writeText(sku);
@@ -2679,6 +3068,16 @@ function ProductVariantsPanel({
             Warianty SKU ({variants.length})
           </h3>
         </div>
+        {canEditImages && resolved.size > 0 && (
+          <button
+            type="button"
+            onClick={() => setCopyOpen({})}
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] font-medium text-slate-300 hover:border-brand-500/40 hover:bg-slate-800"
+            title="Wybierz produkt ze zdjęciami i wgraj je pozostałym oraz jako zdjęcie grupy"
+          >
+            <Images className="h-3 w-3" /> Zdjęcia dla grupy / wszystkich
+          </button>
+        )}
         <p className="text-xs text-slate-500">
           Łączny stan:{' '}
           <span className="font-semibold tabular-nums text-slate-300">
@@ -2691,21 +3090,64 @@ function ProductVariantsPanel({
           compact ? 'max-h-48' : 'max-h-[min(28rem,50vh)]'
         }`}
       >
-        {list.map((v) => (
+        {list.map((v) => {
+          const found = resolved.get(String(v.sku).trim().toUpperCase());
+          const full = found ? withLocal(found) : undefined;
+          const price = full?.priceSaleGross ?? 0;
+          const openable = !!(full && onOpenVariant);
+          return (
           <li
             key={v.sku}
-            className="flex items-start justify-between gap-3 px-4 py-3 hover:bg-slate-900/50"
+            onClick={openable ? () => onOpenVariant!(full!) : undefined}
+            className={`flex items-start justify-between gap-3 px-4 py-3 hover:bg-slate-900/50 ${openable ? 'cursor-pointer' : ''}`}
           >
+            {full && (
+              <span className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-800 bg-white">
+                {full.hasImage || full.imageUrl ? (
+                  <ProductImage product={full} className="h-full w-full object-contain" />
+                ) : (
+                  <ImageOff className="h-5 w-5 text-slate-400" aria-label="Brak zdjęcia" />
+                )}
+              </span>
+            )}
             <div className="min-w-0 flex-1">
-              <p className="text-sm leading-snug text-slate-200">{v.name}</p>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {full && <BaselinkerTag product={full} />}
+                {full && <WaproMagTag product={full} />}
+                {full && !(full.hasImage || full.imageUrl) && (
+                  <span className="inline-flex items-center gap-1 rounded-md bg-red-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-red-300">
+                    <ImageOff className="h-3 w-3" /> brak zdjęcia
+                  </span>
+                )}
+              </div>
+              <p className="mt-0.5 text-sm leading-snug text-slate-200">{v.name}</p>
               {v.ean && (
                 <p className="mt-0.5 font-mono text-[11px] text-slate-500">EAN {v.ean}</p>
               )}
             </div>
             <div className="flex shrink-0 flex-col items-end gap-1">
+              {showPrices && price > 0 && (
+                <span className="text-sm font-semibold tabular-nums text-slate-100">{formatPricePln(price)}</span>
+              )}
+              {canEditImages && full && (full.hasImage || full.imageUrl) && resolved.size > 1 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCopyOpen({ source: full.id });
+                  }}
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] font-medium text-slate-300 hover:border-brand-500/40 hover:bg-slate-800"
+                  title="Skopiuj zdjęcia tego wariantu do pozostałych"
+                >
+                  <Images className="h-3 w-3" /> zdjęcia → inne
+                </button>
+              )}
               <button
                 type="button"
-                onClick={() => void copySku(v.sku)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void copySku(v.sku);
+                }}
                 className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1 font-mono text-xs font-medium text-brand-300 hover:border-brand-500/40 hover:bg-slate-800"
                 title="Kopiuj SKU"
               >
@@ -2721,8 +3163,26 @@ function ProductVariantsPanel({
               </span>
             </div>
           </li>
-        ))}
+          );
+        })}
       </ul>
+      {copyOpen && (
+        <CopyImagesDialog
+          members={[...resolved.values()].map(withLocal)}
+          group={groupProduct}
+          initialSource={copyOpen.source}
+          onClose={() => setCopyOpen(null)}
+          onDone={(res) => {
+            const gid = groupProduct?.id;
+            setLocalImages((prev) => new Map([...prev, ...[...res].filter(([id]) => id !== gid)]));
+            for (const [id, urls] of res) {
+              const patch = { customImageUrl: urls[0], extraImageUrls: urls.slice(1), hasImage: true };
+              if (id === gid) onGroupPatched?.(patch);
+              onVariantPatched?.(id, patch);
+            }
+          }}
+        />
+      )}
       {hidden > 0 && (
         <p className="border-t border-slate-800 px-4 py-2 text-center text-xs text-slate-500">
           + {hidden} kolejnych w zakładce Warianty
@@ -2835,3 +3295,4 @@ function CategoryPicker({
     </>
   );
 }
+

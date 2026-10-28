@@ -1,6 +1,7 @@
 import { memo, useCallback } from 'react';
 import type { Product } from '../types';
 import { ProductCard } from './ProductCard';
+import { ProductRow } from './ProductRow';
 
 export interface CatalogGridCardProps {
   product: Product;
@@ -10,7 +11,7 @@ export interface CatalogGridCardProps {
   onToggleFavorite?: (productId: string) => void;
   onStockDelta?: (product: Product, delta: number) => void;
   stockBusy: boolean;
-  density: 'sm' | 'md' | 'lg';
+  density: 'sm' | 'md' | 'lg' | 'list';
   orderQty: number;
   onOrderDelta?: (product: Product, delta: number) => void;
   hideImages: boolean;
@@ -41,6 +42,20 @@ export const CatalogGridCard = memo(function CatalogGridCard({
     onProductClick(product);
   }, [onProductClick, product]);
 
+  // wiersz (telefon) nie obsługuje edycji stanów ani zamówień — wtedy zostaje karta
+  if (density === 'list' && !editMode && !onOrderDelta) {
+    return (
+      <ProductRow
+        product={product}
+        onClick={handleClick}
+        isFavorite={isFavorite}
+        onToggleFavorite={onToggleFavorite}
+        hideImages={hideImages}
+        showPrices={showPrices}
+      />
+    );
+  }
+
   return (
     <ProductCard
       product={product}
@@ -50,7 +65,7 @@ export const CatalogGridCard = memo(function CatalogGridCard({
       onToggleFavorite={onToggleFavorite}
       onStockDelta={onStockDelta}
       stockBusy={stockBusy}
-      density={density}
+      density={density === 'list' ? 'md' : density}
       orderQty={orderQty}
       onOrderDelta={onOrderDelta}
       hideImages={hideImages}

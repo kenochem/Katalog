@@ -467,7 +467,7 @@ export function FinanceDashboard({ onBack }: FinanceDashboardProps) {
         />
       </div>
 
-      <div className="grid gap-3 xl:grid-cols-12">
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-12">
         <section className="rounded-2xl border border-slate-800 bg-slate-900/50 p-4 xl:col-span-12">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
@@ -815,7 +815,7 @@ function MonthFormModal({
             </p>
           )}
         </Field>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Sprzedaż netto">
             <input
               value={sprzedaz}

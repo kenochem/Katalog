@@ -18,8 +18,8 @@ export const VALIDATION_LABEL: Record<ValidationKind, string> = {
 
 export const VALIDATION_KINDS = Object.keys(VALIDATION_LABEL) as ValidationKind[];
 
-/** Maksymalna zalecana długość tytułu oferty (Allegro i większość marketplace’ów: 75). */
-export const TITLE_MAX = 75;
+/** Maksymalna zalecana długość tytułu oferty (standard nazw katalogu: 60). */
+export const TITLE_MAX = 60;
 
 export interface ValidationFinding {
   kind: ValidationKind;

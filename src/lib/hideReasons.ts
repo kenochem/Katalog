@@ -8,6 +8,7 @@ export const HIDE_REASON_PRESETS: string[] = [
   'Uszczelka / o-ring / drobny element',
   'Śruba / nakrętka / złączka',
   'Stara marka / wycofane',
+  'Zablokowany w WAPRO',
   'Produkt przestarzały',
   'Nie sprzedajemy',
   'Duplikat',

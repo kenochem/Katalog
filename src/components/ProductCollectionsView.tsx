@@ -223,7 +223,7 @@ export function ProductCollectionsView({
       {showNew && !activeId && (
         <div className="rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-sm">
           <p className="mb-3 text-sm font-medium text-slate-100">Nowy folder</p>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block sm:col-span-2">
               <span className="mb-1 block text-xs text-slate-500">Nazwa</span>
               <input
@@ -286,7 +286,7 @@ export function ProductCollectionsView({
           </p>
         </div>
       ) : !activeId ? (
-        <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {collections.map((c) => (
             <li key={c.id} className="relative">
               <button
@@ -394,7 +394,7 @@ export function ProductCollectionsView({
 
             {editingMeta && (
               <div className="rounded-2xl border border-slate-700 bg-slate-900 p-4">
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <label className="block sm:col-span-2">
                     <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
                       Nazwa folderu

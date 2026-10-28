@@ -17,6 +17,8 @@ export interface SysEvent {
   title: string;
   message: string;
   details?: Record<string, unknown>;
+  /** Produkty, których dotyczy zdarzenie (np. wysłane do BaseLinkera) — do podglądu i otwarcia karty. */
+  products?: { sku: string; label: string }[];
 }
 
 export interface AgentBeat {
@@ -196,14 +198,42 @@ export async function fetchSystemData(days: number): Promise<SystemData> {
       message: String(r.message ?? ''),
     });
   }
+  // nazwy produktów z próbek wysyłek do BaseLinkera (sample: [{ sku, value | status, reason }])
+  type BlSample = { sku?: string; value?: unknown; status?: string; reason?: string };
+  const blSkus = new Set<string>();
+  for (const r of (blLog ?? []) as Record<string, unknown>[]) {
+    for (const x of Array.isArray(r.sample) ? (r.sample as BlSample[]) : []) {
+      if (x?.sku && x.sku !== '*') blSkus.add(String(x.sku).toUpperCase());
+    }
+  }
+  const blNames = new Map<string, string>();
+  const skuList = [...blSkus];
+  for (let i = 0; i < skuList.length; i += 150) {
+    const { data } = await sb.from('products').select('sku,name,display_name').in('sku', skuList.slice(i, i + 150));
+    for (const p of (data ?? []) as Record<string, unknown>[]) {
+      blNames.set(String(p.sku).toUpperCase(), String(p.display_name || p.name || ''));
+    }
+  }
   for (const r of (blLog ?? []) as Record<string, unknown>[]) {
     const status = String(r.status);
+    const field = String(r.field);
+    const sample = (Array.isArray(r.sample) ? (r.sample as BlSample[]) : []).filter((x) => x?.sku && x.sku !== '*');
+    const products = sample.map((x) => {
+      const sku = String(x.sku).toUpperCase();
+      const name = blNames.get(sku);
+      const what =
+        x.value != null
+          ? field === 'price' ? ` → ${x.value} zł` : field === 'stock' ? ` → stan ${x.value}` : ` → ${x.value}`
+          : x.status ? ` · ${x.status}${x.reason ? `: ${x.reason}` : ''}` : '';
+      return { sku, label: `${name ? `${name} ` : ''}${what}`.trim() };
+    });
     events.push({
       id: `bl-${r.id}`,
       at: String(r.created_at),
       source: 'baselinker',
       level: status === 'error' ? 'error' : status === 'ok' ? 'success' : 'warning',
-      title: `${BL_FIELD_TITLE[String(r.field)] ?? 'BaseLinker'}${r.trigger === 'auto' ? ' (automat)' : ''}`,
+      title: `${BL_FIELD_TITLE[field] ?? 'BaseLinker'}${r.trigger === 'auto' ? ' (automat)' : ''}`,
+      ...(products.length ? { products } : {}),
       message: [
         r.requested != null ? `Wysłano: ${r.updated ?? 0} z ${r.requested}${r.skipped ? `, pominięto ${r.skipped}` : ''}` : '',
         String(r.note ?? ''),

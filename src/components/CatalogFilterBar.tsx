@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'rea
 import {
   ChevronDown,
   LayoutGrid,
+  List,
   Pencil,
   Plus,
   Rows2,
@@ -22,7 +23,7 @@ import {
 } from '../lib/search';
 import { CATALOG_LABELS, type CatalogListFilter } from '../types';
 
-export type GridDensity = 'sm' | 'md' | 'lg';
+export type GridDensity = 'sm' | 'md' | 'lg' | 'list';
 
 type MenuId =
   | 'category'
@@ -197,6 +198,7 @@ function DensityToggle({
           { id: 'sm' as const, icon: LayoutGrid, label: 'Małe' },
           { id: 'md' as const, icon: Rows2, label: 'Średnie' },
           { id: 'lg' as const, icon: Square, label: 'Duże' },
+          { id: 'list' as const, icon: List, label: 'Lista' },
         ] as const
       ).map((opt) => (
         <button
@@ -436,14 +438,14 @@ export function CatalogFilterBar({
       return (
         <div className={`space-y-4 ${className.includes('grid') ? '' : className}`}>
           {visibleCategories.includes('Wszystkie') && (
-            <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">{categoryButton('Wszystkie')}</div>
+            <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">{categoryButton('Wszystkie')}</div>
           )}
           {sections.map((g) => (
             <div key={g.root}>
               <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
                 {g.root}
               </p>
-              <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
                 {g.leaves.map((leaf) => categoryButton(leaf))}
               </div>
             </div>
@@ -453,7 +455,7 @@ export function CatalogFilterBar({
               <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Inne
               </p>
-              <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
                 {ungrouped.map((cat) => categoryButton(cat))}
               </div>
             </div>
@@ -610,6 +612,30 @@ export function CatalogFilterBar({
             {filteredCount} prod.
             {searching && ' · trafność'}
           </p>
+        </div>
+        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 scrollbar-none" role="group" aria-label="Szybkie filtry">
+          {(
+            [
+              { id: 'all', label: 'Wszystkie', active: stockFilter === 'all' && imageFilter === 'all', on: () => { onStockFilterChange('all'); onImageFilterChange('all'); } },
+              { id: 'in-stock', label: 'Na stanie', active: stockFilter === 'in-stock', on: () => onStockFilterChange(stockFilter === 'in-stock' ? 'all' : 'in-stock') },
+              { id: 'low', label: 'Niski stan', active: stockFilter === 'low', on: () => onStockFilterChange(stockFilter === 'low' ? 'all' : 'low') },
+              { id: 'out', label: 'Brak', active: stockFilter === 'out', on: () => onStockFilterChange(stockFilter === 'out' ? 'all' : 'out') },
+              { id: 'noimg', label: 'Bez zdjęcia', active: imageFilter === 'without', on: () => onImageFilterChange(imageFilter === 'without' ? 'all' : 'without') },
+            ] as const
+          ).map((chip) => (
+            <button
+              key={chip.id}
+              type="button"
+              onClick={chip.on}
+              className={`shrink-0 rounded-full px-3.5 py-2 text-xs font-semibold transition ${
+                chip.active
+                  ? 'bg-brand-600 text-white'
+                  : 'bg-slate-800 text-slate-300 active:bg-slate-700'
+              }`}
+            >
+              {chip.label}
+            </button>
+          ))}
         </div>
         {activeFilterCount > 0 && activeChips}
       </div>

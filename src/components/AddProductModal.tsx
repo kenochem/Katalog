@@ -1,4 +1,5 @@
 import { Camera, Loader2, Save, Upload, X } from 'lucide-react';
+import { isMobileDevice } from '../lib/device';
 import { useRef, useState } from 'react';
 import type { Product, CatalogType } from '../types';
 import { ACCESSORY_CATEGORIES, deriveCategories } from '../types';
@@ -141,14 +142,16 @@ export function AddProductModal({
                 e.target.value = '';
               }}
             />
-            <button
-              type="button"
-              onClick={() => cameraRef.current?.click()}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-600 py-2.5 text-sm text-white hover:bg-brand-500"
-            >
-              <Camera className="h-4 w-4" />
-              Zrób zdjęcie
-            </button>
+            {isMobileDevice() && (
+              <button
+                type="button"
+                onClick={() => cameraRef.current?.click()}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-600 py-2.5 text-sm text-white hover:bg-brand-500"
+              >
+                <Camera className="h-4 w-4" />
+                Zrób zdjęcie
+              </button>
+            )}
             <button
               type="button"
               onClick={() => fileRef.current?.click()}

@@ -330,7 +330,7 @@ export function OpsSonaxAnalytics({ onBack, embedded = false }: OpsSonaxAnalytic
 
       {acq && computed && s ? (
         <>
-          <section className="grid gap-2 sm:grid-cols-3">
+          <section className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <LegendChip
               icon={UserCheck}
               label="Czysty Sonax"
@@ -423,7 +423,7 @@ export function OpsSonaxAnalytics({ onBack, embedded = false }: OpsSonaxAnalytic
             ) : null}
           </section>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <KpiTile
               icon={Wallet}
               label="Obrot netto (widok)"
@@ -509,7 +509,7 @@ export function OpsSonaxAnalytics({ onBack, embedded = false }: OpsSonaxAnalytic
           ) : null}
 
           {tab === 'summary' ? (
-            <section className="grid gap-5 xl:grid-cols-[1.3fr_0.7fr]">
+            <section className="grid grid-cols-1 gap-5 xl:grid-cols-[1.3fr_0.7fr]">
               <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/50">
                 <div className="mb-1 flex items-center gap-2">
                   <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200">Obrót miesięczny (widok)</h3>

@@ -21,6 +21,8 @@ export const PRICE_FIELD_LABEL: Record<PriceField, string> = {
 export interface BulkEditSpec {
   manufacturer?: string;
   category?: string;
+  /** Pełna ścieżka kategorii („A › B”) zapisywana w meta — ma pierwszeństwo przy wyliczaniu kategorii produktu. */
+  shopPath?: string;
   vatRate?: number;
   unit?: string;
   tagsAdd?: string[];
@@ -90,6 +92,10 @@ export function computeChanges(src: BulkSource, spec: BulkEditSpec): FieldChange
   }
   if (spec.category !== undefined) {
     push({ label: 'Kategoria', column: 'category', from: src.category, to: spec.category });
+  }
+  if (spec.shopPath !== undefined) {
+    push({ label: 'meta: shopCategoryPath', metaKey: 'shopCategoryPath', from: src.meta.shopCategoryPath ?? null, to: spec.shopPath || null });
+    push({ label: 'meta: categoryAssignedBy', metaKey: 'categoryAssignedBy', from: src.meta.categoryAssignedBy ?? null, to: 'manual' });
   }
   if (spec.vatRate !== undefined) {
     push({ label: 'meta: vatRate', metaKey: 'vatRate', from: src.meta.vatRate ?? null, to: spec.vatRate });

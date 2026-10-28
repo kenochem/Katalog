@@ -417,7 +417,7 @@ export function CrmHubView({
             onCommission={() => setTab('commission')}
             onCalendar={() => setTab('calendar')}
           />
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <CrmTasksPanel />
             <CrmNotesPanel clients={clients} />
           </div>
@@ -496,7 +496,7 @@ export function CrmHubView({
             subtitle="Wspólny kalendarz zespołu — wizyty, dostawy, zadania. Organizuj swoje dni."
             onBack={goHub}
           />
-          <div className="grid gap-4 lg:grid-cols-[1fr_20rem] lg:items-start">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_20rem] lg:items-start">
             <CalendarKenochemView />
             <CrmTasksPanel />
           </div>
@@ -680,7 +680,7 @@ function CrmOperatingCenter({
 
   return (
     <div className="space-y-4">
-      <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="rounded-3xl border border-slate-800 bg-slate-950 p-4 shadow-xl shadow-slate-950/20">
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div>
@@ -702,7 +702,7 @@ function CrmOperatingCenter({
             </div>
           </div>
 
-          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {priorities.map((item) => (
               <button
                 key={item.id}
@@ -724,7 +724,7 @@ function CrmOperatingCenter({
             ))}
           </div>
 
-          <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
             <CrmQuickAction icon={<ShoppingCart className="h-4 w-4" />} label="Nowa oferta" onClick={onOrder} />
             <CrmQuickAction icon={<Target className="h-4 w-4" />} label="Lejek" onClick={onPipeline} />
             <CrmQuickAction icon={<MapPin className="h-4 w-4" />} label="Trasa wizyt" onClick={onRoutes} />
@@ -859,7 +859,7 @@ function CrmCompanyLayer({
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 xl:grid-cols-4">
+      <div className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-4">
         <button
           type="button"
           onClick={onClients}
@@ -953,7 +953,7 @@ function CrmCompanyLayer({
         Ustawienia firmowe
         <ContextHelp id="crmCompanySettings" />
       </p>
-      <div className="mt-2 grid gap-3 lg:grid-cols-[1fr_1fr_1fr_1.3fr]">
+      <div className="mt-2 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_1fr_1fr_1.3fr]">
         <CrmConfigField
           label="Klient cichnie po"
           suffix="dni"
@@ -990,7 +990,7 @@ function CrmCompanyLayer({
         </label>
       </div>
 
-      <div className="mt-3 grid gap-2 sm:grid-cols-3">
+      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
         <MiniCrmMetric label="Termin platnosci" value={`${config.defaultPaymentDays} dni`} />
         <MiniCrmMetric label="Brak pozycji mapy" value={String(model.geoMissing)} />
         <MiniCrmMetric label="Do przypisania" value={String(model.ordersWithoutClient)} />

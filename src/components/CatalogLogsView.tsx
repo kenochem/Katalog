@@ -56,6 +56,8 @@ function formatChangeValue(field: ProductSyncChangeField, value: number | null):
 
 interface CatalogLogsViewProps {
   userId?: string;
+  /** Otwiera kartę produktu po SKU (podgląd z wpisów logów). */
+  onOpenSku?: (sku: string) => void;
 }
 
 const LEVEL_LABELS: Record<CatalogLogLevel, string> = {
@@ -319,7 +321,7 @@ function CatalogSystemLogs({ userId }: CatalogLogsViewProps) {
         </div>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
           <div className="flex items-start gap-3">
             <span
@@ -535,7 +537,7 @@ function CatalogSystemLogs({ userId }: CatalogLogsViewProps) {
                     {entry.source !== 'sync-wapro' &&
                       entry.details &&
                       Object.keys(entry.details).length > 0 && (
-                      <dl className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                      <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
                         {Object.entries(entry.details).map(([key, value]) => (
                           <div
                             key={key}
@@ -563,7 +565,7 @@ function CatalogSystemLogs({ userId }: CatalogLogsViewProps) {
 }
 
 /** Logi: synchronizacje i zdarzenia + (dla uprawnionych) dziennik aktywności użytkowników. */
-export function CatalogLogsView({ userId }: CatalogLogsViewProps) {
+export function CatalogLogsView({ userId, onOpenSku }: CatalogLogsViewProps) {
   const { role } = useAuth();
   const canAudit = roleCan(role, 'manageUsers');
   const [tab, setTab] = useState<'status' | 'system' | 'activity' | 'migrations' | 'bulk'>('status');
@@ -600,7 +602,7 @@ export function CatalogLogsView({ userId }: CatalogLogsViewProps) {
         ))}
       </div>
       {tab === 'status' ? (
-        <SystemStatusView />
+        <SystemStatusView onOpenSku={onOpenSku} />
       ) : tab === 'system' || !canAudit ? (
         <CatalogSystemLogs userId={userId} />
       ) : tab === 'bulk' ? (

@@ -1,4 +1,5 @@
-import { ListChecks, Loader2, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import { ListChecks, Loader2, Pencil, Plus, Search, Sparkles, Trash2, X } from 'lucide-react';
+import { SegmentationPanel } from './SegmentationPanel';
 import { useMemo, useState } from 'react';
 import type { Product } from '../types';
 import {
@@ -19,8 +20,17 @@ import { showToast } from '../lib/toast';
 const EMPTY: AttributeDef = { key: '', label: '', type: 'text', unit: '', options: [], categories: [], required: false, sort: 0 };
 
 /** Atrybuty strukturalne: definicje (typ, jednostka, lista wartości, kategorie) i pokrycie w produktach. */
-export function AttributesView({ products, canEdit }: { products: Product[]; canEdit: boolean }) {
+export function AttributesView({
+  products,
+  canEdit,
+  onPatched,
+}: {
+  products: Product[];
+  canEdit: boolean;
+  onPatched?: (patches: { id: string; patch: Partial<Product> }[]) => void;
+}) {
   const version = useAttributesVersion();
+  const [tab, setTab] = useState<'defs' | 'auto'>('defs');
   useCategoryRegistry();
   const [draft, setDraft] = useState<AttributeDef | null>(null);
   const [isNew, setIsNew] = useState(false);
@@ -81,6 +91,19 @@ export function AttributesView({ products, canEdit }: { products: Product[]; can
         </div>
       </section>
 
+      <div className="inline-flex rounded-xl border border-slate-300 bg-white p-0.5 dark:border-slate-700 dark:bg-slate-900">
+        <button type="button" onClick={() => setTab('defs')} className={`rounded-lg px-4 py-1.5 text-sm font-semibold ${tab === 'defs' ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'}`}>
+          Definicje
+        </button>
+        <button type="button" onClick={() => setTab('auto')} className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-sm font-semibold ${tab === 'auto' ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'}`}>
+          <Sparkles className="h-3.5 w-3.5" /> Auto-uzupełnianie
+        </button>
+      </div>
+
+      {tab === 'auto' ? (
+        <SegmentationPanel products={products} canEdit={canEdit} onApplied={onPatched} />
+      ) : (
+      <>
       <div className="relative max-w-md">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Szukaj atrybutu…" className="input-field with-icon" />
@@ -93,7 +116,7 @@ export function AttributesView({ products, canEdit }: { products: Product[]; can
             : 'Nic nie pasuje do wyszukiwania.'}
         </div>
       ) : (
-        <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {shown.map(({ def, inScope, filled, pct }) => (
             <li key={def.key} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950/30">
               <div className="flex items-start justify-between gap-2">
@@ -129,6 +152,7 @@ export function AttributesView({ products, canEdit }: { products: Product[]; can
               </div>
               <p className="mt-2 truncate text-[11px] text-slate-600 dark:text-slate-400">
                 {def.categories.length ? `Kategorie: ${def.categories.join(', ')}` : 'Wszystkie kategorie'}
+              {def.showWhen ? ` · tylko gdy ${getAttributes().find((a) => a.key === def.showWhen?.key)?.label ?? def.showWhen.key} = ${def.showWhen.values.join(' / ')}` : ''}
               </p>
               <div className="mt-3">
                 <div className="flex justify-between text-[11px] text-slate-600 dark:text-slate-400">
@@ -144,6 +168,8 @@ export function AttributesView({ products, canEdit }: { products: Product[]; can
             </li>
           ))}
         </ul>
+      )}
+      </>
       )}
     </div>
   );
@@ -187,7 +213,7 @@ function AttributeEditor({ initial, isNew, onClose }: { initial: AttributeDef; i
           </button>
         </div>
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block text-xs text-slate-400 sm:col-span-2">
               Nazwa
               <input value={def.label} onChange={(e) => setDef({ ...def, label: e.target.value })} className={`${sel} mt-1`} placeholder="np. Pojemność" />
@@ -219,6 +245,48 @@ function AttributeEditor({ initial, isNew, onClose }: { initial: AttributeDef; i
             <input type="checkbox" checked={def.required} onChange={(e) => setDef({ ...def, required: e.target.checked })} className="h-4 w-4 accent-brand-500" />
             Wymagany — brak wartości będzie zgłaszany w Uzupełnianiu danych
           </label>
+
+          <section>
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Pokazuj tylko, gdy inny atrybut ma wartość (opcjonalnie)</p>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <select
+                value={def.showWhen?.key ?? ''}
+                onChange={(e) => setDef({ ...def, showWhen: e.target.value ? { key: e.target.value, values: [] } : null })}
+                className={sel}
+              >
+                <option value="">— zawsze —</option>
+                {getAttributes()
+                  .filter((a) => a.type === 'select' && a.key !== def.key)
+                  .map((a) => (
+                    <option key={a.key} value={a.key}>
+                      {a.label}
+                    </option>
+                  ))}
+              </select>
+              {def.showWhen && (
+                <div className="flex max-h-28 flex-wrap gap-1.5 overflow-y-auto">
+                  {(getAttributes().find((a) => a.key === def.showWhen?.key)?.options ?? []).map((o) => {
+                    const on = def.showWhen?.values.includes(o) ?? false;
+                    return (
+                      <button
+                        key={o}
+                        type="button"
+                        onClick={() =>
+                          setDef({
+                            ...def,
+                            showWhen: { key: def.showWhen!.key, values: on ? def.showWhen!.values.filter((x) => x !== o) : [...def.showWhen!.values, o] },
+                          })
+                        }
+                        className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${on ? 'border-brand-500 bg-brand-500/15 text-brand-200' : 'border-slate-700 text-slate-300 hover:bg-slate-800'}`}
+                      >
+                        {o}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </section>
 
           <section>
             <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">

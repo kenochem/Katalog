@@ -261,7 +261,7 @@ export function AdminUsersSection() {
 
   return (
     <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 sm:p-5">
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {ACCOUNT_ROLES.map((r) => {
           const summary = summarizeRolePermissions(r);
           return (
@@ -294,7 +294,7 @@ export function AdminUsersSection() {
         <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
           Nowy użytkownik
         </p>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <input
             type="text"
             value={displayName}
@@ -355,7 +355,7 @@ export function AdminUsersSection() {
           <Loader2 className="h-6 w-6 animate-spin text-brand-400" />
         </div>
       ) : (
-        <ul className="grid gap-2 lg:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-2 lg:grid-cols-2">
           {users.map((u) => {
             const userSummary = summarizeRolePermissions(u.role);
             return (

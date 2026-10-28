@@ -1,4 +1,5 @@
 import { Download, CheckSquare, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, EyeOff, ImageOff, Loader2, RotateCcw, Search, SlidersHorizontal, Square, Tag, X } from 'lucide-react';
+import { CopyName } from './CopyName';
 import { useEffect, useMemo, useState } from 'react';
 import type { Product } from '../types';
 import { getProductImage } from '../lib/products';
@@ -178,7 +179,7 @@ export function CatalogHiddenView({
         </div>
       </section>
 
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_21rem] 2xl:grid-cols-[minmax(0,1fr)_24rem]">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_21rem] 2xl:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="min-w-0 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-950/30">
             <button type="button" onClick={togglePage} disabled={!canBulk || pageRows.length === 0} className="flex items-center gap-1.5 text-sm font-semibold text-slate-800 disabled:opacity-40 dark:text-slate-100">
@@ -228,7 +229,7 @@ export function CatalogHiddenView({
                       {image ? <img src={image} alt="" loading="lazy" className="h-full w-full object-contain p-1" /> : <ImageOff className="h-5 w-5 text-slate-500" />}
                     </button>
                     <button type="button" onClick={() => onOpenProduct(p)} className="min-w-0 text-left">
-                      <span className="block truncate font-semibold text-slate-950 dark:text-slate-50">{p.displayName}</span>
+                      <span className="block truncate font-semibold text-slate-950 dark:text-slate-50"><CopyName text={p.displayName}>{p.displayName}</CopyName></span>
                       <span className="mt-0.5 block truncate font-mono text-xs text-slate-600 dark:text-slate-400">
                         {p.sku} · {effectiveManufacturer(p) || 'Bez producenta'} · {getProductDisplayCategory(p)} · stan {p.stock ?? 0}
                       </span>
@@ -236,6 +237,14 @@ export function CatalogHiddenView({
                         <span className="inline-flex items-center gap-1 rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 font-semibold text-rose-900 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
                           <EyeOff className="h-3 w-3" /> {reasonOf(p)}
                         </span>
+                        {p.meta?.waproBlocked && (
+                          <span
+                            className="inline-flex items-center rounded-full border border-orange-300 bg-orange-50 px-2 py-0.5 text-[10px] font-bold text-orange-800 dark:border-orange-500/40 dark:bg-orange-500/15 dark:text-orange-200"
+                            title="Artykuł zablokowany w WAPRO — ukryty i przywracany automatycznie przez synchronizację"
+                          >
+                            WAPRO
+                          </span>
+                        )}
                         {p.meta?.catalogHiddenAt && <span className="text-slate-600 dark:text-slate-400">ukryto {ago(p.meta.catalogHiddenAt)}</span>}
                       </span>
                     </button>

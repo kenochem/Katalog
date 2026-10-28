@@ -187,7 +187,7 @@ export function WarehouseLocationsPanel({
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(220px,280px)]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(220px,280px)]">
         <ul className="max-h-[min(50dvh,520px)] space-y-1 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/40 dark:shadow-none lg:max-h-[calc(100dvh-16rem)]">
           {filtered.map((p) => {
             const loc = formatLocationCode(p.warehouseLocation);

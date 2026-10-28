@@ -168,7 +168,7 @@ export function MarketingProductApp() {
 
           <section>
             <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-slate-500">Planowane moduły</h2>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {PLANNED.map((p) => (
                 <article key={p.title} className="flex flex-col rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
                   <div className="flex items-center justify-between">

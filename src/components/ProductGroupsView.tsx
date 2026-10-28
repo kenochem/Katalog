@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { AlertTriangle, CheckCircle2, ImageOff, Loader2, Pencil, Search, Wrench, X } from 'lucide-react';
 import type { Product } from '../types';
 import { getProductImage } from '../lib/products';
@@ -32,6 +32,10 @@ interface Props {
   who: string;
   hideImages?: boolean;
   onOpenProduct: (p: Product) => void;
+  /** Zakładka „Łączenie w grupy” (tworzenie i edycja prawdziwych grup produktów z wariantami). */
+  renderMerge?: () => ReactNode;
+  /** Zakładka, od której zaczynamy (np. po przejściu ze starego linku). */
+  initialTab?: 'groups' | 'review' | 'merge';
 }
 
 function numericCompare(a: string, b: string): number {
@@ -39,10 +43,10 @@ function numericCompare(a: string, b: string): number {
 }
 
 /** „Grupy produktów”: elementy techniczne pogrupowane po typie, z filtrami parametrów i zatwierdzaniem opisów. */
-export function ProductGroupsView({ products, canEdit, who, hideImages, onOpenProduct }: Props) {
+export function ProductGroupsView({ products, canEdit, who, hideImages, onOpenProduct, renderMerge, initialTab = 'groups' }: Props) {
   const ver = useTechVersion();
   const entries = useMemo(() => buildTechEntries(products), [products, ver]);
-  const [tab, setTab] = useState<'groups' | 'review'>('groups');
+  const [tab, setTab] = useState<'groups' | 'review' | 'merge'>(renderMerge ? initialTab : initialTab === 'merge' ? 'groups' : initialTab);
   const [editing, setEditing] = useState<TechEntry | null>(null);
 
   const proposed = useMemo(() => entries.filter((e) => e.state === 'proposed'), [entries]);
@@ -61,8 +65,13 @@ export function ProductGroupsView({ products, canEdit, who, hideImages, onOpenPr
         </div>
         <div className="flex gap-1 rounded-xl border border-slate-700 p-1 text-sm">
           <TabBtn active={tab === 'groups'} onClick={() => setTab('groups')}>
-            Grupy
+            Elementy techniczne
           </TabBtn>
+          {renderMerge && (
+            <TabBtn active={tab === 'merge'} onClick={() => setTab('merge')}>
+              Łączenie w grupy
+            </TabBtn>
+          )}
           {canEdit && (
             <TabBtn active={tab === 'review'} onClick={() => setTab('review')}>
               Do zatwierdzenia ({proposed.length})
@@ -78,7 +87,9 @@ export function ProductGroupsView({ products, canEdit, who, hideImages, onOpenPr
         </p>
       )}
 
-      {tab === 'groups' || !canEdit ? (
+      {tab === 'merge' && renderMerge ? (
+        renderMerge()
+      ) : tab === 'groups' || !canEdit ? (
         <GroupsTab
           entries={entries}
           canEdit={canEdit}
@@ -231,7 +242,7 @@ function GroupsTab({
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-[13rem_1fr]">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-[13rem_1fr]">
       {/* typy */}
       <nav className="flex gap-2 overflow-x-auto md:flex-col md:overflow-visible">
         {TECH_TYPES.map((t) => {

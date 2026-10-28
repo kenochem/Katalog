@@ -57,7 +57,7 @@ export function QuickEditRow({
 
   return (
     <div className="col-span-full rounded-xl border border-brand-500/30 bg-brand-500/5 p-3">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <label className="block">
           <span className={label}>EAN {eanBad && <span className="text-amber-500">(zwykle 8 / 13 cyfr)</span>}</span>
           <input value={ean} onChange={(e) => setEan(e.target.value)} inputMode="numeric" className="input-field font-mono text-sm" placeholder="np. 5901234567890" />

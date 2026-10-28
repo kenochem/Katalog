@@ -170,7 +170,7 @@ export function AdminOverviewSection({
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <ChartCard title="Aktywność zespołu" subtitle="Logowania i działania dziennie (ostatnie 14 dni)" className="lg:col-span-2">
           {entries ? (
             <Trend
@@ -189,7 +189,7 @@ export function AdminOverviewSection({
         </ChartCard>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <ChartCard title="Najaktywniejsi" subtitle="Liczba działań (bez logowań), 14 dni">
           <HBars data={activity.top} color={PALETTE.violet} />
           {entries && activity.top.length === 0 && <p className="text-sm text-slate-500">Brak działań w tym okresie.</p>}
@@ -223,7 +223,7 @@ export function AdminOverviewSection({
         <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
           <ShieldCheck className="h-3.5 w-3.5" /> Skróty administracyjne
         </p>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {shortcuts
             .filter((s) => canGo[s.id])
             .map((s) => (

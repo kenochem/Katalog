@@ -185,7 +185,7 @@ export function BulkEditDialog({
           </button>
         </div>
 
-        <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto px-5 py-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 min-h-0 flex-1 gap-4 overflow-y-auto px-5 py-4 lg:grid-cols-2">
           <div className="space-y-2.5">
             <Section title="Producent" enabled={useMfr} onToggle={setUseMfr}>
               <ManufacturerSelect value={mfr} onChange={setMfr} />

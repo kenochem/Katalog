@@ -202,7 +202,7 @@ export function WarehouseIsometricView({
           )}
           </div>
         </div>
-        <div className="mt-4 grid gap-2 sm:grid-cols-3">
+        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
           <IsoMetric label="Regaly" value={rackCount} />
           <IsoMetric label="SKU z adresem" value={assignedCount} />
           <IsoMetric label="Elementy planu" value={layout.elements.length} />

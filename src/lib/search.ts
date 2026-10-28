@@ -2,7 +2,7 @@ import { assessProductKnowledge } from './productKnowledge';
 import { hasBaselinkerLink } from './baselinkerLink';
 import { isCatalogHiddenProduct, isWaproSkeletonProduct } from './productMeta';
 import { getProductSearchIndex, searchIndexedProducts } from './productSearchIndex';
-import { effectiveManufacturer } from './waproManufacturers';
+import { effectiveManufacturer, NO_MANUFACTURER } from './waproManufacturers';
 import { getProductDisplayCategory } from './catalogCategory';
 import { getAvailableQty, getReservedQty } from './reservedStock';
 import { getLivePromo } from './promotions';
@@ -35,35 +35,32 @@ export const CATALOG_SORT_OPTIONS: { value: CatalogSort; label: string }[] = [
   { value: 'stock-asc', label: 'Stan: od najmniejszego' },
 ];
 
-function comparePl(a: string, b: string): number {
-  return a.localeCompare(b, 'pl', { sensitivity: 'base', numeric: true });
+const plCollator = new Intl.Collator('pl', { sensitivity: 'base', numeric: true });
+const comparePl = (a: string, b: string): number => plCollator.compare(a, b);
+
+/** Sortowanie z kluczami wyliczonymi raz na produkt (a nie przy każdym porównaniu). */
+function sortByKeys<K>(list: Product[], keyOf: (p: Product) => K, cmp: (a: K, b: K) => number, tie: (a: Product, b: Product) => number): Product[] {
+  const decorated = list.map((p) => ({ p, k: keyOf(p) }));
+  decorated.sort((x, y) => cmp(x.k, y.k) || tie(x.p, y.p));
+  return decorated.map((d) => d.p);
 }
 
 export function sortProducts(products: Product[], sort: CatalogSort): Product[] {
-  const list = [...products];
+  const byName = (a: Product, b: Product) => comparePl(a.displayName, b.displayName);
   switch (sort) {
     case 'name-desc':
-      return list.sort((a, b) => comparePl(b.displayName, a.displayName));
+      return [...products].sort((a, b) => comparePl(b.displayName, a.displayName));
     case 'category':
-      return list.sort((a, b) => {
-        const c = comparePl(getProductDisplayCategory(a), getProductDisplayCategory(b));
-        return c !== 0 ? c : comparePl(a.displayName, b.displayName);
-      });
+      return sortByKeys(products, (p) => getProductDisplayCategory(p), comparePl, byName);
     case 'sku':
-      return list.sort((a, b) => comparePl(a.sku, b.sku));
+      return [...products].sort((a, b) => comparePl(a.sku, b.sku));
     case 'stock-desc':
-      return list.sort((a, b) => {
-        const d = getAvailableQty(b) - getAvailableQty(a);
-        return d !== 0 ? d : comparePl(a.displayName, b.displayName);
-      });
+      return sortByKeys(products, (p) => getAvailableQty(p), (a, b) => b - a, byName);
     case 'stock-asc':
-      return list.sort((a, b) => {
-        const d = getAvailableQty(a) - getAvailableQty(b);
-        return d !== 0 ? d : comparePl(a.displayName, b.displayName);
-      });
+      return sortByKeys(products, (p) => getAvailableQty(p), (a, b) => a - b, byName);
     case 'name-asc':
     default:
-      return list.sort((a, b) => comparePl(a.displayName, b.displayName));
+      return [...products].sort(byName);
   }
 }
 
@@ -80,6 +77,8 @@ export function applyCatalogFilters(
     baselinkerFilter?: BaselinkerFilter;
     waproMagFilter?: WaproMagFilter;
     visibilityFilter?: CatalogVisibilityFilter;
+    /** Produkty będące wariantami grupy, która też jest na liście, pokazuj tylko w grupie. */
+    collapseGroupMembers?: boolean;
   },
 ): Product[] {
   let result = filterProducts(products, opts.search, opts.category);
@@ -93,7 +92,9 @@ export function applyCatalogFilters(
 
   const manufacturer = opts.manufacturer?.trim();
   if (manufacturer && manufacturer !== 'Wszyscy') {
-    result = result.filter((p) => effectiveManufacturer(p) === manufacturer);
+    result = result.filter((p) =>
+      manufacturer === NO_MANUFACTURER ? !effectiveManufacturer(p) : effectiveManufacturer(p) === manufacturer,
+    );
   }
 
   // Filtry stanu liczą stan REALNY (dostępny = stan − zarezerwowane), jak „Ilość dost.” w WAPRO.
@@ -134,11 +135,35 @@ export function applyCatalogFilters(
     result = result.filter((p) => isWaproSkeletonProduct(p));
   }
 
+  if (opts.collapseGroupMembers) result = collapseGroupMembers(products, result, opts.search);
+
   // Przy aktywnym wyszukiwaniu zachowaj ranking trafień
   if (opts.search.trim().length >= 2) {
     return result;
   }
   return sortProducts(result, opts.sort);
+}
+
+/**
+ * Warianty grupy są też osobnymi produktami. Gdy grupa jest na liście, jej warianty chowamy (są w środku grupy);
+ * wyjątek: wyszukiwanie po SKU/EAN konkretnego wariantu.
+ */
+export function collapseGroupMembers(all: Product[], result: Product[], search: string): Product[] {
+  const memberGroup = new Map<string, string>();
+  for (const g of all) {
+    if (!g.isGroup) continue;
+    for (const v of g.variants ?? []) if (v.sku) memberGroup.set(String(v.sku).toUpperCase(), g.id);
+  }
+  if (memberGroup.size === 0) return result;
+  const groupsInResult = new Set(result.filter((p) => p.isGroup).map((p) => p.id));
+  if (groupsInResult.size === 0) return result;
+  const q = search.trim().toLowerCase();
+  return result.filter((p) => {
+    if (p.isGroup) return true;
+    const gid = memberGroup.get(String(p.sku).toUpperCase());
+    if (!gid || !groupsInResult.has(gid)) return true;
+    return q.length >= 2 && (p.sku.toLowerCase().includes(q) || (p.ean ?? '').toLowerCase().includes(q));
+  });
 }
 
 export { createProductSearch, type FuseProduct } from './productSearchIndex';

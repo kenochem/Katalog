@@ -188,7 +188,7 @@ export function CrmQuoteEditor({
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_min(20rem,32%)]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_min(20rem,32%)]">
         <div className="crm-panel overflow-hidden">
           {/* Telefon/tablet: karty pod sobą — pole rabatu widoczne od razu, bez
               przewijania w bok. Od `lg` wraca klasyczna tabela (więcej miejsca

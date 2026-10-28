@@ -99,7 +99,7 @@ export function WarehouseKenochemView({
             <ExternalLink className="h-4 w-4" />
           </a>
         </div>
-        <div className="mt-4 grid gap-2 sm:grid-cols-4">
+        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-4">
           <Metric label="SKU" value={productCount} />
           <Metric label="Niski stan" value={lowStockCount} />
           <Metric label="Etykiety" value={labelQueueCount} />

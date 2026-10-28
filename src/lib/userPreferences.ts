@@ -2,7 +2,7 @@ import type { CatalogListFilter, View } from '../types';
 import type { CatalogSort } from './search';
 import { supabase, isSupabaseConfigured } from './supabase';
 
-export type GridDensityPref = 'sm' | 'md' | 'lg';
+export type GridDensityPref = 'sm' | 'md' | 'lg' | 'list';
 
 export interface CatalogUserPreferences {
   sort?: CatalogSort;
@@ -10,6 +10,8 @@ export interface CatalogUserPreferences {
   catalogListFilter?: CatalogListFilter;
   sidebarOrder?: View[];
   sidebarHidden?: View[];
+  /** Własne przypisanie pozycji menu do sekcji (widok → id sekcji). */
+  sidebarGroups?: Record<string, string>;
 }
 
 /** Personalizacja profilu (Mój profil). */

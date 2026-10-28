@@ -85,6 +85,15 @@ export const MIGRATION_PROBES: MigrationProbe[] = [
     "functions": []
   },
   {
+    "file": "migration-catalog-attributes-showwhen.sql",
+    "title": "Atrybuty zależne od innych atrybutów (np. „Grupa części” tylko dla typu towaru „Część do myjek ciśnieniowych”).",
+    "tables": [],
+    "columns": [
+      "catalog_attributes.show_when"
+    ],
+    "functions": []
+  },
+  {
     "file": "migration-catalog-attributes.sql",
     "title": "Atrybuty strukturalne produktów (parametry): definicje (typ, jednostka, lista wartości, zakres kategorii).",
     "tables": [
@@ -298,19 +307,6 @@ export const MIGRATION_PROBES: MigrationProbe[] = [
     "tables": [],
     "columns": [
       "crm_leads.owner_name"
-    ],
-    "functions": []
-  },
-  {
-    "file": "migration-crm-mailbox.sql",
-    "title": "Skrzynka e-mail CRM (IMAP/SMTP) — uruchom w Supabase SQL Editor",
-    "tables": [
-      "crm_mailbox_settings",
-      "crm_mailbox_credentials",
-      "crm_inbox_sync"
-    ],
-    "columns": [
-      "crm_mailbox_settings.last_imap_uid"
     ],
     "functions": []
   },

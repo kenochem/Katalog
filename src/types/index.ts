@@ -109,6 +109,7 @@ export interface Kit {
 export type View =
 
   | 'home'
+  | 'assortment'
   | 'catalog'
   | 'collections'
   | 'kits'
@@ -122,6 +123,8 @@ export type View =
   | 'manufacturers'
   | 'categories'
   | 'rules'
+  | 'names'
+  | 'variant-groups'
   | 'attributes'
 
 

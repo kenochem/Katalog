@@ -115,7 +115,7 @@ export function LibraryView() {
         </p>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {LIBRARY_ENTRIES.map((entry) => {
           const Icon = entry.icon;
           return (
@@ -164,7 +164,7 @@ export function LibraryView() {
           Przewodnik po produktach danej marki ze zdjęciem i opisem — do pokazania klientowi
           na miejscu albo wydrukowania. Otwierają się w nowej karcie.
         </p>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           {BRAND_CATALOGS.map((entry) => (
             <a
               key={entry.id}

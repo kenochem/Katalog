@@ -803,6 +803,84 @@ html:not(.dark) .stock-app .hover\:bg-slate-950\/30:hover {
   }
 }
 
+/* Cienkie, przezroczyste paski przewijania: sam uchwyt, bez białego tła i strzałek */
+* {
+  --sb-thumb: rgb(100 116 139 / 0.45);
+  --sb-thumb-hover: rgb(100 116 139 / 0.8);
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background: transparent;
+}
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+*::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--sb-thumb);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--sb-thumb-hover);
+  background-clip: content-box;
+}
+@supports (-moz-appearance: none) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(100 116 139 / 0.5) transparent;
+  }
+}
+
+/* Telefon: nic nie wystaje poza szerokość ekranu (zabezpieczenie; konkretne elementy też są zwijane w układzie) */
+@media (max-width: 1023px) {
+  html,
+  body {
+    overflow-x: clip;
+    max-width: 100%;
+  }
+  #root img,
+  #root video,
+  #root canvas {
+    max-width: 100%;
+  }
+  #root table {
+    max-width: 100%;
+  }
+  /* długie nieprzerywalne ciągi (SKU, adresy, nazwy plików) łamią się zamiast rozpychać układ */
+  #root h1,
+  #root h2,
+  #root h3,
+  #root p {
+    overflow-wrap: anywhere;
+  }
+}
+
+/* Boczna szuflada menu na telefonie */
+@keyframes drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+.animate-drawer-in {
+  animation: drawer-in 0.22s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-drawer-in {
+    animation: none;
+  }
+}
+
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;

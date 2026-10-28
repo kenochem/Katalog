@@ -11,6 +11,8 @@ import {
 } from 'recharts';
 import { Search, TrendingUp, Package, ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
 import type { Product } from '../types';
+import { PriceChangesOverview } from './PriceChangesOverview';
+import { buildMarginSeries } from '../lib/priceMonitor';
 import { getProductImage } from '../lib/products';
 import { formatPricePln, formatStock } from '../lib/format';
 import {
@@ -96,6 +98,7 @@ export function CatalogHistoryView({ products }: { products: Product[] }) {
   const [selected, setSelected] = useState<Product | null>(null);
   const [changes, setChanges] = useState<ProductSyncChange[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [tab, setTab] = useState<'overview' | 'product'>('overview');
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -130,6 +133,7 @@ export function CatalogHistoryView({ products }: { products: Product[] }) {
 
   const priceSeries = useMemo(() => (changes ? buildPriceSeries(changes) : []), [changes]);
   const stockEvents = useMemo(() => (changes ? buildStockEvents(changes) : []), [changes]);
+  const marginSeries = useMemo(() => (changes ? buildMarginSeries(changes, formatDateShort) : []), [changes]);
   const activePriceSeries = useMemo(
     () => PRICE_SERIES.filter((s) => priceSeries.some((p) => p[s.key] != null)),
     [priceSeries],
@@ -142,11 +146,40 @@ export function CatalogHistoryView({ products }: { products: Product[] }) {
           Zmiany w czasie
         </h2>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-          Historia cen (zakup i sprzedaż) oraz stanu magazynowego dla wybranego produktu — na
-          podstawie logu zmian z każdego syncu WAPRO.
+          Przegląd zmian cen i alertów marży w całym katalogu oraz historia cen, marży i stanu
+          wybranego produktu — na podstawie logu zmian z każdego syncu WAPRO.
         </p>
       </div>
 
+      <div className="inline-flex rounded-xl border border-slate-300 bg-white p-0.5 dark:border-slate-700 dark:bg-slate-900">
+        {(
+          [
+            ['overview', 'Przegląd zmian cen'],
+            ['product', 'Historia produktu'],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setTab(id)}
+            className={`rounded-lg px-4 py-1.5 text-sm font-semibold ${tab === id ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'overview' ? (
+        <PriceChangesOverview
+          products={products}
+          onPick={(p) => {
+            setSelected(p);
+            setQuery(p.displayName);
+            setTab('product');
+          }}
+        />
+      ) : (
+        <>
       <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 px-4 py-2.5 text-xs text-sky-800 dark:text-sky-300">
         Log zmian działa od <strong>24 września 2026</strong> — starszej historii po prostu nie ma
         (nic wcześniej nie było zapisywane). Im dłużej to działa, tym dłuższą historię zobaczysz.
@@ -318,6 +351,33 @@ export function CatalogHistoryView({ products }: { products: Product[] }) {
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/40">
+            <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Marża w czasie</h3>
+            <p className="mt-0.5 text-xs text-slate-500">(sprzedaż netto − zakup netto) / sprzedaż netto, po każdej zmianie ceny.</p>
+            {marginSeries.length === 0 ? (
+              <p className="mt-2 text-sm text-slate-500">Za mało danych — potrzebna jest zmiana ceny zakupu lub sprzedaży netto.</p>
+            ) : (
+              <div className="mt-3 h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={marginSeries} margin={{ left: 4, right: 12, top: 8, bottom: 4 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" vertical={false} />
+                    <XAxis dataKey="label" stroke="#64748b" fontSize={11} />
+                    <YAxis stroke="#64748b" fontSize={11} width={50} tickFormatter={(v) => `${v}%`} />
+                    <Tooltip
+                      formatter={(v, _n, item) => `${v}% (${formatPricePln((item.payload as { marginPln: number }).marginPln)})`}
+                      labelFormatter={(label, payload) => {
+                        const p = payload?.[0]?.payload as { changed_at: string } | undefined;
+                        return p ? formatDateTime(p.changed_at) : label;
+                      }}
+                      contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 12, color: '#f1f5f9' }}
+                    />
+                    <Line type="stepAfter" dataKey="marginPct" name="Marża" stroke="#f43f5e" strokeWidth={2.5} dot={{ r: 3, fill: '#f43f5e' }} isAnimationActive={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/40">
             <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Stan w czasie</h3>
             <p className="mt-0.5 text-xs text-slate-500">
               Wzrost stanu = dostawa/zakup, spadek = sprzedaż lub korekta.
@@ -412,6 +472,8 @@ export function CatalogHistoryView({ products }: { products: Product[] }) {
             )}
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

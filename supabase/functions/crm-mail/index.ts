@@ -927,7 +927,7 @@ Deno.serve(async (req) => {
           settings: null,
           configured: false,
           schemaOk: false,
-          hint: 'Uruchom migration-crm-mailbox.sql w Supabase SQL Editor.',
+          hint: 'Poczta w CRM jest wyłączona (brak tabel poczty w bazie).',
         });
       }
       return json({

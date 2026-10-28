@@ -187,7 +187,7 @@ export function RulesView({
           <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
             <Sparkles className="h-4 w-4 text-amber-500" /> Zacznij od szablonu
           </p>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {RULE_TEMPLATES.map((t) => (
               <button
                 key={t.name}
@@ -278,7 +278,7 @@ export function RulesView({
       {rules && rules.length > 0 && canEdit && (
         <details className="surface-panel p-4">
           <summary className="cursor-pointer text-sm font-semibold text-slate-800 dark:text-slate-200">Szablony reguł</summary>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
             {RULE_TEMPLATES.map((t) => (
               <button
                 key={t.name}
@@ -446,7 +446,7 @@ function RuleEditor({
             {a.type === 'setManufacturer' && <ManufacturerSelect value={a.value} onChange={(v) => setDraft({ ...draft, action: { type: 'setManufacturer', value: v } })} />}
             {a.type === 'addTag' && <input value={a.value} onChange={(e) => setDraft({ ...draft, action: { type: 'addTag', value: e.target.value } })} className={sel} placeholder="Nazwa tagu" />}
             {a.type === 'exception' && (
-              <div className="grid gap-1.5">
+              <div className="grid grid-cols-1 gap-1.5">
                 {EXCEPTION_PRESETS.map((p) => (
                   <button
                     key={p.id}

@@ -115,7 +115,7 @@ export function AdminPermissionsSection({ canEditMatrix }: AdminPermissionsSecti
       </div>
 
       {view === 'overview' && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {accountRoles.map((r) => (
             <RoleOverviewCard key={r} role={r} />
           ))}
@@ -157,7 +157,7 @@ export function AdminPermissionsSection({ canEditMatrix }: AdminPermissionsSecti
                 {expanded && (
                   <div className="border-t border-slate-800">
                     {group === 'modules' && (
-                      <ul className="grid gap-2 p-4 sm:grid-cols-2">
+                      <ul className="grid grid-cols-1 gap-2 p-4 sm:grid-cols-2">
                         {moduleOnly.map((def) => {
                           const on = def.moduleId ? moduleEnabled(def.moduleId) : true;
                           return (

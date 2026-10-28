@@ -397,7 +397,7 @@ export function CatalogBaselinkerImagesPanel({ products, onProductClick, canPush
 
         </div>
       ) : (
-        <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {needing.slice(0, 300).map((r) => {
             const p = bySku.get(r.sku);
             return (

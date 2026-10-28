@@ -2,7 +2,7 @@ import type { Product } from '../types';
 import { CATALOG_LABELS } from '../types';
 import { stripHtml } from './format';
 import { formatLocationCode } from './warehouseLocation';
-import { resolveProductLocation } from './locationStore';
+import { legacyLocationsSignature, resolveProductLocation } from './locationStore';
 import { formatDimensions, normalizeProductMeta, type ProductMeta } from './productMeta';
 import { inferProductTypeLabel } from './catalogKind';
 import { getProductDisplayCategory, productNeedsCategoryDecision } from './catalogCategory';
@@ -286,7 +286,20 @@ export const KNOWLEDGE_CHECKS: {
   },
 ];
 
+/** Wynik zależy od produktu, jego kategorii (rejestr kategorii) i lokalnych lokalizacji — podpis tych dwóch unieważnia bufor. */
+const knowledgeCache = new WeakMap<Product, { cat: string; loc: string | null; value: ProductKnowledgeCompleteness }>();
+
 export function assessProductKnowledge(product: Product): ProductKnowledgeCompleteness {
+  const cat = getProductDisplayCategory(product);
+  const loc = legacyLocationsSignature();
+  const hit = knowledgeCache.get(product);
+  if (hit && hit.cat === cat && hit.loc === loc) return hit.value;
+  const value = computeProductKnowledge(product);
+  knowledgeCache.set(product, { cat, loc, value });
+  return value;
+}
+
+function computeProductKnowledge(product: Product): ProductKnowledgeCompleteness {
   const meta = normalizeProductMeta(product.meta) ?? {};
   let score = 0;
   const filled: string[] = [];

@@ -50,6 +50,10 @@ export interface ProductMeta {
   /** Krótki powód ukrycia, np. stara marka, produkt przestarzały. */
   catalogHiddenReason?: string;
   catalogHiddenAt?: string;
+  /** Ukryty automatycznie, bo artykuł jest zablokowany w WAPRO (ustawia synchronizacja). */
+  waproBlocked?: boolean;
+  /** Grupa wariantów (pojemności): SKU wariantu, którego zdjęcie i cena reprezentują grupę. */
+  groupPrimarySku?: string;
   /** Rodzaje braków, których dla tego produktu nie wymagamy (np. bl, photo, ean) albo „all”. */
   dataExceptions?: string[];
   dataExceptionNote?: string;
@@ -83,6 +87,7 @@ export const PRODUCT_META_LABELS: Record<
     | 'baselinkerSkipPrice'
     | 'catalogHidden'
     | 'catalogHiddenAt'
+    | 'waproBlocked'
     | 'dataExceptions'
     | 'dataExceptionNote'
     | 'attrs'
@@ -103,6 +108,7 @@ export const PRODUCT_META_LABELS: Record<
   waproSku: 'Indeks WAPRO (jeśli inny niż SKU)',
   previousSku: 'Poprzedni SKU (legacy)',
   catalogHiddenReason: 'Powód ukrycia',
+  groupPrimarySku: 'Wariant główny grupy',
   parameters: 'Parametry',
 };
 
@@ -139,6 +145,7 @@ export function normalizeProductMeta(raw: unknown): ProductMeta | undefined {
   str('baselinkerDescriptionImportedAt');
   str('waproImportedAt');
   str('catalogHiddenReason');
+  str('groupPrimarySku');
   str('catalogHiddenAt');
   str('dataExceptionNote');
   str('dataExceptionAt');
@@ -191,6 +198,7 @@ export function normalizeProductMeta(raw: unknown): ProductMeta | undefined {
   if (typeof o.baselinkerSkipStock === 'boolean') meta.baselinkerSkipStock = o.baselinkerSkipStock;
   if (typeof o.baselinkerSkipPrice === 'boolean') meta.baselinkerSkipPrice = o.baselinkerSkipPrice;
   if (typeof o.catalogHidden === 'boolean') meta.catalogHidden = o.catalogHidden;
+  if (typeof o.waproBlocked === 'boolean') meta.waproBlocked = o.waproBlocked;
 
   return Object.keys(meta).length > 0 ? meta : undefined;
 }

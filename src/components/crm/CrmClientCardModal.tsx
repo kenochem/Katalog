@@ -244,7 +244,7 @@ export function CrmClientCardModal({ client, onClose, onOrder, onEdit, onDelete,
             )}
           </section>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <ClientTimelinePanel clientId={client.id} clientName={client.displayName} />
             <CrmNotesPanel clients={[client]} clientId={client.id} compact />
           </div>

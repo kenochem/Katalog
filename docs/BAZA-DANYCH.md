@@ -35,7 +35,7 @@ Ważne pola `product_meta` (JSONB): `baselinkerProductId`, `shopCategoryPath` / 
 | `wapro_sales_requests` | Stara kolejka sprzedaży per SKU — już nieużywana przez UI |
 
 ### CRM
-`crm_clients`, `crm_orders` (zamówienia i oferty; numeracja ofert), `crm_leads` (lejek), `crm_calendar_events` (kalendarz — **wspólny dla zespołu**), `crm_tasks`, `crm_notes`, `crm_client_notes`, `crm_user_settings`, `crm_mailbox_settings` / `crm_mailbox_credentials` / `crm_inbox_sync` (skrzynka e-mail IMAP/SMTP).
+`crm_clients`, `crm_orders` (zamówienia i oferty; numeracja ofert), `crm_leads` (lejek), `crm_calendar_events` (kalendarz — **wspólny dla zespołu**), `crm_tasks`, `crm_notes`, `crm_client_notes`, `crm_user_settings`.
 
 ### Operacje
 `ops_customers` (kontrahenci z WAPRO). Dane kosztowe Ops są ładowane m.in. z pliku `public/data/finance-koszty.json` (generowanego przez `npm run export:finance`), a analiza sprzedaży z `products.wapro_sales_stats`.
@@ -51,7 +51,7 @@ Ważne pola `product_meta` (JSONB): `baselinkerProductId`, `shopCategoryPath` / 
 1. `schema.sql` → `migration-catalog.sql`, `migration-stock.sql`, `migration-product-meta.sql`, `migration-product-prices.sql`, `migration-product-tags.sql`, `migration-extra-images.sql`, `migration-sku-per-catalog.sql`, `migration-warehouse-location.sql`
 2. Konta i role: `migration-auth-profiles.sql`, `migration-user-sync-all.sql`, `migration-user-cloud-platform.sql` (definiuje `is_admin()`; wymagana m.in. przez `migration-app-settings.sql`), `migration-user-favorites*.sql`, `migration-product-collections.sql`, `migration-groups.sql`
 3. Synchronizacja WAPRO: `migration-stock-sync-requests.sql`, `migration-stock-sync-catalog.sql`, `migration-product-wapro-sales-stats.sql`, `migration-sales-sync-requests.sql`, `migration-product-sync-changes.sql`, `migration-wapro-order-requests.sql`
-4. CRM: `migration-crm-clients-orders.sql`, `migration-crm-client-*.sql`, `migration-crm-lead-owner.sql`, `migration-crm-notes.sql`, `migration-crm-personal-stores.sql`, `migration-crm-quote-number.sql`, `migration-crm-mailbox.sql`
+4. CRM: `migration-crm-clients-orders.sql`, `migration-crm-client-*.sql`, `migration-crm-lead-owner.sql`, `migration-crm-notes.sql`, `migration-crm-personal-stores.sql`, `migration-crm-quote-number.sql`
 5. Ops: `migration-ops-customers.sql`
 6. Biblioteka: `migration-technical-library.sql`, `migration-catalog-brand-overrides.sql`
 7. Ustawienia: `migration-app-settings.sql`, `migration-audit-log.sql`, `migration-audit-log-ip-device.sql`, `migration-baselinker.sql`, `migration-baselinker-sync-log.sql`

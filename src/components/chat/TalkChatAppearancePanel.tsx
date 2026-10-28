@@ -412,7 +412,7 @@ function PushDiagnosticsCard({
         )}
       </div>
 
-      <div className="grid gap-1.5 text-[11px] text-slate-700 dark:text-slate-200 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-1.5 text-[11px] text-slate-700 dark:text-slate-200 sm:grid-cols-2">
         <PushDiagLine label="Web Push" ok={diagnostics?.supported} />
         <PushDiagLine label="Klucz VAPID w aplikacji" ok={diagnostics?.vapidConfigured} />
         <PushDiagLine label="Zgoda systemu" ok={diagnostics?.permission === 'granted'} value={diagnostics?.permission} />

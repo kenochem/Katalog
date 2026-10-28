@@ -1,3 +1,4 @@
+import './lib/fastCompare';
 import { StrictMode, lazy, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AuthProvider } from './lib/auth';

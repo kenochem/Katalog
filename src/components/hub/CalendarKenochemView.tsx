@@ -215,7 +215,7 @@ export function CalendarKenochemView({
           </div>
         </section>
 
-        <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_26rem]">
+        <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_26rem]">
         <section className="rounded-3xl border border-slate-800 bg-slate-950 p-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
@@ -288,7 +288,7 @@ export function CalendarKenochemView({
                 Nowe wydarzenie
               </button>
             </div>
-            <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
               {selectedEvents.length ? (
                 selectedEvents.map((event) => (
                   <CalendarEventRow
@@ -379,7 +379,7 @@ export function CalendarKenochemView({
                   />
                 </label>
               </div>
-              <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]">
                 <label>
                   <span className="text-xs text-slate-500">Koniec</span>
                   <input
@@ -419,7 +419,7 @@ export function CalendarKenochemView({
                 ))}
               </div>
               </div>
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <label>
                   <span className="text-xs text-slate-500">Osoba / dzial</span>
                   <input
@@ -451,7 +451,7 @@ export function CalendarKenochemView({
               </label>
             </div>
 
-            <div className="mt-5 grid gap-2 sm:grid-cols-2">
+            <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">
               <CalendarAction
                 icon={<Route className="h-4 w-4" />}
                 label="Plan wizyt"
@@ -501,7 +501,7 @@ export function CalendarKenochemView({
               </label>
             </div>
 
-            <div className="mt-4 grid gap-2 sm:grid-cols-3">
+            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
               <CalendarMetric label="Powiazane" value={String(integratedCount)} compact />
               <CalendarMetric label="Typy" value={String(TYPES.length)} compact />
               <CalendarMetric label="Wszystkie" value={String(events.length)} compact />

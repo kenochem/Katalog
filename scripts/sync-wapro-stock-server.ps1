@@ -287,6 +287,156 @@ function Get-ExistingProductSkuSet {
   return $seen
 }
 
+<#
+  Blokady artykulow z WAPRO Mag -> ukrywanie w katalogu.
+  Artykul zablokowany w WAPRO dostaje w katalogu ukrycie z powodem "Zablokowany w WAPRO"
+  (product_meta: catalogHidden, catalogHiddenReason, catalogHiddenAt, waproBlocked). Po odblokowaniu w WAPRO
+  katalog sam przywraca TYLKO te produkty, ktore ukryl ta funkcja (reczne ukrycia zostaja).
+  Kolumne blokady wykrywamy w dbo.ARTYKUL; mozna ja wskazac w .env:
+    WAPRO_BLOCKED_COLUMN=NAZWA_KOLUMNY   WAPRO_BLOCKED_VALUE=1   (WAPRO_BLOCKED_SYNC=0 wylacza funkcje)
+  Kandydaci kolumn trafiaja do logu i do pliku wapro-blocked-columns.csv.
+  UWAGA: zero polskich znakow w tym pliku (Windows PowerShell 5.1 czyta go w ANSI).
+#>
+function Sync-WaproBlockedProducts {
+  param(
+    [string]$SupabaseUrl,
+    [hashtable]$Headers,
+    [string]$SyncDirPath,
+    $EnvMap,
+    [int]$TotalSkus
+  )
+  if ($EnvMap['WAPRO_BLOCKED_SYNC'] -eq '0') { return }
+  $reason = 'Zablokowany w WAPRO'
+
+  $col = ([string]$EnvMap['WAPRO_BLOCKED_COLUMN']).Trim()
+  $val = ([string]$EnvMap['WAPRO_BLOCKED_VALUE']).Trim()
+  if (-not $val) { $val = '1' }
+  if ($val -notmatch "^(\d+|'[A-Za-z0-9]{1,5}')$") {
+    Write-Log ('Blokady WAPRO: niepoprawne WAPRO_BLOCKED_VALUE ({0}) - pomijam' -f $val)
+    return
+  }
+
+  $probeFile = Join-Path $SyncDirPath 'wapro-blocked-columns.csv'
+  $probeQuery = @'
+SET NOCOUNT ON;
+SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME = 'ARTYKUL'
+  AND (COLUMN_NAME LIKE '%BLOK%' OR COLUMN_NAME LIKE '%NIEAKT%' OR COLUMN_NAME LIKE '%ARCH%'
+    OR COLUMN_NAME LIKE '%AKTYW%' OR COLUMN_NAME LIKE '%WYCOF%' OR COLUMN_NAME LIKE '%ZABLOK%')
+ORDER BY COLUMN_NAME;
+'@
+  $probeCode = Invoke-WaproQuery $probeQuery $probeFile
+  $candidates = @()
+  if ($probeCode -eq 0 -and (Test-Path $probeFile)) {
+    foreach ($line in [System.IO.File]::ReadAllLines($probeFile)) {
+      $t = $line.Trim().TrimStart([char]0xFEFF)
+      if ($t -and $t -notmatch '^(Msg |Changed database|---|\(\d+ rows affected\)|COLUMN_NAME)') { $candidates += $t }
+    }
+  }
+  Write-Log ('Blokady WAPRO: kolumny-kandydaci w ARTYKUL: {0}' -f $(if ($candidates.Count) { $candidates -join ', ' } else { '(brak)' }))
+
+  if (-not $col) {
+    foreach ($pref in @('ZABLOKOWANY', 'ZABLOKOWANA', 'BLOKADA', 'BLOKOWANY', 'NIEAKTYWNY', 'NIEAKTYWNA', 'ARCHIWALNY', 'WYCOFANY')) {
+      if ($candidates -contains $pref) { $col = $pref; break }
+    }
+  }
+  if (-not $col) {
+    Write-Log 'Blokady WAPRO: nie znaleziono kolumny blokady - ustaw WAPRO_BLOCKED_COLUMN (i ewentualnie WAPRO_BLOCKED_VALUE) w .env'
+    return
+  }
+  if ($col -notmatch '^[A-Za-z0-9_]+$') {
+    Write-Log ('Blokady WAPRO: niepoprawna nazwa kolumny ({0}) - pomijam' -f $col)
+    return
+  }
+
+  $blockedFile = Join-Path $SyncDirPath 'wapro-blocked.raw'
+  $blockedQuery = @"
+SET NOCOUNT ON;
+SELECT DISTINCT LTRIM(RTRIM(INDEKS_KATALOGOWY)) AS sku
+FROM dbo.ARTYKUL WITH (NOLOCK)
+WHERE INDEKS_KATALOGOWY IS NOT NULL
+  AND LTRIM(RTRIM(INDEKS_KATALOGOWY)) <> ''
+  AND ID_MAGAZYNU = 1
+  AND [$col] = $val;
+"@
+  $bCode = Invoke-WaproQuery $blockedQuery $blockedFile
+  $bRaw = ''
+  if (Test-Path $blockedFile) { $bRaw = [System.IO.File]::ReadAllText($blockedFile) }
+  if ($bCode -ne 0 -or $bRaw -match 'Msg \d+' -or $bRaw -match 'Invalid column') {
+    Write-Log ('Blokady WAPRO: zapytanie o kolumne {0} nieudane (kod {1}) - bez zmian w katalogu' -f $col, $bCode)
+    return
+  }
+  $blocked = @{}
+  foreach ($line in [System.IO.File]::ReadAllLines($blockedFile)) {
+    $t = $line.Trim().TrimStart([char]0xFEFF)
+    if (-not $t -or $t -match '^(Msg |Changed database|---|\(\d+ rows affected\))' -or $t -eq 'sku') { continue }
+    $blocked[$t.ToUpperInvariant()] = $true
+  }
+  Write-Log ('Blokady WAPRO: kolumna {0} = {1}, zablokowanych SKU: {2}' -f $col, $val, $blocked.Count)
+  # zabezpieczenie przed zla kolumna (np. flaga, ktora ma wiekszosc artykulow)
+  $limit = [Math]::Max(200, [int]($TotalSkus * 0.3))
+  if ($blocked.Count -gt $limit) {
+    Write-Log ('Blokady WAPRO: podejrzanie duzo ({0} > {1}) - nie ukrywam, sprawdz WAPRO_BLOCKED_COLUMN/VALUE' -f $blocked.Count, $limit)
+    return
+  }
+
+  $patchHeadersLocal = $Headers + @{ 'Content-Type' = 'application/json; charset=utf-8'; Prefer = 'return=minimal' }
+  $now = (Get-Date).ToUniversalTime().ToString('o')
+  $hidden = 0
+  $restored = 0
+  $errors = 0
+  $from = 0
+  $page = 1000
+  do {
+    $uri = '{0}/rest/v1/products?select=id,sku,is_group,product_meta&offset={1}&limit={2}&order=id' -f $SupabaseUrl, $from, $page
+    $batch = Invoke-RestMethod -Uri $uri -Headers $Headers -Method Get
+    $arr = @($batch)
+    if ($arr.Count -eq 0 -or $null -eq $batch) { break }
+    foreach ($p in $arr) {
+      if ($p.is_group -eq $true) { continue }
+      $meta = $p.product_meta
+      if ($meta -is [string] -and $meta.Trim()) {
+        try { $meta = $meta | ConvertFrom-Json } catch { $meta = $null }
+      }
+      $m = @{}
+      if ($meta) { foreach ($prop in $meta.PSObject.Properties) { $m[$prop.Name] = $prop.Value } }
+      $sku = ([string]$p.sku).Trim().ToUpperInvariant()
+      $waproSku = ([string]$m['waproSku']).Trim().ToUpperInvariant()
+      $isBlocked = $blocked.ContainsKey($sku) -or ($waproSku -and $blocked.ContainsKey($waproSku))
+      $isHidden = ($m['catalogHidden'] -eq $true)
+      $ours = ($m['waproBlocked'] -eq $true)
+      $change = $false
+      if ($isBlocked -and -not $isHidden) {
+        $m['catalogHidden'] = $true
+        $m['catalogHiddenReason'] = $reason
+        $m['catalogHiddenAt'] = $now
+        $m['waproBlocked'] = $true
+        $change = $true
+        $hidden++
+      } elseif (-not $isBlocked -and $ours) {
+        if ($isHidden -and ([string]$m['catalogHiddenReason']) -eq $reason) {
+          $m.Remove('catalogHidden'); $m.Remove('catalogHiddenReason'); $m.Remove('catalogHiddenAt')
+          $restored++
+        }
+        $m.Remove('waproBlocked')
+        $change = $true
+      }
+      if (-not $change) { continue }
+      try {
+        $body = [System.Text.Encoding]::UTF8.GetBytes((@{ product_meta = $m } | ConvertTo-Json -Depth 8 -Compress))
+        $patchUri = '{0}/rest/v1/products?id=eq.{1}' -f $SupabaseUrl, [uri]::EscapeDataString([string]$p.id)
+        Invoke-RestMethod -Uri $patchUri -Headers $patchHeadersLocal -Method Patch -Body $body -ContentType 'application/json; charset=utf-8' | Out-Null
+      } catch {
+        $errors++
+        Write-Log ('Blokady WAPRO: blad zapisu {0}: {1}' -f $sku, $_.Exception.Message)
+      }
+    }
+    if ($arr.Count -lt $page) { break }
+    $from += $page
+  } while ($true)
+  Write-Log ('Blokady WAPRO: ukryto {0}, przywrocono {1}, bledy {2}' -f $hidden, $restored, $errors)
+}
+
 function New-WaproSkeletonProduct($row) {
   $sku = (Get-JsonTextValue $row 'sku').ToUpperInvariant()
   $catalog = Get-JsonTextValue $row 'catalog' 'accessories'
@@ -1920,7 +2070,8 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
 SET NOCOUNT ON;
 SELECT
        LTRIM(RTRIM(a.INDEKS_KATALOGOWY)) AS sku,
-       REPLACE(LTRIM(RTRIM(MAX(a.NAZWA))), ';', ',') AS name,
+       -- NAZWA ma w WAPRO tylko 40 znakow (ucina nazwy); pelna nazwa jest w NAZWA_CALA (230 znakow)
+       REPLACE(LTRIM(RTRIM(COALESCE(NULLIF(LTRIM(RTRIM(MAX(a.NAZWA_CALA))), ''), MAX(a.NAZWA)))), ';', ',') AS name,
        REPLACE(LTRIM(RTRIM(MAX(k.NAZWA))), ';', ',') AS manufacturer
 FROM dbo.ARTYKUL a WITH (NOLOCK)
 LEFT JOIN dbo.KATEGORIA_ARTYKULU k WITH (NOLOCK)
@@ -2163,6 +2314,8 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
   $linkedViaAlt = 0
   $bootstrapped = 0
   $warnings = 0
+  $manualList = [System.Collections.Generic.List[string]]::new()
+  $missingList = [System.Collections.Generic.List[string]]::new()
   $unmatchedProducts = [System.Collections.Generic.List[object]]::new()
   # Szczegolowy log zmian per produkt/pole (product_sync_changes) — do zakladki
   # Logi w apce: ktory SKU, ktore pole, stara -> nowa wartosc.
@@ -2170,6 +2323,35 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
   $patchHeaders = $headers + @{
     'Content-Type' = 'application/json'
     Prefer         = 'return=minimal'
+  }
+
+  # Naprawa nazw uciętych przez limit 40 znakow pola NAZWA: jesli pelna nazwa z WAPRO zaczyna sie od obecnej
+  # (a nazwa w katalogu nie byla recznie zmieniana), dopisujemy reszte.
+  $namesFixed = 0
+  if ($catalogInfo -and $catalogInfo.Count -gt 0) {
+    foreach ($p in $products) {
+      if ($namesFixed -ge 500) { break }
+      if ($p.is_group -eq $true) { continue }
+      $skuKey = ([string]$p.sku).Trim().ToUpperInvariant()
+      if (-not $catalogInfo.ContainsKey($skuKey)) { continue }
+      $full = [string]$catalogInfo[$skuKey].name
+      $cur = (([string]$p.name) -replace '\s+', ' ').Trim()
+      $disp = (([string]$p.display_name) -replace '\s+', ' ').Trim()
+      if (-not $full -or $cur.Length -eq 0 -or $cur.Length -gt 40 -or $full.Length -le $cur.Length) { continue }
+      if ($disp -and $disp -ne $cur) { continue }
+      if (-not $full.StartsWith($cur, [System.StringComparison]::OrdinalIgnoreCase)) { continue }
+      $fixBody = @{ name = $full; display_name = $full } | ConvertTo-Json -Compress
+      try {
+        $fixUri = '{0}/rest/v1/products?id=eq.{1}' -f $SupabaseUrl, $p.id
+        Invoke-RestMethod -Uri $fixUri -Headers $patchHeaders -Method Patch -Body ([System.Text.Encoding]::UTF8.GetBytes($fixBody)) | Out-Null
+        $namesFixed++
+        $p.name = $full
+        $p.display_name = $full
+      } catch {
+        Write-Log ('Nie udalo sie uzupelnic nazwy {0}: {1}' -f $skuKey, $_.Exception.Message)
+      }
+    }
+    if ($namesFixed -gt 0) { Write-Log ('Uzupelniono uciete nazwy z WAPRO (NAZWA_CALA): {0}' -f $namesFixed) }
   }
 
   function Add-ChangeRow {
@@ -2198,6 +2380,11 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
       $priceBuy = $null
       $priceSale = $null
       $priceGross = $null
+      # grupa wariantów pojemności: ceny grupy = ceny wariantu głównego (np. 500 ml)
+      $primarySku = ''
+      $pm = $p.product_meta
+      if ($pm -is [string] -and $pm.Trim()) { try { $pm = $pm | ConvertFrom-Json } catch { $pm = $null } }
+      if ($null -ne $pm -and $null -ne $pm.groupPrimarySku) { $primarySku = ([string]$pm.groupPrimarySku).Trim().ToUpperInvariant() }
       $next = foreach ($v in $variants) {
         $vsku = ([string]$v.sku).Trim().ToUpperInvariant()
         $row = Get-WaproRow $vsku
@@ -2206,14 +2393,17 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
           if ($p.stock_manual -ne $true) {
             $v | Add-Member -NotePropertyName stock -NotePropertyValue $row.stock -Force
           }
-          if ($null -ne $row.price_purchase_net) { $priceBuy = $row.price_purchase_net }
-          if ($null -ne $row.price_sale_net) { $priceSale = $row.price_sale_net }
-          if ($null -ne $row.price_sale_gross) { $priceGross = $row.price_sale_gross }
+          if (-not $primarySku -or $vsku -eq $primarySku) {
+            if ($null -ne $row.price_purchase_net) { $priceBuy = $row.price_purchase_net }
+            if ($null -ne $row.price_sale_net) { $priceSale = $row.price_sale_net }
+            if ($null -ne $row.price_sale_gross) { $priceGross = $row.price_sale_gross }
+          }
         }
         $v
       }
       if (-not $touched) {
         $skippedMissing++
+      [void]$missingList.Add((('{0} - {1}' -f $p.sku, $(if ($p.display_name) { $p.display_name } else { $p.name }))))
         if (Test-LikelyPlaceholderSku $p.sku) { $warnings++ }
         [void]$unmatchedProducts.Add([ordered]@{
           id = [string]$p.id
@@ -2228,6 +2418,7 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
       $changed = $false
       if ($p.stock_manual -eq $true) {
         $skippedManual++
+      [void]$manualList.Add((('{0} - {1} (stan w katalogu: {2})' -f $p.sku, $(if ($p.display_name) { $p.display_name } else { $p.name }), $p.stock)))
       } else {
         $sum = 0.0
         foreach ($v in $next) { $sum += [double]$v.stock }
@@ -2270,6 +2461,7 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
     $resolved = Resolve-WaproRowForProduct $p
     if ($null -eq $resolved) {
       $skippedMissing++
+      [void]$missingList.Add((('{0} - {1}' -f $p.sku, $(if ($p.display_name) { $p.display_name } else { $p.name }))))
       if (Test-LikelyPlaceholderSku $p.sku) { $warnings++ }
       [void]$unmatchedProducts.Add([ordered]@{
         id = [string]$p.id
@@ -2288,6 +2480,7 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
 
     if ($p.stock_manual -eq $true) {
       $skippedManual++
+      [void]$manualList.Add((('{0} - {1} (stan w katalogu: {2})' -f $p.sku, $(if ($p.display_name) { $p.display_name } else { $p.name }), $p.stock)))
     } else {
       $oldStock = 0.0
       [void][double]::TryParse(
@@ -2296,7 +2489,7 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
         [System.Globalization.CultureInfo]::InvariantCulture,
         [ref]$oldStock
       )
-      if ($bootstrap -or [Math]::Abs($oldStock - [double]$row.stock) -gt 0.0005) {
+      if ([Math]::Abs($oldStock - [double]$row.stock) -gt 0.0005) {
         Add-ChangeRow -Product $p -Field 'stock' -OldValue $oldStock -NewValue $row.stock
         $payload.stock = $row.stock
         $changed = $true
@@ -2334,6 +2527,12 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
     $patchUri = '{0}/rest/v1/products?id=eq.{1}' -f $SupabaseUrl, $p.id
     Invoke-RestMethod -Uri $patchUri -Headers $patchHeaders -Method Patch -Body $body | Out-Null
     $updated++
+  }
+
+  try {
+    Sync-WaproBlockedProducts -SupabaseUrl $SupabaseUrl -Headers $headers -SyncDirPath $SyncDir -EnvMap $envMap -TotalSkus $stockBySku.Count
+  } catch {
+    Write-Log ('Blokady WAPRO: blad: {0}' -f $_.Exception.Message)
   }
 
   $unmatchedNote = ''
@@ -2429,11 +2628,35 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
   # zdarzenie dla strony Logi -> Status systemow (takze dla przebiegow automatycznych, bez zlecenia z aplikacji)
   $warnN = 0
   [void][int]::TryParse([string]$warnings, [ref]$warnN)
-  Send-AgentSignal -Agent 'stock' -Source 'stock' `
-    -Kind $(if ($pendingIds.Count -gt 0) { 'sync-manual' } else { 'sync-auto' }) `
-    -Level $(if ($warnN -gt 0) { 'warning' } else { 'success' }) `
-    -Message $msg `
-    -Details @{ scope = [string]$syncScope; updated = [string]$updated; unchanged = [string]$unchanged; warnings = $warnN }
+  # Przebiegi automatyczne zapisuja zdarzenie tylko gdy zmienil sie obraz (liczba pominietych / ostrzezen)
+  # albo minelo 6 h od ostatniego wpisu; zmiany stanow trafiaja do osobnego logu (product_sync_changes).
+  $sigNow = '{0}|{1}|{2}|{3}' -f $skippedManual, $skippedMissing, $warnN, $bootstrapped
+  $sigPath = Join-Path $SyncDir 'last-signal.txt'
+  $sendEvent = $pendingIds.Count -gt 0
+  if (-not $sendEvent) {
+    $sendEvent = $true
+    try {
+      if (Test-Path $sigPath) {
+        $sigLines = @(Get-Content $sigPath)
+        $sigAge = ((Get-Date) - (Get-Item $sigPath).LastWriteTime).TotalHours
+        if ($sigLines.Count -ge 1 -and $sigLines[0] -eq $sigNow -and $sigAge -lt 6) { $sendEvent = $false }
+      }
+    } catch { }
+  }
+  if ($sendEvent) {
+    try { Set-Content -Path $sigPath -Value @($sigNow) -Encoding ASCII } catch { }
+    Send-AgentSignal -Agent 'stock' -Source 'stock' `
+      -Kind $(if ($pendingIds.Count -gt 0) { 'sync-manual' } else { 'sync-auto' }) `
+      -Level $(if ($warnN -gt 0) { 'warning' } else { 'success' }) `
+      -Message $msg `
+      -Details @{
+        scope = [string]$syncScope; updated = [string]$updated; unchanged = [string]$unchanged; warnings = $warnN
+        'reczne stany (SKU - nazwa)' = @($manualList | Select-Object -First 150)
+        'brak w WAPRO (SKU - nazwa)' = @($missingList | Select-Object -First 150)
+      }
+  } else {
+    Send-AgentSignal -Agent 'stock' -HeartbeatOnly
+  }
 
   if ($pendingIds.Count -gt 0) {
     $doneAt = (Get-Date).ToUniversalTime().ToString('o')

@@ -197,7 +197,7 @@ export function LabelItemRow({
       </div>
 
       {editing && (
-        <div className="mt-2 grid gap-3 border-t border-slate-800 pt-3 sm:grid-cols-2">
+        <div className="mt-2 grid grid-cols-1 gap-3 border-t border-slate-800 pt-3 sm:grid-cols-2">
           <label className="sm:col-span-2">
             <span className="mb-0.5 flex items-center justify-between text-xs text-slate-400">
               Nazwa na etykiecie

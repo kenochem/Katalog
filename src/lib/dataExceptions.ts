@@ -7,7 +7,7 @@ import { invalidateProductsCache } from './products';
  * (np. nie trafi do BaseLinkera, nie ma EAN, zdjęcie niepotrzebne), znika z listy braków.
  * Zapis w product_meta produktu (wspólny dla wszystkich).
  */
-export type ExceptionKind = 'photo' | 'category' | 'mfr' | 'ean' | 'price' | 'low' | 'type' | 'bl' | 'validation' | 'attrs';
+export type ExceptionKind = 'photo' | 'category' | 'mfr' | 'ean' | 'price' | 'low' | 'type' | 'bl' | 'validation' | 'attrs' | 'name';
 
 export const EXCEPTION_KIND_LABEL: Record<ExceptionKind | 'all', string> = {
   photo: 'Zdjęcie',
@@ -20,6 +20,7 @@ export const EXCEPTION_KIND_LABEL: Record<ExceptionKind | 'all', string> = {
   bl: 'BaseLinker',
   validation: 'Walidacje jakości',
   attrs: 'Atrybuty',
+  name: 'Standard nazwy',
   all: 'Wszystko',
 };
 
@@ -48,6 +49,7 @@ export const EXCEPTION_PRESETS: ExceptionPreset[] = [
     kinds: ['validation'],
     note: 'Walidacje jakości pominięte',
   },
+  { id: 'name-ok', label: 'Nazwa celowo nietypowa', hint: 'Pomiń w kontroli standardu nazw', kinds: ['name'], note: 'Nazwa zostaje bez zmian' },
   { id: 'no-photo', label: 'Zdjęcie niepotrzebne',
  hint: 'Np. część, drobnica, usługa', kinds: ['photo'], note: 'Zdjęcie nie jest potrzebne' },
   { id: 'no-ean', label: 'Brak kodu EAN (nie istnieje)', hint: 'Produkt własny / luzem', kinds: ['ean'], note: 'Produkt bez kodu EAN' },

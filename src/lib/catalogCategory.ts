@@ -2,6 +2,9 @@ import type { Product } from '../types';
 import { getShopCategoryTree, walkShopLeaves } from './shopCategoryTree';
 import { effectiveManufacturer } from './waproManufacturers';
 
+/** Bufor normalizacji (deklarowany przed użyciem na poziomie modułu). */
+const normalizeCache = new Map<string, string>();
+
 const GENERIC_SOURCE_CATEGORIES = new Set([
   '',
   'produkt',
@@ -46,7 +49,9 @@ export function rebuildCategoryIndex(): void {
 }
 
 function normalize(value: string): string {
-  return value
+  const hit = normalizeCache.get(value);
+  if (hit !== undefined) return hit;
+  const out = value
     .trim()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -54,6 +59,12 @@ function normalize(value: string): string {
     .replace(/[^a-z0-9]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+  // kr\u00f3tkie, powtarzalne napisy (kategorie, producenci, frazy) \u2014 bufor ograniczony rozmiarem
+  if (value.length <= 80) {
+    if (normalizeCache.size > 20000) normalizeCache.clear();
+    normalizeCache.set(value, out);
+  }
+  return out;
 }
 
 function target(label: string): string {
@@ -103,8 +114,18 @@ function textForInference(product: Product): string {
   );
 }
 
+const needleCache = new Map<string, string>();
+function normalizedNeedle(needle: string): string {
+  let n = needleCache.get(needle);
+  if (n === undefined) {
+    n = normalize(needle);
+    needleCache.set(needle, n);
+  }
+  return n;
+}
+
 function has(text: string, ...needles: string[]): boolean {
-  return needles.some((needle) => text.includes(normalize(needle)));
+  return needles.some((needle) => text.includes(normalizedNeedle(needle)));
 }
 
 function inferTargetCategory(product: Product): string | null {

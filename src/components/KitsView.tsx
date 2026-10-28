@@ -597,7 +597,7 @@ function KitDetailModal({
           </button>
         </div>
 
-        <div className="grid min-h-0 flex-1 overflow-y-auto md:grid-cols-[18rem_1fr]">
+        <div className="grid grid-cols-1 min-h-0 flex-1 overflow-y-auto md:grid-cols-[18rem_1fr]">
           <div className="space-y-2 border-b border-stone-200 p-4 md:border-b-0 md:border-r dark:border-slate-800">
             <KitCover kit={kit} lookup={lookup} className="aspect-square w-full rounded-2xl" />
             {canEdit && (

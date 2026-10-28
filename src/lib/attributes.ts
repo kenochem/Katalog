@@ -30,6 +30,8 @@ export interface AttributeDef {
   categories: string[];
   required: boolean;
   sort: number;
+  /** Atrybut pokazywany tylko wtedy, gdy inny atrybut produktu ma jedną z podanych wartości (np. Grupa części tylko dla części). */
+  showWhen?: { key: string; values: string[] } | null;
 }
 
 let defs: AttributeDef[] = [];
@@ -46,6 +48,10 @@ function emit() {
 
 export function getAttributes(): AttributeDef[] {
   return defs;
+}
+
+export function getAttributesVersion(): number {
+  return version;
 }
 
 export function useAttributesVersion(): number {
@@ -96,6 +102,7 @@ export function loadAttributes(force = false): Promise<void> {
         categories: Array.isArray(r.categories) ? (r.categories as unknown[]).map(String) : [],
         required: r.required === true,
         sort: Number(r.sort ?? 0),
+        showWhen: parseShowWhen(r.show_when),
       }));
       loaded = true;
       emit();
@@ -123,6 +130,7 @@ export async function saveAttribute(def: AttributeDef): Promise<void> {
       categories: def.categories,
       required: def.required,
       sort: def.sort,
+      show_when: def.showWhen && def.showWhen.key && def.showWhen.values.length ? def.showWhen : null,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'key' },
@@ -167,9 +175,29 @@ export function categoryScope(names: string[]): Set<string> {
 }
 
 /** Atrybuty obowiązujące dla produktu (wg jego kategorii). */
-export function attributesFor(product: Product, all: AttributeDef[] = defs): AttributeDef[] {
+function parseShowWhen(raw: unknown): AttributeDef['showWhen'] {
+  if (!raw || typeof raw !== 'object') return null;
+  const o = raw as { key?: unknown; values?: unknown };
+  const key = typeof o.key === 'string' ? o.key : '';
+  const values = Array.isArray(o.values) ? o.values.map(String) : [];
+  return key && values.length ? { key, values } : null;
+}
+
+/**
+ * Atrybuty obowiązujące dla produktu: wg jego kategorii oraz (jeśli atrybut ma warunek) wg wartości innego atrybutu.
+ * `values` — bieżące wartości z formularza (domyślnie zapisane w produkcie).
+ */
+export function attributesFor(product: Product, all: AttributeDef[] = defs, values?: Record<string, AttrValue>): AttributeDef[] {
   const cat = norm(getProductDisplayCategory(product));
-  return all.filter((a) => a.categories.length === 0 || categoryScope(a.categories).has(cat));
+  const current = values ?? attrValuesOf(product);
+  return all.filter((a) => {
+    if (a.categories.length > 0 && !categoryScope(a.categories).has(cat)) return false;
+    if (a.showWhen) {
+      const have = current[a.showWhen.key];
+      if (have === undefined || !a.showWhen.values.includes(String(have))) return false;
+    }
+    return true;
+  });
 }
 
 export function attrValuesOf(product: Pick<Product, 'meta'>): Record<string, AttrValue> {

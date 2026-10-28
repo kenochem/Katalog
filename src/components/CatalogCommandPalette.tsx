@@ -199,6 +199,12 @@ export function CatalogCommandPalette({
         run: wrap(() => onNavigate('logs')),
       },
       {
+        id: 'nav-names',
+        label: 'Widok: Standard nazw',
+        icon: <TrendingUp className="h-4 w-4" />,
+        run: wrap(() => onNavigate('names')),
+      },
+      {
         id: 'nav-history',
         label: 'Widok: Zmiany w czasie',
         icon: <TrendingUp className="h-4 w-4" />,

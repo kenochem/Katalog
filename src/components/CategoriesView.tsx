@@ -322,7 +322,7 @@ export function CategoriesView({
         </section>
       )}
 
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_26rem] 2xl:grid-cols-[minmax(0,1fr)_30rem]">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_26rem] 2xl:grid-cols-[minmax(0,1fr)_30rem]">
         <section className="min-w-0 space-y-3">
           <div className="flex flex-wrap gap-2">
             <div className="relative min-w-[12rem] flex-1">

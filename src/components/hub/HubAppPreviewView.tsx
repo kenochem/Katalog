@@ -177,13 +177,13 @@ export function HubAppPreviewView({
         </div>
       </section>
 
-      <section className="mt-5 grid gap-3 sm:grid-cols-3">
+      <section className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
         {metrics.map(([label, value, icon]) => (
           <Metric key={String(label)} label={String(label)} value={value as string | number} icon={icon as ReactNode} />
         ))}
       </section>
 
-      <section className="mt-5 grid gap-3 md:grid-cols-3">
+      <section className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
         {kind === 'catalog' ? (
           <>
             <Shortcut

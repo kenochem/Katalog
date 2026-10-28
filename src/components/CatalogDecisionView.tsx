@@ -1,15 +1,17 @@
 import { AlertTriangle, Building2, CheckCircle2,
- CheckSquare, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, EyeOff, ImageOff, Loader2, Pencil, RotateCcw, Search, ShieldOff, SlidersHorizontal, Square, Tag, X } from 'lucide-react';
+ CheckSquare, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, EyeOff, ImageOff, Loader2, Pencil, RotateCcw, Search, ShieldOff, SlidersHorizontal, Square, Tag, X } from 'lucide-react';
+import { CopyName } from './CopyName';
 import { useEffect, useMemo, useState } from 'react';
 import type { Product } from '../types';
 import { getProductImage } from '../lib/products';
 import { assessProductKnowledge } from '../lib/productKnowledge';
-import { effectiveManufacturer } from '../lib/waproManufacturers';
+import { effectiveManufacturer, getManufacturersVersion } from '../lib/waproManufacturers';
+import { getLiveLinksVersion } from '../lib/baselinkerLive';
 import { hasBaselinkerLink } from '../lib/baselinkerLink';
 import { HIDE_REASON_PRESETS } from '../lib/hideReasons';
 import { CsvExportDialog } from './CsvExportDialog';
 import { BulkEditDialog } from './BulkEditDialog';
-import { attrValuesOf, attributesFor, hasAttrValue } from '../lib/attributes';
+import { attrValuesOf, attributesFor, getAttributesVersion, hasAttrValue } from '../lib/attributes';
 import { VALIDATION_LABEL, buildValidationContext, validateProduct, type ValidationContext } from '../lib/validations';
 
 import { QuickEditRow, type QuickPatch } from './QuickEditRow';
@@ -40,11 +42,30 @@ type DecisionRow = {
   exceptions: string[];
 };
 
+/**
+ * Braki niezależne od innych produktów liczymy raz na obiekt produktu (WeakMap). Podpis w wpisie unieważnia bufor, gdy zmieni się
+ * coś spoza produktu: kategoria wynikowa, rejestry (atrybuty, producenci), powiązania z BaseLinkerem albo wynik kompletności.
+ */
+const baseIssueCache = new WeakMap<Product, { stamp: string; score: number; issues: DecisionIssue[] }>();
+
 function describeIssues(
   product: Product,
   knowledgeScore = assessProductKnowledge(product).score,
   vctx?: ValidationContext,
 ): DecisionIssue[] {
+  const stamp = `${getProductDisplayCategory(product)}|${getAttributesVersion()}|${getManufacturersVersion()}|${getLiveLinksVersion()}`;
+  let base = baseIssueCache.get(product);
+  if (!base || base.stamp !== stamp || base.score !== knowledgeScore) {
+    base = { stamp, score: knowledgeScore, issues: describeBaseIssues(product, knowledgeScore) };
+    baseIssueCache.set(product, base);
+  }
+  if (!vctx) return base.issues;
+  const issues = [...base.issues];
+  for (const f of validateProduct(product, vctx)) issues.push({ label: f.label, tone: f.tone, kind: 'validation' });
+  return issues;
+}
+
+function describeBaseIssues(product: Product, knowledgeScore: number): DecisionIssue[] {
   const issues: DecisionIssue[] = [];
   const manufacturer = effectiveManufacturer(product);
   const typeLabel = inferProductTypeLabel(product);
@@ -84,10 +105,6 @@ function describeIssues(
       issues.push({ label: `brak atrybutu: ${d.label}`, tone: 'warn', kind: 'attrs' });
     }
   }
-  if (vctx) {
-    for (const f of validateProduct(product, vctx)) issues.push({ label: f.label, tone: f.tone, kind: 'validation' });
-  }
-
   return issues;
 }
 
@@ -226,6 +243,8 @@ export function CatalogDecisionView({
   const [bulkOpen, setBulkOpen] = useState(false);
   const [quickFor, setQuickFor] = useState<string | null>(null);
   const [exceptionNote, setExceptionNote] = useState('');
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [exceptionsOpen, setExceptionsOpen] = useState(false);
   const [exceptionBusy, setExceptionBusy] = useState(false);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const todoRows = useMemo(() => buildCatalogDecisionRows(products, 'todo'), [products]);
@@ -458,7 +477,7 @@ export function CatalogDecisionView({
             )}
           </div>
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <Metric label="Do sprawdzenia" value={rows.length} />
           <Metric label="Ciężkie przypadki" value={hard} />
           <Metric label="Bez zdjęcia" value={kindCounts.get('photo') ?? 0} />
@@ -467,7 +486,7 @@ export function CatalogDecisionView({
         </div>
       </section>
 
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_21rem] 2xl:grid-cols-[minmax(0,1fr)_24rem]">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_21rem] 2xl:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="min-w-0 space-y-3">
           <Pager
             page={currentPage}
@@ -525,7 +544,7 @@ export function CatalogDecisionView({
                     </button>
                     <button type="button" onClick={() => onOpenProduct(p)} className="min-w-0 text-left">
                       <span className="block truncate font-semibold text-slate-950 dark:text-slate-50">
-                        {p.displayName}
+                        <CopyName text={p.displayName}>{p.displayName}</CopyName>
                       </span>
                       <span className="mt-0.5 block truncate font-mono text-xs text-slate-600 dark:text-slate-400">
                         {p.sku} · {effectiveManufacturer(p) || 'Bez producenta'} · {getProductDisplayCategory(p)} · stan {p.stock ?? 0} · {row.knowledgeScore}%
@@ -698,10 +717,17 @@ export function CatalogDecisionView({
           </div>
           <section className="surface-panel space-y-3 p-4">
             <div className="flex items-center justify-between">
-              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
+              <button
+                type="button"
+                onClick={() => setFiltersOpen((v) => !v)}
+                aria-expanded={filtersOpen}
+                className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+              >
                 <SlidersHorizontal className="h-3.5 w-3.5" />
                 Filtry
-              </p>
+                {filtersActive && <span className="rounded-full bg-brand-600 px-1.5 py-0.5 text-[10px] font-bold normal-case tracking-normal text-white">aktywne</span>}
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${filtersOpen ? '' : '-rotate-90'}`} />
+              </button>
               {filtersActive && (
                 <button
                   type="button"
@@ -722,6 +748,8 @@ export function CatalogDecisionView({
                 className="input-field with-icon"
               />
             </div>
+            {filtersOpen && (
+            <>
             <div className="flex flex-wrap gap-1.5">
               {ISSUE_KINDS.map((k) => {
                 const count = kindCounts.get(k.key) ?? 0;
@@ -795,6 +823,8 @@ export function CatalogDecisionView({
                 </select>
               </label>
             </div>
+            </>
+            )}
           </section>
 
           <section className="surface-panel space-y-3 p-4">
@@ -840,11 +870,17 @@ export function CatalogDecisionView({
           {onSetExceptions && (
 
             <section className="surface-panel space-y-3 p-4">
-              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
+              <button
+                type="button"
+                onClick={() => setExceptionsOpen((v) => !v)}
+                aria-expanded={exceptionsOpen}
+                className="flex w-full items-center gap-1.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+              >
                 <ShieldOff className="h-3.5 w-3.5" />
                 {mode === 'todo' ? 'Wyjątek dla zaznaczonych' : 'Wyjątki zaznaczonych'}
-              </p>
-              {mode === 'todo' ? (
+                <ChevronDown className={`ml-auto h-3.5 w-3.5 transition-transform ${exceptionsOpen ? '' : '-rotate-90'}`} />
+              </button>
+              {!exceptionsOpen ? null : mode === 'todo' ? (
                 <>
                   <p className="text-[11px] text-slate-600 dark:text-slate-400">
                     Produkty, którym nie trzeba czegoś uzupełniać, znikają z listy braków (np. nie idą do BaseLinkera). Możesz to cofnąć w zakładce „Wyjątki”.

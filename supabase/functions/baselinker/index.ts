@@ -221,6 +221,22 @@ function mapOur(r: Record<string, unknown>): OurProduct {
  * Zarezerwowane sztuki (products.stock_reserved, zasila agent WAPRO). Osobne zapytanie — brak kolumny
  * (migracja niewykonana) nie psuje reszty: wtedy zwracamy pusta mape i idzie caly stan jak dotad.
  */
+/** Lista produktów do wpisu w aktywności: changes = { SKU: { from: nazwa, to: opis } }, entity_label = pierwsze produkty. */
+async function auditProductList(admin: Admin, rows: { sku: string; text: string }[]) {
+  const list = rows.filter((r) => r.sku && r.sku !== '*').slice(0, 200);
+  const names = new Map<string, string>();
+  const skus = list.map((r) => r.sku.toUpperCase());
+  for (let i = 0; i < skus.length; i += 150) {
+    const { data } = await admin.from('products').select('sku,name,display_name').in('sku', skus.slice(i, i + 150));
+    for (const p of data ?? []) names.set(String(p.sku).toUpperCase(), String(p.display_name || p.name || ''));
+  }
+  const changes: Record<string, { from: string; to: string }> = {};
+  for (const r of list) changes[r.sku.toUpperCase()] = { from: names.get(r.sku.toUpperCase()) ?? '', to: r.text };
+  const first = list.slice(0, 3).map((r) => `${r.sku.toUpperCase()}${names.get(r.sku.toUpperCase()) ? ` ${names.get(r.sku.toUpperCase())}` : ''}`);
+  const entity_label = first.join('; ') + (list.length > 3 ? ` (+${list.length - 3})` : '');
+  return { changes, entity_label };
+}
+
 async function loadReservedMap(admin: Admin, skus?: string[]): Promise<Map<string, number>> {
   const out = new Map<string, number>();
   try {
@@ -1299,6 +1315,7 @@ Deno.serve(async (req) => {
           entity_type: 'baselinker',
           entity_id: 'images',
           summary: `Dolozono ${added} zdjec do BaseLinker (${okCount}/${skus.length} produktow)`,
+          ...(await auditProductList(admin, results.map((x) => ({ sku: String(x.sku), text: `${x.status}${x.added ? ` +${x.added} zdj.` : ''}${x.reason ? `: ${x.reason}` : ''}` })))),
         });
       }
       return json({ requested: skus.length, ok: okCount, added, results });
@@ -1568,6 +1585,7 @@ Deno.serve(async (req) => {
       const noLink: string[] = [];
       const nowIso = new Date().toISOString();
 
+      const pushedBySku = new Map<string, string[]>();
       for (const field of fields) {
         const payload: [string, number, string][] = [];
         let skipped = 0;
@@ -1637,8 +1655,9 @@ Deno.serve(async (req) => {
           skipped,
           status: failure ? 'error' : Object.keys(warnings).length ? 'warning' : 'ok',
           note: failure || (Object.keys(warnings).length ? `Ostrzezenia BL: ${Object.keys(warnings).length}` : ''),
-          sample: payload.slice(0, 20).map(([id, val, sku]) => ({ sku, blId: id, value: val })),
+          sample: payload.slice(0, 100).map(([id, val, sku]) => ({ sku, blId: id, value: val })),
         });
+        if (!failure) for (const [, val, sku] of payload) pushedBySku.set(sku, [...(pushedBySku.get(sku) ?? []), field === 'stock' ? `stan ${val}` : `cena ${val} zł`]);
         results[field] = { updated, skipped, warnings, error: failure || undefined };
       }
 
@@ -1652,6 +1671,7 @@ Deno.serve(async (req) => {
           entity_type: 'baselinker',
           entity_id: fields.join('+'),
           summary: `Wyslano do BaseLinker (${fields.join(', ')}): ${skus.length} SKU`,
+          ...(await auditProductList(admin, [...pushedBySku].map(([sku, parts]) => ({ sku, text: parts.join(', ') })))),
         });
       }
 
@@ -1820,6 +1840,7 @@ Deno.serve(async (req) => {
           entity_type: 'baselinker',
           entity_id: String(INVENTORY_ID),
           summary: `Import do BaseLinker: utworzono ${created} z ${skus.length} produktow`,
+          ...(await auditProductList(admin, results.map((x) => ({ sku: String(x.sku), text: `${x.status}${x.message ? `: ${x.message}` : ''}` })))),
         });
       }
       return json({ results });

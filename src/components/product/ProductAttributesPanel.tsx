@@ -27,7 +27,7 @@ export function ProductAttributesPanel({
 }) {
   const version = useAttributesVersion();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const defs = useMemo(() => attributesFor(product, getAttributes()), [product, version]);
+  const defs = useMemo(() => attributesFor(product, getAttributes(), values), [product, version, values]);
   if (defs.length === 0) return null;
   const filled = defs.filter((d) => hasAttrValue(values[d.key])).length;
 
@@ -40,7 +40,7 @@ export function ProductAttributesPanel({
           {filled} / {defs.length}
         </span>
       </header>
-      <dl className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-2">
+      <dl className="grid grid-cols-1 gap-x-6 gap-y-3 p-4 sm:grid-cols-2">
         {defs.map((d) => {
           const v = values[d.key];
           const err = validateAttrValue(d, v);

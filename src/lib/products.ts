@@ -128,6 +128,7 @@ function lightProductMeta(meta?: ProductMeta): ProductMeta | undefined {
     'baselinkerDescriptionChars',
     'catalogHiddenReason',
     'catalogHiddenAt',
+    'groupPrimarySku',
   ] as const) {
     if (meta[key] != null && meta[key] !== '') {
       (light as Record<string, unknown>)[key] = meta[key];
@@ -138,6 +139,7 @@ function lightProductMeta(meta?: ProductMeta): ProductMeta | undefined {
   }
   if (typeof meta.waproImport === 'boolean') light.waproImport = meta.waproImport;
   if (typeof meta.waproSkeleton === 'boolean') light.waproSkeleton = meta.waproSkeleton;
+  if (typeof meta.waproBlocked === 'boolean') light.waproBlocked = meta.waproBlocked;
   if (typeof meta.salesExcludeFromSum === 'boolean') {
     light.salesExcludeFromSum = meta.salesExcludeFromSum;
   }
@@ -286,22 +288,40 @@ async function fetchProductsUncached(
 
   const all: ProductRow[] = [];
   const pageSize = 1000;
-  let from = 0;
 
   const LIST_SELECT =
     'id,sku,name,display_name,category,manufacturer,ean,image_url,custom_image_url,extra_images,has_image,stock,stock_manual,price_purchase_net,price_sale_net,price_sale_gross,tags,catalog,variants,is_group,warehouse_location,product_meta';
 
-  while (true) {
-    let pageQuery = supabase.from('products').select(LIST_SELECT).order('sku');
-    if (catalog) {
-      pageQuery = pageQuery.eq('catalog', catalog);
-    }
-    const { data, error } = await pageQuery.range(from, from + pageSize - 1);
+  const pageQueryFor = (withCount: boolean) => {
+    let q = supabase!.from('products').select(LIST_SELECT, withCount ? { count: 'exact' } : undefined).order('sku');
+    if (catalog) q = q.eq('catalog', catalog);
+    return q;
+  };
 
-    if (error || !data?.length) break;
-    all.push(...(data as ProductRow[]));
-    if (data.length < pageSize) break;
-    from += pageSize;
+  // pierwsza strona z licznikiem, reszta stron pobierana RÓWNOLEGLE (wcześniej: po kolei, jedna po drugiej)
+  const first = await pageQueryFor(true).range(0, pageSize - 1);
+  if (!first.error && first.data?.length) {
+    all.push(...(first.data as ProductRow[]));
+    if (first.count == null && first.data.length === pageSize) {
+      // brak licznika (nietypowa odpowiedź) — bezpieczny tryb po kolei
+      for (let from = pageSize; ; from += pageSize) {
+        const page = await pageQueryFor(false).range(from, from + pageSize - 1);
+        if (page.error || !page.data?.length) break;
+        all.push(...(page.data as ProductRow[]));
+        if (page.data.length < pageSize) break;
+      }
+    }
+    const total = first.count ?? first.data.length;
+    if (first.count != null && first.data.length === pageSize && total > pageSize) {
+      const pageStarts: number[] = [];
+      for (let from = pageSize; from < total; from += pageSize) pageStarts.push(from);
+      const pages = await Promise.all(pageStarts.map((from) => pageQueryFor(false).range(from, from + pageSize - 1)));
+      for (const page of pages) {
+        // przerwana strona kończy listę w tym miejscu (jak dawniej przy błędzie)
+        if (page.error || !page.data?.length) break;
+        all.push(...(page.data as ProductRow[]));
+      }
+    }
   }
 
   if (!all.length) {
@@ -526,7 +546,7 @@ async function uploadProductImageFile(
   if (isSupabaseConfigured && supabase) {
     const { error } = await supabase.storage
       .from(STORAGE_BUCKET)
-      .upload(path, compressed, { upsert: true, contentType });
+      .upload(path, compressed, { upsert: true, contentType, cacheControl: '31536000' });
     if (error) throw error;
 
     const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
@@ -626,6 +646,88 @@ export async function setProductPrimaryImage(
   await updateProduct(productId, {
     customImageUrl: url,
     extraImageUrls: extras,
+    hasImage: true,
+  });
+}
+
+/**
+ * Podmienia wskazane zdjęcia produktu nowymi plikami (np. po dopasowaniu rozmiaru pod BaseLinker), zachowując kolejność.
+ * Zwraca nową listę adresów w tej samej kolejności.
+ */
+export async function replaceProductImages(productId: string, order: string[], files: Map<string, File>): Promise<string[]> {
+  const stamp = Date.now();
+  const replaced = new Map<string, string>();
+  let n = 0;
+  for (const [oldUrl, file] of files) {
+    replaced.set(oldUrl, await uploadProductImageFile(productId, file, `prep-${stamp}-${n++}`));
+  }
+  const next = order.map((u) => replaced.get(u) ?? u);
+  await updateProduct(productId, {
+    customImageUrl: next[0],
+    extraImageUrls: next.slice(1),
+    hasImage: true,
+  });
+  return next;
+}
+
+/** Pobiera produkty po SKU (np. warianty grupy, których nie ma na załadowanej liście). */
+export async function fetchProductsBySkus(skus: string[]): Promise<Product[]> {
+  const list = [...new Set(skus.map((s) => String(s).trim().toUpperCase()).filter(Boolean))];
+  if (!list.length || !isSupabaseConfigured || !supabase) return [];
+  const out: Product[] = [];
+  for (let i = 0; i < list.length; i += 100) {
+    const { data, error } = await supabase.from('products').select('*').in('sku', list.slice(i, i + 100));
+    if (error) throw error;
+    for (const row of data ?? []) out.push(rowToProduct(row as ProductRow));
+  }
+  return out;
+}
+
+/**
+ * Kopiuje zestaw zdjęć do innych produktów (np. wariantów grupy). Pliki z naszego magazynu są kopiowane osobno,
+ * żeby usunięcie zdjęcia w jednym produkcie nie ruszało pozostałych; adresy zewnętrzne zostają współdzielone.
+ */
+export async function copyImagesToProducts(
+  urls: string[],
+  targetIds: string[],
+  onProgress?: (done: number, total: number) => void,
+): Promise<Map<string, string[]>> {
+  const stamp = Date.now();
+  const blobs = new Map<string, File>();
+  const result = new Map<string, string[]>();
+  let done = 0;
+  for (const id of targetIds) {
+    const next: string[] = [];
+    let n = 0;
+    for (const url of urls) {
+      if (!url.includes('/storage/v1/object/public/')) {
+        next.push(url);
+        continue;
+      }
+      let file = blobs.get(url);
+      if (!file) {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Nie udało się pobrać zdjęcia do skopiowania');
+        const blob = await res.blob();
+        file = new File([blob], 'copy.jpg', { type: blob.type || 'image/jpeg' });
+        blobs.set(url, file);
+      }
+      next.push(await uploadProductImageFile(id, file, `copy-${stamp}-${n++}`, { skipCompress: true }));
+    }
+    await updateProduct(id, { customImageUrl: next[0], extraImageUrls: next.slice(1), hasImage: true });
+    result.set(id, next);
+    onProgress?.(++done, targetIds.length);
+  }
+  return result;
+}
+
+/** Zapisuje nową kolejność zdjęć: pierwsze jest zdjęciem głównym, reszta to zdjęcia dodatkowe. */
+export async function reorderProductImages(productId: string, order: string[]): Promise<void> {
+  const clean = order.filter((u, i) => !!u && order.indexOf(u) === i);
+  if (clean.length < 2) return;
+  await updateProduct(productId, {
+    customImageUrl: clean[0],
+    extraImageUrls: clean.slice(1),
     hasImage: true,
   });
 }
@@ -821,19 +923,24 @@ export function catalogImageHostPriority(url: string): number {
   }
 }
 
-export function collectProductImageCandidates(product: ProductImageSource): string[] {
+export function collectProductImageCandidates(product: ProductImageSource, opts: { keepOrder?: boolean } = {}): string[] {
   const out: string[] = [];
+  // Kopie z kenochem.com/hpeciai/ pomijamy (galerie sklepu mają te same zdjęcia dwa razy), ale gdy to jedyne źródło
+  // zdjęć produktu — używamy ich jako rezerwy, żeby produkt miał podgląd.
+  const hpeciai: string[] = [];
   const push = (url?: string | null) => {
     const trimmed = (url || '').trim();
     if (!trimmed || !/^https?:\/\//i.test(trimmed)) return;
-    if (/kenochem\.com\/hpeciai\//i.test(trimmed)) return;
     const base = trimmed.split('?')[0];
-    if (!out.some((u) => u.split('?')[0] === base)) out.push(trimmed);
+    const target = /kenochem\.com\/hpeciai\//i.test(trimmed) ? hpeciai : out;
+    if (!target.some((u) => u.split('?')[0] === base)) target.push(trimmed);
   };
   push(product.customImageUrl);
   push(product.imageUrl);
   for (const extra of product.extraImageUrls || []) push(extra);
+  if (out.length === 0) out.push(...hpeciai);
 
+  if (opts.keepOrder) return out;
   const customBase = (product.customImageUrl || '').trim().split('?')[0];
   if (!customBase) {
     return [...out].sort((a, b) => catalogImageHostPriority(a) - catalogImageHostPriority(b));
@@ -854,14 +961,20 @@ export function getProductImages(product: Product): string[] {
   // zdjęciem sprzed obróbki — nie pokazujemy go drugi raz (tak samo jak w katalogu akcesoriów).
   if (product.catalog === 'shop') {
     if (!primary) return [];
-    return collectProductImageCandidates({
-      customImageUrl: primary,
-      extraImageUrls: product.extraImageUrls,
-    });
+    // kolejność z bazy (ustawiana przeciąganiem miniatur) — bez sortowania po hoście
+    return collectProductImageCandidates(
+      {
+        customImageUrl: primary,
+        extraImageUrls: product.extraImageUrls,
+      },
+      { keepOrder: true },
+    );
   }
-  const extras = product.extraImageUrls || [];
-  if (!primary) return extras;
-  return [primary, ...extras.filter((url) => url !== primary)];
+  // kopie /hpeciai/ i powtórzone adresy pomijamy także tutaj, zachowując ręcznie ustawioną kolejność
+  return collectProductImageCandidates(
+    { customImageUrl: primary ?? undefined, extraImageUrls: product.extraImageUrls },
+    { keepOrder: true },
+  );
 }
 
 export async function isProductSkuTaken(
