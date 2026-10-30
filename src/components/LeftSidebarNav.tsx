@@ -96,7 +96,7 @@ const NAV_GROUPS: { id: string; label: string; defaultOpen: boolean; items: View
   { id: 'main', label: '', defaultOpen: true, items: ['home', 'catalog', 'favorites', 'collections'] },
   { id: 'products', label: 'Produkty', icon: Boxes, defaultOpen: true, items: ['new-products', 'groups', 'kits', 'promotions', 'labels', 'warehouse', 'library'] },
   { id: 'quality', label: 'Jakość danych', icon: ListChecks, defaultOpen: true, items: ['catalog-decisions', 'names', 'rules', 'small-images', 'catalog-hidden'] },
-  { id: 'dictionaries', label: 'Słowniki', icon: FolderTree, defaultOpen: false, items: ['assortment', 'categories', 'manufacturers', 'attributes'] },
+  { id: 'dictionaries', label: 'Słowniki', icon: FolderTree, defaultOpen: false, items: ['assortment', 'manufacturers', 'attributes'] },
   { id: 'analytics', label: 'Analizy', icon: BarChart3, defaultOpen: false, items: ['progress', 'history'] },
   { id: 'system', label: 'System', icon: Settings2, defaultOpen: false, items: ['logs', 'updates', 'admin'] },
 ];
@@ -386,8 +386,8 @@ export function LeftSidebarNav({
         id: 'categories',
         icon: <FolderTree className="h-4 w-4" />,
         label: 'Kategorie',
-        available: isCatalogProduct && roleCan(role, 'viewProgress'),
-        onClick: () => setView('categories'),
+        available: false,
+        onClick: () => setView('assortment'),
       },
       {
         id: 'manufacturers',

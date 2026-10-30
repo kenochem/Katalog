@@ -1,11 +1,15 @@
 import {
   Boxes,
   ChevronDown,
+  Download,
+  ClipboardCheck,
+  ImageOff,
   ChevronRight,
   GitMerge,
   Loader2,
   Minus,
   Network,
+  Store,
   Pencil,
   Plus,
   Search,
@@ -15,17 +19,20 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import type { Product } from '../types';
 import { getProductDisplayCategory, productNeedsCategoryDecision } from '../lib/catalogCategory';
 import { getShopCategoryTree, type ShopCategoryNode } from '../lib/shopCategoryTree';
 import {
   addCategory,
   categoryKey,
+  findLooseCategories,
   flattenCategories,
+  getCategoryOverrides,
   moveCategory,
   removeCategory,
   renameCategory,
+  resetCategoryOverrides,
   useCategoryRegistry,
 } from '../lib/categoryRegistry';
 import { effectiveManufacturer, NO_MANUFACTURER } from '../lib/waproManufacturers';
@@ -40,13 +47,24 @@ import {
   type CategorySuggestion,
   type ManufacturerSuggestion,
 } from '../lib/assortmentAnalysis';
+import { AUDIT_CODE_LABEL, auditToCsv, downloadText, runAudit, type AuditResult } from '../lib/assortmentAudit';
+import { iconForCategory } from '../lib/categoryIcons';
+import { ShopMirrorPanel } from './ShopMirrorPanel';
+import { effectiveSupplier, supplierStats, SUPPLIER_FROM_MANUFACTURER } from '../lib/suppliers';
 import { confirmDialog, promptDialog } from '../lib/dialog';
 import { showToast } from '../lib/toast';
 
-type Mode = 'tree' | 'manufacturers' | 'analysis';
+type Mode = 'tree' | 'manufacturers' | 'analysis' | 'shop';
+
+const hashOf = (s: string) => {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+};
+const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 type TrayFilter = 'undecided' | 'suggested' | 'node' | 'all';
 
-const NODE_W = 232;
+const NODE_W = 256;
 const NODE_H = 46;
 const GAP_X = 64;
 const ROW = 58;
@@ -72,6 +90,113 @@ function subtreeNames(node: ShopCategoryNode): string[] {
   return [node.name, ...node.children.flatMap(subtreeNames)];
 }
 
+interface RowActions {
+  startDrag: (e: React.DragEvent, id: string) => void;
+  endDrag: () => void;
+  toggle: (id: string, shift: boolean) => void;
+  assignCat: (id: string, category: string) => void;
+  assignMf: (id: string, name: string) => void;
+}
+
+/**
+ * Wiersz tacki. Memoizowany: zaznaczenie jednego produktu albo ruch kursora podczas przeciągania
+ * nie przerysowuje pozostałych wierszy (a każdy ma zdjęcie). Akcje idą przez stabilny obiekt `rowAct`.
+ */
+const TrayRow = memo(function TrayRow({
+  p,
+  on,
+  mode,
+  catLabel,
+  cs,
+  ms,
+  mfLabel,
+  supplier,
+  draggable,
+  disabled,
+  canAssign,
+  showImages,
+  rowAct,
+}: {
+  p: Product;
+  on: boolean;
+  mode: Mode;
+  catLabel: string;
+  cs?: CategorySuggestion;
+  ms?: ManufacturerSuggestion;
+  mfLabel: string;
+  supplier: string;
+  draggable: boolean;
+  disabled: boolean;
+  canAssign: boolean;
+  showImages: boolean;
+  rowAct: React.MutableRefObject<RowActions>;
+}) {
+  return (
+    <li
+      draggable={draggable}
+      onDragStart={(e) => rowAct.current.startDrag(e, p.id)}
+      onDragEnd={() => rowAct.current.endDrag()}
+      onClick={(e) => rowAct.current.toggle(p.id, e.shiftKey)}
+      style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 68px' }}
+      className={`flex cursor-grab select-none items-start gap-2.5 rounded-xl px-2.5 py-2 text-left transition active:cursor-grabbing ${
+        on ? 'bg-brand-500/15 ring-1 ring-brand-500/60' : 'bg-white hover:bg-slate-50 dark:bg-slate-900/60 dark:hover:bg-slate-800/80'
+      }`}
+    >
+      <Thumb p={p} show={showImages} />
+      <div className="min-w-0 flex-1">
+        <p className="line-clamp-2 text-[13px] font-medium leading-snug text-slate-900 dark:text-slate-100">{p.displayName || p.name}</p>
+        <p className="mt-0.5 truncate text-[11px] text-slate-500">
+          {p.sku} · {mode === 'tree' ? catLabel : `${mfLabel}${supplier ? ` · dost.: ${supplier}` : ''}`}
+        </p>
+        {mode === 'tree' && cs && (
+          <button
+            type="button"
+            disabled={disabled || !canAssign}
+            onClick={(e) => {
+              e.stopPropagation();
+              rowAct.current.assignCat(p.id, cs.category);
+            }}
+            className="mt-1 inline-flex max-w-full items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 hover:bg-emerald-500/25 dark:text-emerald-300"
+            title={`Na podstawie słów: ${cs.because.join(', ')}`}
+          >
+            <Wand2 className="h-3 w-3 shrink-0" />
+            <span className="truncate">{cs.category}</span>
+            <span className="tabular-nums opacity-70">{Math.round(cs.confidence * 100)}%</span>
+          </button>
+        )}
+        {mode === 'manufacturers' && ms && (
+          <button
+            type="button"
+            disabled={disabled || !canAssign}
+            onClick={(e) => {
+              e.stopPropagation();
+              rowAct.current.assignMf(p.id, ms.manufacturer);
+            }}
+            className="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 hover:bg-emerald-500/25 dark:text-emerald-300"
+          >
+            <Wand2 className="h-3 w-3" /> {ms.manufacturer}
+          </button>
+        )}
+      </div>
+    </li>
+  );
+});
+
+/** Miniatura produktu w tacce; bez zdjęcia (albo przy błędzie ładowania) pokazuje neutralną ikonę. */
+function Thumb({ p, show }: { p: Product; show: boolean }) {
+  const [bad, setBad] = useState(false);
+  const src = show ? p.customImageUrl || p.imageUrl || p.extraImageUrls?.[0] || '' : '';
+  return (
+    <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-800">
+      {src && !bad ? (
+        <img src={src} alt="" loading="lazy" decoding="async" draggable={false} onError={() => setBad(true)} className="h-full w-full object-contain" />
+      ) : (
+        <ImageOff className="h-4 w-4 text-slate-400" aria-hidden />
+      )}
+    </span>
+  );
+}
+
 export function AssortmentStudio({
   products,
   canEditCategories,
@@ -79,8 +204,11 @@ export function AssortmentStudio({
   onPatched,
   onShowCategory,
   onShowManufacturer,
+  showImages = true,
 }: {
   products: Product[];
+  /** false = rola bez uprawnienia do zdjęć. */
+  showImages?: boolean;
   canEditCategories: boolean;
   canEditManufacturers: boolean;
   onPatched: (patches: { id: string; patch: Partial<Product> }[]) => void;
@@ -91,11 +219,13 @@ export function AssortmentStudio({
   const [mode, setMode] = useState<Mode>('tree');
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [selectedMf, setSelectedMf] = useState<string | null>(null);
+  const [supplierFilter, setSupplierFilter] = useState('');
   const [expanded, setExpanded] = useState<Set<string>>(new Set([VIRTUAL_ROOT]));
   const [zoom, setZoom] = useState(1);
   const [query, setQuery] = useState('');
   const [mfQuery, setMfQuery] = useState('');
   const [trayQuery, setTrayQuery] = useState('');
+  const [stockFilter, setStockFilter] = useState<'' | 'in' | 'out'>('');
   const [trayFilter, setTrayFilter] = useState<TrayFilter>('undecided');
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [limit, setLimit] = useState(TRAY_PAGE);
@@ -147,12 +277,39 @@ export function AssortmentStudio({
     return m;
   }, [singles, findMf]);
 
+  const [audit, setAudit] = useState<AuditResult | null>(null);
+  const runFullAudit = (): AuditResult => {
+    const r = runAudit(products, model);
+    setAudit(r);
+    return r;
+  };
+  /** Audyt liczy się ok. sekundy — najpierw pokazujemy stan „liczenie”, potem blokujemy wątek. */
+  const startAudit = () => {
+    setBusy('audit');
+    window.setTimeout(() => {
+      try {
+        runFullAudit();
+      } finally {
+        setBusy(null);
+      }
+    }, 40);
+  };
+  const exportAudit = (kind: 'csv' | 'json') => {
+    const r = audit ?? runFullAudit();
+    const stamp = new Date().toISOString().slice(0, 10);
+    if (kind === 'csv') downloadText(`audyt-asortymentu-${stamp}.csv`, auditToCsv(r), 'text/csv');
+    else downloadText(`audyt-asortymentu-${stamp}.json`, JSON.stringify(r), 'application/json');
+    showToast(`Pobrano audyt: ${r.summary.withIssues.toLocaleString('pl-PL')} produktów z uwagami`, 'info');
+  };
+
   const health = useMemo(() => computeHealth(singles, catSuggestions, mfSuggestions), [singles, catSuggestions, mfSuggestions]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const roots = useMemo(() => getShopCategoryTree().roots, [version]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const flat = useMemo(() => flattenCategories(), [version]);
+  /** Kategorie spoza 7 działów lub głębsze niż 3 poziomy — do usunięcia (produkty wracają do „Do decyzji”). */
+  const loose = useMemo(() => findLooseCategories(), [version]); // eslint-disable-line react-hooks/exhaustive-deps
   const pathOf = (name: string) => flat.find((c) => categoryKey(c.name) === categoryKey(name))?.path ?? name;
   const leaves = useMemo(() => flat.filter((c) => c.isLeaf), [flat]);
 
@@ -179,8 +336,9 @@ export function AssortmentStudio({
       const open = depth === 0 || (q ? matches(n) : expanded.has(n.name));
       const l: LNode = { node: n, depth, x: depth * (NODE_W + GAP_X), y: 0, color, kids: [], parent };
       const visibleKids = open ? n.children.filter((c) => !q || matches(c)) : [];
-      visibleKids.forEach((c, i) => {
-        const col = depth === 0 ? ROOT_COLORS[i % ROOT_COLORS.length] : color;
+      visibleKids.forEach((c) => {
+        // kolor działu wynika z jego miejsca w pełnym drzewie, nie z pozycji po filtrowaniu
+        const col = depth === 0 ? ROOT_COLORS[Math.max(0, n.children.indexOf(c)) % ROOT_COLORS.length] : color;
         l.kids.push(build(c, depth + 1, l, col));
       });
       if (l.kids.length) l.y = (l.kids[0].y + l.kids[l.kids.length - 1].y) / 2;
@@ -197,6 +355,36 @@ export function AssortmentStudio({
     const maxDepth = Math.max(...all.map((l) => l.depth));
     return { top, all, width: (maxDepth + 1) * NODE_W + maxDepth * GAP_X + 8, height: Math.max(row, 1) * ROW };
   }, [roots, expanded, q]);
+
+  // zwijanie: węzły, które znikają z układu, na chwilę zostają i „wsuwają się” w najbliższego widocznego rodzica
+  const prevAll = useRef<LNode[]>([]);
+  const [ghosts, setGhosts] = useState<{ key: string; l: LNode; tx: number; ty: number; go: boolean }[]>([]);
+  useEffect(() => {
+    const now = new Set(layout.all.map((l) => l.node.name + l.depth));
+    const gone = prevAll.current.filter((l) => !now.has(l.node.name + l.depth));
+    prevAll.current = layout.all;
+    if (!gone.length) return;
+    const byName = new Map(layout.all.map((l) => [l.node.name, l]));
+    setGhosts(
+      gone.map((l) => {
+        let a = l.parent;
+        while (a && !byName.has(a.node.name)) a = a.parent;
+        const t = a ? byName.get(a.node.name)! : null;
+        return { key: `g${l.node.name}${l.depth}`, l, tx: t ? t.x : l.x - 40, ty: t ? t.y : l.y, go: false };
+      }),
+    );
+    const raf = requestAnimationFrame(() => requestAnimationFrame(() => setGhosts((g) => g.map((x) => ({ ...x, go: true })))));
+    const timer = window.setTimeout(() => setGhosts([]), 420);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(timer);
+    };
+  }, [layout]);
+  const pathOfNode = (l: LNode): string => {
+    const names: string[] = [];
+    for (let c: LNode | null = l; c; c = c.parent) if (c.node.name !== VIRTUAL_ROOT) names.unshift(c.node.name);
+    return names.join(' › ');
+  };
 
   // ---- tacka z produktami -------------------------------------------------------------------
   const selectedNodeNames = useMemo(() => {
@@ -217,14 +405,16 @@ export function AssortmentStudio({
     const tq = trayQuery.trim().toLowerCase();
     let list = singles;
     if (mode === 'manufacturers') {
-      if (selectedMf) list = list.filter((p) => (effectiveManufacturer(p) || NO_MANUFACTURER) === selectedMf);
+      if (supplierFilter) list = list.filter((p) => effectiveSupplier(p) === supplierFilter);
+      else if (selectedMf) list = list.filter((p) => (effectiveManufacturer(p) || NO_MANUFACTURER) === selectedMf);
       else list = list.filter((p) => !effectiveManufacturer(p));
     } else if (trayFilter === 'undecided') list = list.filter((p) => displayCat.get(p.id) === UNDECIDED);
     else if (trayFilter === 'suggested') list = list.filter((p) => catSuggestions.has(p.id));
     else if (trayFilter === 'node' && selectedNodeNames) list = list.filter((p) => selectedNodeNames.has(categoryKey(displayCat.get(p.id) ?? '')));
+    if (stockFilter) list = list.filter((p) => ((p.stock ?? 0) > 0) === (stockFilter === 'in'));
     if (tq) list = list.filter((p) => `${p.displayName} ${p.name} ${p.sku} ${p.ean ?? ''}`.toLowerCase().includes(tq));
     return list;
-  }, [singles, mode, trayFilter, selectedMf, selectedNodeNames, trayQuery, displayCat, catSuggestions]);
+  }, [singles, mode, trayFilter, selectedMf, supplierFilter, selectedNodeNames, trayQuery, stockFilter, displayCat, catSuggestions]);
   const tray = trayAll.slice(0, limit);
 
   // ---- akcje --------------------------------------------------------------------------------
@@ -238,6 +428,94 @@ export function AssortmentStudio({
     } finally {
       setBusy(null);
     }
+  }
+
+  /** Zmiany drzewa zapisane w bazie (dodane, usunięte, przeniesione ręcznie) — wszystko, co różni drzewo od wzorca w aplikacji. */
+  const overrideCount = useMemo(() => getCategoryOverrides().length, [version]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function resetLayout() {
+    if (!canEditCategories) return showToast('Brak uprawnienia do zmiany kategorii', 'error');
+    const rows = getCategoryOverrides();
+    if (!rows.length) return;
+    const ok = await confirmDialog({
+      title: 'Przywrócenie wzorcowego układu drzewa',
+      message: `W bazie zapisano ${rows.length} zmian drzewa (dodane, usunięte i przeniesione kategorie). Usunę je, a drzewo wróci do wzorcowego układu z aplikacji. Kopię zmian pobierzesz jako plik. Produkty zostają, ale te, które siedziały w kategoriach spoza wzorca, wymagają potem użycia „Przebuduj kategorie wg nazw” (Sklep) albo ręcznego przypisania.`,
+      confirmLabel: 'Przywróć układ',
+      tone: 'warn',
+    });
+    if (!ok) return;
+    downloadText(`kopia-drzewa-kategorii-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(rows, null, 2), 'application/json');
+    const done = await guarded('reset', async () => {
+      await resetCategoryOverrides();
+      return true;
+    });
+    if (done) showToast('Drzewo wróciło do wzorcowego układu', 'ok', 6000);
+  }
+
+  async function cleanupLoose() {
+    if (!canEditCategories) return showToast('Brak uprawnienia do zmiany kategorii', 'error');
+    if (!loose.length) return;
+    const keys = new Set(loose.map((c) => categoryKey(c.name)));
+    const ids = singles
+      .filter((p) => keys.has(categoryKey(displayCat.get(p.id) ?? '')) || keys.has(categoryKey(p.category ?? '')))
+      .map((p) => p.id);
+    const ok = await confirmDialog({
+      title: 'Usunięcie luźnych kategorii',
+      message: `Usunąć ${loose.length} kategorii spoza 7 działów lub głębszych niż 3 poziomy (${loose
+        .slice(0, 6)
+        .map((c) => c.name)
+        .join(', ')}${loose.length > 6 ? '…' : ''})? ${ids.length} produktów trafi do „Do decyzji” — przypiszesz je ręcznie. Przypisanie da się cofnąć w Logi → Operacje masowe.`,
+      confirmLabel: 'Usuń kategorie',
+      tone: 'danger',
+    });
+    if (!ok) return;
+    const done = await guarded('cleanup', async () => {
+      if (ids.length) {
+        const res = await runBulkEdit(ids, { category: '', shopPath: '' }, 'Porządkowanie struktury: kategorie spoza 7 działów → Do decyzji');
+        onPatched(res.patches);
+      }
+      // od najgłębszych, żeby każda usuwana kategoria była liściem
+      for (const c of [...loose].sort((a, b) => b.depth - a.depth)) await removeCategory(c.name, '');
+      return true;
+    });
+    if (done) showToast(`Usunięto ${loose.length} luźnych kategorii, ${ids.length} produktów czeka w „Do decyzji”`, 'ok', 6000);
+  }
+
+  // stabilny uchwyt na aktualne akcje wierszy tacki (wiersze są memoizowane i nie dostają nowych funkcji co render)
+  const rowAct = useRef<RowActions>({} as RowActions);
+  rowAct.current = {
+    startDrag: startProductDrag,
+    endDrag: () => {
+      setDragKind(null);
+      setDropOn(null);
+    },
+    toggle: togglePick,
+    assignCat: (id, category) => assignCategory([id], category),
+    assignMf: (id, name) => assignManufacturer([id], name),
+  };
+
+  const suppliers = useMemo(() => supplierStats(singles, effectiveManufacturer), [singles]);
+  /** Produkty, które mają producenta, ale jeszcze nie mają dostawcy (do jednorazowego przepisania z WAPRO). */
+  const withoutSupplier = useMemo(
+    () => singles.filter((p) => !effectiveSupplier(p) && (p.manufacturer ?? '').trim() && !/^(wapro|inne)$/i.test(p.manufacturer.trim())),
+    [singles],
+  );
+
+  async function backfillSuppliers() {
+    if (!canEditManufacturers) return showToast('Brak uprawnienia do zmiany producentów', 'error');
+    if (!withoutSupplier.length) return;
+    const ok = await confirmDialog({
+      title: 'Utworzenie dostawców',
+      message: `W WAPRO grupa produktu to dostawca, więc obecne pole „producent” zawiera dostawcę. Zapisać je także jako dostawcę w ${withoutSupplier.length} produktach? Producenta nie zmieniam — poprawisz go potem osobno. Da się cofnąć w Logi → Operacje masowe.`,
+      confirmLabel: 'Utwórz dostawców',
+    });
+    if (!ok) return;
+    await applySpec(
+      withoutSupplier.map((p) => p.id),
+      { supplier: SUPPLIER_FROM_MANUFACTURER },
+      'Dostawca z obecnego producenta (WAPRO)',
+      'Zapisano dostawców',
+    );
   }
 
   async function applySpec(ids: string[], spec: BulkEditSpec, label: string, okText: string) {
@@ -255,6 +533,21 @@ export function AssortmentStudio({
     const info = flat.find((c) => categoryKey(c.name) === categoryKey(leaf));
     if (!info?.isLeaf) return showToast('Produkty można przypisać tylko do kategorii najniższego poziomu — wybierz podkategorię', 'error', 5000);
     void applySpec(ids, { category: info.name, shopPath: info.path }, `Przypisanie do kategorii „${info.name}”`, `Przypisano do „${info.name}”`);
+  }
+
+  /** Zdejmuje produkty z kategorii bez przenoszenia do innej — wracają do „Do decyzji”. */
+  async function removeFromCategory(ids: string[]) {
+    if (!canEditCategories) return showToast('Brak uprawnienia do zmiany kategorii', 'error');
+    const targets = ids.filter((id) => (displayCat.get(id) ?? UNDECIDED) !== UNDECIDED);
+    if (!targets.length) return showToast('Zaznaczone produkty nie mają kategorii', 'info');
+    const ok = await confirmDialog({
+      title: 'Usunięcie z kategorii',
+      message: `${targets.length} produktów zostanie zdjętych ze swoich kategorii i trafi do „Do decyzji” (bez kategorii). Da się cofnąć w Logi → Operacje masowe.`,
+      confirmLabel: 'Usuń z kategorii',
+      tone: 'warn',
+    });
+    if (!ok) return;
+    await applySpec(targets, { category: '', shopPath: '' }, 'Usunięcie z kategorii (Do decyzji)', 'Usunięto z kategorii');
   }
 
   function assignManufacturer(ids: string[], name: string) {
@@ -289,7 +582,8 @@ export function AssortmentStudio({
       if (isVirtual || !isLeaf) return showToast('Upuść na kategorię najniższego poziomu (bez podkategorii). Rozwiń gałąź lub dodaj podkategorię.', 'error', 5000);
       assignCategory(ids, l.node.name);
     } else if (kind === 'category') {
-      void dropCategoryOn(isVirtual ? null : l.node.name);
+      if (isVirtual) return showToast('Działów głównych jest 7 i są stałe — upuść kategorię na jeden z nich albo na podkategorię', 'error', 5000);
+      void dropCategoryOn(l.node.name);
     }
   }
 
@@ -489,10 +783,13 @@ export function AssortmentStudio({
           {modeBtn('tree', 'Drzewo', <Network className="h-4 w-4" />)}
           {modeBtn('manufacturers', 'Producenci', <Boxes className="h-4 w-4" />)}
           {modeBtn('analysis', 'Analiza', <Sparkles className="h-4 w-4" />)}
+          {modeBtn('shop', 'Sklep', <Store className="h-4 w-4" />)}
         </div>
       </header>
 
-      {mode === 'analysis' ? (
+      {mode === 'shop' ? (
+        <ShopMirrorPanel products={products} canEdit={canEditCategories} onPatched={onPatched} />
+      ) : mode === 'analysis' ? (
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {kpis.map(([label, value, tone]) => (
@@ -502,6 +799,43 @@ export function AssortmentStudio({
               </div>
             ))}
           </div>
+
+          <section className={card}>
+            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="text-[15px] font-semibold text-slate-950 dark:text-slate-50">Pełny audyt asortymentu</h3>
+                <p className="text-[13px] text-slate-500">
+                  Sprawdza każdy produkt pod kątem producenta, kategorii, nazwy i gotowości do sklepu. Raport można pobrać i przeanalizować w całości.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" disabled={busy !== null} onClick={startAudit} className={btnPrimary}>
+                  {busy === 'audit' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardCheck className="h-4 w-4" />} {busy === 'audit' ? 'Liczenie…' : 'Uruchom audyt'}
+                </button>
+                <button type="button" onClick={() => exportAudit('csv')} className={btn}>
+                  <Download className="h-4 w-4" /> CSV
+                </button>
+                <button type="button" onClick={() => exportAudit('json')} className={btn}>
+                  <Download className="h-4 w-4" /> JSON
+                </button>
+              </div>
+            </div>
+            {audit && (
+              <div className="space-y-3">
+                <p className="text-[13px] text-slate-600 dark:text-slate-300">
+                  {audit.summary.withIssues.toLocaleString('pl-PL')} z {audit.summary.total.toLocaleString('pl-PL')} produktów ma uwagi; bez uwag: {audit.summary.clean.toLocaleString('pl-PL')}.
+                </p>
+                <ul className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
+                  {audit.summary.byCode.map((c) => (
+                    <li key={c.code} className="flex items-baseline justify-between gap-3 text-[13px]">
+                      <span className="text-slate-700 dark:text-slate-200">{AUDIT_CODE_LABEL[c.code] ?? c.code}</span>
+                      <span className="tabular-nums font-semibold text-slate-950 dark:text-slate-50">{c.count.toLocaleString('pl-PL')}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
 
           <section className={card}>
             <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
@@ -734,9 +1068,41 @@ export function AssortmentStudio({
                 )}
               </p>
             )}
+            {mode === 'manufacturers' && (
+              <div className="mb-2 space-y-1.5">
+                <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-500">Dostawca (od kogo towar)</label>
+                <select className="input-field" value={supplierFilter} onChange={(e) => setSupplierFilter(e.target.value)}>
+                  <option value="">Wszyscy — wg producenta</option>
+                  {suppliers.map((sp) => (
+                    <option key={sp.name} value={sp.name}>
+                      {sp.name} ({sp.count}{sp.noManufacturer ? `, bez producenta: ${sp.noManufacturer}` : ''})
+                    </option>
+                  ))}
+                </select>
+                {canEditManufacturers && withoutSupplier.length > 0 && (
+                  <button type="button" disabled={busy !== null} className={btn} onClick={() => void backfillSuppliers()}>
+                    Utwórz dostawców z WAPRO ({withoutSupplier.length})
+                  </button>
+                )}
+              </div>
+            )}
             <div className="relative mb-2">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
               <input value={trayQuery} onChange={(e) => setTrayQuery(e.target.value)} placeholder="Szukaj produktu, SKU, EAN…" className="input-field with-icon" />
+            </div>
+            <div className="mb-2 flex gap-1.5">
+              {([['', 'Wszystkie'], ['in', 'Na stanie'], ['out', 'Brak na stanie']] as const).map(([k, label]) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setStockFilter(k)}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                    stockFilter === k ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-slate-200/70 text-slate-700 hover:bg-slate-300/70 dark:bg-white/10 dark:text-slate-300'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
             <div className="mb-2 flex items-center justify-between gap-2 text-xs">
               <span className="text-slate-600 dark:text-slate-400">{picked.size ? `Zaznaczono: ${picked.size}` : 'Kliknij, aby zaznaczyć'}</span>
@@ -786,64 +1152,38 @@ export function AssortmentStudio({
                     ))}
                   </select>
                 )}
+                {mode === 'tree' && canEditCategories && (
+                  <button
+                    type="button"
+                    disabled={busy !== null}
+                    onClick={() => void removeFromCategory([...picked])}
+                    className="mt-2 w-full rounded-xl border border-rose-400/60 bg-white px-3 py-1.5 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50 dark:bg-slate-900 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                  >
+                    Usuń z kategorii (bez kategorii)
+                  </button>
+                )}
               </div>
             )}
 
             <ul className="min-h-0 flex-1 space-y-1 overflow-auto pr-1">
-              {tray.map((p) => {
-                const on = picked.has(p.id);
-                const cs = catSuggestions.get(p.id);
-                const ms = mfSuggestions.get(p.id);
-                return (
-                  <li
-                    key={p.id}
-                    draggable={mode === 'tree' ? canEditCategories : canEditManufacturers}
-                    onDragStart={(e) => startProductDrag(e, p.id)}
-                    onDragEnd={() => {
-                      setDragKind(null);
-                      setDropOn(null);
-                    }}
-                    onClick={(e) => togglePick(p.id, e.shiftKey)}
-                    className={`cursor-grab select-none rounded-xl px-3 py-2 text-left transition active:cursor-grabbing ${
-                      on ? 'bg-brand-500/15 ring-1 ring-brand-500/60' : 'bg-white hover:bg-slate-50 dark:bg-slate-900/60 dark:hover:bg-slate-800/80'
-                    }`}
-                  >
-                    <p className="line-clamp-2 text-[13px] font-medium leading-snug text-slate-900 dark:text-slate-100">{p.displayName || p.name}</p>
-                    <p className="mt-0.5 truncate text-[11px] text-slate-500">
-                      {p.sku} · {mode === 'tree' ? displayCat.get(p.id) : effectiveManufacturer(p) || 'brak producenta'}
-                    </p>
-                    {mode === 'tree' && cs && (
-                      <button
-                        type="button"
-                        disabled={busy !== null || !canEditCategories}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          assignCategory([p.id], cs.category);
-                        }}
-                        className="mt-1 inline-flex max-w-full items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 hover:bg-emerald-500/25 dark:text-emerald-300"
-                        title={`Na podstawie słów: ${cs.because.join(', ')}`}
-                      >
-                        <Wand2 className="h-3 w-3 shrink-0" />
-                        <span className="truncate">{cs.category}</span>
-                        <span className="tabular-nums opacity-70">{Math.round(cs.confidence * 100)}%</span>
-                      </button>
-                    )}
-                    {mode === 'manufacturers' && ms && (
-                      <button
-                        type="button"
-                        disabled={busy !== null || !canEditManufacturers}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          assignManufacturer([p.id], ms.manufacturer);
-                        }}
-                        className="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 hover:bg-emerald-500/25 dark:text-emerald-300"
-                      >
-                        <Wand2 className="h-3 w-3" /> {ms.manufacturer}
-                      </button>
-                    )}
-                  </li>
-                );
-              })}
+              {tray.map((p) => (
+                <TrayRow
+                  key={p.id}
+                  p={p}
+                  on={picked.has(p.id)}
+                  mode={mode}
+                  catLabel={mode === 'tree' ? displayCat.get(p.id) ?? '' : ''}
+                  cs={catSuggestions.get(p.id)}
+                  ms={mfSuggestions.get(p.id)}
+                  mfLabel={mode === 'tree' ? '' : effectiveManufacturer(p) || 'brak producenta'}
+                  supplier={mode === 'tree' ? '' : effectiveSupplier(p)}
+                  draggable={mode === 'tree' ? canEditCategories : canEditManufacturers}
+                  disabled={busy !== null}
+                  canAssign={mode === 'tree' ? canEditCategories : canEditManufacturers}
+                  showImages={showImages}
+                  rowAct={rowAct}
+                />
+              ))}
               {tray.length === 0 && <li className="px-2 py-8 text-center text-sm text-slate-500">Brak produktów w tym widoku.</li>}
               {trayAll.length > tray.length && (
                 <li>
@@ -869,6 +1209,16 @@ export function AssortmentStudio({
                 <button type="button" className={btn} onClick={() => setExpanded(new Set([VIRTUAL_ROOT]))}>
                   Zwiń
                 </button>
+                {canEditCategories && overrideCount > 0 && (
+                  <button type="button" disabled={busy !== null} className={btn} onClick={() => void resetLayout()}>
+                    Przywróć wzorcowy układ ({overrideCount})
+                  </button>
+                )}
+                {canEditCategories && loose.length > 0 && (
+                  <button type="button" disabled={busy !== null} className={`${btn} !border-rose-400/60 !text-rose-700 dark:!text-rose-300`} onClick={() => void cleanupLoose()}>
+                    <Trash2 className="h-4 w-4" /> Usuń luźne kategorie ({loose.length})
+                  </button>
+                )}
                 <span className="flex items-center gap-1">
                   <button type="button" className={btn} onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.1).toFixed(2)))} aria-label="Oddal">
                     <ZoomOut className="h-4 w-4" />
@@ -950,10 +1300,35 @@ export function AssortmentStudio({
                           const x2 = l.x;
                           const y2 = l.y + NODE_H / 2;
                           const mx = (x1 + x2) / 2;
-                          return <path key={l.node.name + l.depth} d={`M${x1} ${y1} C${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`} fill="none" stroke={l.color} strokeOpacity={0.45} strokeWidth={1.75} />;
+                          const d = `M${x1} ${y1} C${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`;
+                          return (
+                            <path
+                              key={l.node.name + l.depth}
+                              d={d}
+                              style={{ d: `path("${d}")`, transition: `d 0.38s ${EASE}, stroke-opacity 0.3s`, animation: 'fade-in 0.45s ease-out both' } as React.CSSProperties}
+                              fill="none"
+                              stroke={l.color}
+                              strokeOpacity={0.45}
+                              strokeWidth={1.75}
+                            />
+                          );
                         })}
                     </svg>
-                    {layout.all.map((l) => {
+                    {ghosts.map((g) => {
+                      const GIcon = iconForCategory(g.l.node.name, pathOfNode(g.l));
+                      return (
+                        <div
+                          key={g.key}
+                          aria-hidden
+                          className="pointer-events-none absolute flex items-center gap-2 rounded-xl border border-l-4 border-slate-200 bg-white px-2 text-[13px] font-medium text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                          style={{ left: g.go ? g.tx : g.l.x, top: g.go ? g.ty : g.l.y, width: NODE_W, height: NODE_H, borderLeftColor: g.l.color, opacity: g.go ? 0 : 1, transform: g.go ? 'scale(0.9)' : 'none', transition: `left 0.38s ${EASE}, top 0.38s ${EASE}, opacity 0.34s ease-in, transform 0.38s ${EASE}` }}
+                        >
+                          <GIcon className="h-4 w-4 shrink-0" style={{ color: g.l.color }} />
+                          <span className="truncate">{g.l.node.name}</span>
+                        </div>
+                      );
+                    })}
+                    {layout.all.map((l, idx) => {
                       const n = l.node;
                       const isVirtual = n.name === VIRTUAL_ROOT;
                       const hasKids = n.children.length > 0;
@@ -965,6 +1340,9 @@ export function AssortmentStudio({
                       const hot = dropOn === n.name && dropOk;
                       const empty = !hasKids && own === 0;
                       const heavy = !hasKids && own > OVERLOADED;
+                      const NodeIcon = isVirtual ? Network : iconForCategory(n.name, pathOfNode(l));
+                      const hsh = hashOf(n.name);
+                      const floatVars = { '--kc-dur': `${8 + (hsh % 50) / 10}s`, '--kc-delay': `-${(hsh % 90) / 10}s`, '--kc-icon-dur': `${5 + (hsh % 30) / 10}s` } as React.CSSProperties;
                       return (
                         <div
                           key={n.name + l.depth}
@@ -993,8 +1371,19 @@ export function AssortmentStudio({
                               onDropOnNode(l);
                             }
                           }}
-                          style={{ left: l.x, top: l.y, width: NODE_W, height: NODE_H, borderLeftColor: l.color }}
-                          className={`absolute flex items-center gap-1.5 rounded-xl border border-l-4 bg-white px-2 shadow-sm transition dark:bg-slate-900 ${
+                          style={{
+                            left: l.x,
+                            top: l.y,
+                            width: NODE_W,
+                            height: NODE_H,
+                            transition: `left 0.38s ${EASE}, top 0.38s ${EASE}`,
+                            animationDelay: `${Math.min(idx, 14) * 22}ms`,
+                          }}
+                          className="kc-node-in absolute"
+                        >
+                        <div
+                          style={{ ...floatVars, borderLeftColor: l.color }}
+                          className={`kc-card flex h-full w-full items-center gap-1.5 rounded-xl border border-l-4 bg-white px-2 shadow-sm transition dark:bg-slate-900 ${isVirtual || dragKind || layout.all.length > 70 ? '' : 'kc-float'} ${
                             hot
                               ? 'scale-[1.04] border-brand-500 ring-2 ring-brand-500'
                               : dragKind && dropOk
@@ -1004,6 +1393,13 @@ export function AssortmentStudio({
                                   : 'border-slate-200 dark:border-slate-700'
                           } ${dragKind && !dropOk && !isVirtual ? 'opacity-50' : ''}`}
                         >
+                          <span
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+                            style={{ backgroundColor: `${l.color}26`, color: l.color }}
+                            aria-hidden
+                          >
+                            <NodeIcon className="kc-icon h-4 w-4" />
+                          </span>
                           {hasKids ? (
                             <button
                               type="button"
@@ -1040,29 +1436,12 @@ export function AssortmentStudio({
                             {total}
                           </span>
                         </div>
+                        </div>
                       );
                     })}
                   </div>
                 </div>
               </div>
-              {dragKind === 'category' && canEditCategories && (
-                <div
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setDropOn('__top__');
-                  }}
-                  onDragLeave={() => setDropOn(null)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    void dropCategoryOn(null);
-                  }}
-                  className={`mt-2 rounded-xl border-2 border-dashed px-3 py-2 text-center text-xs font-semibold ${
-                    dropOn === '__top__' ? 'border-brand-500 bg-brand-500/10 text-brand-700' : 'border-slate-400/50 text-slate-500'
-                  }`}
-                >
-                  Upuść tutaj, aby przenieść do działów głównych
-                </div>
-              )}
             </section>
           ) : (
             <section className={`${card} min-w-0`}>

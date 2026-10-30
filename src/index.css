@@ -645,7 +645,6 @@ html:not(.dark) .stock-app .hover\:bg-slate-950\/30:hover {
 .chat-swipe-reply-body {
   touch-action: pan-y;
   cursor: grab;
-  will-change: transform;
 }
 
 .chat-swipe-reply-body.is-dragging {
@@ -3162,3 +3161,55 @@ html:not(.dark) :is(.text-fuchsia-200, .text-fuchsia-300) { color: #86198f; }
 .rich-desc a { color: #38bdf8; text-decoration: underline; }
 .rich-desc table { border-collapse: collapse; margin: 0 0 0.6em; }
 .rich-desc th, .rich-desc td { border: 1px solid rgba(148, 163, 184, 0.4); padding: 0.25em 0.6em; }
+
+/* Drzewo kategorii (Porządkowanie): wejście węzła, ledwie zauważalne unoszenie i ruch ikony */
+@keyframes kc-node-in {
+  from {
+    opacity: 0;
+    transform: translateX(-28px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes kc-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  33% {
+    transform: translate3d(1.4px, -2.2px, 0) rotate(0.22deg);
+  }
+  66% {
+    transform: translate3d(-1.2px, 1.6px, 0) rotate(-0.2deg);
+  }
+}
+@keyframes kc-icon-sway {
+  0%,
+  100% {
+    transform: rotate(-4deg);
+  }
+  50% {
+    transform: rotate(4deg) translateY(-0.5px);
+  }
+}
+.kc-node-in {
+  animation: kc-node-in 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.kc-float {
+  animation: kc-float var(--kc-dur, 9s) ease-in-out var(--kc-delay, 0s) infinite;
+}
+.kc-icon {
+  animation: kc-icon-sway var(--kc-icon-dur, 6s) ease-in-out var(--kc-delay, 0s) infinite;
+}
+.kc-card:hover .kc-icon {
+  animation-duration: 1.2s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .kc-node-in,
+  .kc-float,
+  .kc-icon {
+    animation: none;
+  }
+}

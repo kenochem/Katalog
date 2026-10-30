@@ -574,7 +574,8 @@ export default function App() {
     if (!roleCan(role, 'viewProgress') && view === 'catalog-decisions') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'catalog-hidden') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'manufacturers') setView(fallback);
-    if (!roleCan(role, 'viewProgress') && view === 'categories') setView(fallback);
+    // moduł Kategorie został połączony z Porządkowaniem (jedno drzewo kategorii)
+    if (view === 'categories') setView(roleCan(role, 'viewProgress') ? 'assortment' : fallback);
     if (!roleCan(role, 'viewProgress') && view === 'assortment') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'rules') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'names') setView(fallback);
@@ -1779,7 +1780,6 @@ export default function App() {
           { id: 'attributes', label: 'Atrybuty' },
           { id: 'names', label: 'Standard nazw' },
           { id: 'assortment', label: 'Porządkowanie' },
-          { id: 'categories', label: 'Kategorie' },
           { id: 'manufacturers', label: 'Producenci' },
           { id: 'small-images', label: 'Zdjęcia do poprawy' },
           { id: 'catalog-hidden', label: 'Ukryte' },
@@ -2042,6 +2042,7 @@ export default function App() {
               products={activeAllProducts}
               canEditCategories={roleCan(role, 'manageCategories')}
               canEditManufacturers={roleCan(role, 'manageManufacturers')}
+              showImages={roleCan(role, 'viewImages')}
               onPatched={(patches) => {
                 for (const { id, patch } of patches) patchProductInCache(id, patch);
               }}
@@ -2071,6 +2072,9 @@ export default function App() {
             <ManufacturersView
               products={activeAllProducts}
               canEdit={roleCan(role, 'manageManufacturers')}
+              onPatched={(patches) => {
+                for (const { id, patch } of patches) patchProductInCache(id, patch);
+              }}
               onShowProducts={(name) => {
                 setManufacturer(name);
                 setView('catalog');

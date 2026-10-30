@@ -154,7 +154,9 @@ export function inferManufacturerFromSku(sku: string): string {
 }
 
 /** Producent do wyświetlania i filtrowania — pole z bazy, potem heurystyka SKU. */
-export function effectiveManufacturer(product: Pick<Product, 'manufacturer' | 'sku'>): string {
+export function effectiveManufacturer(product: Pick<Product, 'manufacturer' | 'sku'> & { meta?: Product['meta'] }): string {
+  // jawne „bez producenta” (np. po usunięciu producenta) wygrywa z podpowiedzią z prefiksu SKU
+  if ((product.meta as Record<string, unknown> | undefined)?.noManufacturer === true && isPlaceholderManufacturer(product.manufacturer)) return '';
   const stored = product.manufacturer?.trim();
   if (stored && !isPlaceholderManufacturer(stored)) {
     return normalizeManufacturer(stored);

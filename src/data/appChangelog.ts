@@ -17,6 +17,158 @@ export interface AppChangelogEntry {
  */
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
+    date: '2026-10-30',
+    title: 'Silnik kategorii: deklaracja ekologiczna i walidacja wymagań kategorii',
+    description:
+      'Nowa warstwa „deklaracja ekologiczna”: środki czyszczące do obiektów i domu z linii ECO w nazwie (m.in. Eilfix ECO, Cid Lines ECO CLEAN, Eco Shine Eco Glass/Degreaser/Floor) trafiają do „Ekologicznych środków czystości”, a akcesoria, chemia samochodowa, dezynfekcja i sama marka Eco Shine zostają w swoich kategoriach. Dodano walidatory: kategoria może wymagać deklaracji w nazwie lub opisie (produkty bez niej są oznaczane do sprawdzenia) oraz słowa wykluczające (np. szczotka nie wejdzie do tapicerki materiałowej). Silnik wykorzystuje też producenta jako podpowiedź (nie dowód) i ignoruje ukryte znaki sterujące z importu WAPRO, które rozbijały nazwy.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-30',
+    title: 'Sens logiczny drzewa: koniec z dublami i pustymi kategoriami',
+    description:
+      'Usunięto kategorie bez sensu lub dublujące inne: „Płyny do szyb do myjni” (szyby idą do „Płynów do szyb samochodowych”), „Środki ekologiczne”, „Dywany i tapicerka domowa” i „Podłogi” w dziale Dom i ogród. „Chemia do domu” zawiera teraz wyłącznie marki marketowe (Domestos, Cilit, Cif, Ajax, Persil, Vanish, Pronto, Sidolux…) w liściach „Łazienka i WC”, „Pranie” i „Środki uniwersalne i meble”, a chemia profesjonalna zostaje w dziale Chemia profesjonalna. „Ekologiczne środki czystości” to teraz wyłącznie linia Eco Shine ECO (Eco Glass, Eco Sanit, Eco Toilet…). Kostki i krążki WC wszystkie w „Pisuary i kostki WC”, szczotki Vikan w „Szczotki przemysłowe i HACCP”. Silnik dostał zasadę specyficzności (konkretna kategoria wygrywa z ogólną) i sprawdza sens samego drzewa: w audycie przypisań pokazuje kondycję drzewa — kategorie, które po poprawkach byłyby puste, drobnicę (1–2 produkty) do scalenia oraz pary kategorii, między którymi silnik często się waha. Przyspieszono działanie silnika (prekompilacja wzorców).',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-30',
+    title: 'Silnik kategorii: reguła pojemności (myjnia ↔ detal) i osobny audyt przypisań',
+    description:
+      'Nowa reguła pojemności: duże opakowania chemii samochodowej (od 20 L/kg, beczki) trafiają do „Myjnia samochodowa › Chemia do myjni”, a litrówki i 5 L do „Chemia samochodowa” (klient detaliczny i warsztat). Dotyczy par: aktywne piany, woski/hydrowoski, płyny do szyb, preparaty do felg — ta sama chemia Orion, Eco Wash czy Easy Wash ląduje w innej kategorii zależnie od opakowania; poprawka opakowania jest zawsze „pewna”. W zakładce Sklep są teraz dwa przyciski: „Uruchom silnik uzupełniania” (produkty bez kategorii) i „Sprawdź poprawność przypisań” (osobny audyt produktów, które już mają kategorię: błędne przypisania, sprzeczności, niespójne rodziny, naruszenia reguły pojemności) z przyciskiem „Popraw błędne przypisania”. Silnik korzysta też z kategorii, jakie produkt ma w sklepie kenochem.com (dodatkowy dowód). Dopisano przypisania wyszukane w internecie: Polchem Focid, Kama, Izosol, Atmomix, Swish Food Service, Royal RO-12 Pers.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-30',
+    title: 'Silnik kategorii: więcej pytań i walidacji, lista produktów do ukrycia',
+    description:
+      'Silnik zadaje teraz więcej pytań i sam sprawdza przypisania. Nowe warstwy: rodzina (ten sam produkt w innych opakowaniach musi mieć tę samą kategorię — wykrywa niespójności), model (Nerta ATC 100 i ATC 350 to różne produkty, linia nie przenosi kategorii między numerami modeli), cechy składu (kwas fluorowodorowy). Zasada „bez dowodu nie proponuję”: nowa kategoria wymaga dowodu w nazwie, opisie lub identycznym produkcie w innym opakowaniu — samo podobieństwo do linii marki nie wystarcza. Silnik oznacza też flagami: sprzeczność nazwy i opisu, rodzina niespójna, zmiana kategorii, bez dowodu. Wykrywa pozycje niesprzedażowe (usługi, wysyłka, rozliczenia, sprzęt biurowy) i pokazuje je w osobnej liście „Do ukrycia” z plikiem CSV. Poprawiono Nerta ATC 350 (usuwanie betonu i cementu) i ATC 100 (kwasowy środek przemysłowy) oraz rodziny Textile Cleaner, Top Glass i Super Green NF.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-30',
+    title: 'Ręczny przegląd produktów: 400 sprawdzonych przypisań kategorii',
+    description:
+      'Przejrzałem ręcznie 470 produktów, których silnik nie mógł zakwalifikować pewnie (nazwa, opis, producent, a przy braku opisu — wyszukiwanie w internecie). Wynik to 400 zatwierdzonych przypisań, które mają pierwszeństwo przed silnikiem i regułami. Rozpoznano m.in. Nerta ATC 100 (kwasowy środek do felg aluminiowych), Satellite STF 6K (płyn do toalet przenośnych), Karcher RM 770 i RM 746, Kenotek Trans NT+ (podłogi warsztatowe), linie Textil-Ex, Jax 20 i Teppich Shampoo (pranie dywanów i tapicerki), hydrowoski do myjni. Produkty, co do których nie ma pewności (Parbaks, Polchem, część Nerta, Kenotek Force 2 i inne), zostają w „Do decyzji” z linkiem do wyszukania.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-30',
+    title: 'Zakładka Sklep uproszczona: porównanie ze sklepem i jeden przycisk silnika',
+    description:
+      'Zakładka Sklep ma teraz dwie części. Pierwsza porównuje katalog ze sklepem kenochem.com: kategorie, produkty obecne tylko w katalogu, tylko w sklepie oraz różnice w przypisaniu kategorii — z plikami CSV (w tym import do WooCommerce, zmiany drzewa i przekierowania 301). Druga to jeden przycisk „Uruchom silnik uzupełniania”: silnik pobiera opisy, bada nazwę, opis, sposób użycia, linię produktową i podobne produkty, po czym pokazuje pewne zmiany (do zastosowania hurtem, z cofaniem w Logach), produkty do sprawdzenia i produkty do wyszukania w internecie. Stare przyciski (Uzupełnij ze sklepu, Przebuduj, Dopasuj) usunięto. Silnik uwzględnia kontekst: sprzeczność nazwy i opisu (np. „Czysta Kostka” to środek do kostki brukowej, nie do pisuarów) blokuje status „pewne”.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-30',
+    title: 'Silnik kategorii: wielowarstwowa decyzja, gdzie ma trafić produkt',
+    description:
+      'Przypisywanie kategorii działa teraz warstwowo, jak człowiek: najpierw rozpoznaje rodzaj produktu (pokrowiec, ściągaczka, część), potem funkcję z nazwy (odplamiacz, odkamieniacz, szampon…), potem z opisu, sposobu użycia i składu, następnie sprawdza linię produktową (np. cała linia SPOT-EX to odplamiacze) i podobne produkty, a na końcu uwzględnia obecną kategorię. Warstwy głosują z wagami; wynik ma status „pewne”, „do sprawdzenia” albo „do wyszukania w necie”. Podobieństwo nazw samo nie wystarcza do przypisania. Przycisk „Przebuduj kategorie wg nazw” stosuje tylko pewne decyzje i pomija produkty, których kategorię zmieniłeś po analizie. Gotowe listy: propozycje (docs/kategorie-propozycje-2026-10-30.csv) i produkty do sprawdzenia w internecie (docs/do-wyszukania-w-necie-2026-10-30.csv). Naprawiono m.in. odplamiacze Draco SPOT-EX, które trafiały do tapicerki, betonu i smoły.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-30',
+    title: 'Dokładniejsze przypisywanie kategorii: rodzaj produktu przed zastosowaniem',
+    description:
+      'Po przeglądzie całego katalogu (4274 produkty, nazwy, opisy i producenci) reguły przypisywania najpierw rozpoznają, czym jest produkt, a dopiero potem do czego służy. Dzięki temu pokrowce na fotele i opony trafiają do wyposażenia myjni, a nie do mopów, łazienek ani dressingów; ściągaczki Vikan i myjki do szyb do ściągaczek, a nie do płynów do szyb; gąbki, rękawice i ściereczki do akcesoriów; odkamieniacze do odkamieniania; środki do ciężarówek i obór do właściwych kategorii, a folia spożywcza, cynk i płyn do maszyn do lodów przestają ladować w „Łazienkach i sanitariatach”. Dodano kategorię „Reflektory i lampy” oraz ręczne przypisania dla ok. 190 produktów z „Do decyzji”. Produkty, których nie da się pewnie zakwalifikować (np. Parbaks, Satellite STF, część Polchem), zostają w „Do decyzji” do ręcznej decyzji. Zastosuj przyciskiem „Przebuduj kategorie wg nazw” w Porządkowaniu → Sklep (do cofnięcia w Logi → Operacje masowe).',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-30',
+    title: 'Symetryczne menu kategorii: 4–8 podkategorii w każdym dziale i nowe kategorie sprzedażowe',
+    description:
+      'Każdy z 7 działów ma teraz od 4 do 8 podkategorii o zbliżonej wielkości, żeby menu w sklepie wyglądało równo. Myjnia samochodowa: Chemia do myjni, Węże i bębny, Złączki i szybkozłącza, Lance/pistolety/dysze, Zawory/filtry/armatura, Myjki i pompy, Uszczelnienia/zbiorniki/montaż, Odkurzacze i wyposażenie myjni. Dom i ogród: Chemia do domu, Akcesoria domowe, Czyszczenie zewnętrzne, Ogród i zima. Nowe kategorie dla towarów, które nie miały miejsca: pędzle i aplikatory detailingowe, glinki do lakieru, pisuary i kostki WC, chemia basenowa, usuwanie betonu i cementu, kwasy i zasady przemysłowe, mycie pojazdów ciężarowych, prezentery zapachowe, folie/torby/opakowania oraz znaki ostrzegawcze. Rozszerzone reguły rozpoznawania po nazwie przypisują do nich produkty z „Do decyzji” (przycisk „Przebuduj kategorie wg nazw”).',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-30',
+    title: 'Jedno drzewo kategorii: odchudzony układ i połączenie z Porządkowaniem',
+    description:
+      'Moduł Kategorie został połączony z Porządkowaniem — drzewo graficzne jest teraz jedynym miejscem, gdzie dodajesz, zmieniasz nazwy, przenosisz i usuwasz kategorie (stare wejście do Kategorii przekierowuje do Porządkowania). Drzewo odchudzono: puste kategorie (Osady wapienne, Chemia sezonowa, Krwawa felga i inne) usunięto, a drobne i powielone scalono, m.in. odkamienianie, felgi, mycie auta, szyby, smary, rolnictwo, kategorie myjni (Portalowa, Ręczna, Tunelowa…), dublujące się akcesoria domowe z działu Dom i ogród oraz kategorie nazwane markami (Vikan). Produkty ze scalonych kategorii przechodzą do kategorii docelowej przy użyciu „Przebuduj kategorie wg nazw”. W drzewie pojawił się przycisk „Przywróć wzorcowy układ”, który usuwa nieznane zmiany zapisane w bazie (z kopią do pliku). Zakładka Sklep nie nadpisuje już układu drzewa.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-29',
+    title: 'Przebudowa kategorii części technicznych i przepinanie produktów wg nazw',
+    description:
+      'Kategoria „Części do myjek” (i jej 5 ogólnych podkategorii) została zastąpiona konkretnymi grupami: Węże i bębny, Złączki i szybkozłącza (nyple, złącza obrotowe, redukcje, szybkozłącza, trójniki, korki), Lance, pistolety i dysze, Zawory, filtry i armatura (zwrotne, by-pass, inżektory, filtry, manometry), Pompy i silniki, Uszczelnienia i montaż (o-ringi, uszczelki, komplety naprawcze), Zbiorniki i pobór chemii oraz części do odkurzaczy i opryskiwaczy. Doszły też kategorie dla masek i okularów, pędzli detailingowych, narzędzi ogrodowych i zimowych oraz olejów i żarówek. Nowy przycisk „Przebuduj kategorie wg nazw” w Porządkowaniu → Sklep rozpoznaje części po nazwie niezależnie od obecnej kategorii (np. rurki do zbiorników z kategorii łazienkowej) i przepina je; produkty ze zlikwidowanych kategorii bez dopasowania wracają do „Do decyzji”. Operacja jest do cofnięcia w Logi → Operacje masowe. Katalog jest teraz wzorem — dawne „Odbij sklep 1:1” uzupełnia tylko produkty bez kategorii, a zakładka Sklep pokazuje kategorie do dodania i usunięcia w sklepie oraz przekierowania 301.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-29',
+    title: 'Porządkowanie: usuwanie produktów z kategorii',
+    description: 'Po zaznaczeniu produktów na liście pojawia się przycisk „Usuń z kategorii”: produkty tracą kategorię i wracają do „Do decyzji” zamiast być przenoszone do innej. Operację można cofnąć w Logi → Operacje masowe.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-29',
+    title: 'Porządkowanie: filtr stanu magazynowego na liście produktów',
+    description: 'Nad listą produktów po lewej są przyciski „Wszystkie / Na stanie / Brak na stanie”, które łączą się z wyszukiwarką i pozostałymi filtrami.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-29',
+    title: 'Porządkowanie: stałe kolory działów podczas wyszukiwania',
+    description: 'Po wyszukaniu lub zawężeniu widoku drzewa każdy dział zachowuje swój kolor, zamiast dostawać kolejny kolor od początku palety (wcześniej pierwszy widoczny dział zawsze był niebieski).',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-29',
+    title: 'Koniec z kategoriami branżowymi i zestawami: branża jako filtr',
+    description:
+      'Z drzewa katalogu zniknęła gałąź „Dla obiektów i branż” (Biura, Hotele, Szkoły, Placówki medyczne, Firmy sprzątające) oraz kategorie „Zestawy…” — produkt ma jedną kategorię według rodzaju i zastosowania. Branże z tych kategorii zapisują się w atrybucie „Branża” (filtr w sklepie), a zakładka Sklep pokazuje je jako kategorie do usunięcia i generuje pliki: CSV kategorii produktów bez kategorii branżowych, CSV branż oraz listę przekierowań 301. Nowy przycisk „Dopasuj produkty” przypina do właściwych kategorii produkty bez kategorii i te przypisane ewidentnie źle (do cofnięcia w Logach).',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-29',
+    title: 'Lustro sklepu kenochem.com: kategorie 1:1 i porównanie ze sklepem',
+    description:
+      'Drzewo kategorii zostało pobrane ze sklepu kenochem.com i odpowiada mu 1:1 (7 działów, 3 poziomy; dział „Myjnie i urządzenia” nazywa się w sklepie „Myjnia samochodowa”, doszły „Chemia sezonowa” i „Osady wapienne”). W Porządkowanie → Sklep przycisk „Odbij sklep 1:1” przywraca drzewo ze sklepu (z kopią zapasową zmian) i ustawia produktom kategorie tak jak w sklepie, dopasowując po SKU; przypisanie da się cofnąć w Logi → Operacje masowe. Po naszych poprawkach ta sama zakładka pokazuje, co różni katalog od sklepu, i daje pliki CSV do wdrożenia zmian: kategorie produktów w formacie importu WooCommerce oraz listę zmian drzewa. Dane sklepu odświeża skrypt scripts/fetch-shop-mirror.mjs.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-29',
+    title: 'Szybsze ładowanie katalogu i płynniejsze Porządkowanie',
+    description:
+      'Przyspieszono wyliczanie kategorii produktów przy ładowaniu katalogu (reguły są kompilowane raz, normalizacja tekstu pomija zbędne kroki) — start listy produktów jest ok. 2 razy szybszy. Podpowiedzi producentów i analiza asortymentu liczą się szybciej dzięki współdzielonej normalizacji nazw. W Porządkowaniu tacka z produktami przerysowuje tylko zmieniony wiersz zamiast wszystkich naraz, a poza ekranem wiersze nie są renderowane. Unoszenie węzłów drzewa włącza się tylko przy niewielkiej liczbie rozwiniętych węzłów (do 70), żeby nie obciążać słabszych komputerów. Audyt pokazuje stan „Liczenie…” zamiast zawieszać stronę.',
+    tag: 'wydajność',
+  },
+  {
+    date: '2026-10-29',
+    title: 'Porządkowanie: ikony kategorii, miniatury produktów i animowane drzewo',
+    description:
+      'Każda kategoria (dział, podkategoria i kategoria najniższego poziomu) ma ikonę dobieraną automatycznie z jej nazwy — po zmianie nazwy ikona dopasowuje się sama, a gdy nazwa nic nie mówi, bierze ikonę z działu nadrzędnego. Węzły rozwijają się i zwijają płynnie, a po rozwinięciu bardzo delikatnie unoszą się jak na wodzie (wyłączone przy przeciąganiu i przy ustawieniu systemu „ogranicz animacje”). Produkty na tacce po lewej mają miniatury zdjęć.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-29',
+    title: 'Dostawca jako osobne pole: od kogo towar, a nie marka',
+    description:
+      'Produkt ma teraz dwa osobne pola: producent (marka na opakowaniu) i dostawca (od kogo mamy towar — w WAPRO to grupa produktu). Dostawcę widać i edytuje się w szczegółach produktu, a w Porządkowanie → Producenci jest filtr „Dostawca”, który pokazuje wszystkie produkty danego dostawcy do przeciągnięcia na właściwych producentów. Przycisk „Utwórz dostawców z WAPRO” jednorazowo przepisuje obecne pole producenta do dostawcy (do cofnięcia w Logi → Operacje masowe), bez zmiany producentów. Dzięki temu np. MERSA zostaje dostawcą, a marki towarów można poprawić osobno.',
+    tag: 'nowość',
+    size: 'minor',
+  },
+  {
+    date: '2026-10-29',
+    title: 'Stała struktura kategorii: 7 działów i 3 poziomy, sprzątanie luźnych',
+    description:
+      'Kategorie mają teraz stały układ: 7 działów głównych, podkategoria i kategoria najniższego poziomu. Nie da się już dodać dodatkowego działu ani zagnieździć głębiej (dodawanie nowych działów z widoku Kategorie i z karty produktu wyłączono). W Porządkowanie → Drzewo pojawił się przycisk „Usuń luźne kategorie”: usuwa kategorie spoza 7 działów (np. osierocone „Zlaczki i adaptery”, „Worki do odkurzacza”) i przenosi ich produkty do „Do decyzji”, żeby przypisać je ręcznie. Operację można cofnąć w Logi → Operacje masowe.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-10-29',
+    title: 'Naprawione usuwanie i zmiana nazwy producenta',
+    description:
+      'Usunięty producent znikał z listy dopiero po przeładowaniu, a produkty z prefiksem SKU potrafiły wracać pod starą marką. Teraz lista odświeża się od razu, a produkty przeniesione do „bez producenta” zostają bez producenta (oznaczone jawnie, więc podpowiedź z SKU ich nie przywraca). Usunięcie producenta jest zapisane w dzienniku i można je cofnąć w Logi → Operacje masowe. Poprawiono też audyt: model kategorii uczy się tylko na kategoriach z drzewa i wykrywa prefiks „Z-Z” w nazwach.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-10-29',
+    title: 'Pełny audyt asortymentu: producent, kategoria, nazwa i gotowość do sklepu',
+    description:
+      'W Porządkowanie → Analiza jest nowa sekcja „Pełny audyt asortymentu”. Jednym kliknięciem sprawdza każdy produkt: brak lub niewłaściwy producent (np. „Inni producenci”, nazwa kategorii zamiast marki, inna marka w nazwie), brak lub zbyt ogólna kategoria, kategorię niezgodną z nazwą produktu, ucięte lub techniczne nazwy, brak zdjęcia, opisu, ceny i EAN oraz błędy walidacji. Wynik widać jako zestawienie liczby problemów, a cały raport można pobrać do pliku CSV (do Excela) albo JSON.',
+    tag: 'nowość',
+  },
+  {
     date: '2026-10-28',
     title: 'Porządkowanie asortymentu: graf kategorii, przeciąganie produktów, analiza',
     description:

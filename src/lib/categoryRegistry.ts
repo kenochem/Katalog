@@ -125,6 +125,46 @@ export function getAssignableCategories(): string[] {
   return walkShopLeaves(getShopCategoryTree().roots).map((l) => l.label);
 }
 
+/** Struktura katalogu: 7 stałych działów (poziom 1), podkategoria (2) i kategoria najniższego poziomu (3). */
+export const MAX_CATEGORY_DEPTH = 2;
+
+/** Nazwy stałych działów głównych — z drzewa bazowego (sklepu). */
+export function mainCategoryRoots(): string[] {
+  return getBaseShopCategoryTree().roots.map((r) => r.name);
+}
+
+/** Kategorie niezgodne ze strukturą: dodatkowe działy główne i wszystko głębsze niż 3 poziomy (wraz z potomkami). */
+export function findLooseCategories(): CategoryNodeInfo[] {
+  const main = new Set(mainCategoryRoots().map(categoryKey));
+  const flat = flattenCategories();
+  const loose = new Set<string>();
+  for (const c of flat) {
+    if ((c.depth === 0 && !main.has(categoryKey(c.name))) || c.depth > MAX_CATEGORY_DEPTH) loose.add(categoryKey(c.name));
+  }
+  // potomkowie luźnej kategorii też są luźni
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const c of flat) {
+      if (c.parent && loose.has(categoryKey(c.parent)) && !loose.has(categoryKey(c.name))) {
+        loose.add(categoryKey(c.name));
+        grew = true;
+      }
+    }
+  }
+  return flat.filter((c) => loose.has(categoryKey(c.name)));
+}
+
+function subtreeHeight(name: string): number {
+  const flat = flattenCategories();
+  const k = categoryKey(name);
+  const walk = (parentKey: string): number => {
+    const kids = flat.filter((c) => c.parent && categoryKey(c.parent) === parentKey);
+    return kids.length ? 1 + Math.max(...kids.map((c) => walk(categoryKey(c.name)))) : 0;
+  };
+  return walk(k);
+}
+
 /** Kategorie, pod którymi można umieścić nową (korzenie i kategorie grupujące; liście z produktami odpadają). */
 export function getParentCandidates(): CategoryNodeInfo[] {
   return flattenCategories().filter((c) => !c.isLeaf || c.depth === 0);
@@ -173,9 +213,11 @@ export async function addCategory(rawName: string, parent: string | null = null)
   if (!name) throw new Error('Podaj nazwę kategorii');
   const info = getCategoryInfo(name);
   if (info) return info.name; // już istnieje — po prostu ją wybieramy
-  if (parent) {
+  if (!parent) throw new Error('Działów głównych jest 7 i są stałe — wybierz dział, pod którym ma powstać kategoria');
+  {
     const p = getCategoryInfo(parent);
     if (!p) throw new Error(`Nie ma kategorii nadrzędnej „${parent}”`);
+    if (p.depth + 1 > MAX_CATEGORY_DEPTH) throw new Error('Struktura ma 3 poziomy (dział › podkategoria › kategoria) — nie można zagnieżdżać głębiej');
     if (p.isLeaf && p.depth > 0) throw new Error(`„${parent}” zawiera produkty — wybierz kategorię grupującą lub główną`);
   }
   await upsertRow({ name, parent, source: 'custom', removed: false });
@@ -244,9 +286,11 @@ export async function renameCategory(oldName: string, newRaw: string): Promise<{
 export async function moveCategory(name: string, newParent: string | null): Promise<void> {
   const info = getCategoryInfo(name);
   if (!info) throw new Error('Nie znaleziono kategorii');
-  if (newParent) {
+  if (!newParent) throw new Error('Działów głównych jest 7 i są stałe — przenieś kategorię pod jeden z nich');
+  {
     const p = getCategoryInfo(newParent);
     if (!p) throw new Error('Nie znaleziono kategorii nadrzędnej');
+    if (p.depth + 1 + subtreeHeight(info.name) > MAX_CATEGORY_DEPTH) throw new Error('Struktura ma 3 poziomy (dział › podkategoria › kategoria) — ta gałąź nie zmieści się tutaj');
     if (categoryKey(p.name) === categoryKey(info.name)) throw new Error('Kategoria nie może być własnym rodzicem');
     if (p.path.split(' › ').some((seg) => categoryKey(seg) === categoryKey(info.name))) throw new Error('Nie można przenieść kategorii pod jej własną podkategorię');
     if (p.isLeaf && p.depth > 0) throw new Error(`„${newParent}” zawiera produkty — wybierz kategorię grupującą lub główną`);
@@ -282,4 +326,22 @@ export async function restoreShopCategory(name: string): Promise<void> {
 
 export function removedShopCategories(): string[] {
   return rows.filter((r) => r.source === 'shop' && r.removed).map((r) => r.name);
+}
+
+/** Zmiany drzewa zapisane w bazie względem drzewa ze sklepu (własne kategorie, przeniesienia, usunięcia). */
+export function getCategoryOverrides(): CategoryRow[] {
+  return rows;
+}
+
+/** Kasuje wszystkie zmiany drzewa — zostaje drzewo ze sklepu 1:1. Zwraca liczbę usuniętych zmian. */
+export async function resetCategoryOverrides(): Promise<number> {
+  const client = supabase;
+  if (!client) throw new Error('Brak połączenia z bazą');
+  const count = rows.length;
+  if (!count) return 0;
+  const { error } = await client.from('catalog_categories').delete().neq('name_key', '');
+  if (error) throw missingTable(error.message);
+  await loadCategoryRegistry(true);
+  logAudit({ action: 'category.reset', entityType: 'category', entityId: 'drzewo', summary: `Przywrócono drzewo kategorii ze sklepu (usunięto ${count} zmian)` });
+  return count;
 }

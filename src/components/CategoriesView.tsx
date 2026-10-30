@@ -57,7 +57,6 @@ export function CategoriesView({
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [rootDraft, setRootDraft] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [sort, setSort] = useState<TreeSort>('shop');
   const [onlyEmpty, setOnlyEmpty] = useState(false);
@@ -282,41 +281,19 @@ export function CategoriesView({
             <div>
               <p className="text-sm font-bold text-amber-950 dark:text-amber-200">Kategorie z produktów, których nie ma w drzewie ({orphans.length})</p>
               <p className="text-xs text-amber-900/80 dark:text-amber-200/70">
-                Wpisane wcześniej w produktach. Kliknij nazwę, aby dodać ją do drzewa — będzie dostępna do wyboru w każdym produkcie.
+                Wpisane wcześniej w produktach. Struktura ma 7 stałych działów i 3 poziomy, więc tych nazw nie dodajemy do drzewa — przypisz ich produkty do właściwych kategorii w Porządkowaniu.
               </p>
             </div>
-            <button
-              type="button"
-              disabled={busy !== null}
-              onClick={() =>
-                void run(
-                  'orphan-all',
-                  async () => {
-                    for (const o of orphans) await addCategory(o.name, null);
-                    return orphans.length;
-                  },
-                  (n) => `Dodano ${n} kategorii do drzewa`,
-                )
-              }
-              className="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-500 disabled:opacity-50"
-            >
-              {busy === 'orphan-all' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              Dodaj wszystkie
-            </button>
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             {orphans.map((o) => (
-              <button
+              <span
                 key={o.name}
-                type="button"
-                disabled={busy !== null}
-                onClick={() => void run('orphan:' + o.name, () => addCategory(o.name, null), (n) => `Dodano „${n}” do drzewa`)}
-                className="group inline-flex items-center gap-1.5 rounded-full border border-amber-400/60 bg-white px-3 py-1.5 text-sm font-medium text-amber-950 transition hover:border-amber-500 hover:bg-amber-100 disabled:opacity-50 dark:border-amber-500/40 dark:bg-slate-900 dark:text-amber-100 dark:hover:bg-slate-800"
+                className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/60 bg-white px-3 py-1.5 text-sm font-medium text-amber-950 dark:border-amber-500/40 dark:bg-slate-900 dark:text-amber-100"
               >
-                <Plus className="h-3.5 w-3.5 text-amber-600 group-hover:scale-110" />
                 {o.name}
                 <span className="rounded-full bg-amber-200 px-1.5 text-[11px] font-semibold tabular-nums text-amber-900 dark:bg-amber-500/20 dark:text-amber-200">{o.count}</span>
-              </button>
+              </span>
             ))}
           </div>
         </section>
@@ -345,40 +322,6 @@ export function CategoriesView({
             </button>
           </div>
 
-          {canEdit && (
-            <div className="flex gap-2">
-              <input
-                value={rootDraft}
-                onChange={(e) => setRootDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && rootDraft.trim()) {
-                    void run('root', () => addCategory(rootDraft, null), (n) => `Dodano kategorię „${n}”`).then((name) => {
-                      if (name) {
-                        setRootDraft('');
-                        setSelected(name);
-                      }
-                    });
-                  }
-                }}
-                placeholder="Nowa kategoria główna…"
-                className="input-field min-w-0 flex-1"
-              />
-              <button
-                type="button"
-                disabled={!rootDraft.trim() || busy !== null}
-                onClick={async () => {
-                  const name = await run('root', () => addCategory(rootDraft, null), (n) => `Dodano kategorię „${n}”`);
-                  if (name) {
-                    setRootDraft('');
-                    setSelected(name);
-                  }
-                }}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-500 disabled:opacity-50"
-              >
-                {busy === 'root' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Dodaj
-              </button>
-            </div>
-          )}
 
           <div className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm dark:border-slate-800 dark:bg-slate-950/30 dark:shadow-none">
             {canEdit && dragging && (

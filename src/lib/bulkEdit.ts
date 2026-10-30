@@ -2,6 +2,8 @@ import type { Product } from '../types';
 import { supabase } from './supabase';
 import { logAudit, withAuditBatch, type AuditChange } from './auditLog';
 import { invalidateProductsCache } from './products';
+import { isPlaceholderManufacturer } from './waproManufacturers';
+import { SUPPLIER_FROM_MANUFACTURER } from './suppliers';
 
 /**
  * Edycja masowa produktów: producent, kategoria, VAT, jednostka, tagi i ceny
@@ -20,6 +22,8 @@ export const PRICE_FIELD_LABEL: Record<PriceField, string> = {
 
 export interface BulkEditSpec {
   manufacturer?: string;
+  /** Dostawca (od kogo towar) — tekst albo SUPPLIER_FROM_MANUFACTURER; pusty tekst czyści pole. */
+  supplier?: string;
   category?: string;
   /** Pełna ścieżka kategorii („A › B”) zapisywana w meta — ma pierwszeństwo przy wyliczaniu kategorii produktu. */
   shopPath?: string;
@@ -89,6 +93,18 @@ export function computeChanges(src: BulkSource, spec: BulkEditSpec): FieldChange
 
   if (spec.manufacturer !== undefined) {
     push({ label: 'Producent', column: 'manufacturer', from: src.manufacturer, to: spec.manufacturer });
+    // pusty producent = świadomie „bez producenta” (inaczej wraca podpowiedź z prefiksu SKU)
+    push({ label: 'meta: noManufacturer', metaKey: 'noManufacturer', from: src.meta.noManufacturer ?? null, to: spec.manufacturer === '' ? true : null });
+  }
+  if (spec.supplier !== undefined) {
+    if (spec.supplier === SUPPLIER_FROM_MANUFACTURER) {
+      // uzupełnia tylko puste pole, nie nadpisuje ręcznie ustawionego dostawcy
+      const has = (typeof src.meta.supplier === 'string' && src.meta.supplier.trim()) || (typeof src.meta.waproManufacturer === 'string' && src.meta.waproManufacturer.trim());
+      const mf = src.manufacturer.trim();
+      if (!has && mf && !isPlaceholderManufacturer(mf)) push({ label: 'meta: supplier', metaKey: 'supplier', from: null, to: mf });
+    } else {
+      push({ label: 'meta: supplier', metaKey: 'supplier', from: src.meta.supplier ?? null, to: spec.supplier.trim() || null });
+    }
   }
   if (spec.category !== undefined) {
     push({ label: 'Kategoria', column: 'category', from: src.category, to: spec.category });
@@ -183,7 +199,8 @@ function productPatchFrom(changes: FieldChange[], meta: Record<string, unknown>,
 /** Wykonuje edycję masową na produktach (po id); aktualne dane czyta z bazy. */
 export async function runBulkEdit(
   ids: string[],
-  spec: BulkEditSpec,
+  /** Jedna specyfikacja dla wszystkich albo funkcja zwracająca osobną dla każdego produktu (np. kategoria wg sklepu). */
+  spec: BulkEditSpec | ((id: string) => BulkEditSpec),
   label: string,
   onProgress?: (done: number, total: number) => void,
 ): Promise<BulkRunResult> {
@@ -216,7 +233,7 @@ export async function runBulkEdit(
             pricePurchaseNet: row.price_purchase_net != null ? Number(row.price_purchase_net) : null,
             meta,
           };
-          const changes = computeChanges(src, spec);
+          const changes = computeChanges(src, typeof spec === 'function' ? spec(String(row.id)) : spec);
           if (!changes.length) {
             unchanged++;
           } else {

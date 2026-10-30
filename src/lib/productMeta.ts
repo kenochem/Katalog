@@ -60,6 +60,12 @@ export interface ProductMeta {
   /** Atrybuty strukturalne (parametry): klucz atrybutu → wartość. */
   attrs?: Record<string, string | number | boolean>;
   dataExceptionAt?: string;
+  /** Dostawca towaru (od kogo go mamy) — w WAPRO to grupa produktu; osobno od producenta (marki). */
+  supplier?: string;
+  /** Surowa grupa z WAPRO (dostawca), zapisywana przy imporcie z Mag. */
+  waproManufacturer?: string;
+  /** Świadomie bez producenta — nie podpowiadaj marki z prefiksu SKU. */
+  noManufacturer?: boolean;
 }
 
 export const PRODUCT_META_LABELS: Record<
@@ -92,6 +98,8 @@ export const PRODUCT_META_LABELS: Record<
     | 'dataExceptionNote'
     | 'attrs'
     | 'dataExceptionAt'
+    | 'waproManufacturer'
+    | 'noManufacturer'
   >,
   string
 > & { parameters: string } = {
@@ -109,6 +117,7 @@ export const PRODUCT_META_LABELS: Record<
   previousSku: 'Poprzedni SKU (legacy)',
   catalogHiddenReason: 'Powód ukrycia',
   groupPrimarySku: 'Wariant główny grupy',
+  supplier: 'Dostawca',
   parameters: 'Parametry',
 };
 
@@ -146,6 +155,8 @@ export function normalizeProductMeta(raw: unknown): ProductMeta | undefined {
   str('waproImportedAt');
   str('catalogHiddenReason');
   str('groupPrimarySku');
+  str('supplier');
+  str('waproManufacturer');
   str('catalogHiddenAt');
   str('dataExceptionNote');
   str('dataExceptionAt');
@@ -192,6 +203,7 @@ export function normalizeProductMeta(raw: unknown): ProductMeta | undefined {
   }
 
   if (typeof o.waproImport === 'boolean') meta.waproImport = o.waproImport;
+  if (o.noManufacturer === true) meta.noManufacturer = true;
   if (typeof o.waproSkeleton === 'boolean') meta.waproSkeleton = o.waproSkeleton;
   if (typeof o.baselinkerDescriptionFull === 'boolean') meta.baselinkerDescriptionFull = o.baselinkerDescriptionFull;
   if (typeof o.salesExcludeFromSum === 'boolean') meta.salesExcludeFromSum = o.salesExcludeFromSum;

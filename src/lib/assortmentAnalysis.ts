@@ -1,6 +1,7 @@
 import type { Product } from '../types';
 import { getProductDisplayCategory, productNeedsCategoryDecision } from './catalogCategory';
 import { effectiveManufacturer } from './waproManufacturers';
+import { flattenCategories, mainCategoryRoots, categoryKey, MAX_CATEGORY_DEPTH } from './categoryRegistry';
 
 /**
  * Analiza asortymentu: podpowiedzi kategorii i producentów oraz wykrywanie problemów w drzewie.
@@ -16,15 +17,38 @@ export const norm = (s: string) =>
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
     .replace(/ł/g, 'l')
-    .toLocaleLowerCase('pl')
+    .toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
+
+const titleCache = new WeakMap<object, string>();
+
+/** Znormalizowany tytuł produktu — liczony raz i współdzielony przez tokeny, podpowiedzi producenta i audyt. */
+export function normTitle(p: Pick<Product, 'name' | 'displayName'>): string {
+  let t = titleCache.get(p);
+  if (t === undefined) {
+    t = norm(`${p.displayName || ''} ${p.name || ''}`);
+    titleCache.set(p, t);
+  }
+  return t;
+}
 
 /** Klucz porównawczy: bez spacji, znaków i polskich liter — wykrywa „Eco Shine” = „ecoshine”. */
 export const compactKey = (s: string) => norm(s).replace(/ /g, '');
 
+const tokenCache = new WeakMap<object, string[]>();
+
+/** Słowa nazwy produktu (wynik trzymany w pamięci podręcznej — liczone w kilku miejscach analizy). */
 export function tokens(p: Pick<Product, 'name' | 'displayName'>): string[] {
-  const base = norm(`${p.displayName || ''} ${p.name || ''}`);
+  const cached = tokenCache.get(p);
+  if (cached) return cached;
+  const out = computeTokens(p);
+  tokenCache.set(p, out);
+  return out;
+}
+
+function computeTokens(p: Pick<Product, 'name' | 'displayName'>): string[] {
+  const base = normTitle(p);
   const out = new Set<string>();
   for (const t of base.split(' ')) {
     if (t.length < 3 || STOP.has(t) || /^\d+$/.test(t) || /^\d+(ml|l|g|kg|mm|cm|m)$/.test(t)) continue;
@@ -52,10 +76,17 @@ export function buildCategoryModel(products: Product[]): CategoryModel {
   const tokenCats = new Map<string, Map<string, number>>();
   const df = new Map<string, number>();
   let trained = 0;
+  // uczymy się tylko na kategoriach zgodnych ze strukturą (liść pod jednym z 7 działów), nie na sierotach
+  const mains = new Set(mainCategoryRoots().map(categoryKey));
+  const valid = new Set(
+    flattenCategories()
+      .filter((c) => c.isLeaf && c.depth > 0 && c.depth <= MAX_CATEGORY_DEPTH && mains.has(categoryKey(c.path.split(' › ')[0])))
+      .map((c) => categoryKey(c.name)),
+  );
   for (const p of products) {
     if (p.isGroup || productNeedsCategoryDecision(p)) continue;
     const cat = getProductDisplayCategory(p);
-    if (cat === UNDECIDED) continue;
+    if (cat === UNDECIDED || !valid.has(categoryKey(cat))) continue;
     trained++;
     for (const t of tokens(p)) {
       df.set(t, (df.get(t) ?? 0) + 1);
@@ -114,12 +145,28 @@ export function buildManufacturerFinder(products: Product[]) {
     .map(([name, n]) => ({ name, n, key: norm(name) }))
     .filter((b) => b.key.length >= 3 && b.n >= 2)
     .sort((a, b) => b.key.length - a.key.length);
+  // marki jednowyrazowe sprawdzamy w zbiorze słów nazwy (O(1)), wielowyrazowe — jako fragment tekstu
+  const single = new Map<string, string>();
+  const multi: { name: string; key: string }[] = [];
+  for (const b of brands) {
+    if (b.key.includes(' ')) multi.push({ name: b.name, key: b.key });
+    else if (!single.has(b.key)) single.set(b.key, b.name);
+  }
   return (p: Product): ManufacturerSuggestion | null => {
-    const hay = ` ${norm(`${p.displayName || ''} ${p.name || ''}`)} `;
-    for (const b of brands) {
-      if (hay.includes(` ${b.key} `)) return { manufacturer: b.name, via: b.name };
+    const text = normTitle(p);
+    // najdłuższa marka wygrywa (jak wcześniej: lista była posortowana malejąco po długości)
+    let best: { name: string; len: number } | null = null;
+    for (const w of text.split(' ')) {
+      const name = single.get(w);
+      if (name && (!best || w.length > best.len)) best = { name, len: w.length };
     }
-    return null;
+    if (multi.length) {
+      const hay = ` ${text} `;
+      for (const b of multi) {
+        if (hay.includes(` ${b.key} `) && (!best || b.key.length > best.len)) best = { name: b.name, len: b.key.length };
+      }
+    }
+    return best ? { manufacturer: best.name, via: best.name } : null;
   };
 }
 

@@ -21,7 +21,7 @@ import {
   importManufacturersFromBaselinker,
   manufacturerKey,
   registerManufacturers,
-  removeManufacturerAndMove,
+  removeManufacturer,
   renameManufacturer,
   saveManufacturerProfile,
   sendManufacturersToBaselinker,
@@ -30,6 +30,8 @@ import {
   type ManufacturerProfile,
 } from '../lib/manufacturerRegistry';
 import { effectiveManufacturer, isStaticManufacturer, manufacturerOptions, NO_MANUFACTURER } from '../lib/waproManufacturers';
+import { runBulkEdit } from '../lib/bulkEdit';
+import { logAudit } from '../lib/auditLog';
 import { confirmDialog } from '../lib/dialog';
 import { showToast } from '../lib/toast';
 
@@ -69,10 +71,13 @@ function Avatar({ name, logoUrl, size = 40 }: { name: string; logoUrl?: string; 
 export function ManufacturersView({
   products,
   onShowProducts,
+  onPatched,
   canEdit = true,
 }: {
   products: Product[];
   onShowProducts: (manufacturer: string) => void;
+  /** Odświeża produkty w pamięci po zmianie producenta (inaczej lista pokazuje stare dane). */
+  onPatched?: (patches: { id: string; patch: Partial<Product> }[]) => void;
   /** false = tylko podgląd (brak uprawnienia „Producenci”). */
   canEdit?: boolean;
 }) {
@@ -328,6 +333,8 @@ export function ManufacturersView({
               busy={busy !== null}
               onShowProducts={() => onShowProducts(selected.name)}
               onSendToBl={() => void sendToBl([selected.name])}
+              productIds={products.filter((p) => manufacturerKey(effectiveManufacturer(p)) === manufacturerKey(selected.name)).map((p) => p.id)}
+              onPatched={onPatched}
               onRenamed={(n) => setSelectedName(n)}
               onRemoved={() => setSelectedName(null)}
               statClass={stat}
@@ -352,12 +359,16 @@ function ManufacturerDetail({
   onSendToBl,
   onRenamed,
   onRemoved,
+  productIds,
+  onPatched,
   statClass,
   registryVersion,
   canEdit,
 }: {
   row: Row;
   busy: boolean;
+  productIds: string[];
+  onPatched?: (patches: { id: string; patch: Partial<Product> }[]) => void;
   onShowProducts: () => void;
   onSendToBl: () => void;
   onRenamed: (name: string) => void;
@@ -448,6 +459,7 @@ function ManufacturerDetail({
     setWorking('rename');
     try {
       const res = await renameManufacturer(row.name, next);
+      onPatched?.(productIds.map((id) => ({ id, patch: { manufacturer: next } })));
       showToast(`Zmieniono nazwę (${res.updated} produktów)`, 'ok');
       onRenamed(next);
     } catch (err) {
@@ -470,8 +482,20 @@ function ManufacturerDetail({
     if (!ok) return;
     setWorking('remove');
     try {
-      const res = await removeManufacturerAndMove(row.name, moveTo);
-      showToast(`Producent usunięty${res.moved ? ` (przeniesiono ${res.moved} produktów)` : ''}`, 'ok');
+      // produkty przepisuje edycja masowa: jest w dzienniku (można cofnąć) i zwraca zmiany do odświeżenia widoku
+      const target = cleanManufacturerName(moveTo);
+      const res = productIds.length
+        ? await runBulkEdit(productIds, { manufacturer: target }, `Usunięcie producenta „${row.name}”`)
+        : null;
+      await removeManufacturer(row.name);
+      logAudit({
+        action: 'manufacturer.remove',
+        entityType: 'manufacturer',
+        entityId: row.name,
+        summary: `Producent „${row.name}” usunięty, ${res?.updated ?? 0} produktów → ${target || 'bez producenta'}`,
+      });
+      if (res) onPatched?.(res.patches);
+      showToast(`Producent usunięty${res?.updated ? ` (przeniesiono ${res.updated} produktów)` : ''}`, 'ok');
       onRemoved();
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Nie udało się usunąć', 'error', 7000);

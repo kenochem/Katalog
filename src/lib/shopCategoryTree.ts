@@ -1,4 +1,5 @@
 import treeJson from '../../public/data/shop-category-tree.json';
+import { TAXONOMY_GROUPS, TAXONOMY_REMOVED } from './partsTaxonomy';
 
 export type ShopCategoryNode = {
   id: number;
@@ -14,7 +15,54 @@ export type ShopCategoryTreeFile = {
   roots: ShopCategoryNode[];
 };
 
-const baseTree = treeJson as ShopCategoryTreeFile;
+const fullTree = treeJson as ShopCategoryTreeFile;
+
+const plain = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
+
+/** Kategorie wycofane z układu: gałąź „Dla obiektów i branż” (branża to filtr, nie kategoria) oraz kategorie „Zestawy…”. */
+export const AUDIENCE_CATEGORY = 'dla obiektów i branż';
+export function isRetiredCategoryName(name: string): boolean {
+  const n = plain(name);
+  return n === AUDIENCE_CATEGORY || n.startsWith('zestaw');
+}
+
+function pruneRetired(nodes: ShopCategoryNode[]): ShopCategoryNode[] {
+  return nodes.filter((n) => !isRetiredCategoryName(n.name)).map((n) => ({ ...n, children: pruneRetired(n.children) }));
+}
+
+const lower = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
+
+/** Nakłada na drzewo sklepu układ katalogu: usuwa przebudowane kategorie i dodaje szczegółowe grupy części technicznych. */
+function applyTaxonomy(roots: ShopCategoryNode[]): ShopCategoryNode[] {
+  const removed = new Set(TAXONOMY_REMOVED.map(lower));
+  const strip = (nodes: ShopCategoryNode[]): ShopCategoryNode[] =>
+    nodes.filter((n) => !removed.has(lower(n.name))).map((n) => ({ ...n, children: strip(n.children) }));
+  const out = strip(roots);
+  let nextId = -100000;
+  const make = (name: string, parent: number): ShopCategoryNode => ({ id: nextId--, name, slug: lower(name).replace(/\s+/g, '-'), parent, count: 0, children: [] });
+  const taken = new Set<string>();
+  const collect = (nodes: ShopCategoryNode[]) => nodes.forEach((n) => (taken.add(lower(n.name)), collect(n.children)));
+  collect(out);
+  for (const g of TAXONOMY_GROUPS) {
+    const dept = out.find((d) => lower(d.name) === lower(g.dept));
+    if (!dept) continue;
+    let group = dept.children.find((c) => lower(c.name) === lower(g.group));
+    if (!group) {
+      group = make(g.group, dept.id);
+      dept.children.push(group);
+      taken.add(lower(g.group));
+    }
+    for (const leaf of g.leaves) {
+      if (taken.has(lower(leaf))) continue;
+      group.children.push(make(leaf, group.id));
+      taken.add(lower(leaf));
+    }
+  }
+  return out;
+}
+
+/** Drzewo bazowe katalogu: sklep bez kategorii wycofanych i z przebudowaną strukturą części technicznych. */
+const baseTree: ShopCategoryTreeFile = { ...fullTree, roots: applyTaxonomy(pruneRetired(fullTree.roots)) };
 
 /** Zmiany drzewa kategorii zapisane w bazie (catalog_categories): własne kategorie, przeniesienia i usunięcia. */
 export interface CategoryOverride {
@@ -96,6 +144,11 @@ export function subscribeCategoryTree(fn: () => void): () => void {
 /** Drzewo kategorii: bazowe ze sklepu + zmiany z bazy. */
 export function getShopCategoryTree(): ShopCategoryTreeFile {
   return tree;
+}
+
+/** Drzewo sklepu dokładnie takie, jak pobrane (z kategoriami wycofanymi) — do porównania ze sklepem. */
+export function getFullShopCategoryTree(): ShopCategoryTreeFile {
+  return fullTree;
 }
 
 /** Drzewo bazowe (bez zmian z bazy) — do wykrywania, czy kategoria pochodzi ze sklepu. */

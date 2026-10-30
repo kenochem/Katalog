@@ -1599,6 +1599,15 @@ export function ProductDetail({
                 <ManufacturerSelect value={manufacturer} onChange={setManufacturer} extra={[detail.manufacturer]} />
               </label>
               <label className="block">
+                <span className="mb-1 text-xs text-slate-500">Dostawca (od kogo towar)</span>
+                <input
+                  value={editMeta.supplier ?? ''}
+                  placeholder={detail.meta?.waproManufacturer || 'np. MERSA — gdy różni się od producenta'}
+                  onChange={(e) => setEditMeta((m: ProductMeta) => ({ ...m, supplier: e.target.value }))}
+                  className="input-field"
+                />
+              </label>
+              <label className="block">
                 <span className="mb-1 text-xs text-slate-500">Kategoria</span>
                 <CategoryPicker value={category} options={editCategories} onChange={setCategory} />
 
@@ -1865,6 +1874,15 @@ export function ProductDetail({
                 <span className="mb-1 text-xs text-slate-500">Producent / marka</span>
                 <ManufacturerSelect value={manufacturer} onChange={setManufacturer} extra={[detail.manufacturer]} />
 
+              </label>
+              <label className="block">
+                <span className="mb-1 text-xs text-slate-500">Dostawca (od kogo towar)</span>
+                <input
+                  value={editMeta.supplier ?? ''}
+                  placeholder={detail.meta?.waproManufacturer || 'np. MERSA — gdy różni się od producenta'}
+                  onChange={(e) => setEditMeta((m: ProductMeta) => ({ ...m, supplier: e.target.value }))}
+                  className="input-field"
+                />
               </label>
               <label className="block">
                 <span className="mb-1 text-xs text-slate-500">Kategoria</span>
@@ -3232,6 +3250,7 @@ function CategoryPicker({
     setAdding(true);
     try {
       // zapis na stałe w bazie: kategoria trafia do wspólnej listy i jest dostępna w każdym produkcie
+      if (draft.trim()) throw new Error('Nowe kategorie dodaje się w Słowniki → Porządkowanie, pod jednym z 7 działów głównych');
       const saved = await addCategory(draft, null);
       onChange(saved);
       showToast(`Kategoria „${saved}” zapisana — dopracujesz jej położenie w sekcji Kategorie`, 'ok', 5000);
