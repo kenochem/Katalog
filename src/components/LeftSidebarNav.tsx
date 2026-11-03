@@ -25,6 +25,7 @@ import {
   TrendingUp,
   Wrench,
   Building2,
+  Cpu,
   Network,
   FolderTree,
   Type,
@@ -35,6 +36,7 @@ import type { View } from '../types';
 import { canAccessAdminPanel } from '../lib/adminAccess';
 import { openGlobalAdminPanel } from '../lib/adminNavigation';
 import { roleCan, type AppRole } from '../lib/roles';
+import { ENGINE_NAME } from '../lib/engineBrand';
 import {
   getCachedCatalogPreferences,
   scheduleSaveUserPreferences,
@@ -64,6 +66,7 @@ const PREFS_KEY = 'katalog-sidebar-prefs-v1';
 const DEFAULT_ORDER: View[] = [
   'home',
   'catalog',
+  'engine',
   'groups',
   'library',
   'logs',
@@ -94,7 +97,7 @@ const GROUPS_KEY = 'katalog-sidebar-groups-v1';
 /** Grupy menu bocznego (jak w panelach typu BaseLinker): nagłówek zwija i rozwija sekcję. */
 const NAV_GROUPS: { id: string; label: string; defaultOpen: boolean; items: View[]; icon?: typeof Boxes }[] = [
   { id: 'main', label: '', defaultOpen: true, items: ['home', 'catalog', 'favorites', 'collections'] },
-  { id: 'products', label: 'Produkty', icon: Boxes, defaultOpen: true, items: ['new-products', 'groups', 'kits', 'promotions', 'labels', 'warehouse', 'library'] },
+  { id: 'products', label: 'Produkty', icon: Boxes, defaultOpen: true, items: ['engine', 'new-products', 'groups', 'kits', 'promotions', 'labels', 'warehouse', 'library'] },
   { id: 'quality', label: 'Jakość danych', icon: ListChecks, defaultOpen: true, items: ['catalog-decisions', 'names', 'rules', 'small-images', 'catalog-hidden'] },
   { id: 'dictionaries', label: 'Słowniki', icon: FolderTree, defaultOpen: false, items: ['assortment', 'manufacturers', 'attributes'] },
   { id: 'analytics', label: 'Analizy', icon: BarChart3, defaultOpen: false, items: ['progress', 'history'] },
@@ -374,6 +377,13 @@ export function LeftSidebarNav({
         label: 'Reguły jakości',
         available: isCatalogProduct && roleCan(role, 'viewProgress'),
         onClick: () => setView('rules'),
+      },
+      {
+        id: 'engine',
+        icon: <Cpu className="h-4 w-4" />,
+        label: ENGINE_NAME,
+        available: isCatalogProduct && roleCan(role, 'viewProgress'),
+        onClick: () => setView('engine'),
       },
       {
         id: 'assortment',

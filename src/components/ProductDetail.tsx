@@ -7,9 +7,10 @@ import {
   X, Camera, Upload, Loader2, Package, Pencil, Save, Trash2,
   Minus, Plus, Images, Printer, Tag, ArrowLeft,
   FileText, Barcode, Copy, Check, Scissors, Undo2, Layers,
-  Sparkles, TrendingUp, Star, Maximize2, History as HistoryIcon, ChevronLeft, ChevronRight, ImageOff,
+  Sparkles, TrendingUp, Paperclip, Star, Maximize2, History as HistoryIcon, ChevronLeft, ChevronRight, ImageOff,
 } from 'lucide-react';
 import { ProductHistoryPanel } from './product/ProductHistoryPanel';
+import { ProductDocsPanel } from './product/ProductDocsPanel';
 import { ProductAttributesPanel } from './product/ProductAttributesPanel';
 import { attrValuesOf, type AttrValue } from '../lib/attributes';
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
@@ -17,11 +18,12 @@ import type { Product, ProductVariant } from '../types';
 import { ACCESSORY_CATEGORIES } from '../types';
 import { normalizeManufacturer, effectiveManufacturer } from '../lib/waproManufacturers';
 import { ManufacturerSelect } from './ManufacturerSelect';
+import { SupplierDatalist, SUPPLIER_LIST_ID } from './SupplierDatalist';
 import { ManufacturerLogo } from './ManufacturerLogo';
 
 
 import { ProductImage } from './ProductImage';
-import { getProductImage, getProductImages, updateProductImage, addProductExtraImage, setProductPrimaryImage, reorderProductImages, replaceProductImages,
+import { getProductImage, getProductImages, updateProductImage, addProductExtraImage, addProductImages, setProductPrimaryImage, reorderProductImages, replaceProductImages,
   updateProduct, deleteProductImage, deleteProductExtraImage, fetchProductById,
   deleteProduct, isProductSkuTaken, fetchProductsBySkus, copyImagesToProducts,
 } from '../lib/products';
@@ -171,7 +173,7 @@ export function ProductDetail({
   const extraCameraRef = useRef<HTMLInputElement>(null);
   const [deleting, setDeleting] = useState(false);
   const [detailTab, setDetailTab] = useState<
-    'info' | 'desc' | 'variants' | 'photos' | 'ai' | 'sales' | 'history'
+    'info' | 'desc' | 'variants' | 'photos' | 'docs' | 'ai' | 'sales' | 'history'
   >('info');
   const [copied, setCopied] = useState<'sku' | 'ean' | null>(null);
   const [removeBgOpen, setRemoveBgOpen] = useState(false);
@@ -496,27 +498,14 @@ export function ProductDetail({
     const added: string[] = [];
     let failed = 0;
     try {
-      const queue = [...images];
-      let done = 0;
-      if (!hasPrimary) {
-        const first = queue.shift()!;
-        try {
-          newPrimary = await updateProductImage(product.id, first);
-        } catch (err) {
-          console.error(err);
-          failed++;
-        }
-        setUploadProgress([++done, images.length]);
-      }
-      for (const file of queue) {
-        try {
-          added.push(await addProductExtraImage(product.id, file));
-        } catch (err) {
-          console.error(err);
-          failed++;
-        }
-        setUploadProgress([++done, images.length]);
-      }
+      // pliki idą do magazynu równolegle, a zapis w bazie jest jeden (kolejność zdjęć zostaje taka jak wybrana)
+      const result = await addProductImages(product.id, images, { onProgress: (done, total) => setUploadProgress([done, total]) });
+      newPrimary = result.primary;
+      added.push(...result.added);
+      failed = result.failed;
+    } catch (err) {
+      console.error(err);
+      failed = images.length;
     } finally {
       setUploadingExtra(false);
       setUploadProgress(null);
@@ -924,7 +913,7 @@ export function ProductDetail({
   const canUploadImages = roleCan(role, 'uploadImage');
   const hubTabs = useMemo(() => {
     const tabs: {
-      id: 'info' | 'desc' | 'variants' | 'photos' | 'ai' | 'sales' | 'history';
+      id: 'info' | 'desc' | 'variants' | 'photos' | 'docs' | 'ai' | 'sales' | 'history';
       label: string;
       icon: typeof Package;
     }[] = [
@@ -939,6 +928,7 @@ export function ProductDetail({
         ? [{ id: 'variants' as const, label: `Warianty (${variantCount})`, icon: Layers }]
         : []),
       { id: 'desc', label: 'Opisy', icon: FileText },
+      { id: 'docs', label: 'Materiały', icon: Paperclip },
       { id: 'ai', label: 'AI', icon: Sparkles },
       ...(roleCan(role, 'viewProgress') ? [{ id: 'history' as const, label: 'Historia', icon: HistoryIcon }] : []),
     ];
@@ -1530,6 +1520,8 @@ export function ProductDetail({
             <ProductDetailSalesPanel detail={detail} />
           )}
 
+          {hubStyle && detailTab === 'docs' && <ProductDocsPanel productId={detail.id} canEdit={canUploadImages} />}
+
           {hubStyle && !editing && detailTab === 'ai' && <ProductDetailAiPanel detail={detail} />}
 
           {hubStyle && detailTab === 'history' && (
@@ -1605,7 +1597,9 @@ export function ProductDetail({
                   placeholder={detail.meta?.waproManufacturer || 'np. MERSA — gdy różni się od producenta'}
                   onChange={(e) => setEditMeta((m: ProductMeta) => ({ ...m, supplier: e.target.value }))}
                   className="input-field"
+                  list={SUPPLIER_LIST_ID}
                 />
+                <SupplierDatalist />
               </label>
               <label className="block">
                 <span className="mb-1 text-xs text-slate-500">Kategoria</span>
@@ -1882,7 +1876,9 @@ export function ProductDetail({
                   placeholder={detail.meta?.waproManufacturer || 'np. MERSA — gdy różni się od producenta'}
                   onChange={(e) => setEditMeta((m: ProductMeta) => ({ ...m, supplier: e.target.value }))}
                   className="input-field"
+                  list={SUPPLIER_LIST_ID}
                 />
+                <SupplierDatalist />
               </label>
               <label className="block">
                 <span className="mb-1 text-xs text-slate-500">Kategoria</span>

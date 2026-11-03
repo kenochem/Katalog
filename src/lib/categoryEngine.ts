@@ -7,7 +7,9 @@
  *  3. opis      — do czego służy według opisu, sposobu użycia i składu (te same pojęcia, liczone w tekście)  [słownik FUNCTIONS]
  *  4. linia     — co robią inne produkty z tej samej linii (np. „Draco SPOT-EX” → odplamiacze)               [konsensus linii]
  *  5. podobne   — do jakich kategorii należą produkty o podobnej nazwie                                      [kNN po słowach]
- *  6. obecna    — kategoria, którą produkt ma teraz (bezwładność: zmieniamy tylko na wyraźną przewagę)
+ *  6. model     — klasyfikator statystyczny (naiwny Bayes) uczony na nazwie i opisie znanych produktów        [słowa + pary słów]
+ *  7. sieć      — fakty znalezione w internecie (źródło obowiązkowe), np. karta producenta                  [src/data/webFacts.ts]
+ *  8. obecna    — kategoria, którą produkt ma teraz (bezwładność: zmieniamy tylko na wyraźną przewagę)
  *
  * Wynik ma status: „pewne” (można zastosować hurtem), „do sprawdzenia” (są konkurencyjne propozycje) albo
  * „do wyszukania” (brak sygnału — trzeba sprawdzić w internecie, do czego produkt służy).
@@ -16,6 +18,7 @@ import { fold } from './partsText';
 import { classifyByName } from './partsTaxonomy';
 import { MANUAL_ASSIGNMENTS } from '../data/manualAssignments';
 import { REVIEWED_ASSIGNMENTS } from '../data/reviewedAssignments';
+import { WEB_FACTS } from '../data/webFacts';
 
 export interface EngineProduct {
   sku: string;
@@ -32,7 +35,7 @@ export interface EngineProduct {
   shopLeaf?: string;
 }
 
-export type LayerId = 'ręczne' | 'rodzaj' | 'funkcja' | 'opis' | 'rodzina' | 'sklep' | 'linia' | 'producent' | 'podobne' | 'obecna';
+export type LayerId = 'ręczne' | 'rodzaj' | 'funkcja' | 'opis' | 'rodzina' | 'sklep' | 'linia' | 'producent' | 'podobne' | 'model' | 'sieć' | 'karta' | 'obecna';
 
 export interface Vote {
   layer: LayerId;
@@ -163,6 +166,8 @@ const FUNCTIONS: Fn[] = [
   { re: /tapicerk/, leaf: 'Tapicerka materiałowa', w: 0.45, not: /dywan.*domow/ },
   { re: /klimatyzac|klima ?(doktor|cleaner)|neutralizator zapach\w* (w )?(samochod|pojazd)/, leaf: 'Zapachy i neutralizatory do samochodu', w: 0.6 },
   { re: /gumy i uszczelk|guma w sprayu|silikon do uszczelek|konserwacji gum|plastik\w* zewn|zderzak|chrom/, leaf: 'Plastiki, gumy i chrom', w: 0.65 },
+  // przedmioty do sprzątania: mop jest produktem tylko wtedy, gdy nie jest celem chemii („płyn do prania mopów”)
+  { re: /\bmop(y|a|em|ow)?\b|stelaz\w* do mop|kij do mopa|wiadro z wyciskark/, leaf: 'Mopy i stelaże', w: 0.9, nameOnly: true, not: /plyn|proszek|koncentrat|zel\b|preparat|srodek|pranie|prania/ },
   // dom, obiekty
   { re: /\bwc\b|toalet|toilet|sanitar|sanit\b|pisuar|kabin\w* prysznic|kamien i rdz/, leaf: 'Łazienki i sanitariaty', w: 0.7, not: /przenosn|turystycz|szczotk/ },
   { re: /plyn do podlog|do mycia podlog|podlog\w* (drewnian|panel)|posadzk|floor|maszynowe mycie podlog/, leaf: 'Podłogi i posadzki', w: 0.7, not: /sciagacz|zbierak|mop\b|stojak/ },
@@ -204,18 +209,33 @@ const FUNCTIONS: Fn[] = [
 /** Wersje globalne wzorców — kompilowane raz, a nie przy każdym produkcie. */
 const FUNCTIONS_G = FUNCTIONS.map((f) => ({ ...f, g: new RegExp(f.re.source, 'g') }));
 
-function applyFunctions(text: string, inName = false): { leaf: string; w: number; hits: number }[] {
+/** Czynność tuż przed wzmianką o przedmiocie („do prania odzieży i mopów”, „do mycia szczotek”): przedmiot jest tu celem chemii, a nie produktem. */
+const ACTION_BEFORE = /(prania|pranie|mycia|mycie|czyszczenia|czyszczenie|konserwacji|impregnacji|dezynfekcji|pielegnacji|plukania|namaczania|wybielania|odkazania|dozowania w)\b[^.;:+]{0,38}$/;
+
+/** Kategorie przedmiotów (mopy, szczotki, ściereczki, wiadra…) — w odróżnieniu od chemii i urządzeń. */
+const ITEM_LEAF_RE = /\bmop|szczotk|sciere|wiadr|rekawic|worki|miotl|zmiotk|szufel|stelaz|trzonek|gabk|zmywak|\bpad/;
+
+function applyFunctions(text: string, inName = false, itemLeaves?: Set<string>): { leaf: string; w: number; hits: number }[] {
   const out = new Map<string, { w: number; hits: number }>();
   for (const f of FUNCTIONS_G) {
     if (f.nameOnly && !inName) continue;
     if (f.not && f.not.test(text)) continue;
-    const m = text.match(f.g);
-    if (!m) continue;
+    let m: string[] | null = text.match(f.g);
+    if (m && itemLeaves?.has(f.leaf)) {
+      // liczą się tylko wzmianki, które nie są obiektem czynności
+      m = [...text.matchAll(f.g)].filter((x) => !ACTION_BEFORE.test(text.slice(Math.max(0, (x.index ?? 0) - 45), x.index ?? 0))).map((x) => x[0]);
+    }
+    if (!m?.length) continue;
     const cur = out.get(f.leaf);
     if (!cur || f.w > cur.w) out.set(f.leaf, { w: f.w, hits: (cur?.hits ?? 0) + m.length });
     else cur.hits += m.length;
   }
   return [...out.entries()].map(([leaf, v]) => ({ leaf, w: v.w, hits: v.hits }));
+}
+
+/** Do czego służy tekst (np. opis produktu): kategorie wskazane przez słownik funkcji, z wagą i liczbą trafień. */
+export function functionLeaves(text: string): { leaf: string; w: number; hits: number }[] {
+  return applyFunctions(fold(text));
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -224,6 +244,79 @@ function applyFunctions(text: string, inName = false): { leaf: string; w: number
 const STOP = new Set(['do', 'na', 'dla', 'oraz', 'szt', 'ml', 'kg', 'nr', 'the', 'and', 'typ', 'set', 'bez', 'ze', 'od', 'po', 'przy']);
 const stem = (t: string) => (t.length > 5 ? t.replace(/(ami|ach|owi|ego|emu|ych|ymi|ow|ie|a|y|i|e|u|om|em)$/, '') : t);
 const SIZE = /^\d+([.,]\d+)?(ml|l|g|kg|mm|cm|m|szt|sztuk|w|v|bar)?$/;
+
+/** Cechy do klasyfikatora: słowa i pary sąsiednich słów z nazwy (waga 2) oraz słowa z opisu, użycia i składu (waga 1). */
+function features(p: EngineProduct): Map<string, number> {
+  const f = new Map<string, number>();
+  const put = (k: string, w: number) => f.set(k, Math.max(f.get(k) ?? 0, w));
+  const nameToks = fold(p.name)
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length >= 3 && !STOP.has(t) && !SIZE.test(t))
+    .map(stem);
+  nameToks.forEach((t, i) => {
+    put(t, 2);
+    if (i > 0) put(`${nameToks[i - 1]}_${t}`, 2);
+  });
+  const rest = fold([p.short, p.usage, p.desc, p.comp].filter(Boolean).join(' '));
+  for (const t of tokens(rest).filter((t) => t.length >= 4).slice(0, 80)) put(t, 1);
+  return f;
+}
+
+interface NbSample {
+  sku: string;
+  cat: string;
+  feats: Map<string, number>;
+}
+
+/** Naiwny klasyfikator Bayesa z wygładzaniem; przy ocenie produktu, który sam jest w zbiorze uczącym, odejmuje jego wkład (leave-one-out). */
+function buildNaiveBayes(samples: NbSample[]) {
+  const ALPHA = 0.1;
+  const classN = new Map<string, number>();
+  const tokN = new Map<string, Map<string, number>>();
+  const classTotal = new Map<string, number>();
+  const vocab = new Set<string>();
+  const bySku = new Map<string, NbSample>();
+  for (const s of samples) {
+    bySku.set(s.sku, s);
+    classN.set(s.cat, (classN.get(s.cat) ?? 0) + 1);
+    const m = tokN.get(s.cat) ?? new Map<string, number>();
+    tokN.set(s.cat, m);
+    for (const [k, w] of s.feats) {
+      m.set(k, (m.get(k) ?? 0) + w);
+      classTotal.set(s.cat, (classTotal.get(s.cat) ?? 0) + w);
+      vocab.add(k);
+    }
+  }
+  const V = Math.max(vocab.size, 1);
+  const total = samples.length;
+  function predict(sku: string, feats: Map<string, number>): { leaf: string; prob: number } | null {
+    if (!feats.size || total < 20) return null;
+    const self = bySku.get(sku);
+    const logp: [string, number][] = [];
+    for (const [c, n] of classN) {
+      const own = self && self.cat === c;
+      const nc = n - (own ? 1 : 0);
+      if (nc <= 0) continue;
+      const tc = (classTotal.get(c) ?? 0) - (own ? [...self!.feats.values()].reduce((a, b) => a + b, 0) : 0);
+      const m = tokN.get(c)!;
+      let lp = Math.log(nc / total) * 0.5; // prior stłumiony — mała kategoria nie powinna przegrywać z dużą z samej liczebności
+      for (const [k, w] of feats) {
+        const cnt = (m.get(k) ?? 0) - (own ? (self!.feats.get(k) ?? 0) : 0);
+        lp += w * Math.log((cnt + ALPHA) / (tc + ALPHA * V));
+      }
+      logp.push([c, lp]);
+    }
+    if (logp.length < 2) return null;
+    const max = Math.max(...logp.map(([, l]) => l));
+    // temperatura: surowe prawdopodobieństwa NB są zbyt pewne siebie, więc spłaszczamy je przed normalizacją
+    const T = Math.max(1, feats.size / 4);
+    const exps = logp.map(([c, l]) => [c, Math.exp((l - max) / T)] as const);
+    const sum = exps.reduce((a, [, e]) => a + e, 0);
+    const [leaf, e] = exps.sort((a, b) => b[1] - a[1])[0];
+    return { leaf, prob: e / sum };
+  }
+  return { predict };
+}
 
 function tokens(text: string): string[] {
   return [
@@ -311,19 +404,46 @@ function familyKey(name: string): string {
 // ---------------------------------------------------------------------------------------------
 // Silnik
 // ---------------------------------------------------------------------------------------------
-const WEIGHTS: Record<LayerId, number> = { ręczne: 3, rodzaj: 1.0, funkcja: 1.0, opis: 0.6, rodzina: 0.8, sklep: 0.6, linia: 0.7, producent: 0.3, podobne: 0.45, obecna: 0.5 };
+const WEIGHTS: Record<LayerId, number> = { ręczne: 3, rodzaj: 1.0, funkcja: 1.0, opis: 0.6, rodzina: 0.8, sklep: 0.6, linia: 0.7, producent: 0.3, podobne: 0.45, model: 0.5, sieć: 1.6, karta: 0.6, obecna: 0.5 };
 /** Warstwy, które są dowodem z samego produktu (nazwa, opis, identyczne produkty w innych opakowaniach). */
-const EVIDENCE: LayerId[] = ['ręczne', 'rodzaj', 'funkcja', 'opis', 'rodzina', 'sklep'];
+const EVIDENCE: LayerId[] = ['ręczne', 'rodzaj', 'funkcja', 'opis', 'rodzina', 'sklep', 'sieć', 'karta'];
 const UNDECIDED = 'Do decyzji';
 
+/** Fakty wyciągnięte z kart charakterystyki, kart technicznych i ulotek produktu (public/data/material-facts.json). */
+export interface MaterialFact {
+  /** Przeznaczenie i właściwości wg dokumentu. */
+  use: string;
+  usage?: string;
+  comp?: string;
+  ph?: string;
+  form?: string;
+  /** Gęstość w g/ml (zakres zapisany jak w karcie, np. „1,0 – 1,1”). */
+  density?: string;
+  /** Termin trwałości w miesiącach. */
+  shelfLife?: number;
+  /** Zapach opisany w karcie (np. „cytrynowy”). */
+  fragrance?: string;
+  /** Pliki, z których pochodzą dane. */
+  files: string[];
+}
+
 export interface EngineOptions {
+  /** Liście będące przedmiotami (mopy, szczotki…) — chemii nie wolno do nich trafiać na podstawie samej wzmianki w opisie. Domyślnie wykrywane po nazwie. */
+  itemLeaves?: Set<string>;
   /** Zbiór dozwolonych kategorii (liście drzewa) — decyzje poza nim są odrzucane. */
   leaves: Set<string>;
+  /** SKU → kategoria zatwierdzona przez użytkownika w panelu silnika (działa jak przypisanie ręczne). */
+  learned?: Record<string, string>;
+  /** SKU → kategorie odrzucone przez użytkownika dla tego produktu — nie są ponownie proponowane. */
+  rejected?: Record<string, string[]>;
+  /** SKU → fakty z materiałów produktu. */
+  facts?: Record<string, MaterialFact>;
 }
 
 export function buildEngine(products: EngineProduct[], opts: EngineOptions) {
   const leafKey = (s: string) => fold(s).trim();
   const validLeaf = new Map([...opts.leaves].map((l) => [leafKey(l), l]));
+  const itemLeaves = opts.itemLeaves ?? new Set([...opts.leaves].filter((l) => ITEM_LEAF_RE.test(fold(l))));
   const known = products.filter((p) => p.category && p.category !== UNDECIDED && validLeaf.has(leafKey(p.category)));
 
   // linie produktowe i modele: klucz → rozkład kategorii znanych produktów
@@ -375,6 +495,15 @@ export function buildEngine(products: EngineProduct[], opts: EngineOptions) {
     return { layer: 'producent', leaf, weight: WEIGHTS.producent * (n / total), why: `producent „${m}”: ${Math.round((100 * n) / total)}% produktów to ${leaf}` };
   };
 
+  // klasyfikator statystyczny: niezależna płaszczyzna — uczy się z nazw i opisów wszystkich znanych produktów
+  const nb = buildNaiveBayes(known.map((p) => ({ sku: p.sku, cat: validLeaf.get(leafKey(p.category!))!, feats: features(p) })));
+  const modelVote = (p: EngineProduct): Vote | null => {
+    const top = nb.predict(p.sku, features(p));
+    // przy leave-one-out trafność: ~90% od 0,9, ~70% w przedziale 0,7–0,9, poniżej — rzut monetą, więc nie głosuje
+    if (!top || top.prob < 0.8) return null;
+    return { layer: 'model', leaf: top.leaf, weight: WEIGHTS.model * top.prob, why: `model statystyczny → ${top.leaf} (${Math.round(top.prob * 100)}%)` };
+  };
+
   const N = Math.max(known.length, 1);
   const idf = (w: string) => Math.log(1 + N / (df.get(w) ?? 0.5));
 
@@ -421,19 +550,35 @@ export function buildEngine(products: EngineProduct[], opts: EngineOptions) {
     // 0. ręczne
     const manual = REVIEWED_ASSIGNMENTS[p.sku.trim().toUpperCase()] ?? MANUAL_ASSIGNMENTS[p.sku.trim().toUpperCase()];
     if (manual) add({ layer: 'ręczne', leaf: manual, weight: WEIGHTS.ręczne, why: 'przypisane ręcznie po przeglądzie' });
+    const skuKey = p.sku.trim().toUpperCase();
+    const learnedLeaf = opts.learned?.[skuKey];
+    if (learnedLeaf) add({ layer: 'ręczne', leaf: learnedLeaf, weight: WEIGHTS.ręczne, why: 'zatwierdzone przez Ciebie w panelu silnika' });
 
     // 1. rodzaj produktu (reguły części/akcesoriów/chemii o jednoznacznych słowach)
     const byRule = classifyByName(p.name, p.sku);
     if (byRule) add({ layer: 'rodzaj', leaf: byRule, weight: WEIGHTS.rodzaj, why: `reguła nazwy → ${byRule}` });
 
     // 2. funkcja w nazwie
-    for (const f of applyFunctions(name, true)) add({ layer: 'funkcja', leaf: f.leaf, weight: WEIGHTS.funkcja * f.w, why: `w nazwie: ${f.leaf}` });
+    for (const f of applyFunctions(name, true, itemLeaves)) add({ layer: 'funkcja', leaf: f.leaf, weight: WEIGHTS.funkcja * f.w, why: `w nazwie: ${f.leaf}` });
 
     // 3. funkcja w opisie (im częściej pada pojęcie, tym mocniej, ale z sufitem)
     if (detail.length > 30) {
-      for (const f of applyFunctions(detail)) {
+      for (const f of applyFunctions(detail, false, itemLeaves)) {
         const boost = Math.min(1, 0.5 + 0.15 * f.hits);
         add({ layer: 'opis', leaf: f.leaf, weight: WEIGHTS.opis * f.w * boost, why: `w opisie (${f.hits}×): ${f.leaf}` });
+      }
+    }
+
+    // 3b. materiały produktu: przeznaczenie z karty charakterystyki / karty technicznej / ulotki
+    const fact = opts.facts?.[skuKey];
+    if (fact) {
+      // tylko początek dokumentu: dalej karty wymieniają dziesiątki powierzchni, które rozmywają przeznaczenie
+      const text = fold(fact.use.slice(0, 320));
+      if (text.length > 20) {
+        for (const f of applyFunctions(text, false, itemLeaves)) {
+          const boost = Math.min(1, 0.6 + 0.15 * f.hits);
+          add({ layer: 'karta', leaf: f.leaf, weight: WEIGHTS.karta * f.w * boost, why: `w karcie produktu (${f.hits}×): ${f.leaf}` });
+        }
       }
     }
 
@@ -513,12 +658,50 @@ export function buildEngine(products: EngineProduct[], opts: EngineOptions) {
       if (c.ok) add({ layer: 'linia', leaf: c.leaf, weight: WEIGHTS.linia * 0.5, why: `linia „${lk}” (${c.support}/${c.others}) → ${c.leaf}` });
     }
 
+    // 4b. sieć: kategoria ustalona na podstawie źródeł w internecie
+    const web = WEB_FACTS[p.sku];
+    if (web?.leaf && web.sources.length) add({ layer: 'sieć', leaf: web.leaf, weight: WEIGHTS.sieć, why: `ustalone w sieci: ${web.use}` });
+
     // 5. podobne produkty
     add(similar(p));
+    add(modelVote(p));
     add(makerHint(p));
 
     // 6. obecna kategoria
     if (from) add({ layer: 'obecna', leaf: from, weight: WEIGHTS.obecna, why: `obecnie: ${from}` });
+
+    // 6b. rodzaj produktu: chemia (płyn, proszek, żel…) nie jest przedmiotem — głosy na kategorie przedmiotów
+    //     z opisu, linii, modelu czy podobnych nazw odpadają, a błędne ręczne przypisanie traci wagę i trafia do sprawdzenia
+    const lead = fold(`${p.short ?? ''} ${p.desc ?? ''}`).slice(0, 220);
+    const FORM = /\b(plyn|proszek|zel|koncentrat|preparat|srodek|pianka|piana|spray|tabletk|mleczko|pasta|granulat|emulsj|zmywacz)\w*/;
+    const ACTION = /\b(pranie|prania|mycie|mycia|czyszczenie|czyszczenia|odtluszcz\w*|odkamien\w*|dezynfekcj\w*|impregnacj\w*|wosk\w*|polerowani\w*)\b/;
+    const ITEM_HEAD = /^(\S+\s+){0,2}?(mop|mopy|szczotk\w*|scierecz\w*|wiadro|wiadra|rekawic\w*|worki|miotl\w*|zmiotk\w*|szufelk\w*|stelaz\w*|kij|trzonek|gabk\w*|zmywak\w*|pad|pady|dozownik\w*|pompk\w*|opryskiw\w*|aplikator\w*|pedzel|pedzle|uchwyt\w*|zawieszk\w*|ssawk\w*|dysz\w*|lanc\w*|wieszak\w*|miarka|menzurk\w*|pojemnik\w*|butelk\w*|stojak\w*|kosz\w*)\b/;
+    const isChemical = (FORM.test(name) || (FORM.test(lead) && ACTION.test(`${name} ${lead}`))) && !name.split(/\s[-–]\s/).some((seg) => ITEM_HEAD.test(seg.trim()));
+    if (isChemical) {
+      let dropped = false;
+      // przedmiot, który jest nazwany wprost w nazwie produktu, zostaje; odpadają tylko głosy z opisu, linii, modelu itp.
+      const namedItems = new Set(votes.filter((v) => v.layer === 'rodzaj' || v.layer === 'funkcja').map((v) => v.leaf));
+      for (let i = votes.length - 1; i >= 0; i--) {
+        const v = votes[i];
+        if (!itemLeaves.has(v.leaf) || namedItems.has(v.leaf)) continue;
+        if (v.layer === 'obecna') {
+          // obecna kategoria przedmiotu przy chemii bez przedmiotu w nazwie to najpewniej błąd — traci bezwładność
+          v.weight = Math.min(v.weight, 0.15);
+          dropped = true;
+          continue;
+        }
+        if (v.layer === 'ręczne') {
+          if (v.why.includes('Ciebie')) continue;
+          v.weight = Math.min(v.weight, 1.0);
+          v.why += ' (kłóci się z rodzajem produktu: to chemia, nie przedmiot)';
+          dropped = true;
+          continue;
+        }
+        votes.splice(i, 1);
+        dropped = true;
+      }
+      if (dropped) flags.push('chemia, nie przedmiot');
+    }
 
     // 7. pojemność: ta sama chemia dla myjni (duże gabaryty) i dla detalu/warsztatu (litrówki) leży w innych kategoriach
     const volume = packageVolume(p.name);
@@ -535,6 +718,12 @@ export function buildEngine(products: EngineProduct[], opts: EngineOptions) {
     if (volumeShift) flags.push('reguła pojemności');
 
     if (dropLeaf) for (let i = votes.length - 1; i >= 0; i--) if (votes[i].leaf === dropLeaf) votes.splice(i, 1);
+    // kategorie odrzucone przez użytkownika dla tego produktu nie wracają (chyba że ktoś zatwierdził je ręcznie)
+    const rejectedLeaves = opts.rejected?.[skuKey];
+    if (rejectedLeaves?.length) {
+      const hasManual = votes.some((v) => v.layer === 'ręczne');
+      if (!hasManual) for (let i = votes.length - 1; i >= 0; i--) if (rejectedLeaves.includes(votes[i].leaf) && votes[i].leaf !== from) votes.splice(i, 1);
+    }
 
     // agregacja
     const agg = new Map<string, { score: number; layers: Set<LayerId> }>();
@@ -607,7 +796,7 @@ export function buildEngine(products: EngineProduct[], opts: EngineOptions) {
     if (best === from && !conflict) return { ...out, status: 'pewne' }; // potwierdzona obecna kategoria
     if (conflict && !bestA.layers.has('ręczne')) return { ...out, status: 'do sprawdzenia' };
     // samo podobieństwo nazw (bez żadnej innej warstwy) nie uzasadnia przypisania ani zmiany
-    const onlySimilar = signal.length > 0 && signal.every((v) => v.layer === 'podobne');
+    const onlySimilar = signal.length > 0 && signal.every((v) => v.layer === 'podobne' || v.layer === 'model');
     if (onlySimilar) {
       return from ? { ...out, to: from, status: 'pewne', reason: 'bez zmian (brak mocnego sygnału za zmianą)' } : { ...out, to: null, status: 'do wyszukania', reason: 'tylko podobieństwo nazw — sprawdzić w internecie' };
     }
@@ -615,7 +804,7 @@ export function buildEngine(products: EngineProduct[], opts: EngineOptions) {
     if (!signal.length) return { ...out, status: 'do wyszukania' };
     const strong = bestA.score - (agg.get(from)?.score ?? 0) >= 0.9 && margin >= 0.5;
     if (strong && independent >= 2) return { ...out, status: 'pewne' };
-    if (strong && independent === 1 && [...bestA.layers][0] !== 'podobne' && bestA.score >= 1.3) return { ...out, status: 'pewne' };
+    if (strong && independent === 1 && ![...bestA.layers].every((l) => l === 'podobne' || l === 'model') && bestA.score >= 1.3) return { ...out, status: 'pewne' };
     if (bestA.score >= 0.55 && margin >= 0.2) return { ...out, status: 'do sprawdzenia' };
     return { ...out, to: best, status: 'do sprawdzenia' };
   }

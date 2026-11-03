@@ -283,7 +283,7 @@ export async function renameCategory(oldName: string, newRaw: string): Promise<{
 }
 
 /** Przenosi kategorię pod innego rodzica (null = kategoria główna). */
-export async function moveCategory(name: string, newParent: string | null): Promise<void> {
+export async function moveCategory(name: string, newParent: string | null, opts: { emptyTarget?: boolean } = {}): Promise<void> {
   const info = getCategoryInfo(name);
   if (!info) throw new Error('Nie znaleziono kategorii');
   if (!newParent) throw new Error('Działów głównych jest 7 i są stałe — przenieś kategorię pod jeden z nich');
@@ -293,7 +293,8 @@ export async function moveCategory(name: string, newParent: string | null): Prom
     if (p.depth + 1 + subtreeHeight(info.name) > MAX_CATEGORY_DEPTH) throw new Error('Struktura ma 3 poziomy (dział › podkategoria › kategoria) — ta gałąź nie zmieści się tutaj');
     if (categoryKey(p.name) === categoryKey(info.name)) throw new Error('Kategoria nie może być własnym rodzicem');
     if (p.path.split(' › ').some((seg) => categoryKey(seg) === categoryKey(info.name))) throw new Error('Nie można przenieść kategorii pod jej własną podkategorię');
-    if (p.isLeaf && p.depth > 0) throw new Error(`„${newParent}” zawiera produkty — wybierz kategorię grupującą lub główną`);
+    // pusta, świeżo utworzona grupa też jest „liściem” w drzewie — wolno do niej przenosić, gdy wywołujący wie, że to grupa
+    if (p.isLeaf && p.depth > 0 && !opts.emptyTarget) throw new Error(`„${newParent}” zawiera produkty — wybierz kategorię grupującą lub główną`);
   }
   await upsertRow({ name: info.name, parent: newParent, source: info.fromShop ? 'shop' : 'custom', removed: false });
   await loadCategoryRegistry(true);

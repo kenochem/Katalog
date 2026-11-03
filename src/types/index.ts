@@ -110,6 +110,7 @@ export type View =
 
   | 'home'
   | 'assortment'
+  | 'engine'
   | 'catalog'
   | 'collections'
   | 'kits'

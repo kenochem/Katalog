@@ -6,6 +6,7 @@ import { effectiveManufacturer, NO_MANUFACTURER } from './waproManufacturers';
 import { getProductDisplayCategory } from './catalogCategory';
 import { getAvailableQty, getReservedQty } from './reservedStock';
 import { getLivePromo } from './promotions';
+import { hasProductDocs } from './productDocsIndex';
 import type { Product } from '../types';
 
 export type CatalogSort =
@@ -20,6 +21,7 @@ export type StockFilter = 'all' | 'in-stock' | 'low' | 'out' | 'reserved' | 'pro
 export type ImageFilter = 'all' | 'with' | 'without';
 export type KnowledgeFilter = 'all' | 'weak' | 'good';
 export type WaproMagFilter = 'all' | 'needs-media';
+export type DocsFilter = 'all' | 'with' | 'without';
 export type BaselinkerFilter = 'all' | 'linked' | 'not-linked';
 export type CatalogVisibilityFilter = 'active' | 'hidden' | 'all';
 
@@ -76,6 +78,7 @@ export function applyCatalogFilters(
     knowledgeFilter?: KnowledgeFilter;
     baselinkerFilter?: BaselinkerFilter;
     waproMagFilter?: WaproMagFilter;
+    docsFilter?: DocsFilter;
     visibilityFilter?: CatalogVisibilityFilter;
     /** Produkty będące wariantami grupy, która też jest na liście, pokazuj tylko w grupie. */
     collapseGroupMembers?: boolean;
@@ -133,6 +136,12 @@ export function applyCatalogFilters(
 
   if (opts.waproMagFilter === 'needs-media') {
     result = result.filter((p) => isWaproSkeletonProduct(p));
+  }
+
+  if (opts.docsFilter === 'with') {
+    result = result.filter((p) => hasProductDocs(p.id));
+  } else if (opts.docsFilter === 'without') {
+    result = result.filter((p) => !hasProductDocs(p.id));
   }
 
   if (opts.collapseGroupMembers) result = collapseGroupMembers(products, result, opts.search);

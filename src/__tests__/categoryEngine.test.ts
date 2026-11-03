@@ -217,3 +217,51 @@ describe('znaki niewidoczne w nazwie', () => {
     expect(buildEngine([p], { leaves }).decide(p).to).toBe('Ekologiczne środki czystości');
   });
 });
+
+describe('warstwa modelu statystycznego', () => {
+  it('uczy się z nazw i opisów i głosuje przy dużej pewności', () => {
+    const leaves = new Set(['Odkamienianie urządzeń', 'Pasty BHP']);
+    const mk = (i: number, name: string, cat: string, desc: string): EngineProduct => ({ sku: `M${i}`, name, maker: 'X', desc, short: '', usage: '', comp: '', category: cat });
+    const train: EngineProduct[] = [];
+    for (let i = 0; i < 30; i++) train.push(mk(i, `Preparat zmiękczający kamień ${i}`, 'Odkamienianie urządzeń', 'usuwa kamień z ekspresów'));
+    for (let i = 30; i < 60; i++) train.push(mk(i, `Preparat myjący ręce ${i}`, 'Pasty BHP', 'do brudnych rąk warsztat'));
+    const target = mk(100, 'Preparat zmiękczający kamień nowy', '', 'usuwa kamień z ekspresów');
+    const d = buildEngine([...train, target], { leaves }).decide(target);
+    expect(d.votes.some((v) => v.layer === 'model' && v.leaf === 'Odkamienianie urządzeń')).toBe(true);
+    // sam model nie wystarcza do przypisania — potrzebny dowód z nazwy lub opisu
+    expect(d.to === null || d.status !== 'pewne' || d.votes.some((v) => v.layer === 'funkcja' || v.layer === 'opis')).toBe(true);
+  });
+});
+
+describe('odporność na haczyki w opisie (np. „do prania odzieży i mopów”)', () => {
+  const fl = flattenCategories().filter((c) => c.isLeaf);
+  const leaves = new Set(fl.map((c) => c.name));
+  const itemLeaves = new Set(fl.filter((c) => /^sprz[eę]t i akcesoria/i.test(c.path)).map((c) => c.name));
+  const mk = (sku: string, name: string, desc: string, category = ''): EngineProduct => ({ sku, name, maker: 'DRACO', desc, short: '', usage: '', comp: '', category });
+  const WASH = 'Profesjonalny płyn do prania odzieży roboczej i mopów. Płyn do pralni w hotelu, restauracji. Rozpuszcza tłuszcz i olej.';
+
+  it('chemia wspominająca mopy w opisie nie trafia do kategorii mopów', () => {
+    const p = mk('ZW1', 'Draco WorkBase ENERGY 5L - pranie odzieży roboczej mopów', WASH, 'Mopy i stelaże');
+    const d = buildEngine([p], { leaves, itemLeaves }).decide(p);
+    expect(d.to).toBe('Płyny, żele i proszki do prania');
+    expect(d.flags).toContain('chemia, nie przedmiot');
+  });
+  it('linia i model sąsiadów z błędną kategorią nie przenoszą jej na chemię', () => {
+    const bad = [1, 2, 3].map((i) => mk(`ZL${i}`, `Draco WorkBase ENERGY ${i}L - pranie odzieży`, WASH, 'Mopy i stelaże'));
+    const p = mk('ZL9', 'Draco WorkBase PROFESSIONAL 5kg - proszek do prania odzieży', 'Proszek do prania odzieży roboczej i mopów.');
+    const d = buildEngine([...bad, p], { leaves, itemLeaves }).decide(p);
+    expect(d.to).toBe('Płyny, żele i proszki do prania');
+    expect(d.votes.some((v) => v.leaf === 'Mopy i stelaże' && v.layer !== 'obecna')).toBe(false);
+  });
+  it('prawdziwy mop pozostaje mopem, także gdy opis mówi o praniu', () => {
+    const p = mk('ZM1', 'Mop płaski z mikrofibry 40 cm', 'Mop do mycia podłóg. Można prać w pralce w 60 stopniach. Po praniu wysuszyć.');
+    const d = buildEngine([p], { leaves, itemLeaves }).decide(p);
+    expect(d.to).toBe('Mopy i stelaże');
+    expect(d.flags).not.toContain('chemia, nie przedmiot');
+  });
+  it('przypisanie zatwierdzone przez użytkownika wygrywa z bramką rodzaju', () => {
+    const p = mk('ZU1', 'Draco WorkBase ENERGY 5L - pranie odzieży roboczej mopów', WASH, 'Mopy i stelaże');
+    const d = buildEngine([p], { leaves, itemLeaves, learned: { ZU1: 'Mopy i stelaże' } }).decide(p);
+    expect(d.to).toBe('Mopy i stelaże');
+  });
+});

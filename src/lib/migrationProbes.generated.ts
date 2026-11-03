@@ -157,6 +157,21 @@ export const MIGRATION_PROBES: MigrationProbe[] = [
     "functions": []
   },
   {
+    "file": "migration-catalog-suppliers.sql",
+    "title": "Rejestr dostawców katalogu (od kogo mamy towar) + ich profile (kontakt, warunki).",
+    "tables": [
+      "catalog_suppliers"
+    ],
+    "columns": [
+      "catalog_suppliers.wapro_code",
+      "catalog_suppliers.nip",
+      "catalog_suppliers.contact_person",
+      "catalog_suppliers.lead_time_days",
+      "catalog_suppliers.min_order_net"
+    ],
+    "functions": []
+  },
+  {
     "file": "migration-catalog-tasks.sql",
     "title": "Moja kolejka: zadania w katalogu przydzielane osobom (uzupelnij zdjecie, zatwierdz opis, sprawdz dane...)",
     "tables": [

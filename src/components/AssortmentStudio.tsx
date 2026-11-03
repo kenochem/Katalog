@@ -1,11 +1,8 @@
 import {
   Boxes,
   ChevronDown,
-  Download,
-  ClipboardCheck,
   ImageOff,
   ChevronRight,
-  GitMerge,
   Loader2,
   Minus,
   Network,
@@ -13,7 +10,6 @@ import {
   Pencil,
   Plus,
   Search,
-  Sparkles,
   Trash2,
   Wand2,
   ZoomIn,
@@ -41,20 +37,19 @@ import {
   buildCategoryModel,
   buildManufacturerFinder,
   computeHealth,
-  findNearDuplicates,
-  topWordsOf,
   UNDECIDED,
   type CategorySuggestion,
   type ManufacturerSuggestion,
 } from '../lib/assortmentAnalysis';
-import { AUDIT_CODE_LABEL, auditToCsv, downloadText, runAudit, type AuditResult } from '../lib/assortmentAudit';
+import { downloadText } from '../lib/assortmentAudit';
 import { iconForCategory } from '../lib/categoryIcons';
 import { ShopMirrorPanel } from './ShopMirrorPanel';
+import { DocsImportPanel } from './DocsImportPanel';
 import { effectiveSupplier, supplierStats, SUPPLIER_FROM_MANUFACTURER } from '../lib/suppliers';
 import { confirmDialog, promptDialog } from '../lib/dialog';
 import { showToast } from '../lib/toast';
 
-type Mode = 'tree' | 'manufacturers' | 'analysis' | 'shop';
+type Mode = 'tree' | 'manufacturers' | 'shop';
 
 const hashOf = (s: string) => {
   let h = 0;
@@ -276,31 +271,6 @@ export function AssortmentStudio({
     }
     return m;
   }, [singles, findMf]);
-
-  const [audit, setAudit] = useState<AuditResult | null>(null);
-  const runFullAudit = (): AuditResult => {
-    const r = runAudit(products, model);
-    setAudit(r);
-    return r;
-  };
-  /** Audyt liczy się ok. sekundy — najpierw pokazujemy stan „liczenie”, potem blokujemy wątek. */
-  const startAudit = () => {
-    setBusy('audit');
-    window.setTimeout(() => {
-      try {
-        runFullAudit();
-      } finally {
-        setBusy(null);
-      }
-    }, 40);
-  };
-  const exportAudit = (kind: 'csv' | 'json') => {
-    const r = audit ?? runFullAudit();
-    const stamp = new Date().toISOString().slice(0, 10);
-    if (kind === 'csv') downloadText(`audyt-asortymentu-${stamp}.csv`, auditToCsv(r), 'text/csv');
-    else downloadText(`audyt-asortymentu-${stamp}.json`, JSON.stringify(r), 'application/json');
-    showToast(`Pobrano audyt: ${r.summary.withIssues.toLocaleString('pl-PL')} produktów z uwagami`, 'info');
-  };
 
   const health = useMemo(() => computeHealth(singles, catSuggestions, mfSuggestions), [singles, catSuggestions, mfSuggestions]);
 
@@ -681,62 +651,6 @@ export function AssortmentStudio({
     }
   }
 
-  // ---- analiza: grupowanie podpowiedzi ------------------------------------------------------
-  const suggestionGroups = useMemo(() => {
-    const m = new Map<string, { category: string; ids: string[]; sum: number }>();
-    for (const [id, s] of catSuggestions) {
-      const g = m.get(s.category) ?? { category: s.category, ids: [], sum: 0 };
-      g.ids.push(id);
-      g.sum += s.confidence;
-      m.set(s.category, g);
-    }
-    return [...m.values()].map((g) => ({ ...g, avg: g.sum / g.ids.length })).sort((a, b) => b.ids.length - a.ids.length);
-  }, [catSuggestions]);
-
-  const mfSuggestionGroups = useMemo(() => {
-    const m = new Map<string, string[]>();
-    for (const [id, s] of mfSuggestions) m.set(s.manufacturer, [...(m.get(s.manufacturer) ?? []), id]);
-    return [...m.entries()].map(([name, ids]) => ({ name, ids })).sort((a, b) => b.ids.length - a.ids.length);
-  }, [mfSuggestions]);
-
-  const overloaded = useMemo(
-    () =>
-      leaves
-        .map((c) => ({ c, n: counts.get(categoryKey(c.name)) ?? 0 }))
-        .filter((x) => x.n > OVERLOADED)
-        .sort((a, b) => b.n - a.n)
-        .map(({ c, n }) => ({
-          name: c.name,
-          path: c.path,
-          count: n,
-          topWords: topWordsOf(singles.filter((p) => categoryKey(displayCat.get(p.id) ?? '') === categoryKey(c.name))),
-        })),
-    [leaves, counts, singles, displayCat],
-  );
-  const tiny = useMemo(
-    () => leaves.map((c) => ({ c, n: counts.get(categoryKey(c.name)) ?? 0 })).filter((x) => x.n <= 2).sort((a, b) => a.n - b.n || a.c.path.localeCompare(b.c.path, 'pl')),
-    [leaves, counts],
-  );
-  const dupCategories = useMemo(() => findNearDuplicates(flat.map((c) => ({ name: c.name, count: counts.get(categoryKey(c.name)) ?? 0 }))), [flat, counts]);
-  const dupManufacturers = useMemo(() => findNearDuplicates(mfRows.filter((r) => r.name !== NO_MANUFACTURER)), [mfRows]);
-
-  function applyAllConfident() {
-    const groups = suggestionGroups
-      .map((g) => ({ ...g, ids: g.ids.filter((id) => (catSuggestions.get(id)?.confidence ?? 0) >= 0.6) }))
-      .filter((g) => g.ids.length);
-    if (!groups.length) return showToast('Brak podpowiedzi o wysokiej pewności', 'info');
-    void (async () => {
-      const ok = await confirmDialog({
-        title: 'Zastosuj pewne podpowiedzi',
-        message: `Przypisać ${groups.reduce((s, g) => s + g.ids.length, 0)} produktów do ${groups.length} kategorii wg podpowiedzi (pewność ≥ 60%)? Każdą partię można cofnąć w Logi → Operacje masowe.`,
-        confirmLabel: 'Zastosuj',
-        tone: 'warn',
-      });
-      if (!ok) return;
-      for (const g of groups) assignCategory(g.ids, g.category);
-    })();
-  }
-
   const modeBtn = (m: Mode, label: string, icon: React.ReactNode) => (
     <button
       key={m}
@@ -757,17 +671,7 @@ export function AssortmentStudio({
 
   const btn =
     'inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800';
-  const btnPrimary = 'inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-500 disabled:opacity-50';
   const card = 'rounded-3xl bg-slate-100/70 p-5 dark:bg-white/[0.045]';
-
-  const kpis: [string, number, string][] = [
-    ['Bez kategorii („Do decyzji”)', health.undecided, health.undecided ? 'text-rose-600 dark:text-rose-400' : ''],
-    ['Do sprawdzenia', health.needsReview, health.needsReview ? 'text-amber-600 dark:text-amber-400' : ''],
-    ['Podpowiedzi kategorii', health.withSuggestion, ''],
-    ['w tym pewne (≥60%)', health.highConfidence, 'text-emerald-600 dark:text-emerald-400'],
-    ['Bez producenta', health.noManufacturer, health.noManufacturer ? 'text-amber-600 dark:text-amber-400' : ''],
-    ['Podpowiedzi producenta', health.manufacturerSuggestions, ''],
-  ];
 
   return (
     <div className="catalog-readable-light w-full space-y-4 pb-10">
@@ -782,243 +686,14 @@ export function AssortmentStudio({
         <div className="flex gap-1 rounded-full bg-slate-100 p-1 dark:bg-white/[0.06]">
           {modeBtn('tree', 'Drzewo', <Network className="h-4 w-4" />)}
           {modeBtn('manufacturers', 'Producenci', <Boxes className="h-4 w-4" />)}
-          {modeBtn('analysis', 'Analiza', <Sparkles className="h-4 w-4" />)}
           {modeBtn('shop', 'Sklep', <Store className="h-4 w-4" />)}
         </div>
       </header>
 
       {mode === 'shop' ? (
-        <ShopMirrorPanel products={products} canEdit={canEditCategories} onPatched={onPatched} />
-      ) : mode === 'analysis' ? (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            {kpis.map(([label, value, tone]) => (
-              <div key={label} className={card}>
-                <p className="text-[13px] text-slate-500">{label}</p>
-                <p className={`mt-1 text-[28px] font-semibold leading-none tabular-nums text-slate-950 dark:text-slate-50 ${tone}`}>{value.toLocaleString('pl-PL')}</p>
-              </div>
-            ))}
-          </div>
-
-          <section className={card}>
-            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h3 className="text-[15px] font-semibold text-slate-950 dark:text-slate-50">Pełny audyt asortymentu</h3>
-                <p className="text-[13px] text-slate-500">
-                  Sprawdza każdy produkt pod kątem producenta, kategorii, nazwy i gotowości do sklepu. Raport można pobrać i przeanalizować w całości.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button type="button" disabled={busy !== null} onClick={startAudit} className={btnPrimary}>
-                  {busy === 'audit' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardCheck className="h-4 w-4" />} {busy === 'audit' ? 'Liczenie…' : 'Uruchom audyt'}
-                </button>
-                <button type="button" onClick={() => exportAudit('csv')} className={btn}>
-                  <Download className="h-4 w-4" /> CSV
-                </button>
-                <button type="button" onClick={() => exportAudit('json')} className={btn}>
-                  <Download className="h-4 w-4" /> JSON
-                </button>
-              </div>
-            </div>
-            {audit && (
-              <div className="space-y-3">
-                <p className="text-[13px] text-slate-600 dark:text-slate-300">
-                  {audit.summary.withIssues.toLocaleString('pl-PL')} z {audit.summary.total.toLocaleString('pl-PL')} produktów ma uwagi; bez uwag: {audit.summary.clean.toLocaleString('pl-PL')}.
-                </p>
-                <ul className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
-                  {audit.summary.byCode.map((c) => (
-                    <li key={c.code} className="flex items-baseline justify-between gap-3 text-[13px]">
-                      <span className="text-slate-700 dark:text-slate-200">{AUDIT_CODE_LABEL[c.code] ?? c.code}</span>
-                      <span className="tabular-nums font-semibold text-slate-950 dark:text-slate-50">{c.count.toLocaleString('pl-PL')}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </section>
-
-          <section className={card}>
-            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h3 className="text-[15px] font-semibold text-slate-950 dark:text-slate-50">Podpowiedzi przypisań do kategorii</h3>
-                <p className="text-[13px] text-slate-500">
-                  Policzone z nazw produktów, którym już przypisano kategorię ({model.trained.toLocaleString('pl-PL')} produktów uczących). Pewność mówi, jak jednoznacznie słowa z nazwy wskazują kategorię.
-                </p>
-              </div>
-              {canEditCategories && (
-                <button type="button" disabled={busy !== null || health.highConfidence === 0} onClick={applyAllConfident} className={btnPrimary}>
-                  <Wand2 className="h-4 w-4" /> Zastosuj pewne ({health.highConfidence})
-                </button>
-              )}
-            </div>
-            <ul className="divide-y divide-slate-200 dark:divide-white/10">
-              {suggestionGroups.slice(0, 40).map((g) => (
-                <li key={g.category} className="flex flex-wrap items-center gap-3 py-2.5">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{g.category}</p>
-                    <p className="truncate text-xs text-slate-500">{pathOf(g.category)}</p>
-                  </div>
-                  <span className="text-sm tabular-nums text-slate-700 dark:text-slate-300">{g.ids.length} prod.</span>
-                  <span className="w-24 text-right text-xs tabular-nums text-slate-500">śr. pewność {Math.round(g.avg * 100)}%</span>
-                  <button
-                    type="button"
-                    className={btn}
-                    onClick={() => {
-                      setMode('tree');
-                      setTrayFilter('suggested');
-                      setSelectedCat(g.category);
-                    }}
-                  >
-                    Przejrzyj
-                  </button>
-                  {canEditCategories && (
-                    <button type="button" disabled={busy !== null} className={btn} onClick={() => assignCategory(g.ids, g.category)}>
-                      Przypisz {g.ids.length}
-                    </button>
-                  )}
-                </li>
-              ))}
-              {suggestionGroups.length === 0 && <li className="py-6 text-center text-sm text-slate-500">Brak podpowiedzi — wszystkie produkty mają pewną kategorię albo brak podobnych nazw.</li>}
-            </ul>
-          </section>
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            <section className={card}>
-              <h3 className="text-[15px] font-semibold text-slate-950 dark:text-slate-50">Przeładowane kategorie (&gt; {OVERLOADED} produktów)</h3>
-              <p className="mb-3 text-[13px] text-slate-500">Kandydaci do podziału na podkategorie. Najczęstsze słowa w nazwach podpowiadają, jak je rozdzielić.</p>
-              <ul className="space-y-3">
-                {overloaded.map((o) => (
-                  <li key={o.name}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMode('tree');
-                        setSelectedCat(o.name);
-                        setTrayFilter('node');
-                      }}
-                      className="block w-full text-left"
-                    >
-                      <div className="flex items-baseline justify-between gap-3 text-sm">
-                        <span className="truncate font-semibold text-slate-900 dark:text-slate-100">{o.name}</span>
-                        <span className="tabular-nums text-slate-700 dark:text-slate-300">{o.count}</span>
-                      </div>
-                      <p className="truncate text-xs text-slate-500">{o.path}</p>
-                      <p className="mt-1 flex flex-wrap gap-1.5">
-                        {o.topWords.map((w) => (
-                          <span key={w.word} className="rounded-full bg-slate-200/80 px-2 py-0.5 text-[11px] text-slate-700 dark:bg-white/10 dark:text-slate-300">
-                            {w.word} · {w.count}
-                          </span>
-                        ))}
-                      </p>
-                    </button>
-                  </li>
-                ))}
-                {overloaded.length === 0 && <li className="text-sm text-slate-500">Żadna kategoria nie jest przeładowana.</li>}
-              </ul>
-            </section>
-
-            <section className={card}>
-              <h3 className="text-[15px] font-semibold text-slate-950 dark:text-slate-50">Puste i bardzo małe kategorie (≤ 2 produkty)</h3>
-              <p className="mb-3 text-[13px] text-slate-500">Kandydaci do scalenia z sąsiednią kategorią albo usunięcia.</p>
-              <ul className="max-h-[26rem] space-y-1.5 overflow-auto pr-1">
-                {tiny.map(({ c, n }) => (
-                  <li key={c.name}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMode('tree');
-                        setSelectedCat(c.name);
-                        setTrayFilter('node');
-                      }}
-                      className="flex w-full items-baseline justify-between gap-3 text-left text-sm hover:text-brand-700"
-                    >
-                      <span className="min-w-0 truncate text-slate-800 dark:text-slate-200">
-                        {c.name} <span className="text-xs text-slate-500">· {c.path.split(' › ').slice(0, -1).join(' › ')}</span>
-                      </span>
-                      <span className={`tabular-nums ${n === 0 ? 'text-amber-600' : 'text-slate-600'}`}>{n}</span>
-                    </button>
-                  </li>
-                ))}
-                {tiny.length === 0 && <li className="text-sm text-slate-500">Brak.</li>}
-              </ul>
-            </section>
-
-            <section className={card}>
-              <h3 className="text-[15px] font-semibold text-slate-950 dark:text-slate-50">Podpowiedzi producenta</h3>
-              <p className="mb-3 text-[13px] text-slate-500">Produkty bez producenta, w których nazwie występuje nazwa znanej marki.</p>
-              <ul className="space-y-2">
-                {mfSuggestionGroups.slice(0, 20).map((g) => (
-                  <li key={g.name} className="flex items-center justify-between gap-3 text-sm">
-                    <span className="min-w-0 truncate font-semibold text-slate-900 dark:text-slate-100">{g.name}</span>
-                    <span className="flex items-center gap-3">
-                      <span className="tabular-nums text-slate-600">{g.ids.length} prod.</span>
-                      {canEditManufacturers && (
-                        <button type="button" disabled={busy !== null} className={btn} onClick={() => assignManufacturer(g.ids, g.name)}>
-                          Przypisz
-                        </button>
-                      )}
-                    </span>
-                  </li>
-                ))}
-                {mfSuggestionGroups.length === 0 && <li className="text-sm text-slate-500">Brak podpowiedzi.</li>}
-              </ul>
-            </section>
-
-            <section className={card}>
-              <h3 className="text-[15px] font-semibold text-slate-950 dark:text-slate-50">Duplikaty nazw</h3>
-              <p className="mb-3 text-[13px] text-slate-500">Nazwy różniące się tylko wielkością liter, spacją lub znakami.</p>
-              <ul className="space-y-2.5">
-                {dupManufacturers.map((g) => (
-                  <li key={'m' + g.key} className="text-sm">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Producent</p>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {g.names.map((n) => (
-                        <span key={n.name} className="rounded-full bg-slate-200/80 px-2.5 py-0.5 text-xs dark:bg-white/10">
-                          {n.name} · {n.count}
-                        </span>
-                      ))}
-                      {canEditManufacturers && (
-                        <button
-                          type="button"
-                          disabled={busy !== null}
-                          className={btn}
-                          onClick={async () => {
-                            const keep = g.names[0].name;
-                            const ids = singles.filter((p) => g.names.slice(1).some((n) => n.name === effectiveManufacturer(p))).map((p) => p.id);
-                            const ok = await confirmDialog({ title: 'Scalenie producentów', message: `Ustawić producenta „${keep}” w ${ids.length} produktach?`, confirmLabel: 'Scal', tone: 'warn' });
-                            if (ok) assignManufacturer(ids, keep);
-                          }}
-                        >
-                          <GitMerge className="h-4 w-4" /> Scal do „{g.names[0].name}”
-                        </button>
-                      )}
-                    </div>
-                  </li>
-                ))}
-                {dupCategories.map((g) => (
-                  <li key={'c' + g.key} className="text-sm">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Kategoria</p>
-                    <div className="flex flex-wrap gap-2">
-                      {g.names.map((n) => (
-                        <button
-                          key={n.name}
-                          type="button"
-                          onClick={() => {
-                            setMode('tree');
-                            setSelectedCat(n.name);
-                          }}
-                          className="rounded-full bg-slate-200/80 px-2.5 py-0.5 text-xs hover:bg-slate-300 dark:bg-white/10"
-                        >
-                          {n.name} · {n.count}
-                        </button>
-                      ))}
-                    </div>
-                  </li>
-                ))}
-                {dupManufacturers.length === 0 && dupCategories.length === 0 && <li className="text-sm text-slate-500">Nie znaleziono duplikatów.</li>}
-              </ul>
-            </section>
-          </div>
+          <ShopMirrorPanel products={products} />
+          <DocsImportPanel products={products} canEdit={canEditCategories} />
         </div>
       ) : (
         <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[22rem_minmax(0,1fr)]">

@@ -17,6 +17,115 @@ export interface AppChangelogEntry {
  */
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
+    date: '2026-11-03',
+    title: 'ATLAS: czytelny układ i dostawcy w katalogu',
+    description:
+      'ATLAS dostał poprawiony wygląd: w jasnym motywie część tła i ramek była za ciemna, a aktywne zakładki i chipy niewidoczne — teraz wszystko ma poprawny kontrast. Poza Przeglądem nagłówek jest kompaktowy (nazwa, wynik, jeden przycisk analizy), a listy mają wspólny pasek narzędzi: wyszukiwanie, główny przełącznik i przycisk Filtry, pod którym schowane są filtry dodatkowe z licznikiem aktywnych. Nazwy to teraz siatka „obecna nazwa → po ujednoliceniu” z objaśnieniem zwiniętym na żądanie i rodziną jako filtrem. Wiedza podzielona na zakładki (atrybuty, pokrycie, branża, sprawdź produkt). Nowa zakładka Producenci i dostawcy: dostawca to osobne pojęcie od producenta (źródło towaru z WAPRO), z podsumowaniem pokrycia, markami każdego dostawcy, profilem (kontakt, NIP, czas dostawy, minimalne zamówienie) i akcją tworzenia dostawców z obecnych producentów. Profile zapisują się w nowej tabeli catalog_suppliers (migracja supabase/migration-catalog-suppliers.sql), a w karcie produktu pole Dostawca podpowiada nazwy z rejestru.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-11-03',
+    title: 'ATLAS: silnik produktowy jako osobne miejsce w Produktach',
+    description:
+      'Silnik produktowy dostał własny widok w menu Produkty i nową nazwę: ATLAS (Asortyment, Taksonomia, Lista nazw, Atrybuty, Standardy opisów). Z Porządkowania zniknęła zakładka silnika wraz ze starymi, dublującymi się analizami (podpowiedzi przypisań starym modelem, przeładowane i drobne kategorie, duble kategorii) — robi to teraz silnik, lepiej i z możliwością zastosowania. Widok ma nowy układ: Przegląd (wynik gotowości katalogu, sześć obszarów ze wskaźnikami i lista rzeczy do zrobienia od najpoważniejszych), Przypisania (audyt przypisanych i uzupełnianie brakujących w jednej kolejce, bez dwóch osobnych uruchomień), Drzewo, Nazwy, Wiedza, Opisy i Producenci. Jedno uruchomienie analizy zasila wszystkie zakładki, a kliknięcie zadania w Przeglądzie otwiera właściwe narzędzie na właściwej kolejce. Audyt jakości danych z CSV/JSON przeniósł się do Przeglądu, podpowiedzi producenta i różne zapisy tej samej marki do zakładki Producenci. Wszystkie zakładki mają wspólny wygląd.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-11-03',
+    title: 'Katalizator: standard nazw dla rodzin produktów',
+    description:
+      'W panelu Katalizatora jest nowa zakładka „Nazwy”. Produkty o wielu wersjach (nyple, lance, dysze, węże, redukcje, złącza, pistolety, zawory, filtry…) dostają jednolity szyk nazwy: rodzaj, cecha, materiał, do czego, model, przyłącza (A × B), wymiary, kolor, a za myślnikiem opis i kod katalogowy. Katalizator ujednolica zapis gwintów (GZ 3/8, GW 1/4, GZ M22; Ż i M przy rozmiarze rozpoznaje jako gwint wewnętrzny i zewnętrzny), materiały i kolory zgodnie z rodzajem gramatycznym (nypel mosiężny, lanca stalowa), jednostki długości i ciśnienia, rozwija skróty (D/, OBROT., CIŚNIEN.), wynosi kody katalogowe na koniec i wykrywa produkty, które po ujednoliceniu mają identyczną nazwę (także z odwróconą kolejnością końców przyłącza). Pozycje są podzielone na „pewne” i „do sprawdzenia”, każdą nazwę można poprawić przed zapisem, a zmiana idzie jako jedna operacja zbiorcza do cofnięcia w Logi → Operacje masowe. Można też pobrać zestawienie przed/po w CSV.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-11-03',
+    title: 'Katalizator ocenia i porządkuje drzewo kategorii',
+    description:
+      'W panelu Katalizatora jest nowa zakładka „Drzewo”. Silnik ocenia sam układ kategorii pod kątem wygody w sklepie internetowym i proponuje poprawki: scalenie kategorii o prawie identycznych nazwach, scalenie drobnicy (1–2 produkty) z najlepiej pasującą sąsiednią, usunięcie pustych kategorii, podział przeładowanych (45+ produktów) na podkategorie według słów powtarzających się w nazwach, zmianę nazw, które mają usterkę zapisu albo nie oddają zawartości, spłaszczenie grup z jedną podkategorią, pogrupowanie zbyt szerokich działów oraz uwagi o szufladach typu „Inne” i niejasnych granicach między kategoriami. Każdą propozycję można poprawić (kategoria docelowa, nazwy nowych podkategorii, zaznaczenie części), pominąć albo zastosować po potwierdzeniu; produkty przenoszone są zbiorczą edycją, więc przypisania da się cofnąć w Logi → Operacje masowe. Po zmianie Katalizator sam przelicza wynik.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-11-02',
+    title: 'Katalizator: odporność na haczyki w opisach i bramka rodzaju produktu',
+    description:
+      'Silnik produktowy dostał nazwę „Katalizator” (zakładka w Asortymencie). Naprawiono błąd, w którym płyny do prania z dopiskiem „…odzieży roboczej i mopów” (Draco WorkBase, Textil Extra) były traktowane jak mopy. Nowe zabezpieczenia: wzmianka o przedmiocie tuż po czynności („do prania mopów”, „do mycia szczotek”) oznacza, że przedmiot jest celem chemii, a nie produktem; bramka rodzaju produktu rozpoznaje chemię (płyn, proszek, żel, koncentrat…) i odrzuca dla niej głosy na kategorie przedmiotów pochodzące z opisu, linii, modelu i podobnych nazw, o ile przedmiot nie jest nazwany wprost w nazwie; błędne ręczne przypisanie przedmiotu do chemii traci wagę i jest oznaczane flagą „chemia, nie przedmiot”; przypisania zatwierdzone przez Ciebie nadal zawsze wygrywają. Silnik rozpoznaje też mopy po nazwie. Poprawiono ręczne przypisania WorkBase Energy.',
+    tag: 'poprawka',
+  },
+  {
+    date: '2026-11-02',
+    title: 'Szybsze ładowanie katalogu i wgrywanie zdjęć',
+    description:
+      'Start katalogu: lista produktów z ostatniej wizyty pojawia się od razu (migawka w przeglądarce), a świeże dane z bazy podmieniają ją zaraz po pobraniu — nic nie jest pomijane. Strony listy produktów pobierają się naraz, bez czekania na licznik z pierwszej, a lista materiałów (filtr „Materiały”) pobiera się dopiero przy pierwszym użyciu filtra. Zdjęcia: wiele plików wgrywa się równolegle z jednym zapisem w bazie (kolejność zostaje taka, jak wybrana), zapis zdjęcia głównego nie pobiera już najpierw całego produktu, a zapis w bazie nie robi dodatkowego pobrania i nie przebudowuje indeksu wyszukiwania, gdy zmieniają się tylko zdjęcia, stany lub ceny. Dopasowanie rozmiaru zdjęć w oknie przygotowania też wysyła pliki po trzy naraz.',
+    tag: 'wydajność',
+  },
+  {
+    date: '2026-11-02',
+    title: 'Silnik uzupełnia atrybuty produktów',
+    description:
+      'W zakładce Silnik → Wiedza jest nowa sekcja „Uzupełnianie atrybutów”. Silnik rozumie atrybuty z panelu po nazwie (pH, gęstość, termin trwałości, pojemność, forma produktu, koncentracja, dozowanie, odbiorca, HACCP, EU Ecolabel, zapach) i wpisuje je z kart produktów, opisów i nazw — np. dla Eco Shine Smart Foam pH 10, gęstość 1,05 g/ml, trwałość 24 miesiące, zapach cytrynowy. Uzupełnia tylko puste pola, wartość dopasowuje do typu atrybutu i jego listy opcji (niczego spoza listy nie wymyśla), a wartości już wpisane porównuje z tym, co wie, i pokazuje niespójności bez ich nadpisywania. Każdą propozycję można wykluczyć przed zapisem, zapis da się cofnąć w Logi → Operacje masowe. Atrybuty, które silnik potrafi uzupełniać, a których nie ma w panelu, można utworzyć jednym kliknięciem. Karty produktów dostarczają teraz też gęstość, termin trwałości i zapach.',
+    tag: 'nowość',
+    size: 'minor',
+  },
+  {
+    date: '2026-11-02',
+    title: 'Silnik: zakładka „Wiedza”, kontrola opisów i podpowiedzi branży',
+    description:
+      'Silnik nie pisze już opisów — opisy powstają poza katalogiem. Zakładka „Opisy” przyjmuje gotowe opisy z pliku CSV i sprawdza je przed zapisem: pusty lub zbyt krótki opis, tekst zastępczy, niedozwolony HTML, inna pojemność niż produkt, wzmianki o cudzych markach, zgodność z kategorią i pH z karty, deklaracje biobójcze bez pokrycia oraz identyczne opisy u różnych produktów. Błędy blokują zapis, ostrzeżenia zostawiają decyzję Tobie; tę samą kontrolę można uruchomić na opisach, które już są w katalogu (raport CSV). Nowa zakładka „Wiedza”: profil produktu pokazuje, co silnik o nim rozumie (pojemność, forma, koncentracja, dozowanie, pH, odbiorca, certyfikaty, przeznaczenie) wraz ze źródłem każdej informacji, luki w wiedzy i sprzeczności między źródłami, a pokrycie wiedzy pokazuje, ile produktów ma poszczególne dane. Silnik uczy się też atrybutu „Branża” z produktów, które już go mają, i podpowiada go pozostałym (z uzasadnieniem i możliwością wykluczenia przed zapisem).',
+    tag: 'nowość',
+    size: 'minor',
+  },
+  {
+    date: '2026-11-02',
+    title: 'Silnik uczy się z Twoich decyzji i czyta karty produktów',
+    description:
+      'Pamięć silnika: każde zatwierdzenie, zmiana kategorii i pominięcie propozycji zapisuje się we wspólnym dzienniku. Zatwierdzona kategoria działa jak przypisanie ręczne (audyt nie podważy jej ponownie), a odrzucona propozycja nie wraca dla tego produktu. Panel pokazuje liczbę decyzji i trafność propozycji. Nowa warstwa „karta”: z kart technicznych, ulotek i kart charakterystyki wyciągnięto przeznaczenie, sposób użycia i pH dla 262 produktów (plik public/data/material-facts.json, budowany skryptem scripts/build-material-facts.ts). Silnik używa przeznaczenia z karty jako dowodu przy wyborze kategorii.',
+    tag: 'nowość',
+    size: 'minor',
+  },
+  {
+    date: '2026-11-02',
+    title: 'Silnik produktowy: nowy panel w Asortymencie',
+    description:
+      'Zakładka „Analiza” zmieniła się w „Silnik” — centrum przypisywania i kontroli produktów, wyjęte z zakładki „Sklep”. Silnik ma animację pracy i dwa tryby: „Sprawdź przypisane” wskazuje źle przypisane produkty z propozycją poprawki, a „Przypisz bez kategorii” dopasowuje te, które jeszcze jej nie mają. Wyniki trafiają do kolejek: pewne, do sprawdzenia, bez sygnału i do ukrycia. Każdą pozycję można rozwinąć („dlaczego”: głosy warstw silnika), zatwierdzić, zmienić na inną kategorię albo pominąć. Panel pokazuje komunikaty z podpowiedziami, co zrobić dalej, i kondycję drzewa kategorii. Zakładka „Opisy” znajduje produkty bez pełnego opisu, składa szkice z danych produktu (opis tego samego produktu w innym opakowaniu, krótki opis, użycie i skład) i przyjmuje gotowe opisy z pliku CSV, a „Asortyment” zawiera dotychczasową analizę (audyt jakości danych, duplikaty, przeładowane kategorie).',
+    tag: 'nowość',
+    size: 'minor',
+  },
+  {
+    date: '2026-11-02',
+    title: 'Import materiałów: kolejne marki i typy dokumentów',
+    description:
+      'Import masowy materiałów obsługuje teraz foldery z kartami wielu marek (Draco, Eco Shine, K2, Cartec, Kala, Freshtek, Tenzi, Cid Lines/Kenotek) i różne typy dokumentów: karty charakterystyki, karty produktu, TDS, ulotki, certyfikaty, arkusze składników. Pliki z SKU w nazwie (np. K2000048_…) trafiają dokładnie do tego produktu, pozostałe są dopasowywane po nazwie handlowej, także gdy w pliku jest tylko początek nazwy produktu, a pojemność i kod dokumentu są pomijane. Nazwa wgranego pliku dostaje prefiks typu dokumentu (KCH, Karta produktu, TDS…), więc dwa dokumenty o tej samej nazwie nie nadpisują się. Zdjęcia, archiwa ZIP, pakiety zbiorcze i pliki manifestów są pomijane.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-11-02',
+    title: 'Filtr produktów z materiałami i lepsze dopasowanie kart',
+    description:
+      'W filtrach katalogu jest nowy filtr „Materiały”: z materiałami (karty charakterystyki, specyfikacje) lub bez nich — także na telefonie i jako znacznik aktywnego filtra. Lista aktualizuje się od razu po dodaniu lub usunięciu pliku. Dopasowanie kart przy imporcie masowym rozpoznaje teraz nazwy z opisem po pojemności (np. „Active Foam Cherry 20L - kwaśna piana”), skróty z numerem (AD50 = AD 50), znak plus i literówki w marce, więc dopasowuje więcej plików.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-11-02',
+    title: 'Import masowy materiałów produktów',
+    description:
+      'W Asortyment → Sklep jest nowa karta „Materiały produktów: import masowy”. Wybierasz folder z kartami charakterystyki (podfoldery to marki), aplikacja dopasowuje pliki do produktów po nazwie handlowej zapisanej w nazwie pliku i pokazuje, ile plików i przypisań znalazła. Przycisk „Wgraj dopasowane” dodaje je do zakładki „Materiały” każdego pasującego produktu (wszystkie opakowania tego samego produktu dostają ten sam plik). Dopasowanie jest ostrożne: numer modelu, wariant (S, Plus, Ultra) i marka muszą się zgadzać, a niejednoznaczne pliki trafiają do raportu CSV zamiast do przypadkowego produktu. Powtórny import pomija pliki, które produkt już ma.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-11-02',
+    title: 'Materiały produktu: karty charakterystyki i ulotki',
+    description:
+      'W podglądzie produktu jest nowa zakładka „Materiały”. Można w niej dodać pliki (PDF, dokumenty, arkusze, obrazy) przyciskiem albo przeciągnięciem — karty charakterystyki, specyfikacje i ulotki producentów. Pliki otwierają się w nowej karcie, a osoby z uprawnieniem do zdjęć mogą je usuwać. Pliki zapisują się w tym samym magazynie co zdjęcia, w osobnym katalogu produktu.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-11-02',
+    title: 'Silnik kategorii: model statystyczny i warstwa faktów z sieci',
+    description:
+      'Dodano niezależną płaszczyznę oceny: klasyfikator statystyczny uczony na nazwach, parach słów i opisach wszystkich produktów z kategorią (trafność ok. 90% przy wysokiej pewności, sprawdzona metodą „bez tego produktu”). Głosuje tylko przy dużej pewności i nigdy nie decyduje sam — potrzebny jest dowód z nazwy lub opisu. Dodano też warstwę „sieć”: fakty o produkcie znalezione w internecie (plik src/data/webFacts.ts, źródło obowiązkowe) liczą się jako dowód i będą podstawą szkiców opisów.',
+    tag: 'nowość',
+  },
+  {
     date: '2026-10-30',
     title: 'Silnik kategorii: deklaracja ekologiczna i walidacja wymagań kategorii',
     description:

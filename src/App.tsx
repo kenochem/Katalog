@@ -39,6 +39,7 @@ import {
   type KnowledgeFilter,
   type BaselinkerFilter,
   type WaproMagFilter,
+  type DocsFilter,
   type CatalogVisibilityFilter,
 } from './lib/search';
 import { useTheme } from './lib/theme';
@@ -66,6 +67,8 @@ import { LabelStudioView } from './components/LabelStudioView';
 import { PromotionsView } from './components/PromotionsView';
 import { useReservedVersion } from './lib/reservedStock';
 import { useLivePromosVersion } from './lib/promotions';
+import { useDocsIndexVersion } from './lib/productDocsIndex';
+import { loadSnapshot, saveSnapshot } from './lib/productsSnapshot';
 import { useTaskNotifications } from './lib/catalogTasks';
 import { ProductGrid } from './components/ProductGrid';
 import { InstallAppHint, resetInstallHint } from './components/InstallAppHint';
@@ -89,6 +92,7 @@ import { withAuditBatch } from './lib/auditLog';
 function batchIfMany<T>(n: number, label: string, fn: () => Promise<T>): Promise<T> {
   return n > 1 ? withAuditBatch(label, fn) : fn();
 }
+import { ENGINE_NAME } from './lib/engineBrand';
 import { roleCan, ROLE_LABELS } from './lib/roles';
 import { branding, moduleEnabled, APP_PRODUCT } from './app/moduleRegistry';
 import { canUseCrmModule, canViewOpsModule, canUseCommsModule } from './app/productAccess';
@@ -203,6 +207,9 @@ const NameStandardView = lazy(() =>
 );
 const RulesView = lazy(() =>
   import('./components/RulesView').then((m) => ({ default: m.RulesView })),
+);
+const EngineStudio = lazy(() =>
+  import('./components/engine/EngineStudio').then((m) => ({ default: m.EngineStudio })),
 );
 const AssortmentStudio = lazy(() =>
   import('./components/AssortmentStudio').then((m) => ({ default: m.AssortmentStudio })),
@@ -345,6 +352,7 @@ export default function App() {
   const [knowledgeFilter, setKnowledgeFilter] = useState<KnowledgeFilter>('all');
   const [baselinkerFilter, setBaselinkerFilter] = useState<BaselinkerFilter>('all');
   const [waproMagFilter, setWaproMagFilter] = useState<WaproMagFilter>('all');
+  const [docsFilter, setDocsFilter] = useState<DocsFilter>('all');
   const [visibilityFilter, setVisibilityFilter] = useState<CatalogVisibilityFilter>('active');
   const [editMode, setEditMode] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<string[]>(() => getLocalFavoriteIds());
@@ -577,6 +585,7 @@ export default function App() {
     // moduł Kategorie został połączony z Porządkowaniem (jedno drzewo kategorii)
     if (view === 'categories') setView(roleCan(role, 'viewProgress') ? 'assortment' : fallback);
     if (!roleCan(role, 'viewProgress') && view === 'assortment') setView(fallback);
+    if (!roleCan(role, 'viewProgress') && view === 'engine') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'rules') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'names') setView(fallback);
     if (!roleCan(role, 'viewProgress') && view === 'variant-groups') setView(fallback);
@@ -829,6 +838,7 @@ export default function App() {
         ? await fetchProducts(catalog, { force: true, source: 'supabase' })
         : await fetchProducts(catalog, { source: 'json' });
       setCatalogCache((prev) => ({ ...prev, [catalog]: data }));
+      if (useSupabase) saveSnapshot(catalog, data);
     } catch (err) {
       console.warn('loadCatalog', catalog, err);
     }
@@ -936,16 +946,26 @@ export default function App() {
       try {
         if (filter === 'all' && shouldUseSupabaseCatalog) {
           setShopLoading(true);
+          let fresh = false;
+          // pierwszy obraz od razu z migawki z ostatniej wizyty; świeże dane z bazy podmieniają ją zaraz po pobraniu
+          void Promise.all([loadSnapshot('accessories'), loadSnapshot('shop')]).then(([a, s]) => {
+            if (cancelled || fresh || !a?.length || !s?.length) return;
+            setCatalogCache({ accessories: a, shop: s });
+            setLoading(false);
+          });
           const [accData, shopData] = await Promise.all([
             fetchProducts('accessories', { force: true, source: 'supabase' }),
             fetchProducts('shop', { force: true, source: 'supabase' }),
           ]);
+          fresh = true;
           if (cancelled) return;
           setCatalogCache((prev) => ({
             ...prev,
             accessories: accData,
             shop: shopData,
           }));
+          saveSnapshot('accessories', accData);
+          saveSnapshot('shop', shopData);
           setLoading(false);
           setShopLoading(false);
           return;
@@ -1223,6 +1243,8 @@ export default function App() {
   // filtry/sortowanie po stanie liczą stan dostępny (stan − rezerwacje) — przelicz po odświeżeniu rezerwacji
   const reservedVersion = useReservedVersion();
   const promosVersion = useLivePromosVersion();
+  // lista materiałów jest potrzebna tylko do filtra „Materiały” — nie pobieramy jej przy starcie
+  const docsVersion = useDocsIndexVersion(docsFilter !== 'all');
 
   const filtered = useMemo(() => {
     const catalogForFavorites = view === 'favorites' ? allProducts : products;
@@ -1240,10 +1262,11 @@ export default function App() {
       knowledgeFilter,
       baselinkerFilter,
       waproMagFilter,
+      docsFilter,
       visibilityFilter,
       collapseGroupMembers: true,
     });
-  }, [products, allProducts, debouncedSearch, category, manufacturer, sort, stockFilter, imageFilter, knowledgeFilter, baselinkerFilter, waproMagFilter, visibilityFilter, view, favoriteSet, reservedVersion, promosVersion]);
+  }, [products, allProducts, debouncedSearch, category, manufacturer, sort, stockFilter, imageFilter, knowledgeFilter, baselinkerFilter, waproMagFilter, docsFilter, docsVersion, visibilityFilter, view, favoriteSet, reservedVersion, promosVersion]);
 
   const favoriteCount = useMemo(
     () => allProducts.reduce((n, p) => n + (favoriteSet.has(p.id) ? 1 : 0), 0),
@@ -1770,7 +1793,7 @@ export default function App() {
     return <LoginGate />;
   }
 
-  const canSplit = !embeddedInHub && isCatalogProduct() && !opsStandalone && !sellStandalone && ['catalog', 'favorites', 'home', 'variant-groups', 'groups', 'attributes', 'names', 'rules', 'categories', 'assortment', 'manufacturers', 'catalog-decisions', 'catalog-hidden', 'small-images', 'new-products', 'history', 'library', 'promotions', 'kits', 'logs', 'updates', 'progress'].includes(view);
+  const canSplit = !embeddedInHub && isCatalogProduct() && !opsStandalone && !sellStandalone && ['catalog', 'favorites', 'home', 'variant-groups', 'groups', 'attributes', 'names', 'rules', 'categories', 'assortment', 'engine', 'manufacturers', 'catalog-decisions', 'catalog-hidden', 'small-images', 'new-products', 'history', 'library', 'promotions', 'kits', 'logs', 'updates', 'progress'].includes(view);
   const splitChoices: { id: View; label: string }[] = [
     { id: 'variant-groups', label: 'Łączenie w grupy' },
     { id: 'groups', label: 'Grupy produktów' },
@@ -1779,6 +1802,7 @@ export default function App() {
           { id: 'catalog-decisions', label: 'Uzupełnianie danych' },
           { id: 'attributes', label: 'Atrybuty' },
           { id: 'names', label: 'Standard nazw' },
+          { id: 'engine', label: ENGINE_NAME },
           { id: 'assortment', label: 'Porządkowanie' },
           { id: 'manufacturers', label: 'Producenci' },
           { id: 'small-images', label: 'Zdjęcia do poprawy' },
@@ -1926,6 +1950,8 @@ export default function App() {
             onBaselinkerFilterChange={setBaselinkerFilter}
             waproMagFilter={waproMagFilter}
             onWaproMagFilterChange={setWaproMagFilter}
+            docsFilter={docsFilter}
+            onDocsFilterChange={setDocsFilter}
             visibilityFilter={visibilityFilter}
             onVisibilityFilterChange={setVisibilityFilter}
             filtered={filtered}
@@ -2033,6 +2059,17 @@ export default function App() {
                 for (const { id, patch } of res.patches) patchProductInCache(id, patch);
                 for (const id of res.hiddenIds) patchProductInCache(id, (p) => ({ ...p, meta: { ...(p.meta ?? {}), catalogHidden: true } }));
                 for (const id of res.exceptionIds) patchProductInCache(id, (p) => ({ ...p, meta: { ...(p.meta ?? {}), dataExceptions: [...new Set([...(p.meta?.dataExceptions ?? []), ...(rule.action.type === 'exception' ? rule.action.kinds : [])])] } }));
+              }}
+            />
+          </Suspense>
+        ) : view === 'engine' && isCatalogProduct() ? (
+          <Suspense fallback={<ViewFallback />}>
+            <EngineStudio
+              products={activeAllProducts}
+              canEdit={roleCan(role, 'manageCategories')}
+              canEditManufacturers={roleCan(role, 'manageManufacturers')}
+              onPatched={(patches) => {
+                for (const { id, patch } of patches) patchProductInCache(id, patch);
               }}
             />
           </Suspense>
@@ -3037,6 +3074,8 @@ function CatalogView({
   onBaselinkerFilterChange,
   waproMagFilter = 'all',
   onWaproMagFilterChange,
+  docsFilter = 'all',
+  onDocsFilterChange,
   visibilityFilter = 'active',
   onVisibilityFilterChange,
   filtered,
@@ -3093,6 +3132,8 @@ function CatalogView({
   onBaselinkerFilterChange?: (v: BaselinkerFilter) => void;
   waproMagFilter?: WaproMagFilter;
   onWaproMagFilterChange?: (v: WaproMagFilter) => void;
+  docsFilter?: DocsFilter;
+  onDocsFilterChange?: (v: DocsFilter) => void;
   visibilityFilter?: CatalogVisibilityFilter;
   onVisibilityFilterChange?: (v: CatalogVisibilityFilter) => void;
   filtered: Product[];
@@ -3142,6 +3183,7 @@ function CatalogView({
     (knowledgeFilter !== 'all' ? 1 : 0) +
     (baselinkerFilter !== 'all' ? 1 : 0) +
     (waproMagFilter !== 'all' ? 1 : 0) +
+    (docsFilter !== 'all' ? 1 : 0) +
     (visibilityFilter !== 'active' ? 1 : 0);
 
   function resetFilters() {
@@ -3152,6 +3194,7 @@ function CatalogView({
     onKnowledgeFilterChange?.('all');
     onBaselinkerFilterChange?.('all');
     onWaproMagFilterChange?.('all');
+    onDocsFilterChange?.('all');
     onVisibilityFilterChange?.('active');
   }
 
@@ -3188,6 +3231,8 @@ function CatalogView({
         onBaselinkerFilterChange={onBaselinkerFilterChange}
         waproMagFilter={waproMagFilter}
         onWaproMagFilterChange={onWaproMagFilterChange}
+        docsFilter={docsFilter}
+        onDocsFilterChange={onDocsFilterChange}
         visibilityFilter={visibilityFilter}
         onVisibilityFilterChange={onVisibilityFilterChange}
         shopCategoryGroups={shopCategoryGroups}

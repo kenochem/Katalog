@@ -19,6 +19,7 @@ import {
   type KnowledgeFilter,
   type BaselinkerFilter,
   type WaproMagFilter,
+  type DocsFilter,
   type CatalogVisibilityFilter,
 } from '../lib/search';
 import { CATALOG_LABELS, type CatalogListFilter } from '../types';
@@ -33,6 +34,7 @@ type MenuId =
   | 'knowledge'
   | 'baselinker'
   | 'waproMag'
+  | 'docs'
   | 'visibility'
   | null;
 
@@ -68,6 +70,12 @@ const WAPRO_MAG_OPTS = [
   { id: 'needs-media' as const, label: 'Mag WAPRO — bez zdjęcia' },
 ];
 
+const DOCS_OPTS = [
+  { id: 'all' as const, label: 'Wszystkie' },
+  { id: 'with' as const, label: 'Z materiałami' },
+  { id: 'without' as const, label: 'Bez materiałów' },
+];
+
 const VISIBILITY_OPTS = [
   { id: 'active' as const, label: 'Aktywne' },
   { id: 'hidden' as const, label: 'Ukryte' },
@@ -97,6 +105,8 @@ interface CatalogFilterBarProps {
   onBaselinkerFilterChange?: (v: BaselinkerFilter) => void;
   waproMagFilter?: WaproMagFilter;
   onWaproMagFilterChange?: (v: WaproMagFilter) => void;
+  docsFilter?: DocsFilter;
+  onDocsFilterChange?: (v: DocsFilter) => void;
   visibilityFilter?: CatalogVisibilityFilter;
   onVisibilityFilterChange?: (v: CatalogVisibilityFilter) => void;
   /** Grupowane liście kategorii sklepu (jak na kenochem.pl). */
@@ -293,6 +303,8 @@ export function CatalogFilterBar({
   onBaselinkerFilterChange,
   waproMagFilter = 'all',
   onWaproMagFilterChange,
+  docsFilter = 'all',
+  onDocsFilterChange,
   visibilityFilter = 'active',
   onVisibilityFilterChange,
   shopCategoryGroups,
@@ -333,6 +345,7 @@ export function CatalogFilterBar({
     BASELINKER_OPTS.find((o) => o.id === baselinkerFilter)?.label ?? 'Wszystkie';
   const waproMagLabel =
     WAPRO_MAG_OPTS.find((o) => o.id === waproMagFilter)?.label ?? 'Wszystkie';
+  const docsLabel = DOCS_OPTS.find((o) => o.id === docsFilter)?.label ?? 'Wszystkie';
   const visibilityLabel =
     VISIBILITY_OPTS.find((o) => o.id === visibilityFilter)?.label ?? 'Aktywne';
   const categoryLabel = category === 'Wszystkie' ? 'Wszystkie kategorie' : category;
@@ -528,6 +541,9 @@ export function CatalogFilterBar({
       )}
       {waproMagFilter !== 'all' && onWaproMagFilterChange && (
         <ActiveChip label={waproMagLabel} onRemove={() => onWaproMagFilterChange('all')} />
+      )}
+      {docsFilter !== 'all' && onDocsFilterChange && (
+        <ActiveChip label={docsLabel} onRemove={() => onDocsFilterChange('all')} />
       )}
       {visibilityFilter !== 'active' && onVisibilityFilterChange && (
         <ActiveChip
@@ -771,6 +787,23 @@ export function CatalogFilterBar({
             </div>
           )}
 
+          {onDocsFilterChange && (
+            <div className="relative">
+              <FilterTrigger
+                label="Materiały"
+                value={docsLabel}
+                active={docsFilter !== 'all'}
+                open={openMenu === 'docs'}
+                onClick={() => setOpenMenu((m) => (m === 'docs' ? null : 'docs'))}
+              />
+              {openMenu === 'docs' && (
+                <div className="catalog-filter-dropdown absolute left-0 top-full z-30 mt-1 min-w-[12rem] overflow-hidden rounded-xl border border-slate-700 bg-slate-900 shadow-xl">
+                  {optionList(DOCS_OPTS, docsFilter, onDocsFilterChange)}
+                </div>
+              )}
+            </div>
+          )}
+
           {onVisibilityFilterChange && (
             <div className="relative">
               <FilterTrigger
@@ -974,6 +1007,24 @@ export function CatalogFilterBar({
                           waproMagFilter === opt.id
                             ? 'bg-brand-500 text-white'
                             : 'bg-slate-800 text-slate-400'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </MobileFilterSection>
+              )}
+              {onDocsFilterChange && (
+                <MobileFilterSection title="Materiały (karty, specyfikacje)">
+                  <div className="flex flex-wrap gap-1.5">
+                    {DOCS_OPTS.map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => onDocsFilterChange(opt.id)}
+                        className={`rounded-lg px-2.5 py-1.5 text-xs font-medium ${
+                          docsFilter === opt.id ? 'bg-brand-500 text-white' : 'bg-slate-800 text-slate-400'
                         }`}
                       >
                         {opt.label}

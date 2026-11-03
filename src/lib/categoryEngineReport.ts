@@ -1,6 +1,6 @@
 import type { Product } from '../types';
 import { getProductDisplayCategory } from './catalogCategory';
-import { buildEngine, type Decision, type EngineProduct } from './categoryEngine';
+import { buildEngine, type Decision, type EngineOptions, type EngineProduct } from './categoryEngine';
 import { categoryKey, flattenCategories } from './categoryRegistry';
 import { bestShopCategory, type ShopSkuFile } from './shopMirror';
 import { supabase } from './supabase';
@@ -41,10 +41,12 @@ const plain = (html: string) =>
     .trim();
 
 /** Uruchamia silnik kategorii na wszystkich produktach (bez grup) i zwraca decyzję dla każdego. */
-export function runCategoryEngine(products: Product[], descriptions: Map<string, string>, shop?: ShopSkuFile | null): EngineRow[] {
+export function runCategoryEngine(products: Product[], descriptions: Map<string, string>, shop?: ShopSkuFile | null, extra: Pick<EngineOptions, 'learned' | 'rejected' | 'facts'> = {}): EngineRow[] {
   const flat = flattenCategories();
   const leaves = flat.filter((c) => c.isLeaf);
   const leafSet = new Set(leaves.map((c) => c.name));
+  // kategorie przedmiotów = dział „Sprzęt i akcesoria czyszczące”
+  const itemLeaves = new Set(leaves.filter((c) => /^sprz[eę]t i akcesoria/i.test(c.path)).map((c) => c.name));
   const byKey = new Map(leaves.map((c) => [categoryKey(c.name), c]));
   const singles = products.filter((p) => !p.isGroup && (p.sku ?? '').trim());
 
@@ -71,7 +73,7 @@ export function runCategoryEngine(products: Product[], descriptions: Map<string,
   };
 
   const prepared = singles.map(prepare);
-  const engine = buildEngine(prepared, { leaves: leafSet });
+  const engine = buildEngine(prepared, { leaves: leafSet, ...(itemLeaves.size ? { itemLeaves } : {}), ...extra });
   return singles.map((p, i) => {
     const decision = engine.decide(prepared[i]);
     return {

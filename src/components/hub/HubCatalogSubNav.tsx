@@ -1,6 +1,7 @@
-import { AlertTriangle, BarChart3, BookOpen, Building2, FolderTree, Wand2, Type, ListChecks,
+import { Cpu, AlertTriangle, BarChart3, BookOpen, Building2, FolderTree, Wand2, Type, ListChecks,
  EyeOff, Home, Layers, Maximize2, Printer, Search, Star } from 'lucide-react';
 import type { View } from '../../types';
+import { ENGINE_NAME } from '../../lib/engineBrand';
 
 export function HubCatalogSubNav({
   view,
@@ -42,6 +43,7 @@ export function HubCatalogSubNav({
     tabs.push({ id: 'catalog-decisions', label: 'Uzupełnianie danych', icon: AlertTriangle, count: counts.decisions });
     tabs.push({ id: 'attributes', label: 'Atrybuty', icon: ListChecks });
     tabs.push({ id: 'rules', label: 'Reguły', icon: Wand2 });
+    tabs.push({ id: 'engine', label: ENGINE_NAME, icon: Cpu });
     tabs.push({ id: 'names', label: 'Standard nazw', icon: Type });
     tabs.push({ id: 'categories', label: 'Kategorie', icon: FolderTree });
     tabs.push({ id: 'manufacturers', label: 'Producenci', icon: Building2 });

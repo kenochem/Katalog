@@ -36,14 +36,18 @@ function fetchCacheKey(catalog?: CatalogType): string {
   return catalog || 'all';
 }
 
-export function invalidateProductsCache(catalog?: CatalogType): void {
+/** Pola produktu, od których zależy wyszukiwanie — zmiana samych zdjęć, stanów czy cen nie wymaga przebudowy indeksu. */
+const SEARCHABLE_FIELDS: (keyof Product)[] = ['sku', 'name', 'displayName', 'ean', 'manufacturer', 'category', 'variants', 'catalog', 'tags'];
+export const touchesSearchIndex = (updates: Partial<Product>): boolean => SEARCHABLE_FIELDS.some((k) => k in updates);
+
+export function invalidateProductsCache(catalog?: CatalogType, opts: { searchIndex?: boolean } = {}): void {
   if (catalog) {
     fetchMem.delete(`${catalog}:json`);
     fetchMem.delete(`${catalog}:supabase`);
   } else {
     fetchMem.clear();
   }
-  void import('./productSearchIndex').then((m) => m.invalidateProductSearchIndex());
+  if (opts.searchIndex !== false) void import('./productSearchIndex').then((m) => m.invalidateProductSearchIndex());
 }
 
 /** SKU z katalogu Akcesoria (WAPRO) — nie dublujemy ich w Produktach. */
@@ -298,9 +302,38 @@ async function fetchProductsUncached(
     return q;
   };
 
+  // Znamy liczbę produktów z poprzedniego wczytania, więc wszystkie strony (plus jedna zapasowa) pobieramy naraz,
+  // bez czekania na licznik z pierwszej strony — o jedną rundę zapytań mniej przy każdym starcie.
+  const countKey = `katalog.productCount.${catalog ?? 'all'}`;
+  const knownTotal = (() => {
+    try {
+      return Number(localStorage.getItem(countKey)) || 0;
+    } catch {
+      return 0;
+    }
+  })();
+  if (knownTotal > 0) {
+    const n = Math.ceil(knownTotal / pageSize) + 1;
+    const pages = await Promise.all(Array.from({ length: n }, (_, i) => pageQueryFor(false).range(i * pageSize, (i + 1) * pageSize - 1)));
+    for (const page of pages) {
+      if (page.error || !page.data?.length) break;
+      all.push(...(page.data as ProductRow[]));
+      if (page.data.length < pageSize) break;
+    }
+    // katalog urósł ponad zapas — resztę dociągamy po kolei
+    if (all.length >= n * pageSize) {
+      for (let from = n * pageSize; ; from += pageSize) {
+        const page = await pageQueryFor(false).range(from, from + pageSize - 1);
+        if (page.error || !page.data?.length) break;
+        all.push(...(page.data as ProductRow[]));
+        if (page.data.length < pageSize) break;
+      }
+    }
+  }
+
   // pierwsza strona z licznikiem, reszta stron pobierana RÓWNOLEGLE (wcześniej: po kolei, jedna po drugiej)
-  const first = await pageQueryFor(true).range(0, pageSize - 1);
-  if (!first.error && first.data?.length) {
+  const first = all.length ? null : await pageQueryFor(true).range(0, pageSize - 1);
+  if (first && !first.error && first.data?.length) {
     all.push(...(first.data as ProductRow[]));
     if (first.count == null && first.data.length === pageSize) {
       // brak licznika (nietypowa odpowiedź) — bezpieczny tryb po kolei
@@ -321,6 +354,14 @@ async function fetchProductsUncached(
         if (page.error || !page.data?.length) break;
         all.push(...(page.data as ProductRow[]));
       }
+    }
+  }
+
+  if (all.length) {
+    try {
+      localStorage.setItem(countKey, String(all.length));
+    } catch {
+      /* brak dostępu do pamięci przeglądarki — następny start użyje licznika */
     }
   }
 
@@ -459,7 +500,7 @@ export async function updateProduct(
       .from('products')
       .update(row)
       .eq('id', productId)
-      .select('id');
+      .select('id,catalog');
     if (error) throw error;
 
     if (!data?.length) {
@@ -478,9 +519,8 @@ export async function updateProduct(
       if (upsertErr) throw upsertErr;
       invalidateProductsCache(merged.catalog);
     } else {
-      invalidateProductsCache(
-        updates.catalog ?? (await fetchProductById(productId))?.catalog,
-      );
+      // katalog znamy z odpowiedzi na zapis — bez dodatkowego pobierania całego produktu
+      invalidateProductsCache(updates.catalog ?? (data[0] as { catalog?: CatalogType }).catalog, { searchIndex: touchesSearchIndex(updates) });
     }
     recordProductUpdate(productId, updates, auditBefore);
     return;
@@ -599,13 +639,55 @@ export async function updateProductImage(
   opts: { skipCompress?: boolean } = {},
 ): Promise<string> {
   const url = await uploadProductImageFile(productId, file, '', opts);
-  const existing = await getExistingProduct(productId);
-  await updateProduct(productId, {
-    customImageUrl: url,
-    hasImage: true,
-    extraImageUrls: existing?.extraImageUrls,
-  });
+  // zmieniamy tylko zdjęcie główne — galeria zostaje, więc nie trzeba jej wcześniej pobierać i zapisywać z powrotem
+  await updateProduct(productId, { customImageUrl: url, hasImage: true });
   return url;
+}
+
+/**
+ * Wgrywa kilka zdjęć naraz: pliki idą do magazynu równolegle (kolejność zachowana), a zapis w bazie jest jeden.
+ * Bez zdjęcia głównego pierwsze zostaje głównym, reszta trafia do galerii.
+ */
+export async function addProductImages(
+  productId: string,
+  files: File[],
+  opts: { onProgress?: (done: number, total: number) => void; concurrency?: number } = {},
+): Promise<{ primary: string | null; added: string[]; failed: number }> {
+  const stamp = Date.now();
+  const existingPromise = getExistingProduct(productId);
+  const urls: (string | null)[] = new Array(files.length).fill(null);
+  let next = 0;
+  let done = 0;
+  let failed = 0;
+  async function worker() {
+    for (;;) {
+      const i = next++;
+      if (i >= files.length) return;
+      try {
+        urls[i] = await uploadProductImageFile(productId, files[i], `extra-${stamp}-${i}`);
+      } catch (err) {
+        console.error(err);
+        failed++;
+      }
+      opts.onProgress?.(++done, files.length);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(opts.concurrency ?? 3, files.length) }, worker));
+  const ok = urls.filter((u): u is string => !!u);
+  if (!ok.length) return { primary: null, added: [], failed };
+  const existing = await existingPromise;
+  const hasPrimary = !!(existing?.customImageUrl || existing?.imageUrl);
+  const updates: Partial<Product> = { hasImage: true };
+  let primary: string | null = null;
+  let rest = ok;
+  if (!hasPrimary) {
+    primary = ok[0];
+    rest = ok.slice(1);
+    updates.customImageUrl = primary;
+  }
+  if (rest.length) updates.extraImageUrls = [...(existing?.extraImageUrls || []), ...rest];
+  await updateProduct(productId, updates);
+  return { primary, added: rest, failed };
 }
 
 export async function uploadProductImageRevertBackup(
@@ -624,7 +706,7 @@ export async function addProductExtraImage(
   const extras = [...(existing?.extraImageUrls || []), url];
   const shouldUseAsPrimary = !existing?.customImageUrl && !existing?.imageUrl;
   await updateProduct(productId, {
-    imageUrl: shouldUseAsPrimary ? url : existing?.imageUrl,
+    ...(shouldUseAsPrimary ? { imageUrl: url } : {}),
     extraImageUrls: extras,
     hasImage: true,
   });
@@ -657,10 +739,15 @@ export async function setProductPrimaryImage(
 export async function replaceProductImages(productId: string, order: string[], files: Map<string, File>): Promise<string[]> {
   const stamp = Date.now();
   const replaced = new Map<string, string>();
-  let n = 0;
-  for (const [oldUrl, file] of files) {
-    replaced.set(oldUrl, await uploadProductImageFile(productId, file, `prep-${stamp}-${n++}`));
-  }
+  // pliki wgrywamy po trzy naraz — kolejność wynikowa wynika z `order`, więc nie zależy od tempa pojedynczych wysyłek
+  const queue = [...files].map(([oldUrl, file], n) => ({ oldUrl, file, n }));
+  await Promise.all(
+    Array.from({ length: Math.min(3, queue.length) }, async () => {
+      for (let job = queue.shift(); job; job = queue.shift()) {
+        replaced.set(job.oldUrl, await uploadProductImageFile(productId, job.file, `prep-${stamp}-${job.n}`));
+      }
+    }),
+  );
   const next = order.map((u) => replaced.get(u) ?? u);
   await updateProduct(productId, {
     customImageUrl: next[0],

@@ -2354,6 +2354,69 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
     if ($namesFixed -gt 0) { Write-Log ('Uzupelniono uciete nazwy z WAPRO (NAZWA_CALA): {0}' -f $namesFixed) }
   }
 
+  # Zmiany nazw w WAPRO - dzialaja tylko OD TERAZ (bez cofania w czasie).
+  # Pierwszy przebieg tylko zapamietuje nazwe z WAPRO (product_meta.waproName) jako punkt odniesienia i niczego nie zmienia.
+  # Pozniej, gdy nazwa w WAPRO sie zmieni, katalog ja przejmuje wylacznie gdy produkt:
+  #  - nie pochodzi z BaseLinkera (brak product_meta.baselinkerProductId),
+  #  - w chwili zapamietania mial nazwe identyczna z WAPRO (waproNameSynced),
+  #  - nie mial nazwy zmienianej recznie ani standardem nazw (name i display_name wciaz rowne zapamietanej nazwie).
+  $namesFollowed = 0
+  $namesBaselined = 0
+  $namesNotFollowed = 0
+  $nameBaselineCap = 1500
+  $followedList = [System.Collections.Generic.List[string]]::new()
+  if ($catalogInfo -and $catalogInfo.Count -gt 0) {
+    $nameStamp = (Get-Date).ToUniversalTime().ToString('o')
+    foreach ($p in $products) {
+      if ($p.is_group -eq $true) { continue }
+      $skuKey = ([string]$p.sku).Trim().ToUpperInvariant()
+      if (-not $catalogInfo.ContainsKey($skuKey)) { continue }
+      $full = (([string]$catalogInfo[$skuKey].name) -replace '\s+', ' ').Trim()
+      if (-not $full) { continue }
+      $meta = $p.product_meta
+      if ($meta -is [string] -and $meta.Trim()) { try { $meta = $meta | ConvertFrom-Json } catch { $meta = $null } }
+      $m = @{}
+      if ($meta) { foreach ($prop in $meta.PSObject.Properties) { $m[$prop.Name] = $prop.Value } }
+      $snap = (([string]$m['waproName']) -replace '\s+', ' ').Trim()
+      $cur = (([string]$p.name) -replace '\s+', ' ').Trim()
+      $disp = (([string]$p.display_name) -replace '\s+', ' ').Trim()
+      $fromBl = -not [string]::IsNullOrWhiteSpace([string]$m['baselinkerProductId'])
+      $payload = @{}
+      if (-not $snap) {
+        if ($namesBaselined -ge $nameBaselineCap) { continue }
+        $m['waproName'] = $full
+        $m['waproNameSynced'] = ((-not $fromBl) -and ($cur -ceq $full) -and ((-not $disp) -or ($disp -ceq $full)))
+        $namesBaselined++
+      } elseif ($snap -cne $full) {
+        $canFollow = (($m['waproNameSynced'] -eq $true) -and (-not $fromBl) -and ($cur -ceq $snap) -and ((-not $disp) -or ($disp -ceq $snap)))
+        if ($canFollow) {
+          $payload['name'] = $full
+          $payload['display_name'] = $full
+          $namesFollowed++
+          if ($followedList.Count -lt 40) { [void]$followedList.Add(('{0}: {1} -> {2}' -f $skuKey, $snap, $full)) }
+        } else {
+          $m['waproNameSynced'] = $false
+          $namesNotFollowed++
+        }
+        $m['waproName'] = $full
+        $m['waproNameChangedAt'] = $nameStamp
+      } else {
+        continue
+      }
+      $payload['product_meta'] = $m
+      try {
+        $nameUri = '{0}/rest/v1/products?id=eq.{1}' -f $SupabaseUrl, [uri]::EscapeDataString([string]$p.id)
+        Invoke-RestMethod -Uri $nameUri -Headers $patchHeaders -Method Patch -Body ([System.Text.Encoding]::UTF8.GetBytes(($payload | ConvertTo-Json -Depth 8 -Compress))) | Out-Null
+        if ($payload.ContainsKey('name')) { $p.name = $full; $p.display_name = $full }
+      } catch {
+        Write-Log ('Nie udalo sie zapisac nazwy z WAPRO {0}: {1}' -f $skuKey, $_.Exception.Message)
+      }
+    }
+    if ($namesBaselined -gt 0) { Write-Log ('Nazwy WAPRO: zapamietano punkt odniesienia dla {0} produktow' -f $namesBaselined) }
+    if ($namesFollowed -gt 0) { Write-Log ('Nazwy WAPRO: zaktualizowano nazwy w katalogu: {0}' -f $namesFollowed); foreach ($line in $followedList) { Write-Log ('  ' + $line) } }
+    if ($namesNotFollowed -gt 0) { Write-Log ('Nazwy WAPRO: zmiana w WAPRO pominieta (BaseLinker lub nazwa zmieniona recznie): {0}' -f $namesNotFollowed) }
+  }
+
   function Add-ChangeRow {
     param($Product, [string]$Field, $OldValue, $NewValue)
     # Warunki wywolania (bootstrap / Test-PriceShouldSet) traktuja "pusta stara

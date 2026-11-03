@@ -41,3 +41,41 @@ export function supplierStats(products: Product[], manufacturerOf: (p: Product) 
   }
   return [...map.values()].sort((a, b) => b.count - a.count);
 }
+
+/** Marki (producenci) produktów danego dostawcy, od najczęstszej — pokazuje, gdzie dostawca i producent się pokrywają. */
+export function supplierBrands(products: Product[], supplier: string, manufacturerOf: (p: Product) => string): { brand: string; count: number }[] {
+  const key = supplier.trim().toLowerCase();
+  const map = new Map<string, { brand: string; count: number }>();
+  for (const p of products) {
+    if (p.isGroup || effectiveSupplier(p).toLowerCase() !== key) continue;
+    const brand = manufacturerOf(p) || '(bez producenta)';
+    const row = map.get(brand.toLowerCase()) ?? { brand, count: 0 };
+    row.count++;
+    map.set(brand.toLowerCase(), row);
+  }
+  return [...map.values()].sort((a, b) => b.count - a.count);
+}
+
+export interface SupplierOverview {
+  products: number;
+  withSupplier: number;
+  withoutSupplier: number;
+  /** Ile produktów ma dostawcę o tej samej nazwie co producent. */
+  sameAsManufacturer: number;
+  /** Dostawcy, których produkty mają wiele różnych marek (hurtownie/dystrybutorzy). */
+  distributors: number;
+}
+
+export function supplierOverview(products: Product[], manufacturerOf: (p: Product) => string): SupplierOverview {
+  const stats = supplierStats(products, manufacturerOf);
+  const singles = products.filter((p) => !p.isGroup);
+  const withSupplier = stats.reduce((s, r) => s + r.count, 0);
+  const distributors = stats.filter((r) => r.count >= 5 && r.sameAsManufacturer / r.count < 0.5).length;
+  return {
+    products: singles.length,
+    withSupplier,
+    withoutSupplier: singles.length - withSupplier,
+    sameAsManufacturer: stats.reduce((s, r) => s + r.sameAsManufacturer, 0),
+    distributors,
+  };
+}
