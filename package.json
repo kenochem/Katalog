@@ -79,14 +79,15 @@
     "embeddings:enrich": "node scripts/enrich-shop-embeddings.mjs",
     "export:finance": "py scripts/export-finance-koszty.py",
     "deploy": "npm run build:products && npx firebase deploy --only hosting",
-    "deploy:catalog": "npm test && npm run build:catalog && node scripts/verify-hosting-dist.mjs dist-catalog && npx firebase deploy --only hosting:katalog",
+    "deploy:catalog": "npm run gen:version && npm test && npm run build:catalog && node scripts/verify-hosting-dist.mjs dist-catalog && npx firebase deploy --only hosting:katalog",
     "deploy:ops": "npm run build:ops && npx firebase deploy --only hosting:ops",
     "deploy:sell": "npm test && npm run build:sell && npx firebase deploy --only hosting:sell",
     "deploy:suite": "npm run build:suite && npx firebase deploy --only hosting:suite",
     "deploy:calendar": "npm run build:calendar && npx firebase deploy --only hosting:calendar",
     "deploy:marketing": "npm test && npm run build:marketing && npx firebase deploy --only hosting:marketing",
     "deploy:stock": "npm test && npm run build:stock && npx firebase deploy --only hosting:stock",
-    "deploy:products": "npm run deploy"
+    "deploy:products": "npm run deploy",
+    "gen:version": "vite-node scripts/generate-app-version.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

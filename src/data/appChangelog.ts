@@ -18,6 +18,20 @@ export interface AppChangelogEntry {
 export const APP_CHANGELOG: AppChangelogEntry[] = [
   {
     date: '2026-11-03',
+    title: 'Wydajność: lżejszy start katalogu i płynniejszy ATLAS',
+    description:
+      'Przy starcie nie ładuje się już cały dziennik zmian (ok. 140 KB) — menu i ekran startowy biorą numer wersji z małego pliku generowanego przy wdrożeniu — ani widoki Etykiety, Promocje, Małe zdjęcia i Braki, które wczytują się dopiero po wejściu. Główna paczka aplikacji zmalała z 391 do 256 KB, a przy starcie nie pobierają się moduły etykiet i kodów kreskowych. Liczba pozycji w „Brakach” do menu liczy się po bezczynności (na całym katalogu to kilkaset milisekund), więc nie blokuje startu ani zapisu zmian w produkcie. Zalogowani nie pobierają już przy każdym wejściu pliku sklepu, którego nie używają. W ATLAS analiza przypisań liczy się porcjami z paskiem postępu i nie zamraża strony (było ok. 2 s jednym ciągiem), a lista nazw po zmianie jednego produktu nie liczy od nowa całego katalogu.',
+    tag: 'wydajność',
+  },
+  {
+    date: '2026-11-03',
+    title: 'Dokładniejsze atrybuty produktów i czystszy podgląd',
+    description:
+      'Podgląd produktu pokazuje już tylko uzupełnione parametry — puste pozycje są widoczne wyłącznie w edycji. ATLAS rozdziela teraz pojemność (litry, mililitry) od masy netto (kilogramy, gramy), zamiast zamieniać kilogramy na litry. Płyn sprzedawany na wagę dostaje pojemność, a płyn na litry masę, gdy gęstość znana jest z karty produktu (wartość oznaczona jako wyliczona). Nowe atrybuty do utworzenia jednym kliknięciem w zakładce Wiedza: Masa netto, Liczba sztuk w opakowaniu, Kolor, Materiał, Przyłącza (np. GZ 3/8 × GW 1/4) i Ciśnienie robocze — czytane z nazw produktów technicznych (nyple, węże, lance, zawory), a nie z chemii, gdzie słowo „czarny” nic nie znaczy. Małe gramy (gramatura papieru) nie są traktowane jako masa netto.',
+    tag: 'nowość',
+  },
+  {
+    date: '2026-11-03',
     title: 'ATLAS: czytelny układ i dostawcy w katalogu',
     description:
       'ATLAS dostał poprawiony wygląd: w jasnym motywie część tła i ramek była za ciemna, a aktywne zakładki i chipy niewidoczne — teraz wszystko ma poprawny kontrast. Poza Przeglądem nagłówek jest kompaktowy (nazwa, wynik, jeden przycisk analizy), a listy mają wspólny pasek narzędzi: wyszukiwanie, główny przełącznik i przycisk Filtry, pod którym schowane są filtry dodatkowe z licznikiem aktywnych. Nazwy to teraz siatka „obecna nazwa → po ujednoliceniu” z objaśnieniem zwiniętym na żądanie i rodziną jako filtrem. Wiedza podzielona na zakładki (atrybuty, pokrycie, branża, sprawdź produkt). Nowa zakładka Producenci i dostawcy: dostawca to osobne pojęcie od producenta (źródło towaru z WAPRO), z podsumowaniem pokrycia, markami każdego dostawcy, profilem (kontakt, NIP, czas dostawy, minimalne zamówienie) i akcją tworzenia dostawców z obecnych producentów. Profile zapisują się w nowej tabeli catalog_suppliers (migracja supabase/migration-catalog-suppliers.sql), a w karcie produktu pole Dostawca podpowiada nazwy z rejestru.',

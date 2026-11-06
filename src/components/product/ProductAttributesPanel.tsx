@@ -28,20 +28,24 @@ export function ProductAttributesPanel({
   const version = useAttributesVersion();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const defs = useMemo(() => attributesFor(product, getAttributes(), values), [product, version, values]);
-  if (defs.length === 0) return null;
   const filled = defs.filter((d) => hasAttrValue(values[d.key])).length;
+  // w podglądzie pokazujemy tylko uzupełnione parametry — puste pozycje są tylko w edycji
+  const shown = editing ? defs : defs.filter((d) => hasAttrValue(values[d.key]));
+  if (shown.length === 0) return null;
 
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-800 bg-white shadow-sm dark:bg-slate-950/30 dark:shadow-none">
       <header className="flex items-center gap-2 border-b border-slate-800 bg-slate-900/70 px-4 py-2">
         <ListChecks className="h-4 w-4 text-slate-400" />
         <h3 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Parametry produktu</h3>
-        <span className="ml-auto text-[11px] tabular-nums text-slate-500">
-          {filled} / {defs.length}
-        </span>
+        {editing && (
+          <span className="ml-auto text-[11px] tabular-nums text-slate-500">
+            {filled} / {defs.length}
+          </span>
+        )}
       </header>
       <dl className="grid grid-cols-1 gap-x-6 gap-y-3 p-4 sm:grid-cols-2">
-        {defs.map((d) => {
+        {shown.map((d) => {
           const v = values[d.key];
           const err = validateAttrValue(d, v);
           return (

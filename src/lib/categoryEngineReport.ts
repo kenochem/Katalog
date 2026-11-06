@@ -41,7 +41,7 @@ const plain = (html: string) =>
     .trim();
 
 /** Uruchamia silnik kategorii na wszystkich produktach (bez grup) i zwraca decyzję dla każdego. */
-export function runCategoryEngine(products: Product[], descriptions: Map<string, string>, shop?: ShopSkuFile | null, extra: Pick<EngineOptions, 'learned' | 'rejected' | 'facts'> = {}): EngineRow[] {
+function prepareEngineRun(products: Product[], descriptions: Map<string, string>, shop: ShopSkuFile | null | undefined, extra: Pick<EngineOptions, 'learned' | 'rejected' | 'facts'>) {
   const flat = flattenCategories();
   const leaves = flat.filter((c) => c.isLeaf);
   const leafSet = new Set(leaves.map((c) => c.name));
@@ -74,7 +74,8 @@ export function runCategoryEngine(products: Product[], descriptions: Map<string,
 
   const prepared = singles.map(prepare);
   const engine = buildEngine(prepared, { leaves: leafSet, ...(itemLeaves.size ? { itemLeaves } : {}), ...extra });
-  return singles.map((p, i) => {
+  const rowAt = (i: number): EngineRow => {
+    const p = singles[i];
     const decision = engine.decide(prepared[i]);
     return {
       id: p.id,
@@ -86,7 +87,35 @@ export function runCategoryEngine(products: Product[], descriptions: Map<string,
       decision,
       toPath: decision.to ? (byKey.get(categoryKey(decision.to))?.path ?? '') : '',
     };
-  });
+  };
+  return { count: singles.length, rowAt };
+}
+
+export function runCategoryEngine(products: Product[], descriptions: Map<string, string>, shop?: ShopSkuFile | null, extra: Pick<EngineOptions, 'learned' | 'rejected' | 'facts'> = {}): EngineRow[] {
+  const { count, rowAt } = prepareEngineRun(products, descriptions, shop, extra);
+  return Array.from({ length: count }, (_, i) => rowAt(i));
+}
+
+/**
+ * To samo co `runCategoryEngine`, ale co kilkaset produktów oddaje sterowanie przeglądarce — strona nie zamarza
+ * na czas analizy, a pasek postępu się odświeża.
+ */
+export async function runCategoryEngineAsync(
+  products: Product[],
+  descriptions: Map<string, string>,
+  shop?: ShopSkuFile | null,
+  extra: Pick<EngineOptions, 'learned' | 'rejected' | 'facts'> = {},
+  onProgress?: (done: number, total: number) => void,
+): Promise<EngineRow[]> {
+  const { count, rowAt } = prepareEngineRun(products, descriptions, shop, extra);
+  const rows: EngineRow[] = [];
+  const STEP = 250;
+  for (let i = 0; i < count; i += STEP) {
+    for (let j = i; j < Math.min(count, i + STEP); j++) rows.push(rowAt(j));
+    onProgress?.(rows.length, count);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+  return rows;
 }
 
 export interface EngineSummary {

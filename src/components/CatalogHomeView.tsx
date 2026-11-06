@@ -21,8 +21,7 @@ import { supabase } from '../lib/supabase';
 import { formatAgo } from '../suite/suiteData';
 import { ContextHelp } from './ContextHelp';
 import { computeCatalogStats as computeQualityStats, suggestNext } from '../lib/catalogStats';
-import { APP_CHANGELOG } from '../data/appChangelog';
-import { APP_VERSION } from '../lib/appVersion';
+import { APP_VERSION_STAMP as APP_VERSION, LATEST_CHANGE } from '../lib/appVersion.generated';
 import { fetchAuditLog, type AuditEntry } from '../lib/auditLog';
 
 export type CatalogHomeQuickAction = {
@@ -109,7 +108,7 @@ export function CatalogHomeView({
   const stats = useMemo(() => computeCatalogStats(allProducts), [allProducts]);
   const quality = useMemo(() => computeQualityStats(allProducts), [allProducts]);
   const next = useMemo(() => suggestNext(quality, 3), [quality]);
-  const latest = APP_CHANGELOG[0];
+  const latest = LATEST_CHANGE.title ? LATEST_CHANGE : undefined;
 
   const baselinker = useMemo(() => {
     let linked = 0;

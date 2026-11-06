@@ -2,6 +2,7 @@ import type { Product } from '../types';
 import { attrValuesOf, attributesFor, hasAttrValue, type AttrType, type AttrValue, type AttributeDef } from './attributes';
 import type { MaterialFact } from './categoryEngine';
 import { fold } from './partsText';
+import { technicalFacts } from './technicalNames';
 import type { ProductProfile } from './productProfile';
 
 /**
@@ -9,7 +10,7 @@ import type { ProductProfile } from './productProfile';
  * z karty produktu, opisu i nazwy. Silnik rozumie atrybuty po nazwie (pH, gęstość, forma…) i wpisuje wartość
  * tylko tam, gdzie atrybut jest pusty, a wartość da się uczciwie dopasować do typu atrybutu i jego listy opcji.
  */
-export type ExtractorId = 'ph' | 'gestosc' | 'trwalosc' | 'pojemnosc' | 'forma' | 'koncentracja' | 'dozowanie' | 'odbiorca' | 'haccp' | 'ecolabel' | 'zapach';
+export type ExtractorId = 'ph' | 'gestosc' | 'trwalosc' | 'pojemnosc' | 'forma' | 'koncentracja' | 'dozowanie' | 'odbiorca' | 'haccp' | 'ecolabel' | 'zapach' | 'waga' | 'sztuki' | 'kolor' | 'material' | 'przylacze' | 'cisnienie';
 
 export interface ExtractorInfo {
   id: ExtractorId;
@@ -31,6 +32,12 @@ export const EXTRACTORS: ExtractorInfo[] = [
   { id: 'odbiorca', title: 'Odbiorca', match: /odbiorca|segment|uzytkownik|grupa docelowa/, create: { label: 'Odbiorca', type: 'select', unit: '', options: ['Profesjonalny', 'Domowy'] } },
   { id: 'haccp', title: 'Certyfikat HACCP', match: /haccp/, create: { label: 'HACCP', type: 'bool', unit: '' } },
   { id: 'ecolabel', title: 'EU Ecolabel', match: /ecolabel|ekoetykiet/, create: { label: 'EU Ecolabel', type: 'bool', unit: '' } },
+  { id: 'waga', title: 'Masa netto', match: /(^|\W|_)(masa|waga)($|\W|_)/, create: { label: 'Masa netto', type: 'number', unit: 'kg' } },
+  { id: 'sztuki', title: 'Liczba sztuk w opakowaniu', match: /sztuk|(^|\W|_)szt($|\W|_)|ilosc w opakowaniu/, create: { label: 'Liczba sztuk w opakowaniu', type: 'number', unit: 'szt.' } },
+  { id: 'kolor', title: 'Kolor', match: /(^|\W|_)kolor|barwa/, create: { label: 'Kolor', type: 'text', unit: '' } },
+  { id: 'material', title: 'Materiał', match: /material|tworzywo/, create: { label: 'Materiał', type: 'text', unit: '' } },
+  { id: 'przylacze', title: 'Przyłącza', match: /przylacz|gwint/, create: { label: 'Przyłącza', type: 'text', unit: '' } },
+  { id: 'cisnienie', title: 'Ciśnienie robocze', match: /cisnienie/, create: { label: 'Ciśnienie robocze', type: 'number', unit: 'bar' } },
   { id: 'zapach', title: 'Zapach', match: /zapach|aromat/, create: { label: 'Zapach', type: 'text', unit: '' } },
 ];
 
@@ -50,7 +57,15 @@ export interface AttrKnowledge {
   ph?: string;
   density?: string;
   shelfLife?: number;
-  volume?: { n: number; unit: 'L' | 'ml' | 'kg' | 'g' };
+  /** Objętość (płyny): tylko litry i mililitry. */
+  volume?: { n: number; unit: 'L' | 'ml'; derived?: boolean };
+  /** Masa netto: kilogramy i gramy. */
+  mass?: { n: number; unit: 'kg' | 'g'; derived?: boolean };
+  pieces?: number;
+  colour?: string;
+  material?: string;
+  threads?: string;
+  pressure?: number;
   form?: { label: string; source: string };
   concentration?: { label: 'Koncentrat' | 'Gotowy do użycia'; source: string };
   dilution?: { value: string; source: string };
@@ -77,7 +92,27 @@ export function knowledgeOf(p: Product, profile: ProductProfile, fact?: Material
   if (fact && (fact.density || fact.shelfLife || fact.fragrance)) k.cardFile = cardFile;
   if (profile.volume) {
     const m = profile.volume.value.match(/^([\d.]+) (L|ml|kg|g)$/);
-    if (m) k.volume = { n: parseFloat(m[1]), unit: m[2] as 'L' | 'ml' | 'kg' | 'g' };
+    if (m) {
+      const n = parseFloat(m[1]);
+      if (m[2] === 'L' || m[2] === 'ml') k.volume = { n, unit: m[2] };
+      else if (m[2] === 'kg' || n >= 50) k.mass = { n, unit: m[2] as 'kg' | 'g' }; // małe gramy to zwykle gramatura (np. papier 25g), nie masa netto
+    }
+  }
+  // płyn sprzedawany na wagę (albo odwrotnie): przy znanej gęstości drugą wielkość da się policzyć
+  const rho = k.density ? mean(k.density, 3) : null;
+  if (rho && rho > 0.2 && rho < 3) {
+    if (k.mass && !k.volume) k.volume = { n: round3((k.mass.unit === 'g' ? k.mass.n / 1000 : k.mass.n) / rho), unit: 'L', derived: true };
+    else if (k.volume && !k.mass) k.mass = { n: round3((k.volume.unit === 'ml' ? k.volume.n / 1000 : k.volume.n) * rho), unit: 'kg', derived: true };
+  }
+  const label = p.displayName || p.name || '';
+  const pcs = label.match(/(?<![\d.,])(\d{1,4})\s?(?:szt|sztuk)\b/i);
+  if (pcs) k.pieces = Number(pcs[1]);
+  const tech = technicalFacts(label, p.manufacturer || null);
+  if (tech) {
+    k.material = tech.material;
+    k.colour = tech.colour;
+    k.threads = tech.threads;
+    k.pressure = tech.pressure;
   }
   const form = [...profile.forms].sort((a, b) => SOURCE_RANK[a.source] - SOURCE_RANK[b.source])[0];
   if (form) k.form = { label: form.value, source: form.source };
@@ -86,9 +121,10 @@ export function knowledgeOf(p: Product, profile: ProductProfile, fact?: Material
   if (profile.audience) k.audience = profile.audience.value === 'domowy' ? 'Domowy' : 'Profesjonalny';
   if (profile.certificates.some((c) => c.value === 'HACCP')) k.haccp = true;
   if (profile.certificates.some((c) => c.value === 'EU Ecolabel')) k.ecolabel = true;
-  void p;
   return k;
 }
+
+const round3 = (n: number) => Math.round(n * 1000) / 1000;
 
 const FORM_KEYWORDS: Record<string, string[]> = {
   płyn: ['plyn', 'ciecz'],
@@ -157,10 +193,36 @@ export function valueFor(def: AttributeDef, id: ExtractorId, k: AttrKnowledge): 
     case 'pojemnosc': {
       if (!k.volume) return null;
       const u = def.unit.trim().toLowerCase();
-      const toL = k.volume.unit === 'ml' || k.volume.unit === 'g' ? k.volume.n / 1000 : k.volume.n;
-      if (def.type === 'number') return { value: u === 'ml' || u === 'g' ? toL * 1000 : toL, source: 'nazwa produktu' };
-      return def.type === 'text' ? { value: `${k.volume.n} ${k.volume.unit}`, source: 'nazwa produktu' } : null;
+      const liters = k.volume.unit === 'ml' ? k.volume.n / 1000 : k.volume.n;
+      const source = k.volume.derived ? 'wyliczone z wagi i gęstości' : 'nazwa produktu';
+      if (def.type === 'number') return { value: round3(u === 'ml' ? liters * 1000 : liters), source };
+      return def.type === 'text' ? { value: `${round3(k.volume.n)} ${k.volume.unit}`, source } : null;
     }
+    case 'waga': {
+      if (!k.mass) return null;
+      const kg = k.mass.unit === 'g' ? k.mass.n / 1000 : k.mass.n;
+      const source = k.mass.derived ? 'wyliczone z pojemności i gęstości' : 'nazwa produktu';
+      if (def.type === 'number') return { value: round3(def.unit.trim().toLowerCase() === 'g' ? kg * 1000 : kg), source };
+      return def.type === 'text' ? { value: `${round3(k.mass.n)} ${k.mass.unit}`, source } : null;
+    }
+    case 'sztuki':
+      if (!k.pieces) return null;
+      return def.type === 'number' ? { value: k.pieces, source: 'nazwa produktu' } : def.type === 'text' ? { value: `${k.pieces} szt.`, source: 'nazwa produktu' } : null;
+    case 'kolor':
+    case 'material': {
+      const v = id === 'kolor' ? k.colour : k.material;
+      if (!v) return null;
+      if (def.type === 'select') {
+        const opt = pickOption(def.options, [v]);
+        return opt ? { value: opt, source: 'nazwa produktu' } : null;
+      }
+      return def.type === 'text' ? { value: v, source: 'nazwa produktu' } : null;
+    }
+    case 'przylacze':
+      return k.threads && def.type === 'text' ? { value: k.threads, source: 'nazwa produktu' } : null;
+    case 'cisnienie':
+      if (!k.pressure) return null;
+      return def.type === 'number' ? { value: k.pressure, source: 'nazwa produktu' } : def.type === 'text' ? { value: `${k.pressure} bar`, source: 'nazwa produktu' } : null;
     case 'forma': {
       if (!k.form) return null;
       if (def.type === 'select') {

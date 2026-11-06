@@ -62,9 +62,6 @@ import {
 } from './lib/labelQueue';
 import { CatalogGridCard } from './components/CatalogGridCard';
 import { SearchBar } from './components/SearchBar';
-import { CatalogSmallImagesView } from './components/CatalogSmallImagesView';
-import { LabelStudioView } from './components/LabelStudioView';
-import { PromotionsView } from './components/PromotionsView';
 import { useReservedVersion } from './lib/reservedStock';
 import { useLivePromosVersion } from './lib/promotions';
 import { useDocsIndexVersion } from './lib/productDocsIndex';
@@ -138,12 +135,20 @@ import {
 import { HubCatalogSubNav } from './components/hub/HubCatalogSubNav';
 import { getRecentlyImportedProductsCount } from './lib/newProducts';
 import { LeftSidebarNav } from './components/LeftSidebarNav';
-import {
-  CatalogDecisionView,
-  buildCatalogDecisionRows,
-} from './components/CatalogDecisionView';
 import { getProductDisplayCategory } from './lib/catalogCategory';
 
+const CatalogDecisionView = lazy(() =>
+  import('./components/CatalogDecisionView').then((m) => ({ default: m.CatalogDecisionView })),
+);
+const LabelStudioView = lazy(() =>
+  import('./components/LabelStudioView').then((m) => ({ default: m.LabelStudioView })),
+);
+const PromotionsView = lazy(() =>
+  import('./components/PromotionsView').then((m) => ({ default: m.PromotionsView })),
+);
+const CatalogSmallImagesView = lazy(() =>
+  import('./components/CatalogSmallImagesView').then((m) => ({ default: m.CatalogSmallImagesView })),
+);
 const UserProfileView = lazy(() =>
   import('./components/UserProfileView').then((m) => ({ default: m.UserProfileView })),
 );
@@ -1376,10 +1381,30 @@ export default function App() {
     () => products.filter(isCatalogHiddenProduct),
     [products],
   );
-  const catalogDecisionRows = useMemo(
-    () => buildCatalogDecisionRows(activeProducts),
-    [activeProducts],
-  );
+  // Liczba braków do menu: ciężkie liczenie (kilkaset ms na całym katalogu) robimy po bezczynności,
+  // żeby nie blokowało startu ani zapisu zmian w produkcie.
+  const [catalogDecisionCount, setCatalogDecisionCount] = useState(0);
+  useEffect(() => {
+    if (!activeProducts.length) return;
+    let cancelled = false;
+    const compute = () => {
+      void import('./components/CatalogDecisionView').then((m) => {
+        if (!cancelled) setCatalogDecisionCount(m.buildCatalogDecisionRows(activeProducts).length);
+      });
+    };
+    if (typeof requestIdleCallback === 'function') {
+      const id = requestIdleCallback(compute, { timeout: 4000 });
+      return () => {
+        cancelled = true;
+        cancelIdleCallback(id);
+      };
+    }
+    const t = window.setTimeout(compute, 1500);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [activeProducts]);
 
   const lowStockCount = useMemo(
     () => activeProducts.filter((p) => p.stock <= 5).length,
@@ -1695,7 +1720,7 @@ export default function App() {
         id: 'catalog-decisions',
         label: 'Uzupełnianie danych',
         icon: <AlertTriangle className="h-4 w-4" />,
-        count: catalogDecisionRows.length,
+        count: catalogDecisionCount,
         onClick: () => setView('catalog-decisions'),
       });
       items.push({
@@ -1713,7 +1738,7 @@ export default function App() {
     catalogKits.length,
     collectionCount,
     collectionUserKey,
-    catalogDecisionRows.length,
+    catalogDecisionCount,
     missingImages.length,
     hiddenProducts.length,
     openMissingImages,
@@ -1901,7 +1926,7 @@ export default function App() {
           <CatalogHomeView
             allProducts={activeAllProducts}
             missingImagesCount={missingImages.length}
-            decisionCount={catalogDecisionRows.length}
+            decisionCount={catalogDecisionCount}
             quickActions={catalogHomeQuickActions}
             userName={displayLabel && !displayLabel.includes('@') && displayLabel !== 'Konto' ? displayLabel.trim().split(/\s+/)[0] : undefined}
             onSearch={(q) => {
@@ -1998,24 +2023,26 @@ export default function App() {
             />
           </Suspense>
         ) : view === 'catalog-decisions' && isCatalogProduct() ? (
-          <CatalogDecisionView
-            key={`preset-${decisionPreset?.nonce ?? 0}`}
-            products={activeProducts}
-            initialKinds={decisionPreset?.kinds}
-            initialCategory={decisionPreset?.category}
-            initialManufacturer={decisionPreset?.manufacturer}
-            onOpenProduct={setSelectedProduct}
-            onApplyCategory={handleApplyDecisionCategory}
-            categoryBusyId={categoryBusyId}
-            onOpenHidden={() => setView('catalog-hidden')}
-            onOpenManufacturers={() => setView('manufacturers')}
-            onHideProducts={roleCan(role, 'hideProducts') ? handleHideProducts : undefined}
-            onSetExceptions={roleCan(role, 'editProduct') ? handleSetExceptions : undefined}
-            onQuickSave={roleCan(role, 'editProduct') ? handleQuickSave : undefined}
-            onBulkEditDone={roleCan(role, 'editProduct') ? handleBulkEditDone : undefined}
-            canEditPrices={roleCan(role, 'viewPrices') && roleCan(role, 'editProduct')}
-            canExport={roleCan(role, 'exportData')}
-          />
+          <Suspense fallback={<ViewFallback />}>
+            <CatalogDecisionView
+              key={`preset-${decisionPreset?.nonce ?? 0}`}
+              products={activeProducts}
+              initialKinds={decisionPreset?.kinds}
+              initialCategory={decisionPreset?.category}
+              initialManufacturer={decisionPreset?.manufacturer}
+              onOpenProduct={setSelectedProduct}
+              onApplyCategory={handleApplyDecisionCategory}
+              categoryBusyId={categoryBusyId}
+              onOpenHidden={() => setView('catalog-hidden')}
+              onOpenManufacturers={() => setView('manufacturers')}
+              onHideProducts={roleCan(role, 'hideProducts') ? handleHideProducts : undefined}
+              onSetExceptions={roleCan(role, 'editProduct') ? handleSetExceptions : undefined}
+              onQuickSave={roleCan(role, 'editProduct') ? handleQuickSave : undefined}
+              onBulkEditDone={roleCan(role, 'editProduct') ? handleBulkEditDone : undefined}
+              canEditPrices={roleCan(role, 'viewPrices') && roleCan(role, 'editProduct')}
+              canExport={roleCan(role, 'exportData')}
+            />
+          </Suspense>
         ) : view === 'attributes' && isCatalogProduct() ? (
           <Suspense fallback={<ViewFallback />}>
             <AttributesView
@@ -2179,11 +2206,13 @@ export default function App() {
             />
           </Suspense>
         ) : view === 'labels' ? (
-          <LabelStudioView
-            products={activeAllProducts}
-            queue={labelQueue}
-            onQueueChange={refreshLabelQueue}
-          />
+          <Suspense fallback={<ViewFallback />}>
+            <LabelStudioView
+              products={activeAllProducts}
+              queue={labelQueue}
+              onQueueChange={refreshLabelQueue}
+            />
+          </Suspense>
         ) : view === 'admin' && canAccessAdminPanel(role) && !embeddedInHub ? (
           <Suspense fallback={<ViewFallback />}>
             <AdminHubPanel
@@ -2265,43 +2294,49 @@ export default function App() {
           </InlineErrorBoundary>
         ) : view === 'promotions' && isCatalogProduct() ? (
           <InlineErrorBoundary label="Promocje">
-            <PromotionsView
-              products={activeAllProducts}
-              canEdit={roleCan(role, 'managePromotions')}
-              canSeeMargins={roleCan(role, 'viewPrices')}
-              onOpenLabels={() => setView('labels')}
-            />
+            <Suspense fallback={<ViewFallback />}>
+              <PromotionsView
+                products={activeAllProducts}
+                canEdit={roleCan(role, 'managePromotions')}
+                canSeeMargins={roleCan(role, 'viewPrices')}
+                onOpenLabels={() => setView('labels')}
+              />
+            </Suspense>
           </InlineErrorBoundary>
         ) : view === 'small-images' && isCatalogProduct() ? (
           <InlineErrorBoundary label="Zdjęcia do poprawy">
-            <CatalogSmallImagesView
-              products={activeProducts}
-              onProductClick={setSelectedProduct}
-              onImageUpdated={handleImageUpdated}
-              canEdit={roleCan(role, 'uploadImage')}
-              canBaselinker={roleCan(role, 'manageBaselinker')}
-              onProductPatched={(id, patch) => patchProductInCache(id, patch)}
-            />
+            <Suspense fallback={<ViewFallback />}>
+              <CatalogSmallImagesView
+                products={activeProducts}
+                onProductClick={setSelectedProduct}
+                onImageUpdated={handleImageUpdated}
+                canEdit={roleCan(role, 'uploadImage')}
+                canBaselinker={roleCan(role, 'manageBaselinker')}
+                onProductPatched={(id, patch) => patchProductInCache(id, patch)}
+              />
+            </Suspense>
           </InlineErrorBoundary>
         ) : (
-          <CatalogDecisionView
-            key={`preset-${decisionPreset?.nonce ?? 0}`}
-            products={activeProducts}
-            initialKinds={decisionPreset?.kinds ?? ['photo']}
-            initialCategory={decisionPreset?.category}
-            initialManufacturer={decisionPreset?.manufacturer}
-            onOpenProduct={setSelectedProduct}
-            onApplyCategory={handleApplyDecisionCategory}
-            categoryBusyId={categoryBusyId}
-            onOpenHidden={() => setView('catalog-hidden')}
-            onOpenManufacturers={() => setView('manufacturers')}
-            onHideProducts={roleCan(role, 'hideProducts') ? handleHideProducts : undefined}
-            onSetExceptions={roleCan(role, 'editProduct') ? handleSetExceptions : undefined}
-            onQuickSave={roleCan(role, 'editProduct') ? handleQuickSave : undefined}
-            onBulkEditDone={roleCan(role, 'editProduct') ? handleBulkEditDone : undefined}
-            canEditPrices={roleCan(role, 'viewPrices') && roleCan(role, 'editProduct')}
-            canExport={roleCan(role, 'exportData')}
-          />
+          <Suspense fallback={<ViewFallback />}>
+            <CatalogDecisionView
+              key={`preset-${decisionPreset?.nonce ?? 0}`}
+              products={activeProducts}
+              initialKinds={decisionPreset?.kinds ?? ['photo']}
+              initialCategory={decisionPreset?.category}
+              initialManufacturer={decisionPreset?.manufacturer}
+              onOpenProduct={setSelectedProduct}
+              onApplyCategory={handleApplyDecisionCategory}
+              categoryBusyId={categoryBusyId}
+              onOpenHidden={() => setView('catalog-hidden')}
+              onOpenManufacturers={() => setView('manufacturers')}
+              onHideProducts={roleCan(role, 'hideProducts') ? handleHideProducts : undefined}
+              onSetExceptions={roleCan(role, 'editProduct') ? handleSetExceptions : undefined}
+              onQuickSave={roleCan(role, 'editProduct') ? handleQuickSave : undefined}
+              onBulkEditDone={roleCan(role, 'editProduct') ? handleBulkEditDone : undefined}
+              canEditPrices={roleCan(role, 'viewPrices') && roleCan(role, 'editProduct')}
+              canExport={roleCan(role, 'exportData')}
+            />
+          </Suspense>
         )
   );
 
@@ -2535,7 +2570,7 @@ export default function App() {
           favoriteCount={favoriteCount}
           collectionCount={collectionCount}
           catalogKitsCount={catalogKits.length}
-          catalogDecisionCount={catalogDecisionRows.length}
+          catalogDecisionCount={catalogDecisionCount}
           hiddenProductsCount={hiddenProducts.length}
           missingImagesCount={missingImages.length}
           labelQueueCount={labelQueue.length}
@@ -2593,7 +2628,7 @@ export default function App() {
               products: products.length,
               favorites: favoriteCount,
               kits: catalogKits.length,
-              decisions: catalogDecisionRows.length,
+              decisions: catalogDecisionCount,
               missing: missingImages.length,
               hidden: hiddenProducts.length,
               labels: labelQueue.length,
@@ -2782,7 +2817,7 @@ export default function App() {
         loading={loading}
         syncBusy={syncBusy}
         canRequestStockSync={mode === 'signed_in' && roleCan(role, 'editStock')}
-        decisionCount={catalogDecisionRows.length}
+        decisionCount={catalogDecisionCount}
         missingCount={missingImages.length}
         hiddenCount={hiddenProducts.length}
         kitsCount={catalogKits.length}
@@ -2805,7 +2840,7 @@ export default function App() {
               favoriteCount={favoriteCount}
               collectionCount={collectionCount}
               catalogKitsCount={catalogKits.length}
-              catalogDecisionCount={catalogDecisionRows.length}
+              catalogDecisionCount={catalogDecisionCount}
               hiddenProductsCount={hiddenProducts.length}
               missingImagesCount={missingImages.length}
               labelQueueCount={labelQueue.length}

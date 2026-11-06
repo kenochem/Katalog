@@ -79,3 +79,72 @@ describe('rozumienie atrybutów z panelu', () => {
     ]);
   });
 });
+
+describe('dokładniejsze atrybuty: waga, sztuki, materiał, kolor, przyłącza, ciśnienie', () => {
+  const noFact = (p: Product) => knowledgeOf(p, buildProfile(p, { description: '', category: 'Mycie', department: 'Chemia', siblings: [], hasMaterials: false }));
+  const tds = mergeFacts([{ kind: 'tds', fact: extractFact(TDS, 'x.pdf')!.fact, file: 'SMART FOAM.pdf' }])!;
+  const withFact = (p: Product) => knowledgeOf(p, buildProfile(p, { description: '', category: 'Mycie', department: 'Chemia', fact: tds, siblings: [], hasMaterials: true }), tds);
+
+  it('kilogramy to masa, a nie litry', () => {
+    const k = noFact(prod('k1', 'Preparat do felg 5 kg'));
+    expect(k.mass).toEqual({ n: 5, unit: 'kg' });
+    expect(k.volume).toBeUndefined();
+    expect(valueFor(def('Pojemność', 'number', { unit: 'L' }), 'pojemnosc', k)).toBeNull();
+    expect(valueFor(def('Masa netto', 'number', { unit: 'kg' }), 'waga', k)?.value).toBe(5);
+    expect(valueFor(def('Masa netto', 'number', { unit: 'g' }), 'waga', k)?.value).toBe(5000);
+  });
+
+  it('płyn na wagę: przy znanej gęstości liczy też pojemność i oznacza ją jako wyliczoną', () => {
+    const k = withFact(prod('k2', 'Eco Shine SMART FOAM 5 kg'));
+    const v = valueFor(def('Pojemność', 'number', { unit: 'L' }), 'pojemnosc', k);
+    expect(v?.value).toBeCloseTo(4.762, 2);
+    expect(v?.source).toMatch(/wyliczone/);
+  });
+
+  it('płyn na litry: masa wyliczona z gęstości, ale nie przy braku gęstości', () => {
+    const l = withFact(prod('k3', 'Eco Shine SMART FOAM 1L'));
+    expect(valueFor(def('Masa netto', 'number', { unit: 'kg' }), 'waga', l)?.value).toBeCloseTo(1.05, 2);
+    const none = noFact(prod('k4', 'Eco Shine SMART FOAM 1L'));
+    expect(valueFor(def('Masa netto', 'number', { unit: 'kg' }), 'waga', none)).toBeNull();
+  });
+
+  it('liczba sztuk z nazwy', () => {
+    const k = noFact(prod('k5', 'FALCON CHUSTECZKI COCKPIT OCEAN MAT 28szt w 1opk'));
+    expect(valueFor(def('Liczba sztuk w opakowaniu', 'number'), 'sztuki', k)?.value).toBe(28);
+  });
+
+  it('produkt techniczny: materiał, przyłącza, kolor i ciśnienie z nazwy', () => {
+    const nypel = noFact(prod('t1', 'NYPEL MOSIĄDZ GZ3/8 - GW1/4', { manufacturer: 'HYDROFLEX' }));
+    expect(valueFor(def('Materiał', 'text'), 'material', nypel)?.value).toBe('Mosiądz');
+    expect(valueFor(def('Przyłącza', 'text'), 'przylacze', nypel)?.value).toBe('GZ 3/8 × GW 1/4');
+    const waz = noFact(prod('t2', 'WĄŻ CIŚNIEN. 8 x 2 400bar 20m czarny', { manufacturer: 'HYDROFLEX' }));
+    expect(valueFor(def('Ciśnienie robocze', 'number', { unit: 'bar' }), 'cisnienie', waz)?.value).toBe(400);
+    expect(valueFor(def('Kolor', 'text'), 'kolor', waz)?.value).toBe('Czarny');
+  });
+
+  it('chemia: słowo „czarny” w nazwie nie jest kolorem produktu', () => {
+    const k = noFact(prod('c1', 'Dressing do opon czarny błysk 500ml'));
+    expect(valueFor(def('Kolor', 'text'), 'kolor', k)).toBeNull();
+  });
+
+  it('rozpoznaje nowe atrybuty po nazwie w panelu', () => {
+    expect(extractorFor(def('Masa netto', 'number'))?.id).toBe('waga');
+    expect(extractorFor(def('Liczba sztuk w opakowaniu', 'number'))?.id).toBe('sztuki');
+    expect(extractorFor(def('Ciśnienie robocze', 'number'))?.id).toBe('cisnienie');
+    expect(extractorFor(def('Dodatkowe informacje', 'text'))).toBeNull();
+  });
+});
+
+describe('dokładność wagi i ciśnienia', () => {
+  const k = (name: string, brand = 'HYDROFLEX') => {
+    const p = prod('z1', name, { manufacturer: brand });
+    return knowledgeOf(p, buildProfile(p, { description: '', category: 'Części', department: 'Części', siblings: [], hasMaterials: false }));
+  };
+  it('małe gramy (gramatura papieru) nie są masą netto, duże są', () => {
+    expect(k('Ręcznik celuloza 25g', 'ROYAL').mass).toBeUndefined();
+    expect(k('Proszek do prania 800g', 'ROYAL').mass).toEqual({ n: 800, unit: 'g' });
+  });
+  it('ciśnienie jednocyfrowe', () => {
+    expect(k('ZAWÓR KULOWY 8bar do zbiornika').pressure).toBe(8);
+  });
+});

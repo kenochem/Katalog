@@ -2357,7 +2357,7 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
   # Zmiany nazw w WAPRO - dzialaja tylko OD TERAZ (bez cofania w czasie).
   # Pierwszy przebieg tylko zapamietuje nazwe z WAPRO (product_meta.waproName) jako punkt odniesienia i niczego nie zmienia.
   # Pozniej, gdy nazwa w WAPRO sie zmieni, katalog ja przejmuje wylacznie gdy produkt:
-  #  - nie pochodzi z BaseLinkera (brak product_meta.baselinkerProductId),
+  #  - nie pochodzi z BaseLinkera (katalog shop / id shop-*, albo product_meta.baselinkerProductId),
   #  - w chwili zapamietania mial nazwe identyczna z WAPRO (waproNameSynced),
   #  - nie mial nazwy zmienianej recznie ani standardem nazw (name i display_name wciaz rowne zapamietanej nazwie).
   $namesFollowed = 0
@@ -2380,7 +2380,7 @@ GROUP BY LTRIM(RTRIM(INDEKS_KATALOGOWY));
       $snap = (([string]$m['waproName']) -replace '\s+', ' ').Trim()
       $cur = (([string]$p.name) -replace '\s+', ' ').Trim()
       $disp = (([string]$p.display_name) -replace '\s+', ' ').Trim()
-      $fromBl = -not [string]::IsNullOrWhiteSpace([string]$m['baselinkerProductId'])
+      $fromBl = (([string]$p.catalog) -eq 'shop') -or ([string]$p.id).StartsWith('shop-') -or (-not [string]::IsNullOrWhiteSpace([string]$m['baselinkerProductId']))
       $payload = @{}
       if (-not $snap) {
         if ($namesBaselined -ge $nameBaselineCap) { continue }

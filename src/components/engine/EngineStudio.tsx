@@ -5,7 +5,7 @@ import { buildManufacturerFinder } from '../../lib/assortmentAnalysis';
 import { attributeCoverage } from '../../lib/attributes';
 import { getProductDisplayCategory } from '../../lib/catalogCategory';
 import type { MaterialFact } from '../../lib/categoryEngine';
-import { fetchDescriptions, runCategoryEngine, summarizeEngine, type EngineRow, type EngineScope } from '../../lib/categoryEngineReport';
+import { fetchDescriptions, runCategoryEngineAsync, summarizeEngine, type EngineRow, type EngineScope } from '../../lib/categoryEngineReport';
 import { categoryKey, flattenCategories, useCategoryRegistry } from '../../lib/categoryRegistry';
 import { checkAllDescriptions } from '../../lib/descriptionChecks';
 import { ENGINE_BACKRONYM, ENGINE_NAME, ENGINE_TAGLINE } from '../../lib/engineBrand';
@@ -205,7 +205,7 @@ export function EngineStudio({
       setProgress(`${ENGINE_NAME} analizuje produkty…`);
       // oddajemy sterowanie przeglądarce, żeby animacja i pasek postępu zdążyły się odświeżyć
       await new Promise((r) => setTimeout(r, 60));
-      const result = runCategoryEngine(products, map, shop, { learned: derived.learned, rejected: derived.rejected, facts });
+      const result = await runCategoryEngineAsync(products, map, shop, { learned: derived.learned, rejected: derived.rejected, facts }, (done, total) => setProgress(`${ENGINE_NAME} analizuje produkty ${done}/${total}…`));
       setRows(result);
       const s = summarizeEngine(result, 'audyt');
       const entry = { at: new Date().toISOString(), changes: s.changes.length, review: s.review.length, research: s.research.length };

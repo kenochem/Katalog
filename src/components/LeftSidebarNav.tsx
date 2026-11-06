@@ -42,7 +42,7 @@ import {
   scheduleSaveUserPreferences,
 } from '../lib/userPreferences';
 import { NavTab } from './NavTab';
-import { APP_VERSION } from '../lib/appVersion';
+import { APP_VERSION_STAMP as APP_VERSION } from '../lib/appVersion.generated';
 
 type SidebarItem = {
   id: View;

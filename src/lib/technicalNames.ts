@@ -297,3 +297,46 @@ export function nameDuplicateKey(name: string): string {
   const sorted = main.replace(/((?:G[ZW] M?[\d/]+|M\d+)(?: × (?:G[ZW] M?[\d/]+|M\d+))+)/g, (m) => m.split(CONNECTOR).sort().join(CONNECTOR));
   return fold(`${sorted}${code ? ` - ${code}` : ''}`).replace(/\s+/g, ' ');
 }
+
+const MATERIAL_LABEL: Record<string, string> = { inox: 'Stal nierdzewna', mosiadz: 'Mosiądz', stal: 'Stal', plastik: 'Plastik', guma: 'Guma', aluminium: 'Aluminium', ceramika: 'Ceramika' };
+const COLOUR_LABEL: Record<string, string> = {
+  czarny: 'Czarny',
+  czerwony: 'Czerwony',
+  niebieski: 'Niebieski',
+  zielony: 'Zielony',
+  szary: 'Szary',
+  bialy: 'Biały',
+  zolty: 'Żółty',
+  pomaranczowy: 'Pomarańczowy',
+  srebrny: 'Srebrny',
+  chrom: 'Chrom',
+};
+
+export interface TechFacts {
+  material?: string;
+  colour?: string;
+  /** Przyłącza w kolejności z nazwy, np. „GZ 3/8 × GW 1/4”. */
+  threads?: string;
+  /** Ciśnienie robocze z nazwy, w barach. */
+  pressure?: number;
+}
+
+/**
+ * Fakty o produkcie technicznym (materiał, kolor, przyłącza, ciśnienie) wyczytane z nazwy.
+ * Zwraca null dla produktów, których rodzaju nie znamy (np. chemia) — tam słowa „czarny” czy „stal” nic nie znaczą.
+ */
+export function technicalFacts(raw: string, brand: string | null = null): TechFacts | null {
+  const std = standardizeTechnicalName(raw, brand);
+  if (!std) return null;
+  const out: TechFacts = {};
+  const text = raw.replace(/\s+/g, ' ');
+  const material = MATERIALS.find((m) => text.search(m.re) >= 0);
+  if (material) out.material = MATERIAL_LABEL[material.key];
+  const colour = COLOURS.find((c) => text.search(c.re) >= 0);
+  if (colour) out.colour = COLOUR_LABEL[colour.key];
+  const threads = std.name.match(/\b(?:GZ|GW)\s?M?[\d/]+"?/g);
+  if (threads?.length) out.threads = threads.join(CONNECTOR);
+  const bar = text.match(/(?<![\d.,])(\d{1,4})\s?bar\b/i);
+  if (bar) out.pressure = Number(bar[1]);
+  return out;
+}
